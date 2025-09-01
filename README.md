@@ -1,6 +1,6 @@
 # Descendants™ - Living Metaverse Editor
 
-<img width="688" height="124" alt="Screenshot 2025-09-02 at 3 11 07 AM" src="https://github.com/user-attachments/assets/81fe1ae9-59aa-47e2-af03-f604da6aa3fa" />
+![Generated Image September 02, 2025 - 3_33AM](https://github.com/user-attachments/assets/f9900b53-e967-49f6-bbff-98ac2dea23f0)
 
 
 ### A Living Portfolio. An Echo of a Mind.
