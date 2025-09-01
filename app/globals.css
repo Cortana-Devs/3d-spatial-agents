@@ -1,7 +1,176 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Tailwind v4 CSS-based theme configuration */
+@theme {
+  /* Axiom Design System Colors */
+  --color-axiom-primary-50: #f0f4ff;
+  --color-axiom-primary-100: #e0e7ff;
+  --color-axiom-primary-200: #c7d2fe;
+  --color-axiom-primary-300: #a5b4fc;
+  --color-axiom-primary-400: #818cf8;
+  --color-axiom-primary-500: #6366f1;
+  --color-axiom-primary-600: #4f46e5;
+  --color-axiom-primary-700: #4338ca;
+  --color-axiom-primary-800: #3730a3;
+  --color-axiom-primary-900: #312e81;
+  --color-axiom-primary-950: #1e1b4b;
+
+  /* Glowing accent colors */
+  --color-axiom-glow-cyan: #00f5ff;
+  --color-axiom-glow-purple: #a855f7;
+  --color-axiom-glow-pink: #ec4899;
+  --color-axiom-glow-green: #10b981;
+  --color-axiom-glow-amber: #f59e0b;
+
+  /* Neutral grays with ethereal tint */
+  --color-axiom-neutral-50: #fafafa;
+  --color-axiom-neutral-100: #f5f5f5;
+  --color-axiom-neutral-200: #e5e5e5;
+  --color-axiom-neutral-300: #d4d4d4;
+  --color-axiom-neutral-400: #a3a3a3;
+  --color-axiom-neutral-500: #737373;
+  --color-axiom-neutral-600: #525252;
+  --color-axiom-neutral-700: #404040;
+  --color-axiom-neutral-800: #262626;
+  --color-axiom-neutral-900: #171717;
+  --color-axiom-neutral-950: #0a0a0a;
+
+  /* Block type colors */
+  --color-axiom-block-stone: #666666;
+  --color-axiom-block-leaf: #4CAF50;
+  --color-axiom-block-wood: #8D6E63;
+
+  /* Custom animations */
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  /* Custom border radius */
+  --radius-axiom: 12px;
+
+  /* Custom backdrop blur */
+  --backdrop-blur-axiom: 12px;
+}
+
+/* Custom keyframes for Axiom animations */
+@keyframes glow-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+  }
+  50% { 
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Custom variant for dark mode */
+@variant dark (&:is(.dark *));
+
+@layer base {
+  /* Smooth scrolling and improved font rendering */
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Custom scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent));
+  }
+}
+
+@layer components {
+  /* Axiom glassmorphism effect */
+  .glass-morphism {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(var(--backdrop-blur-axiom));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-axiom);
+  }
+  
+  .dark .glass-morphism {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Ethereal glow effects */
+  .glow-effect {
+    box-shadow: 0 0 20px theme(colors.axiom.primary.500 / 30%);
+  }
+  
+  .glow-effect-cyan {
+    box-shadow: 0 0 20px theme(colors.axiom.glow.cyan / 40%);
+  }
+  
+  .glow-effect-purple {
+    box-shadow: 0 0 20px theme(colors.axiom.glow.purple / 40%);
+  }
+  
+  /* Floating panel styles */
+  .floating-panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(var(--backdrop-blur-axiom));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-axiom);
+    padding: 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateZ(0);
+  }
+  
+  .dark .floating-panel {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Interactive hover states */
+  .interactive-hover {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .interactive-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Utility classes for Axiom colors */
+  .text-axiom-primary {
+    color: theme(colors.axiom.primary.500);
+  }
+  
+  .bg-axiom-primary {
+    background-color: theme(colors.axiom.primary.500);
+  }
+  
+  .border-axiom-primary {
+    border-color: theme(colors.axiom.primary.500);
+  }
+}
 
 @theme inline {
   --color-background: var(--background);

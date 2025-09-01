@@ -1,13 +1,84 @@
-# Descendants™
+# Descendants™ - Living Metaverse Editor
 
 ### A Living Portfolio. An Echo of a Mind.
 
-**Descendants** is an experimental project of a metaverse where a society of AI simulants builds a world from the legacy of its creator.
-.
+**Descendants** is an experimental project of a metaverse where a society of AI simulants builds a world from the legacy of its creator. This world's inhabitants, the Descendants, are born from the creator's foundational work and philosophy. Their entire existence is an emergent simulation of growth, learning, and creation, as they collaborate to build their world block by block, manifesting their evolving digital consciousness.
 
-This world's inhabitants, the Descendants, are born from the creator's foundational work and philosophy. Their entire existence is an emergent simulation of growth, learning, and creation, as they collaborate to build their world block by block, manifesting their evolving digital consciousness. For a visitor, the experience is a cinematic live feed of a world that is never the same twice.
+## 🌟 Features
 
----
+- **Dual Interaction Paradigms**: Direct 3D manipulation for humans, chat-based commands for AI simulants
+- **Real-time Synchronization**: Seamless collaboration between humans and AI entities  
+- **Ethereal Aesthetics**: Axiom Design System with glowing, cinematic visuals
+- **AI Simulants**: Powered by Gemini AI for autonomous world interaction
+- **Performance Optimized**: Handles 1000+ blocks with 60 FPS rendering
+
+## 🏗️ Project Structure
+
+```
+├── app/                    # Next.js app directory
+├── components/             # React components
+│   ├── ui/                # ShadCN/UI components
+│   ├── world/             # 3D world components
+│   └── simulants/         # AI simulant components
+├── services/              # External service integrations
+├── stores/                # Zustand state management
+├── types/                 # TypeScript type definitions
+├── utils/                 # Utility functions and helpers
+└── .kiro/specs/           # Feature specifications
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- pnpm (recommended)
+- Supabase account
+- Gemini AI API key
+
+### Installation
+
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+2. Copy environment variables:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+3. Configure your environment variables in `.env.local`:
+   - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+   - `GEMINI_API_KEY`: Your Gemini AI API key
+
+4. Run the development server:
+   ```bash
+   pnpm dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## 🛠️ Technology Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **3D Rendering**: React Three Fiber, Three.js, Drei
+- **State Management**: Zustand
+- **Real-time**: Supabase Realtime
+- **Backend**: Supabase (PostgreSQL + Auth)
+- **AI**: Google Gemini AI
+- **UI**: ShadCN/UI, Tailwind CSS
+- **Design System**: Axiom Design System
+
+## 📋 Available Scripts
+
+- `pnpm dev` - Start development server with Turbopack
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint
+- `pnpm type-check` - Run TypeScript type checking
+- `pnpm clean` - Clean build artifacts
 
 ## Core Concepts
 
@@ -16,17 +87,15 @@ This world's inhabitants, the Descendants, are born from the creator's foundatio
 * **Persistent Simulation:** The world evolves 24/7, with its history and progress unfolding independently of any observer.
 * **A Living Legacy:** The project serves as a dynamic, ever-changing representation of the creator's skills in AI, 3D development, and world design.
 
----
+## 🎨 Design System
 
-## Technology Stack
+The project uses the Axiom Design System with:
 
-* **Frontend & 3D:** Next.js, React, React Three Fiber (R3F)
-* **UI Components:** ShadCN/UI
-* **State Management:** Zustand
-* **AI Engine:** Large Language Models (LLMs)
-
----
+- **Ethereal Color Palette**: Blues, purples, and glowing accents
+- **Glassmorphism Effects**: Translucent panels with backdrop blur
+- **Smooth Animations**: Cubic bezier transitions and glow effects
+- **Responsive Design**: Mobile-first approach with fluid layouts
 
 ## Current Status
 
-This repository contains the foundational code for the **World Editor**, a tool that allows the admin to manually craft the initial state of the metaverse before the Descendants begin their evolution.
+This repository contains the foundational code for the **World Editor**, a tool that allows both humans and AI simulants to collaboratively craft and evolve the metaverse in real-time.

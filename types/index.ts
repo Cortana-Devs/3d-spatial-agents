@@ -1,0 +1,149 @@
+import { Vector3 } from 'three';
+
+// Core World Types
+export interface Block {
+  id: string;
+  position: { x: number; y: number; z: number };
+  type: BlockType;
+  color: string;
+  metadata: {
+    createdAt: number;
+    modifiedAt: number;
+    createdBy: string; // 'human' | simulant-id
+    glow?: number;
+  };
+}
+
+export type BlockType = 'stone' | 'leaf' | 'wood';
+
+// AI Simulant Types
+export interface AISimulant {
+  id: string;
+  name: string;
+  position: { x: number; y: number; z: number };
+  status: 'active' | 'idle' | 'disconnected';
+  lastAction: string;
+  conversationHistory: ChatMessage[];
+  geminiSessionId: string;
+}
+
+export type SimulantStatus = 'active' | 'idle' | 'disconnected';
+export type SimulantCapability = 'build' | 'destroy' | 'move' | 'communicate' | 'observe';
+
+// Camera Types
+export type CameraMode = 'orbit' | 'fly' | 'follow-simulant' | 'cinematic';
+
+export interface CameraState {
+  position: Vector3;
+  target: Vector3;
+  fov: number;
+  following?: string; // simulant ID
+}
+
+// Communication Types
+export interface ChatMessage {
+  id: string;
+  senderId: string; // 'human' | simulant-id
+  senderName: string;
+  content: string;
+  timestamp: number;
+  type: 'public' | 'private' | 'system';
+  worldPosition?: Vector3; // For spatial chat
+}
+
+// Real-time Events
+export interface BlockChange {
+  type: 'add' | 'remove' | 'update';
+  block: Block;
+  userId: string;
+  timestamp: number;
+}
+
+export interface SimulantUpdate {
+  simulantId: string;
+  position?: Vector3;
+  status?: SimulantStatus;
+  action?: string;
+  timestamp: number;
+}
+
+// World State
+export interface WorldState {
+  // World Data
+  blocks: Block[];
+  worldLimits: { maxBlocks: 1000 };
+  
+  // Human User State
+  selectedBlockType: BlockType;
+  activeCamera: CameraMode;
+  
+  // AI Simulant State
+  simulants: Map<string, AISimulant>;
+  
+  // Real-time Synchronization
+  lastUpdate: number;
+  syncStatus: 'connected' | 'disconnected' | 'syncing';
+}
+
+// Action Types
+export interface SimulantAction {
+  type: 'place_block' | 'remove_block' | 'move' | 'chat' | 'query_world';
+  parameters: Record<string, any>;
+  simulantId: string;
+}
+
+export interface ActionResult {
+  success: boolean;
+  message: string;
+  worldChange?: BlockChange;
+  newPosition?: Vector3;
+}
+
+// Configuration Types
+export interface SimulantConfig {
+  name: string;
+  personality?: string;
+  initialPosition?: Vector3;
+  capabilities: SimulantCapability[];
+}
+
+// Block Definitions
+export interface BlockDefinition {
+  color: string;
+  roughness: number;
+  metalness: number;
+  transparency?: number;
+  description: string;
+}
+
+// Performance and Rendering
+export interface RenderingConfig {
+  instancedRendering: boolean;
+  lodSystem: {
+    highDetail: number; // 0-30 units
+    mediumDetail: number; // 30-60 units
+    lowDetail: number; // 60+ units
+  };
+  frustumCulling: boolean;
+  occlusionCulling: boolean;
+}
+
+export interface PerformanceMetrics {
+  frameRate: number; // Target: 60 FPS
+  memoryUsage: number; // Target: < 500MB
+  networkLatency: number; // Target: < 100ms
+  aiResponseTime: number; // Target: < 2s
+  blockRenderCount: number; // Target: 1000 blocks
+  simultaneousUsers: number; // Target: 10 users
+}
+
+// Connection and Presence
+export type ConnectionStatus = 'connected' | 'disconnected' | 'reconnecting';
+
+export interface PresenceState {
+  userId: string;
+  userType: 'human' | 'simulant';
+  position?: Vector3;
+  lastSeen: number;
+  isActive: boolean;
+}
