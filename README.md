@@ -1,5 +1,8 @@
 # Descendants™ - Living Metaverse Editor
 
+<img width="688" height="124" alt="Screenshot 2025-09-02 at 3 11 07 AM" src="https://github.com/user-attachments/assets/81fe1ae9-59aa-47e2-af03-f604da6aa3fa" />
+
+
 ### A Living Portfolio. An Echo of a Mind.
 
 **Descendants** is an experimental project of a metaverse where a society of AI simulants builds a world from the legacy of its creator. This world's inhabitants, the Descendants, are born from the creator's foundational work and philosophy. Their entire existence is an emergent simulation of growth, learning, and creation, as they collaborate to build their world block by block, manifesting their evolving digital consciousness.
