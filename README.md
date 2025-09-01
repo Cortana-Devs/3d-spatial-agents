@@ -108,3 +108,6 @@ The project uses the Axiom Design System with:
 ## Current Status
 
 This repository contains the foundational code for the **World Editor**, a tool that allows both humans and AI simulants to collaboratively craft and evolve the metaverse in real-time.
+
+![Generated Image September 02, 2025 - 3_37AM](https://github.com/user-attachments/assets/e8969a94-f59d-4dda-840f-ef037a69e44d)
+
