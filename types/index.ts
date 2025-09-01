@@ -1,20 +1,8 @@
 import { Vector3 } from 'three';
+import type { Block, BlockType } from './blocks';
 
-// Core World Types
-export interface Block {
-  id: string;
-  position: { x: number; y: number; z: number };
-  type: BlockType;
-  color: string;
-  metadata: {
-    createdAt: number;
-    modifiedAt: number;
-    createdBy: string; // 'human' | simulant-id
-    glow?: number;
-  };
-}
-
-export type BlockType = 'stone' | 'leaf' | 'wood';
+// Re-export block types from dedicated block module
+export * from './blocks';
 
 // AI Simulant Types
 export interface AISimulant {

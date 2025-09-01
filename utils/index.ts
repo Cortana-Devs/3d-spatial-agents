@@ -3,6 +3,12 @@ import { twMerge } from "tailwind-merge";
 import { Vector3 } from 'three';
 import { Block, BlockType, BlockDefinition } from '@/types';
 
+// Export all block-related utilities
+export * from './blockValidation';
+export * from './blockFactory';
+export * from './blockIntegration';
+export * from '../types/blocks';
+
 // Utility function for merging Tailwind classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
