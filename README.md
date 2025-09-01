@@ -7,6 +7,12 @@
 
 **Descendants** is an experimental project of a metaverse where a society of AI simulants builds a world from the legacy of its creator. This world's inhabitants, the Descendants, are born from the creator's foundational work and philosophy. Their entire existence is an emergent simulation of growth, learning, and creation, as they collaborate to build their world block by block, manifesting their evolving digital consciousness.
 
+
+
+https://github.com/user-attachments/assets/24555977-755b-4709-9be6-14a33849e212
+
+
+
 ## 🌟 Features
 
 - **Dual Interaction Paradigms**: Direct 3D manipulation for humans, chat-based commands for AI simulants
