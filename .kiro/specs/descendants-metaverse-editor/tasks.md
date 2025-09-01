@@ -2,14 +2,14 @@
 
 ## Phase 1: Core Foundation & Data Structures
 
-- [-] 1. Set up Next.js project with TypeScript and essential dependencies
+- [x] 1. Set up Next.js project with TypeScript and essential dependencies
   - Initialize Next.js 14 project with TypeScript configuration
   - Install core dependencies: React Three Fiber, Zustand, Supabase, ShadCN/UI
   - Configure Tailwind CSS with Axiom Design System colors and themes
   - Set up project structure with organized folders for components, stores, and utilities
   - _Requirements: All requirements depend on this foundation_
 
-- [ ] 2. Implement core world store with optimized data structures
+- [x] 2. Implement core world store with optimized data structures
   - Create Zustand store with Block interface and WorldState management
   - Implement spatial hash map for O(1) block position lookups (key: "x,y,z" string)
   - Add block operations: addBlock, removeBlock with collision detection
