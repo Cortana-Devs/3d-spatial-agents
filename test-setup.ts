@@ -1,20 +1,15 @@
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Mock UUID for consistent testing
-const mockUuid = () => 'test-uuid-' + Math.random().toString(36).substr(2, 9);
+vi.mock('uuid', () => ({
+  v4: () => 'test-uuid-123'
+}));
 
-// Extend global interface to include jest
-declare global {
-  var jest: {
-    mock: (module: string, factory: () => any) => any;
-  };
-}
-
-// Global mock for uuid
-(globalThis as any).jest = {
-  mock: (module: string, factory: () => any) => {
-    if (module === 'uuid') {
-      return factory();
-    }
-  }
-};
+// Mock Three.js for testing
+vi.mock('three', () => ({
+  Vector3: vi.fn().mockImplementation((x = 0, y = 0, z = 0) => ({ x, y, z })),
+  Vector2: vi.fn().mockImplementation((x = 0, y = 0) => ({ x, y })),
+  Plane: vi.fn(),
+  Mesh: vi.fn()
+}));

@@ -44,7 +44,7 @@
   - _Branch: `feature/descendants-metaverse-block-types`_
 
 ### ⚡ Parallel Chain B: 3D Rendering Foundation
-- [ ] 4. Build basic 3D viewport with React Three Fiber
+- [x] 4. Build basic 3D viewport with React Three Fiber and connect to main page
   - Set up Canvas component with optimized renderer settings
   - Implement basic scene with lighting and Axiom Design System aesthetics
   - Add orbit camera controls with smooth damping
