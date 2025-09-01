@@ -2,126 +2,150 @@
 
 ## Introduction
 
-Descendants is a Living Metaverse Editor that serves as a 3D voxel world creation platform built with the Axiom Design System principles. The application enables users to sculpt digital worlds using ethereal, glowing blocks in an immersive 3D environment that feels like peering through a window into another dimension. The editor emphasizes invisible intelligence, fluid interactions, and cinematic visual quality while maintaining high performance for complex world creation.
+Descendants is a Living Metaverse Editor that serves as a shared 3D voxel world where both human creators and AI simulants coexist and interact. Built with the Axiom Design System principles, the platform enables human users to sculpt digital worlds using ethereal, glowing blocks while AI simulants (powered by Gemini AI) live within these worlds as autonomous entities. The world has a 1000-block limit and supports dual interaction paradigms: direct 3D manipulation for humans and chat-based commands for AI simulants. The editor emphasizes invisible intelligence, fluid interactions, and seamless human-AI collaboration in a shared digital space.
 
 ## Requirements
 
 ### Requirement 1
 
-**User Story:** As a world creator, I want to place and manipulate 3D voxel blocks in a spatial environment, so that I can build complex digital structures and landscapes.
+**User Story:** As a human world creator, I want to place and manipulate 3D voxel blocks through direct interaction, so that I can build the initial world structure for AI simulants to inhabit.
 
 #### Acceptance Criteria
 
-1. WHEN the user clicks in the 3D viewport THEN the system SHALL place a block of the currently selected type at the clicked position
-2. WHEN the user hovers over an empty grid position THEN the system SHALL display a ghost preview of the block to be placed
-3. WHEN the user places a block THEN the system SHALL animate the block materialization with scale and particle effects
-4. WHEN the user selects a placed block THEN the system SHALL highlight it with a breathing glow effect and selection aura
-5. WHEN the user removes a block THEN the system SHALL animate the block dissolution into particles over 0.5 seconds
+1. WHEN the human user clicks in the 3D viewport THEN the system SHALL place a block of the currently selected type at the clicked position
+2. WHEN the human user hovers over an empty grid position THEN the system SHALL display a ghost preview of the block to be placed
+3. WHEN the human user places a block THEN the system SHALL animate the block materialization and notify all AI simulants of the world change
+4. WHEN the human user removes a block THEN the system SHALL animate the block dissolution and update the world state for AI simulants
+5. WHEN the world reaches 1000 blocks THEN the system SHALL prevent further placement and display a limit notification
 
 ### Requirement 2
 
-**User Story:** As a creative user, I want to select from different ethereal block types with unique visual properties, so that I can create diverse and visually striking worlds.
+**User Story:** As an AI simulant, I want to perceive and modify the world through chat-based commands, so that I can interact with the environment and other entities autonomously.
 
 #### Acceptance Criteria
 
-1. WHEN the user opens the block selector THEN the system SHALL display 6 block types: plasma, crystal, neon, void, hologram, and quantum
-2. WHEN the user hovers over a block type THEN the system SHALL show a 3D rotating preview with type-specific glow effects
-3. WHEN the user selects a block type THEN the system SHALL update the active selection with visual confirmation
-4. WHEN the user presses number keys 1-6 THEN the system SHALL switch to the corresponding block type with flash effect
-5. IF the user is in focus mode THEN the block palette SHALL reduce to 60% opacity and return to full opacity on hover
+1. WHEN an AI simulant sends a world query THEN the system SHALL provide a text description of the current world state including block positions and types
+2. WHEN an AI simulant requests to place a block THEN the system SHALL parse the command, validate the action, and execute the placement with visual feedback
+3. WHEN an AI simulant requests to remove a block THEN the system SHALL identify the target block and execute removal with particle effects
+4. WHEN an AI simulant requests to move THEN the system SHALL update their position and display their avatar in the 3D world
+5. IF an AI simulant's action conflicts with world rules THEN the system SHALL reject the action and provide feedback through chat
 
 ### Requirement 3
 
-**User Story:** As a world architect, I want intelligent camera controls with multiple viewing modes, so that I can navigate and observe my creations from optimal angles.
+**User Story:** As a human observer, I want to see AI simulants as visible entities in the 3D world, so that I can understand their presence and activities.
 
 #### Acceptance Criteria
 
-1. WHEN the user switches to orbit mode THEN the system SHALL provide smooth spherical camera movement with inertia and damping
-2. WHEN the user switches to fly mode THEN the system SHALL enable WASD + mouse look controls with momentum physics
-3. WHEN the user switches to cinematic mode THEN the system SHALL offer preset camera shots and keyframe animation capabilities
-4. WHEN the user double-clicks on a block THEN the system SHALL smoothly focus the camera on that block with cinematic approach
-5. WHEN the user moves at high speed in fly mode THEN the system SHALL apply speed lines and FOV adjustment effects
+1. WHEN an AI simulant is active THEN the system SHALL display a glowing avatar representing the simulant in the 3D viewport
+2. WHEN an AI simulant moves THEN the system SHALL animate their avatar smoothly between positions
+3. WHEN an AI simulant performs an action THEN the system SHALL show visual indicators (particles, glow effects) around their avatar
+4. WHEN multiple AI simulants are present THEN the system SHALL display each with unique colors and identification labels
+5. WHEN an AI simulant is inactive THEN the system SHALL fade their avatar to 50% opacity
 
 ### Requirement 4
 
-**User Story:** As a user managing world data, I want comprehensive save/load functionality with visual feedback, so that I can preserve and share my creative work.
+**User Story:** As both human and AI users, I want to select from different block types with unique properties, so that the world can have diverse materials and structures.
 
 #### Acceptance Criteria
 
-1. WHEN the user clicks save THEN the system SHALL serialize the world data to JSON format with compression
-2. WHEN the user saves a world THEN the system SHALL display a progress indicator and success feedback with green checkmark
-3. WHEN the user loads a world THEN the system SHALL validate the data and animate world materialization from particles
-4. WHEN the user triggers auto-save THEN the system SHALL save in the background with subtle pulse indicator
-5. IF the save operation fails THEN the system SHALL display an error toast with retry option
+1. WHEN any user accesses block types THEN the system SHALL provide 3 types: stone (gray, solid), leaf (green, organic), wood (brown, natural)
+2. WHEN a human user hovers over a block type THEN the system SHALL show a 3D rotating preview with material properties
+3. WHEN an AI simulant queries block types THEN the system SHALL provide text descriptions of available materials and their properties
+4. WHEN any user selects a block type THEN the system SHALL update their active selection and notify other users if relevant
+5. IF a block type has special properties THEN the system SHALL communicate these through both visual and text descriptions
 
 ### Requirement 5
 
-**User Story:** As a user working with complex worlds, I want undo/redo functionality with visual history, so that I can experiment freely and revert unwanted changes.
+**User Story:** As a human user, I want intelligent camera controls to observe both the world and AI simulant activities, so that I can monitor the living ecosystem.
 
 #### Acceptance Criteria
 
-1. WHEN the user performs an action THEN the system SHALL add the state to a history stack limited to 50 states
-2. WHEN the user presses Ctrl+Z THEN the system SHALL undo the last action with backward animation
-3. WHEN the user presses Ctrl+Y THEN the system SHALL redo the last undone action with forward animation
-4. WHEN the user hovers over undo/redo buttons THEN the system SHALL show history stack as glowing dots
-5. IF the history stack is empty THEN the undo/redo buttons SHALL be disabled with 30% opacity
+1. WHEN the human user switches camera modes THEN the system SHALL provide orbit, fly, and follow-simulant modes
+2. WHEN the human user selects follow mode THEN the system SHALL track a chosen AI simulant's movements smoothly
+3. WHEN AI simulants are active THEN the system SHALL provide camera shortcuts to quickly jump between simulant locations
+4. WHEN the human user double-clicks on a simulant THEN the system SHALL focus the camera on that simulant with cinematic approach
+5. IF multiple simulants are performing actions THEN the system SHALL offer picture-in-picture views or split-screen options
 
 ### Requirement 6
 
-**User Story:** As a user creating in 3D space, I want an intelligent grid system that provides spatial reference and snapping, so that I can build with precision and alignment.
+**User Story:** As an AI simulant, I want to understand spatial relationships and navigate the world effectively, so that I can interact meaningfully with the environment.
 
 #### Acceptance Criteria
 
-1. WHEN the viewport loads THEN the system SHALL display an animated grid at y=0 with cyan glow and pulse effects
-2. WHEN the user approaches a grid intersection THEN the system SHALL show a glowing crosshair snap indicator
-3. WHEN the user places a block THEN the system SHALL send an energy ripple through the grid from the placement point
-4. WHEN the camera moves away from the grid THEN the system SHALL fade grid lines exponentially with distance
-5. IF multiple blocks are placed quickly THEN the grid ripples SHALL interfere with wave physics
+1. WHEN an AI simulant requests location information THEN the system SHALL provide their current coordinates and nearby block descriptions
+2. WHEN an AI simulant requests navigation THEN the system SHALL calculate and describe available paths to target locations
+3. WHEN an AI simulant encounters obstacles THEN the system SHALL explain the blocking elements and suggest alternatives
+4. WHEN an AI simulant requests area information THEN the system SHALL describe the local environment within a 5-block radius
+5. IF an AI simulant attempts invalid movement THEN the system SHALL explain the world physics and constraints
 
 ### Requirement 7
 
-**User Story:** As a user customizing the editor, I want comprehensive settings for visual quality, controls, and performance, so that I can optimize the experience for my system and preferences.
+**User Story:** As a system administrator, I want comprehensive world state management with real-time synchronization, so that human and AI actions remain consistent and persistent.
 
 #### Acceptance Criteria
 
-1. WHEN the user opens settings THEN the system SHALL display a sliding panel with tabs for World, Visual, Controls, and Performance
-2. WHEN the user adjusts visual settings THEN the system SHALL apply changes in real-time to the viewport
-3. WHEN the user enables adaptive quality THEN the system SHALL automatically adjust settings to maintain 60 FPS
-4. WHEN the user customizes keybinds THEN the system SHALL allow remapping with conflict detection
-5. IF the user selects a quality preset THEN the system SHALL update all related settings with smooth transitions
+1. WHEN any user modifies the world THEN the system SHALL update the world state immediately and notify all other users
+2. WHEN the system saves world data THEN the system SHALL include both block data and AI simulant states
+3. WHEN the system loads a world THEN the system SHALL restore both the physical world and active AI simulant sessions
+4. WHEN conflicts occur between simultaneous actions THEN the system SHALL resolve them using timestamp priority
+5. IF the system detects inconsistencies THEN the system SHALL log errors and attempt automatic reconciliation
 
 ### Requirement 8
 
-**User Story:** As a user examining individual blocks, I want a detailed inspector panel, so that I can view and modify block properties at a granular level.
+**User Story:** As an AI simulant, I want to communicate with other simulants and humans, so that I can coordinate activities and share information.
 
 #### Acceptance Criteria
 
-1. WHEN the user selects a block THEN the system SHALL open an inspector panel with 3D preview and property controls
-2. WHEN the user modifies block properties THEN the system SHALL update the block in real-time with smooth transitions
-3. WHEN the user changes block color THEN the system SHALL update the emissive and material properties accordingly
-4. WHEN the user closes the inspector THEN the system SHALL slide the panel out with fade animation
-5. IF no block is selected THEN the inspector panel SHALL remain hidden
+1. WHEN an AI simulant sends a message THEN the system SHALL display it in a chat interface visible to humans and other simulants
+2. WHEN a human sends a message THEN the system SHALL deliver it to all active AI simulants through their chat interface
+3. WHEN AI simulants communicate privately THEN the system SHALL support direct messaging between specific simulants
+4. WHEN communication occurs near specific world locations THEN the system SHALL support spatial chat with proximity-based delivery
+5. IF communication volume is high THEN the system SHALL provide filtering and channel management options
 
 ### Requirement 9
 
-**User Story:** As a performance-conscious user, I want the editor to maintain smooth 60 FPS performance even with complex worlds, so that the creative experience remains fluid and responsive.
+**User Story:** As a human user, I want to manage AI simulant lifecycles and behaviors, so that I can control the living ecosystem within the world.
 
 #### Acceptance Criteria
 
-1. WHEN the world contains up to 10,000 blocks THEN the system SHALL maintain 60 FPS through instanced rendering
-2. WHEN blocks are distant from the camera THEN the system SHALL use LOD (Level of Detail) with simplified geometry
-3. WHEN blocks are outside the camera view THEN the system SHALL apply frustum culling to skip rendering
-4. WHEN the frame rate drops below 50 FPS THEN the system SHALL automatically reduce quality if adaptive mode is enabled
-5. IF memory usage exceeds 500MB THEN the system SHALL display a warning indicator in the performance panel
+1. WHEN the human user creates a new simulant THEN the system SHALL initialize it with a Gemini AI connection and spawn it in the world
+2. WHEN the human user pauses a simulant THEN the system SHALL suspend its activities while maintaining its world presence
+3. WHEN the human user removes a simulant THEN the system SHALL gracefully disconnect it and remove its avatar from the world
+4. WHEN the human user adjusts simulant parameters THEN the system SHALL update their behavior patterns and capabilities
+5. IF a simulant becomes unresponsive THEN the system SHALL detect the issue and provide recovery options
 
 ### Requirement 10
 
-**User Story:** As an accessibility-conscious user, I want the editor to support various accessibility needs, so that users with different abilities can create effectively.
+**User Story:** As a performance-conscious user, I want the system to maintain smooth operation with multiple AI simulants and complex interactions, so that the living world experience remains fluid.
 
 #### Acceptance Criteria
 
-1. WHEN the user enables high contrast mode THEN the system SHALL increase grid visibility and border brightness
-2. WHEN the user enables reduced motion mode THEN the system SHALL disable particles and complex animations
-3. WHEN the user navigates with keyboard only THEN the system SHALL provide full functionality through keyboard shortcuts
-4. WHEN the user uses screen reader THEN the system SHALL announce block names, positions, and actions
-5. IF the user has colorblind needs THEN the system SHALL offer alternative color palettes for block types
+1. WHEN up to 10 AI simulants are active THEN the system SHALL maintain 60 FPS performance in the 3D viewport
+2. WHEN AI simulants perform rapid actions THEN the system SHALL queue and batch updates to prevent performance degradation
+3. WHEN the world reaches capacity (1000 blocks) THEN the system SHALL optimize rendering and maintain responsiveness
+4. WHEN network latency affects AI responses THEN the system SHALL provide visual indicators and graceful degradation
+5. IF system resources are constrained THEN the system SHALL prioritize human user interactions over AI simulant activities
+
+### Requirement 11
+
+**User Story:** As both human and AI users, I want procedural world generation capabilities, so that we can create diverse environments beyond manual construction.
+
+#### Acceptance Criteria
+
+1. WHEN the human user requests world generation THEN the system SHALL offer algorithms like terrain, structures, or random patterns
+2. WHEN AI simulants request environmental changes THEN the system SHALL evaluate their proposals and execute approved modifications
+3. WHEN procedural generation occurs THEN the system SHALL respect the 1000-block limit and existing structures
+4. WHEN generation algorithms run THEN the system SHALL provide real-time progress feedback and allow cancellation
+5. IF generated content conflicts with existing elements THEN the system SHALL resolve conflicts intelligently or request user input
+
+### Requirement 12
+
+**User Story:** As an accessibility-conscious user, I want the system to support various interaction methods and assistive technologies, so that users with different abilities can participate in the living world.
+
+#### Acceptance Criteria
+
+1. WHEN users enable high contrast mode THEN the system SHALL increase visibility of both world elements and AI simulant avatars
+2. WHEN users enable reduced motion mode THEN the system SHALL minimize animations while preserving essential feedback
+3. WHEN users navigate with keyboard only THEN the system SHALL provide full access to world interaction and simulant management
+4. WHEN screen readers are active THEN the system SHALL announce world changes, simulant activities, and chat messages
+5. IF users have specific accessibility needs THEN the system SHALL offer customizable interface adaptations
