@@ -1,6 +1,16 @@
-# Implementation Plan
+# Implementation Plan - Descendants Metaverse Editor
 
-## Phase 1: Core Foundation & Data Structures
+## Development Workflow Guide
+
+**Legend:**
+- 🔗 **Sequential**: Must be completed in order
+- ⚡ **Parallel**: Can be developed simultaneously 
+- 🎯 **Independent**: No dependencies, can start anytime
+- 📦 **Feature Branch**: `feature/descendants-metaverse-[task-name]`
+
+---
+
+## Phase 1: Core Foundation & Data Structures ✅
 
 - [x] 1. Set up Next.js project with TypeScript and essential dependencies
   - Initialize Next.js 14 project with TypeScript configuration
@@ -8,6 +18,7 @@
   - Configure Tailwind CSS with Axiom Design System colors and themes
   - Set up project structure with organized folders for components, stores, and utilities
   - _Requirements: All requirements depend on this foundation_
+  - _Branch: `feature/descendants-metaverse-project-setup`_
 
 - [x] 2. Implement core world store with optimized data structures
   - Create Zustand store with Block interface and WorldState management
@@ -16,16 +27,23 @@
   - Implement 1000-block limit validation with efficient counting
   - Create undo/redo system using circular buffer (50 states max) for O(1) operations
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 5.1, 5.2, 5.3, 5.4, 5.5_
+  - _Branch: `feature/descendants-metaverse-world-store`_
 
+---
+
+## Phase 2: Parallel Foundation Development
+
+### 🔗 Sequential Chain A: Block System
 - [ ] 3. Create block type definitions and validation system
   - Define BlockType enum and block property configurations
   - Implement block validation functions with type checking
   - Create block color and material property mappings
   - Add block metadata structure with creation timestamps
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - _Dependencies: Task 2 (world store)_
+  - _Branch: `feature/descendants-metaverse-block-types`_
 
-## Phase 2: 3D Rendering & Interaction
-
+### ⚡ Parallel Chain B: 3D Rendering Foundation
 - [ ] 4. Build basic 3D viewport with React Three Fiber
   - Set up Canvas component with optimized renderer settings
   - Implement basic scene with lighting and Axiom Design System aesthetics
@@ -33,7 +51,25 @@
   - Create basic cube geometry for block rendering
   - Implement click-to-place functionality with raycasting
   - _Requirements: 1.1, 1.2, 3.1, 3.4_
+  - _Dependencies: Task 2 (world store)_
+  - _Branch: `feature/descendants-metaverse-3d-viewport`_
 
+### 🎯 Independent: Database Setup
+- [ ] 10. Set up Supabase backend with optimized database schema
+  - Configure Supabase project with authentication
+  - Create database tables: worlds, blocks, simulants, chat_messages
+  - Add spatial indexing on blocks table for efficient position queries
+  - Implement Row Level Security policies for data protection
+  - Set up database functions for world operations
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+  - _Dependencies: None (can start immediately)_
+  - _Branch: `feature/descendants-metaverse-supabase-setup`_
+
+---
+
+## Phase 3: Dependent Development Chains
+
+### 🔗 Sequential Chain A Continued: Block Rendering
 - [ ] 5. Implement block rendering with performance optimizations
   - Create VoxelBlock component with instanced rendering for identical blocks
   - Implement LOD system: full detail (0-30 units), medium (30-60), low (60+)
@@ -41,14 +77,8 @@
   - Implement block selection with hover states and visual feedback
   - Add block removal with particle dissolution effects
   - _Requirements: 1.1, 1.3, 1.4, 1.5, 9.1, 9.2, 9.3_
-
-- [ ] 6. Create intelligent grid system with spatial indexing
-  - Implement animated grid component with shader-based effects
-  - Add snap-to-grid functionality with visual indicators
-  - Create grid fade system based on camera distance
-  - Implement interaction ripples using wave physics simulation
-  - Add grid configuration options (size, opacity, visibility)
-  - _Requirements: 6.1, 6.2, 6.3, 6.4_
+  - _Dependencies: Tasks 3, 4 (block types + 3D viewport)_
+  - _Branch: `feature/descendants-metaverse-block-rendering`_
 
 - [ ] 7. Build block selector UI with 3D previews
   - Create floating block palette with glassmorphic design
@@ -57,8 +87,19 @@
   - Implement hover states and selection animations
   - Add focus mode behavior with opacity transitions
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - _Dependencies: Tasks 3, 4 (block types + 3D viewport)_
+  - _Branch: `feature/descendants-metaverse-block-selector`_
 
-## Phase 3: Camera System & Controls
+### ⚡ Parallel Chain B: Grid & Camera Systems
+- [ ] 6. Create intelligent grid system with spatial indexing
+  - Implement animated grid component with shader-based effects
+  - Add snap-to-grid functionality with visual indicators
+  - Create grid fade system based on camera distance
+  - Implement interaction ripples using wave physics simulation
+  - Add grid configuration options (size, opacity, visibility)
+  - _Requirements: 6.1, 6.2, 6.3, 6.4_
+  - _Dependencies: Task 4 (3D viewport)_
+  - _Branch: `feature/descendants-metaverse-grid-system`_
 
 - [ ] 8. Implement multi-modal camera controller
   - Create camera mode switching system (orbit, fly, cinematic)
@@ -67,7 +108,14 @@
   - Create camera focus system for double-click block targeting
   - Implement camera state persistence and presets
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
+  - _Dependencies: Task 4 (3D viewport)_
+  - _Branch: `feature/descendants-metaverse-camera-controller`_
 
+---
+
+## Phase 4: Advanced Features & Integration
+
+### 🔗 Sequential Chain C: Advanced Camera Features
 - [ ] 9. Add advanced camera features and effects
   - Implement cinematic mode with preset camera movements
   - Add depth of field and post-processing effects
@@ -75,17 +123,10 @@
   - Implement speed-based FOV adjustment for fly mode
   - Add camera position indicators and control hints
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
+  - _Dependencies: Task 8 (camera controller)_
+  - _Branch: `feature/descendants-metaverse-advanced-camera`_
 
-## Phase 4: World Management & Persistence
-
-- [ ] 10. Set up Supabase backend with optimized database schema
-  - Configure Supabase project with authentication
-  - Create database tables: worlds, blocks, simulants, chat_messages
-  - Add spatial indexing on blocks table for efficient position queries
-  - Implement Row Level Security policies for data protection
-  - Set up database functions for world operations
-  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
-
+### ⚡ Parallel Chain D: World Management
 - [ ] 11. Implement world save/load functionality
   - Create world serialization with JSON compression
   - Implement save operation with progress indicators and visual feedback
@@ -93,6 +134,8 @@
   - Create auto-save system with configurable intervals
   - Implement world metadata management (name, creation date, block count)
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+  - _Dependencies: Task 10 (Supabase setup)_
+  - _Branch: `feature/descendants-metaverse-world-persistence`_
 
 - [ ] 12. Build world controls toolbar
   - Create floating control panel with Axiom Design System styling
@@ -101,6 +144,8 @@
   - Create world clear functionality with confirmation dialog
   - Implement keyboard shortcuts for common operations
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.3, 5.4, 5.5_
+  - _Dependencies: Tasks 2, 11 (world store + persistence)_
+  - _Branch: `feature/descendants-metaverse-world-controls`_
 
 ## Phase 5: Real-time Synchronization
 
