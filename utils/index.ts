@@ -9,6 +9,20 @@ export * from "./blockFactory";
 export * from "./blockIntegration";
 export * from "../types/blocks";
 
+// Export animation utilities
+export * from "./animationUtils";
+export * from "./animationLoader";
+export * from "./useExternalAnimations";
+export * from "./useRPMAnimations";
+export * from "./animationController";
+export * from "./useAnimationController";
+
+// Export performance optimization utilities
+export * from "./performanceMonitor";
+export * from "./animationMemoryManager";
+export * from "./simulantCulling";
+export * from "./usePerformanceOptimization";
+
 // Utility function for merging Tailwind classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

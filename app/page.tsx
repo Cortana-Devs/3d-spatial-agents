@@ -1,14 +1,12 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { useWorldStore } from '../store/worldStore';
-import { BlockType, SelectionMode } from '../types';
-import BlockSelector from '../components/world/BlockSelector';
-import WorldInfo from '../components/world/WorldInfo';
+import React from "react";
+import dynamic from "next/dynamic";
+import BlockSelector from "../components/world/BlockSelector";
+import WorldInfo from "../components/world/WorldInfo";
 
 // Dynamically import VoxelCanvas to avoid SSR issues with Three.js
-const VoxelCanvas = dynamic(() => import('../components/world/VoxelCanvas'), {
+const VoxelCanvas = dynamic(() => import("../components/world/VoxelCanvas"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-axiom-neutral-100 dark:bg-axiom-neutral-800">
@@ -19,12 +17,10 @@ const VoxelCanvas = dynamic(() => import('../components/world/VoxelCanvas'), {
         </p>
       </div>
     </div>
-  )
+  ),
 });
 
 export default function Home() {
-  const { setSelectedBlockType } = useWorldStore();
-
   // Note: Keyboard shortcuts are now handled by individual components
   // BlockSelector handles 0-4 for block selection
   // CameraControls handles Cmd/Ctrl+C for camera mode cycling
@@ -71,23 +67,34 @@ export default function Home() {
         <div className="floating-panel px-6 py-3">
           <div className="flex items-center space-x-6 text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">0-4</kbd>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
+                0-4
+              </kbd>
               <span>Block Selection</span>
             </div>
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">⌘C</kbd>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
+                ⌘C
+              </kbd>
               <span>Camera Modes</span>
             </div>
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">G</kbd>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
+                G
+              </kbd>
               <span>Toggle Grid</span>
             </div>
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">WASD</kbd>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
+                WASD
+              </kbd>
               <span>Fly Mode</span>
             </div>
             <div className="w-px h-4 bg-axiom-neutral-300 dark:bg-axiom-neutral-600"></div>
-            <div>Click canvas in fly mode to lock cursor • Drag to orbit • Scroll to zoom</div>
+            <div>
+              Click canvas in fly mode to lock cursor • Drag to orbit • Scroll
+              to zoom
+            </div>
           </div>
         </div>
       </div>

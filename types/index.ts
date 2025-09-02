@@ -4,6 +4,9 @@ import type { Block, BlockType } from "./blocks";
 // Re-export block types from dedicated block module
 export * from "./blocks";
 
+// Re-export animation types
+export * from "./animations";
+
 // AI Simulant Types
 export interface AISimulant {
   id: string;

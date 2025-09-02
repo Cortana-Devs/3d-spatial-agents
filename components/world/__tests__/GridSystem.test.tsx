@@ -31,10 +31,8 @@ vi.mock("@react-three/fiber", async () => {
 });
 
 describe("GridSystem", () => {
-  const mockUseWorldStore = useWorldStore as jest.MockedFunction<typeof useWorldStore>;
-
   beforeEach(() => {
-    mockUseWorldStore.mockReturnValue({
+    vi.mocked(useWorldStore).mockReturnValue({
       selectionMode: "place",
       gridConfig: {
         size: 50,
@@ -139,8 +137,11 @@ describe("GridUtils", () => {
 
 describe("useGridConfig", () => {
   it("provides default grid configuration", () => {
-    let config: ReturnType<typeof useGridConfig>["config"];
-    let updateConfig: ReturnType<typeof useGridConfig>["updateConfig"];
+    let config: ReturnType<typeof useGridConfig>["config"] | undefined =
+      undefined;
+    let updateConfig:
+      | ReturnType<typeof useGridConfig>["updateConfig"]
+      | undefined = undefined;
 
     function TestComponent() {
       const result = useGridConfig();

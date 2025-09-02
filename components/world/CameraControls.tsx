@@ -82,7 +82,9 @@ export default function CameraControls({
 }: CameraControlsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
-  const [modeChangeNotification, setModeChangeNotification] = useState<string | null>(null);
+  const [modeChangeNotification, setModeChangeNotification] = useState<
+    string | null
+  >(null);
   const { simulants, gridConfig, updateGridConfig } = useWorldStore();
 
   // Calculate active simulants
@@ -114,16 +116,27 @@ export default function CameraControls({
       }
 
       // Cmd/Ctrl + C to cycle through camera modes
-      if ((event.metaKey || event.ctrlKey) && (event.key === "c" || event.key === "C")) {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        (event.key === "c" || event.key === "C")
+      ) {
         event.preventDefault();
 
         // Cycle through camera modes
-        const modes: CameraMode[] = ["orbit", "fly", "cinematic", "follow-simulant"];
+        const modes: CameraMode[] = [
+          "orbit",
+          "fly",
+          "cinematic",
+          "follow-simulant",
+        ];
         const currentIndex = modes.indexOf(currentMode);
         const nextIndex = (currentIndex + 1) % modes.length;
 
         // Skip follow-simulant if no active simulants
-        if (modes[nextIndex] === "follow-simulant" && activeSimulants.length === 0) {
+        if (
+          modes[nextIndex] === "follow-simulant" &&
+          activeSimulants.length === 0
+        ) {
           const afterNext = (nextIndex + 1) % modes.length;
           onModeChange(modes[afterNext]);
         } else {
@@ -140,7 +153,13 @@ export default function CameraControls({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [currentMode, onModeChange, activeSimulants.length]);
+  }, [
+    currentMode,
+    onModeChange,
+    activeSimulants.length,
+    gridConfig.visibility,
+    updateGridConfig,
+  ]);
 
   const handleModeChange = useCallback(
     (mode: CameraMode) => {
@@ -168,7 +187,9 @@ export default function CameraControls({
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
           <div className="bg-blue-500/90 backdrop-blur-md text-white px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2">
-              {React.createElement(CAMERA_MODE_CONFIG[currentMode].icon, { size: 16 })}
+              {React.createElement(CAMERA_MODE_CONFIG[currentMode].icon, {
+                size: 16,
+              })}
               <span className="font-medium">{modeChangeNotification}</span>
             </div>
           </div>
@@ -219,12 +240,14 @@ export default function CameraControls({
                       variant={isActive ? "secondary" : "ghost"}
                       size="sm"
                       onClick={() => handleModeChange(mode as CameraMode)}
-                      className={`w-full justify-between text-left ${isActive
+                      className={`w-full justify-between text-left ${
+                        isActive
                           ? "bg-blue-500/20 text-blue-300 border-blue-400/30"
                           : "text-white hover:bg-white/10"
-                        }`}
+                      }`}
                       disabled={
-                        mode === "follow-simulant" && activeSimulants.length === 0
+                        mode === "follow-simulant" &&
+                        activeSimulants.length === 0
                       }
                     >
                       <div className="flex items-center gap-2">
@@ -270,13 +293,17 @@ export default function CameraControls({
 
                 {/* Grid Controls */}
                 <div className="mt-3 pt-2 border-t border-white/10">
-                  <div className="text-xs text-white/60 mb-2">Grid Settings</div>
-                  
+                  <div className="text-xs text-white/60 mb-2">
+                    Grid Settings
+                  </div>
+
                   {/* Grid Visibility Toggle */}
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => updateGridConfig({ visibility: !gridConfig.visibility })}
+                    onClick={() =>
+                      updateGridConfig({ visibility: !gridConfig.visibility })
+                    }
                     className={`w-full justify-between text-left ${
                       gridConfig.visibility
                         ? "bg-green-500/20 text-green-300 border-green-400/30"
@@ -302,7 +329,9 @@ export default function CameraControls({
                     <div className="mt-2 px-2">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-white/60">Opacity</span>
-                        <span className="text-xs text-white/60">{Math.round(gridConfig.opacity * 100)}%</span>
+                        <span className="text-xs text-white/60">
+                          {Math.round(gridConfig.opacity * 100)}%
+                        </span>
                       </div>
                       <input
                         type="range"
@@ -310,7 +339,11 @@ export default function CameraControls({
                         max="1"
                         step="0.1"
                         value={gridConfig.opacity}
-                        onChange={(e) => updateGridConfig({ opacity: parseFloat(e.target.value) })}
+                        onChange={(e) =>
+                          updateGridConfig({
+                            opacity: parseFloat(e.target.value),
+                          })
+                        }
                         className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
@@ -320,7 +353,9 @@ export default function CameraControls({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => updateGridConfig({ snapToGrid: !gridConfig.snapToGrid })}
+                    onClick={() =>
+                      updateGridConfig({ snapToGrid: !gridConfig.snapToGrid })
+                    }
                     className={`w-full justify-between text-left mt-1 ${
                       gridConfig.snapToGrid
                         ? "bg-blue-500/20 text-blue-300 border-blue-400/30"
@@ -389,16 +424,23 @@ export default function CameraControls({
                 {/* Fly mode instructions */}
                 {currentMode === "fly" && (
                   <div className="mt-3 pt-2 border-t border-white/10">
-                    <div className="text-xs text-white/60 mb-2">🚀 Fly Controls Active</div>
+                    <div className="text-xs text-white/60 mb-2">
+                      🚀 Fly Controls Active
+                    </div>
                     <div className="text-xs text-white/40 space-y-1">
-                      <div className="text-green-400 font-semibold">✓ WASD - Move around</div>
+                      <div className="text-green-400 font-semibold">
+                        ✓ WASD - Move around
+                      </div>
                       <div className="text-green-400">✓ Space - Fly up</div>
                       <div className="text-green-400">✓ Shift - Fly down</div>
                       <div className="text-blue-400">Mouse - Look around</div>
-                      <div className="text-yellow-400 font-bold animate-pulse">👆 Click canvas to lock cursor</div>
+                      <div className="text-yellow-400 font-bold animate-pulse">
+                        👆 Click canvas to lock cursor
+                      </div>
                     </div>
                     <div className="mt-2 p-2 bg-green-500/10 border border-green-400/30 rounded text-green-300 text-xs">
-                      💡 Make sure to click the 3D canvas first, then use WASD keys
+                      💡 Make sure to click the 3D canvas first, then use WASD
+                      keys
                     </div>
                   </div>
                 )}
@@ -431,10 +473,11 @@ export default function CameraControls({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleModeChange(mode as CameraMode)}
-                className={`w-8 h-8 p-0 ${currentMode === mode
+                className={`w-8 h-8 p-0 ${
+                  currentMode === mode
                     ? "bg-blue-500/20 text-blue-300 border border-blue-400/30"
                     : "bg-black/20 text-white/60 hover:bg-white/10 hover:text-white"
-                  }`}
+                }`}
                 title={config.label}
               >
                 {React.createElement(config.icon, { size: 14 })}

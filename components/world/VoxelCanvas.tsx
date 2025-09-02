@@ -35,6 +35,8 @@ import {
 import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
 import CameraControls from "./CameraControls";
+import SimulantManager from "../simulants/SimulantManager";
+import SimulantControls from "../simulants/SimulantControls";
 
 // LOD Configuration for performance optimization
 interface LODConfig {
@@ -806,6 +808,14 @@ function SceneContent({
       {/* Intelligent grid system with spatial indexing */}
       <GridSystem config={gridConfig} />
 
+      {/* AI Simulant System */}
+      <SimulantManager 
+        enableAnimations={true}
+        enableGridSnap={gridConfig.snapToGrid}
+        maxSimulants={10}
+        lodEnabled={true}
+      />
+
       {/* Click handler and ghost preview */}
       <ClickHandler />
     </>
@@ -968,6 +978,9 @@ export default function VoxelCanvas({
       />
 
       {enablePerformanceStats && <PerformanceStats />}
+      
+      {/* Simulant Controls */}
+      <SimulantControls maxSimulants={10} />
       
       {/* Fly mode indicator */}
       {cameraMode === "fly" && (
