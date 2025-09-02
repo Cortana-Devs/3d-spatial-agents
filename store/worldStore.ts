@@ -142,11 +142,11 @@ export const useWorldStore = create<WorldState>()(
       gridConfig: {
         size: 50,
         cellSize: 1,
-        opacity: 0.3,
+        opacity: 0.8, // Increased opacity for better visibility
         visibility: true,
         fadeDistance: 30,
-        fadeStrength: 1,
-        rippleEnabled: true,
+        fadeStrength: 0.5, // Reduced fade strength so grid stays visible longer
+        rippleEnabled: false,
         snapToGrid: true,
         showSnapIndicators: true,
       },
@@ -630,11 +630,11 @@ export const useWorldStore = create<WorldState>()(
           gridConfig: {
             size: 50,
             cellSize: 1,
-            opacity: 0.3,
+            opacity: 0.8,
             visibility: true,
             fadeDistance: 30,
-            fadeStrength: 1,
-            rippleEnabled: true,
+            fadeStrength: 0.5,
+            rippleEnabled: false,
             snapToGrid: true,
             showSnapIndicators: true,
           },

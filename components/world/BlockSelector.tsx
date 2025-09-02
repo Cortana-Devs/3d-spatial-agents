@@ -325,57 +325,160 @@ export default function BlockSelector({ className = '' }: BlockSelectorProps) {
     worldLimits
   } = useWorldStore();
 
+  const [isExpanded, setIsExpanded] = useState(false);
   const blockTypes = useMemo(() => Object.values(BlockType), []);
   const isEmptyHandSelected = selectionMode === SelectionMode.EMPTY;
   const isAtLimit = blockCount >= worldLimits.maxBlocks;
 
-  return (
-    <div className={`floating-panel p-6 space-y-4 min-w-[280px] ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-axiom-neutral-800 dark:text-axiom-neutral-200">
-          Block Palette
-        </h3>
-        <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
-          {blockCount}/{worldLimits.maxBlocks}
-        </div>
-      </div>
+  // Handle keyboard shortcuts for block selection (1,2,3,4 keys)
+  React.useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in an input
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
 
-      {/* Block limit warning */}
-      {isAtLimit && (
-        <div className="p-3 rounded-lg bg-axiom-glow-amber/10 border border-axiom-glow-amber/30 text-axiom-glow-amber text-sm">
-          ⚠️ Block limit reached! Remove blocks to place new ones.
+      // Don't handle if modifier keys are pressed (let camera controls handle Cmd/Ctrl + C)
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      // Handle number keys for block selection
+      switch (event.key) {
+        case "0":
+          event.preventDefault();
+          setSelectionMode(SelectionMode.EMPTY);
+          break;
+        case "1":
+          event.preventDefault();
+          if (blockTypes[0]) {
+            setSelectedBlockType(blockTypes[0]);
+            setSelectionMode(SelectionMode.PLACE);
+          }
+          break;
+        case "2":
+          event.preventDefault();
+          if (blockTypes[1]) {
+            setSelectedBlockType(blockTypes[1]);
+            setSelectionMode(SelectionMode.PLACE);
+          }
+          break;
+        case "3":
+          event.preventDefault();
+          if (blockTypes[2]) {
+            setSelectedBlockType(blockTypes[2]);
+            setSelectionMode(SelectionMode.PLACE);
+          }
+          break;
+        case "4":
+          event.preventDefault();
+          if (blockTypes[3]) {
+            setSelectedBlockType(blockTypes[3]);
+            setSelectionMode(SelectionMode.PLACE);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [blockTypes, setSelectedBlockType, setSelectionMode]);
+
+  // Get current selection info for collapsed view
+  const currentSelection = isEmptyHandSelected 
+    ? { name: "Select Tool", icon: "🔍", shortcut: "0" }
+    : { 
+        name: BLOCK_DEFINITIONS[selectedBlockType].displayName, 
+        icon: "🧱", 
+        shortcut: (Object.values(BlockType).indexOf(selectedBlockType) + 1).toString() 
+      };
+
+  return (
+    <div className={`floating-panel ${isExpanded ? 'p-6 space-y-4 min-w-[280px]' : 'p-3'} ${className}`}>
+      {/* Collapsed Header */}
+      {!isExpanded && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="flex items-center gap-3 w-full text-left hover:bg-white/10 rounded-lg p-2 transition-colors"
+        >
+          <div className="text-lg">{currentSelection.icon}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-axiom-neutral-800 dark:text-axiom-neutral-200 truncate">
+              {currentSelection.name}
+            </div>
+            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
+              Press {currentSelection.shortcut} • Click to expand
+            </div>
+          </div>
+          <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
+            {blockCount}/{worldLimits.maxBlocks}
+          </div>
+        </button>
+      )}
+
+      {/* Expanded Header */}
+      {isExpanded && (
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-axiom-neutral-800 dark:text-axiom-neutral-200">
+            Block Palette
+          </h3>
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
+              {blockCount}/{worldLimits.maxBlocks}
+            </div>
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="text-axiom-neutral-500 hover:text-axiom-neutral-700 dark:hover:text-axiom-neutral-300 p-1 rounded"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Tools Section */}
-      <div className="space-y-3">
-        {/* Empty Hand Tool */}
-        <EmptyHandTool
-          isSelected={isEmptyHandSelected}
-          onSelect={() => setSelectionMode(SelectionMode.EMPTY)}
-        />
+      {/* Expanded Content */}
+      {isExpanded && (
+        <>
+          {/* Block limit warning */}
+          {isAtLimit && (
+            <div className="p-3 rounded-lg bg-axiom-glow-amber/10 border border-axiom-glow-amber/30 text-axiom-glow-amber text-sm">
+              ⚠️ Block limit reached! Remove blocks to place new ones.
+            </div>
+          )}
 
-        {/* Block Types */}
-        {blockTypes.map((type, index) => (
-          <BlockSelectorItem
-            key={type}
-            type={type}
-            isSelected={selectedBlockType === type && selectionMode === SelectionMode.PLACE}
-            onSelect={() => setSelectedBlockType(type)}
-            keyboardShortcut={(index + 1).toString()}
-          />
-        ))}
-      </div>
+          {/* Tools Section */}
+          <div className="space-y-3">
+            {/* Empty Hand Tool */}
+            <EmptyHandTool
+              isSelected={isEmptyHandSelected}
+              onSelect={() => setSelectionMode(SelectionMode.EMPTY)}
+            />
 
-      {/* Footer Instructions */}
-      <div className="pt-4 border-t border-axiom-neutral-200 dark:border-axiom-neutral-700">
-        <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500 space-y-1">
-          <div>• Use keyboard shortcuts for quick selection</div>
-          <div>• Hover for 3D preview animations</div>
-          <div>• Selected tool shows enhanced glow effects</div>
-        </div>
-      </div>
+            {/* Block Types */}
+            {blockTypes.map((type, index) => (
+              <BlockSelectorItem
+                key={type}
+                type={type}
+                isSelected={selectedBlockType === type && selectionMode === SelectionMode.PLACE}
+                onSelect={() => setSelectedBlockType(type)}
+                keyboardShortcut={(index + 1).toString()}
+              />
+            ))}
+          </div>
+
+          {/* Footer Instructions */}
+          <div className="pt-4 border-t border-axiom-neutral-200 dark:border-axiom-neutral-700">
+            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500 space-y-1">
+              <div>• Use keyboard shortcuts for quick selection</div>
+              <div>• Hover for 3D preview animations</div>
+              <div>• Selected tool shows enhanced glow effects</div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

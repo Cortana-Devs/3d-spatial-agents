@@ -8,7 +8,6 @@ import React, {
   useEffect,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
 import {
   Vector3,
   Vector2,
@@ -31,8 +30,11 @@ import {
   BlockType,
   SelectionMode,
   BLOCK_DEFINITIONS,
+  CameraMode,
 } from "../../types";
-import GridSystem, { useGridConfig } from "./GridSystem";
+import GridSystem from "./GridSystem";
+import CameraController, { CAMERA_PRESETS } from "./CameraController";
+import CameraControls from "./CameraControls";
 
 // LOD Configuration for performance optimization
 interface LODConfig {
@@ -494,38 +496,43 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
 function SceneLighting() {
   return (
     <>
-      {/* Ambient light for overall illumination */}
-      <ambientLight intensity={0.4} color="#f0f0f0" />
+      {/* Ambient light for overall illumination - increased for better visibility */}
+      <ambientLight intensity={0.6} color="#f0f0f0" />
 
-      {/* Main directional light (sun) */}
+      {/* Main directional light (sun) - positioned to avoid complete darkness */}
       <directionalLight
-        position={[10, 10, 5]}
-        intensity={1}
+        position={[10, 15, 10]}
+        intensity={0.8}
         color="#ffffff"
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+        shadow-camera-left={-25}
+        shadow-camera-right={25}
+        shadow-camera-top={25}
+        shadow-camera-bottom={-25}
       />
 
-      {/* Fill light for softer shadows */}
+      {/* Fill light for softer shadows - reduced intensity */}
       <directionalLight
-        position={[-5, 5, -5]}
-        intensity={0.3}
+        position={[-5, 8, -5]}
+        intensity={0.2}
         color="#4CAF50"
       />
 
-      {/* Accent light with Axiom glow colors */}
+      {/* Accent light with Axiom glow colors - reduced intensity */}
       <pointLight
-        position={[0, 5, 0]}
-        intensity={0.5}
+        position={[0, 10, 0]}
+        intensity={0.3}
         color="#00D4FF"
-        distance={20}
-        decay={2}
+        distance={30}
+        decay={1}
+      />
+
+      {/* Additional hemisphere light for better overall illumination */}
+      <hemisphereLight
+        args={["#87CEEB", "#362d1a", 0.4]}
       />
     </>
   );
@@ -715,9 +722,14 @@ function ClickHandler() {
 }
 
 // Main scene content with optimized rendering
-function SceneContent() {
-  const { blockMap, removeBlock, selectionMode } = useWorldStore();
-  const { config: gridConfig } = useGridConfig();
+function SceneContent({
+  cameraMode,
+  followTarget,
+}: {
+  cameraMode: CameraMode;
+  followTarget?: string;
+}) {
+  const { blockMap, removeBlock, selectionMode, gridConfig } = useWorldStore();
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [hoveredBlockId] = useState<string | null>(null);
   const [useInstancedRendering, setUseInstancedRendering] = useState(true);
@@ -763,6 +775,14 @@ function SceneContent() {
   return (
     <>
       <SceneLighting />
+
+      {/* Multi-modal camera controller */}
+      <CameraController
+        mode={cameraMode}
+        target={followTarget}
+        enablePresets={true}
+        enableDoubleClickFocus={true}
+      />
 
       {/* Optimized block rendering */}
       {useInstancedRendering ? (
@@ -842,10 +862,48 @@ interface VoxelCanvasProps {
 export default function VoxelCanvas({
   className = "",
   enablePerformanceStats = false,
-  gridConfig,
 }: VoxelCanvasProps) {
-  const { blockMap } = useWorldStore();
+  const { blockMap, activeCamera, setCameraMode } = useWorldStore();
   const blockCount = blockMap.size;
+  const [cameraMode, setCameraModeLocal] = useState<CameraMode>(
+    activeCamera as CameraMode,
+  );
+  const [followTarget] = useState<string | undefined>();
+
+  // Camera mode change handler
+  const handleCameraModeChange = useCallback(
+    (mode: CameraMode) => {
+      setCameraModeLocal(mode);
+      setCameraMode(mode);
+    },
+    [setCameraMode],
+  );
+
+  // Camera preset application handler
+  const handlePresetApply = useCallback(
+    (presetName: keyof typeof CAMERA_PRESETS) => {
+      // This will be handled by the CameraController component
+      console.log("Applying preset:", presetName);
+    },
+    [],
+  );
+
+  // Block focus handler for double-click functionality
+  const handleFocusOnBlock = useCallback(
+    (blockId: string) => {
+      const block = Array.from(blockMap.values()).find((b) => b.id === blockId);
+      if (block) {
+        const blockPosition = new Vector3(
+          block.position.x,
+          block.position.y,
+          block.position.z,
+        );
+        console.log("Focusing on block at:", blockPosition);
+        // The actual focusing will be handled by the CameraController
+      }
+    },
+    [blockMap],
+  );
 
   // Dynamic performance settings based on block count
   const performanceSettings = useMemo(() => {
@@ -898,29 +956,31 @@ export default function VoxelCanvas({
         performance={performanceSettings.performance}
         frameloop="always" // Continuous rendering for smooth animations
       >
-        {/* Orbit controls with optimized settings */}
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          dampingFactor={0.05}
-          enableDamping={true}
-          rotateSpeed={0.5}
-          zoomSpeed={0.8}
-          panSpeed={0.8}
-          maxPolarAngle={Math.PI * 0.75}
-          minDistance={3}
-          maxDistance={100}
-          target={[0, 0, 0]}
-          onChange={() => {
-            // Trigger re-render on camera change for frustum culling
-          }}
-        />
-
-        <SceneContent />
+        <SceneContent cameraMode={cameraMode} followTarget={followTarget} />
       </Canvas>
 
+      {/* Camera controls UI */}
+      <CameraControls
+        currentMode={cameraMode}
+        onModeChange={handleCameraModeChange}
+        onPresetApply={handlePresetApply}
+        onFocusOnBlock={handleFocusOnBlock}
+      />
+
       {enablePerformanceStats && <PerformanceStats />}
+      
+      {/* Fly mode indicator */}
+      {cameraMode === "fly" && (
+        <div className="absolute top-4 left-4 bg-blue-500/80 text-white px-3 py-2 rounded-lg text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            Fly Mode Active
+          </div>
+          <div className="text-xs mt-1 opacity-80">
+            WASD to move, Shift/Space for up/down, Click to look around
+          </div>
+        </div>
+      )}
     </div>
   );
 }

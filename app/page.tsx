@@ -25,28 +25,9 @@ const VoxelCanvas = dynamic(() => import('../components/world/VoxelCanvas'), {
 export default function Home() {
   const { setSelectedBlockType } = useWorldStore();
 
-  // Keyboard shortcuts for block selection
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      switch (event.key) {
-        case '0':
-          useWorldStore.getState().setSelectionMode(SelectionMode.EMPTY);
-          break;
-        case '1':
-          setSelectedBlockType(BlockType.STONE);
-          break;
-        case '2':
-          setSelectedBlockType(BlockType.LEAF);
-          break;
-        case '3':
-          setSelectedBlockType(BlockType.WOOD);
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [setSelectedBlockType]);
+  // Note: Keyboard shortcuts are now handled by individual components
+  // BlockSelector handles 0-4 for block selection
+  // CameraControls handles Cmd/Ctrl+C for camera mode cycling
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-axiom-neutral-50 to-axiom-neutral-100 dark:from-axiom-neutral-900 dark:to-axiom-neutral-950">
@@ -76,7 +57,7 @@ export default function Home() {
       </main>
 
       {/* Left Panel - Block Selector */}
-      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-10">
+      <div className="absolute left-6 bottom-6 z-10">
         <BlockSelector />
       </div>
 
@@ -85,28 +66,28 @@ export default function Home() {
         <WorldInfo />
       </div>
 
-      {/* Bottom Instructions */}
+      {/* Bottom Instructions - Camera and Navigation Help */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
         <div className="floating-panel px-6 py-3">
           <div className="flex items-center space-x-6 text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">0</kbd>
-              <span>Select</span>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">0-4</kbd>
+              <span>Block Selection</span>
             </div>
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">1</kbd>
-              <span>Stone</span>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">⌘C</kbd>
+              <span>Camera Modes</span>
             </div>
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">2</kbd>
-              <span>Leaf</span>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">G</kbd>
+              <span>Toggle Grid</span>
             </div>
             <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">3</kbd>
-              <span>Wood</span>
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">WASD</kbd>
+              <span>Fly Mode</span>
             </div>
             <div className="w-px h-4 bg-axiom-neutral-300 dark:bg-axiom-neutral-600"></div>
-            <div>Select mode: Click to inspect • Place mode: Click to place, Right click to remove</div>
+            <div>Click canvas in fly mode to lock cursor • Drag to orbit • Scroll to zoom</div>
           </div>
         </div>
       </div>

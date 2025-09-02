@@ -1,9 +1,8 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { Canvas } from "@react-three/fiber";
+import { render } from "@testing-library/react";
 import { Vector3 } from "three";
-import GridSystem, { GridUtils, useGridConfig } from "../GridSystem";
+import { GridUtils, useGridConfig } from "../GridSystem";
 import { useWorldStore } from "../../../store/worldStore";
 
 // Mock the world store
@@ -32,7 +31,7 @@ vi.mock("@react-three/fiber", async () => {
 });
 
 describe("GridSystem", () => {
-  const mockUseWorldStore = useWorldStore as any;
+  const mockUseWorldStore = useWorldStore as jest.MockedFunction<typeof useWorldStore>;
 
   beforeEach(() => {
     mockUseWorldStore.mockReturnValue({
@@ -140,8 +139,8 @@ describe("GridUtils", () => {
 
 describe("useGridConfig", () => {
   it("provides default grid configuration", () => {
-    let config: any;
-    let updateConfig: any;
+    let config: ReturnType<typeof useGridConfig>["config"];
+    let updateConfig: ReturnType<typeof useGridConfig>["updateConfig"];
 
     function TestComponent() {
       const result = useGridConfig();

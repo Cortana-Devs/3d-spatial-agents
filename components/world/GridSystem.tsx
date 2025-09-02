@@ -12,10 +12,6 @@ import {
   Color,
   DoubleSide,
   AdditiveBlending,
-  BufferGeometry,
-  BufferAttribute,
-  Points,
-  PointsMaterial,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
 
@@ -40,7 +36,7 @@ const DEFAULT_GRID_CONFIG: GridConfig = {
   visibility: true,
   fadeDistance: 30,
   fadeStrength: 1,
-  rippleEnabled: true,
+  rippleEnabled: false, // Disabled by default to reduce distraction
   snapToGrid: true,
   showSnapIndicators: true,
 };
@@ -50,7 +46,6 @@ const gridVertexShader = `
   uniform float time;
   uniform float fadeDistance;
   uniform float fadeStrength;
-  uniform vec3 cameraPosition;
 
   varying vec2 vUv;
   varying float vDistance;
@@ -96,20 +91,20 @@ const gridFragmentShader = `
     float majorLine = min(majorGrid.x, majorGrid.y);
     float majorGridStrength = 1.0 - min(majorLine, 1.0);
 
-    // Combine grid lines
-    float finalGrid = max(gridStrength * 0.5, majorGridStrength);
+    // Combine grid lines - increased visibility
+    float finalGrid = max(gridStrength * 0.8, majorGridStrength);
 
     // Add subtle animation
     float pulse = sin(time * 2.0) * 0.1 + 0.9;
     finalGrid *= pulse;
 
-    // Add ripple effect
+    // Add subtle ripple effect (much more gentle)
     if (rippleStrength > 0.0) {
       float rippleDistance = distance(vUv, rippleCenter);
-      float ripple = sin(rippleDistance * 20.0 - rippleTime * 10.0) *
-                    exp(-rippleDistance * 5.0) *
-                    exp(-rippleTime * 2.0);
-      finalGrid += ripple * rippleStrength * 0.3;
+      float ripple = sin(rippleDistance * 10.0 - rippleTime * 5.0) *
+                    exp(-rippleDistance * 8.0) *
+                    exp(-rippleTime * 3.0);
+      finalGrid += ripple * rippleStrength * 0.1; // Reduced from 0.3 to 0.1
     }
 
     // Mix colors based on intensity
@@ -210,7 +205,7 @@ export default function GridSystem({
         opacity: { value: gridConfig.opacity },
         fadeDistance: { value: gridConfig.fadeDistance },
         fadeStrength: { value: gridConfig.fadeStrength },
-        gridColor: { value: new Color("#666666") },
+        gridColor: { value: new Color("#888888") }, // Lighter gray for better visibility
         accentColor: { value: new Color("#00D4FF") },
         cellSize: { value: gridConfig.size },
         cameraPosition: { value: camera.position },
@@ -343,12 +338,12 @@ export default function GridSystem({
         const uvX = (intersectionPoint.x + size / 2) / size;
         const uvZ = (intersectionPoint.z + size / 2) / size;
 
-        // Create ripple effect
+        // Create subtle ripple effect
         const newRipple: RippleEffect = {
           center: new Vector2(uvX, uvZ),
           startTime: performance.now() / 1000,
-          duration: 2.0,
-          strength: 1.0,
+          duration: 1.5, // Reduced duration
+          strength: 0.5, // Reduced strength
         };
 
         setRipples((prev) => [...prev, newRipple]);
@@ -378,10 +373,26 @@ export default function GridSystem({
     }
   }, []);
 
-  if (!gridConfig.visibility) return null;
+  // Debug logging
+  React.useEffect(() => {
+    console.log("Grid Config:", gridConfig);
+  }, [gridConfig]);
+
+  if (!gridConfig.visibility) {
+    console.log("Grid not visible - visibility is false");
+    return null;
+  }
+
+  console.log("Rendering grid with config:", gridConfig);
 
   return (
     <group>
+      {/* Debug helper - visible cube to confirm grid system is rendering */}
+      <mesh position={[0, 0.5, 0]}>
+        <boxGeometry args={[0.1, 0.1, 0.1]} />
+        <meshBasicMaterial color="red" />
+      </mesh>
+
       {/* Main grid */}
       <mesh
         ref={gridRef}
@@ -390,6 +401,20 @@ export default function GridSystem({
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, -0.001, 0]} // Slightly below y=0 to avoid z-fighting
       />
+
+      {/* Fallback simple grid using basic material */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0, 0]}
+      >
+        <planeGeometry args={[50, 50]} />
+        <meshBasicMaterial 
+          color="#888888" 
+          transparent 
+          opacity={0.2} 
+          wireframe={true}
+        />
+      </mesh>
 
       {/* Snap indicator */}
       <SnapIndicator
