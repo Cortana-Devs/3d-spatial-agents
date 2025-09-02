@@ -717,6 +717,7 @@ function ClickHandler() {
 // Main scene content with optimized rendering
 function SceneContent() {
   const { blockMap, removeBlock, selectionMode } = useWorldStore();
+  const { config: gridConfig } = useGridConfig();
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [hoveredBlockId] = useState<string | null>(null);
   const [useInstancedRendering, setUseInstancedRendering] = useState(true);
