@@ -1,10 +1,16 @@
-import { Vector3 } from 'three';
+import { Vector3 } from "three";
 
 // Block Type Enum - Enhanced with additional properties
 export enum BlockType {
-  STONE = 'stone',
-  LEAF = 'leaf',
-  WOOD = 'wood'
+  STONE = "stone",
+  LEAF = "leaf",
+  WOOD = "wood",
+}
+
+// Selection Mode Enum - for UI interaction modes
+export enum SelectionMode {
+  EMPTY = "empty", // Empty hand - for selecting/inspecting blocks
+  PLACE = "place", // Placement mode - for placing blocks
 }
 
 // Block Material Properties for 3D rendering
@@ -18,7 +24,7 @@ export interface BlockMaterialProperties {
   textureUrl?: string;
   normalMapUrl?: string;
   description: string;
-  category: 'solid' | 'organic' | 'natural';
+  category: "solid" | "organic" | "natural";
 }
 
 // Enhanced Block Definition with all properties
@@ -40,7 +46,7 @@ export interface BlockMetadata {
   durability?: number; // Current durability (0-1)
   tags?: string[]; // Custom tags for organization
   version?: number; // For future migration support
-  customProperties?: Record<string, any>; // Extensible properties
+  customProperties?: Record<string, unknown>; // Extensible properties
 }
 
 // Enhanced Block Interface
@@ -56,58 +62,58 @@ export interface Block {
 export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
   [BlockType.STONE]: {
     type: BlockType.STONE,
-    displayName: 'Stone Block',
-    color: '#666666',
+    displayName: "Stone Block",
+    color: "#666666",
     roughness: 0.8,
     metalness: 0.1,
-    textureUrl: '/Stone_texture.webp', // Using the provided texture
-    description: 'Solid foundation material with natural stone texture',
-    category: 'solid',
+    textureUrl: "/Stone_texture.webp", // Using the provided texture
+    description: "Solid foundation material with natural stone texture",
+    category: "solid",
     durability: 10,
     stackable: true,
     buildable: true,
-    glowable: false
+    glowable: false,
   },
   [BlockType.LEAF]: {
     type: BlockType.LEAF,
-    displayName: 'Leaf Block',
-    color: '#4CAF50',
+    displayName: "Leaf Block",
+    color: "#4CAF50",
     roughness: 0.9,
     metalness: 0,
     transparency: 0.1,
-    emissive: '#2E7D32',
+    emissive: "#2E7D32",
     emissiveIntensity: 0.1,
-    description: 'Organic living material with subtle glow',
-    category: 'organic',
+    description: "Organic living material with subtle glow",
+    category: "organic",
     durability: 3,
     stackable: true,
     buildable: true,
-    glowable: true
+    glowable: true,
   },
   [BlockType.WOOD]: {
     type: BlockType.WOOD,
-    displayName: 'Wood Block',
-    color: '#8D6E63',
+    displayName: "Wood Block",
+    color: "#8D6E63",
     roughness: 0.7,
     metalness: 0,
-    description: 'Natural building material with warm tones',
-    category: 'natural',
+    description: "Natural building material with warm tones",
+    category: "natural",
     durability: 6,
     stackable: true,
     buildable: true,
-    glowable: false
-  }
+    glowable: false,
+  },
 };
 
 // Block Validation Error Types
 export enum BlockValidationError {
-  INVALID_TYPE = 'INVALID_TYPE',
-  INVALID_POSITION = 'INVALID_POSITION',
-  POSITION_OCCUPIED = 'POSITION_OCCUPIED',
-  WORLD_LIMIT_REACHED = 'WORLD_LIMIT_REACHED',
-  INVALID_METADATA = 'INVALID_METADATA',
-  INVALID_COLOR = 'INVALID_COLOR',
-  MISSING_REQUIRED_FIELDS = 'MISSING_REQUIRED_FIELDS'
+  INVALID_TYPE = "INVALID_TYPE",
+  INVALID_POSITION = "INVALID_POSITION",
+  POSITION_OCCUPIED = "POSITION_OCCUPIED",
+  WORLD_LIMIT_REACHED = "WORLD_LIMIT_REACHED",
+  INVALID_METADATA = "INVALID_METADATA",
+  INVALID_COLOR = "INVALID_COLOR",
+  MISSING_REQUIRED_FIELDS = "MISSING_REQUIRED_FIELDS",
 }
 
 // Validation Result Interface
@@ -174,8 +180,10 @@ export function getAvailableBlockTypes(): BlockType[] {
 }
 
 // Helper function to get block types by category
-export function getBlockTypesByCategory(category: 'solid' | 'organic' | 'natural'): BlockType[] {
-  return ALL_BLOCK_TYPES.filter(type => 
-    BLOCK_DEFINITIONS[type].category === category
+export function getBlockTypesByCategory(
+  category: "solid" | "organic" | "natural",
+): BlockType[] {
+  return ALL_BLOCK_TYPES.filter(
+    (type) => BLOCK_DEFINITIONS[type].category === category,
   );
 }

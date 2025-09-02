@@ -1,16 +1,14 @@
-import { Vector3 } from 'three';
+import { Vector3 } from "three";
 import {
   Block,
-  BlockType,
   BlockValidationError,
   BlockValidationResult,
   CreateBlockParams,
   UpdateBlockParams,
   PositionConstraints,
   BlockMetadata,
-  BLOCK_DEFINITIONS,
-  isValidBlockType
-} from '../types/blocks';
+  isValidBlockType,
+} from "../types/blocks";
 
 /**
  * Comprehensive block validation system
@@ -23,7 +21,7 @@ export class BlockValidator {
     minY: -1000,
     maxY: 1000,
     minZ: -1000,
-    maxZ: 1000
+    maxZ: 1000,
   };
 
   /**
@@ -33,7 +31,7 @@ export class BlockValidator {
     params: CreateBlockParams,
     existingBlocks: Map<string, Block>,
     worldLimits: { maxBlocks: number },
-    positionConstraints: PositionConstraints = BlockValidator.DEFAULT_POSITION_CONSTRAINTS
+    positionConstraints: PositionConstraints = BlockValidator.DEFAULT_POSITION_CONSTRAINTS,
   ): BlockValidationResult {
     const errors: BlockValidationError[] = [];
     const warnings: string[] = [];
@@ -45,7 +43,10 @@ export class BlockValidator {
 
     // Validate position
     const position = this.normalizePosition(params.position);
-    const positionValidation = this.validatePosition(position, positionConstraints);
+    const positionValidation = this.validatePosition(
+      position,
+      positionConstraints,
+    );
     if (!positionValidation.isValid) {
       errors.push(...positionValidation.errors);
     }
@@ -83,7 +84,7 @@ export class BlockValidator {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings: warnings.length > 0 ? warnings : undefined
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
@@ -92,7 +93,7 @@ export class BlockValidator {
    */
   static validateUpdateBlock(
     params: UpdateBlockParams,
-    existingBlock: Block | undefined
+    existingBlock: Block | undefined,
   ): BlockValidationResult {
     const errors: BlockValidationError[] = [];
     const warnings: string[] = [];
@@ -125,7 +126,7 @@ export class BlockValidator {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings: warnings.length > 0 ? warnings : undefined
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
@@ -166,7 +167,7 @@ export class BlockValidator {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings: warnings.length > 0 ? warnings : undefined
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
@@ -175,12 +176,16 @@ export class BlockValidator {
    */
   private static validatePosition(
     position: { x: number; y: number; z: number },
-    constraints: PositionConstraints = BlockValidator.DEFAULT_POSITION_CONSTRAINTS
+    constraints: PositionConstraints = BlockValidator.DEFAULT_POSITION_CONSTRAINTS,
   ): BlockValidationResult {
     const errors: BlockValidationError[] = [];
 
     // Check if position coordinates are valid numbers
-    if (!Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(position.z)) {
+    if (
+      !Number.isFinite(position.x) ||
+      !Number.isFinite(position.y) ||
+      !Number.isFinite(position.z)
+    ) {
       errors.push(BlockValidationError.INVALID_POSITION);
     }
 
@@ -206,14 +211,16 @@ export class BlockValidator {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
   /**
    * Validates block metadata
    */
-  private static validateMetadata(metadata: Partial<BlockMetadata>): BlockValidationResult {
+  private static validateMetadata(
+    metadata: Partial<BlockMetadata>,
+  ): BlockValidationResult {
     const errors: BlockValidationError[] = [];
     const warnings: string[] = [];
 
@@ -232,14 +239,22 @@ export class BlockValidator {
 
     // Validate glow intensity
     if (metadata.glow !== undefined) {
-      if (!Number.isFinite(metadata.glow) || metadata.glow < 0 || metadata.glow > 1) {
+      if (
+        !Number.isFinite(metadata.glow) ||
+        metadata.glow < 0 ||
+        metadata.glow > 1
+      ) {
         errors.push(BlockValidationError.INVALID_METADATA);
       }
     }
 
     // Validate durability
     if (metadata.durability !== undefined) {
-      if (!Number.isFinite(metadata.durability) || metadata.durability < 0 || metadata.durability > 1) {
+      if (
+        !Number.isFinite(metadata.durability) ||
+        metadata.durability < 0 ||
+        metadata.durability > 1
+      ) {
         errors.push(BlockValidationError.INVALID_METADATA);
       }
     }
@@ -257,18 +272,21 @@ export class BlockValidator {
         errors.push(BlockValidationError.INVALID_METADATA);
       } else {
         // Check for valid tag format
-        const invalidTags = metadata.tags.filter(tag => 
-          typeof tag !== 'string' || tag.trim().length === 0
+        const invalidTags = metadata.tags.filter(
+          (tag) => typeof tag !== "string" || tag.trim().length === 0,
         );
         if (invalidTags.length > 0) {
-          warnings.push(`Invalid tags found: ${invalidTags.join(', ')}`);
+          warnings.push(`Invalid tags found: ${invalidTags.join(", ")}`);
         }
       }
     }
 
     // Validate createdBy
     if (metadata.createdBy !== undefined) {
-      if (typeof metadata.createdBy !== 'string' || metadata.createdBy.trim().length === 0) {
+      if (
+        typeof metadata.createdBy !== "string" ||
+        metadata.createdBy.trim().length === 0
+      ) {
         errors.push(BlockValidationError.INVALID_METADATA);
       }
     }
@@ -276,7 +294,7 @@ export class BlockValidator {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings: warnings.length > 0 ? warnings : undefined
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
@@ -291,7 +309,8 @@ export class BlockValidator {
     }
 
     // RGB/RGBA validation
-    const rgbRegex = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)$/;
+    const rgbRegex =
+      /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)$/;
     const rgbMatch = color.match(rgbRegex);
     if (rgbMatch) {
       const [, r, g, b, a] = rgbMatch;
@@ -299,15 +318,22 @@ export class BlockValidator {
       const green = parseInt(g);
       const blue = parseInt(b);
       const alpha = a ? parseFloat(a) : 1;
-      
-      return red >= 0 && red <= 255 &&
-             green >= 0 && green <= 255 &&
-             blue >= 0 && blue <= 255 &&
-             alpha >= 0 && alpha <= 1;
+
+      return (
+        red >= 0 &&
+        red <= 255 &&
+        green >= 0 &&
+        green <= 255 &&
+        blue >= 0 &&
+        blue <= 255 &&
+        alpha >= 0 &&
+        alpha <= 1
+      );
     }
 
     // HSL/HSLA validation
-    const hslRegex = /^hsla?\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*(?:,\s*([\d.]+))?\s*\)$/;
+    const hslRegex =
+      /^hsla?\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*(?:,\s*([\d.]+))?\s*\)$/;
     const hslMatch = color.match(hslRegex);
     if (hslMatch) {
       const [, h, s, l, a] = hslMatch;
@@ -315,45 +341,76 @@ export class BlockValidator {
       const saturation = parseInt(s);
       const lightness = parseInt(l);
       const alpha = a ? parseFloat(a) : 1;
-      
-      return hue >= 0 && hue <= 360 &&
-             saturation >= 0 && saturation <= 100 &&
-             lightness >= 0 && lightness <= 100 &&
-             alpha >= 0 && alpha <= 1;
+
+      return (
+        hue >= 0 &&
+        hue <= 360 &&
+        saturation >= 0 &&
+        saturation <= 100 &&
+        lightness >= 0 &&
+        lightness <= 100 &&
+        alpha >= 0 &&
+        alpha <= 1
+      );
     }
 
     // Named colors (basic set)
     const namedColors = [
-      'red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown',
-      'black', 'white', 'gray', 'grey', 'cyan', 'magenta', 'lime', 'maroon',
-      'navy', 'olive', 'teal', 'silver', 'aqua', 'fuchsia'
+      "red",
+      "green",
+      "blue",
+      "yellow",
+      "orange",
+      "purple",
+      "pink",
+      "brown",
+      "black",
+      "white",
+      "gray",
+      "grey",
+      "cyan",
+      "magenta",
+      "lime",
+      "maroon",
+      "navy",
+      "olive",
+      "teal",
+      "silver",
+      "aqua",
+      "fuchsia",
     ];
-    
+
     return namedColors.includes(color.toLowerCase());
   }
 
   /**
    * Normalizes position from Vector3 or position object
    */
-  private static normalizePosition(position: Vector3 | { x: number; y: number; z: number }): { x: number; y: number; z: number } {
+  private static normalizePosition(
+    position: Vector3 | { x: number; y: number; z: number },
+  ): { x: number; y: number; z: number } {
     if (position instanceof Vector3) {
       return {
         x: Math.round(position.x),
         y: Math.round(position.y),
-        z: Math.round(position.z)
+        z: Math.round(position.z),
       };
     }
     return {
       x: Math.round(position.x),
       y: Math.round(position.y),
-      z: Math.round(position.z)
+      z: Math.round(position.z),
     };
   }
 
   /**
    * Converts position to string key for spatial hash map
    */
-  private static positionToKey(position: { x: number; y: number; z: number }): string {
+  private static positionToKey(position: {
+    x: number;
+    y: number;
+    z: number;
+  }): string {
     return `${position.x},${position.y},${position.z}`;
   }
 }
@@ -372,14 +429,19 @@ export function validateBlockType(type: string): boolean {
 /**
  * Quick validation for block position
  */
-export function validateBlockPosition(position: Vector3 | { x: number; y: number; z: number }): boolean {
-  const normalized = position instanceof Vector3 
-    ? { x: position.x, y: position.y, z: position.z }
-    : position;
-    
-  return Number.isFinite(normalized.x) && 
-         Number.isFinite(normalized.y) && 
-         Number.isFinite(normalized.z);
+export function validateBlockPosition(
+  position: Vector3 | { x: number; y: number; z: number },
+): boolean {
+  const normalized =
+    position instanceof Vector3
+      ? { x: position.x, y: position.y, z: position.z }
+      : position;
+
+  return (
+    Number.isFinite(normalized.x) &&
+    Number.isFinite(normalized.y) &&
+    Number.isFinite(normalized.z)
+  );
 }
 
 /**
@@ -398,7 +460,7 @@ export function createDefaultMetadata(createdBy: string): BlockMetadata {
     createdAt: now,
     modifiedAt: now,
     createdBy,
-    version: 1
+    version: 1,
   };
 }
 
@@ -410,9 +472,11 @@ export function canModifyBlock(block: Block, userId: string): boolean {
   // 1. User created the block
   // 2. User is 'human' (admin privileges)
   // 3. Block was created by 'human' and user is also 'human'
-  return block.metadata.createdBy === userId ||
-         userId === 'human' ||
-         (block.metadata.createdBy === 'human' && userId === 'human');
+  return (
+    block.metadata.createdBy === userId ||
+    userId === "human" ||
+    (block.metadata.createdBy === "human" && userId === "human")
+  );
 }
 
 /**
@@ -421,20 +485,20 @@ export function canModifyBlock(block: Block, userId: string): boolean {
 export function getValidationErrorMessage(error: BlockValidationError): string {
   switch (error) {
     case BlockValidationError.INVALID_TYPE:
-      return 'Invalid block type specified';
+      return "Invalid block type specified";
     case BlockValidationError.INVALID_POSITION:
-      return 'Invalid block position coordinates';
+      return "Invalid block position coordinates";
     case BlockValidationError.POSITION_OCCUPIED:
-      return 'Position is already occupied by another block';
+      return "Position is already occupied by another block";
     case BlockValidationError.WORLD_LIMIT_REACHED:
-      return 'World block limit has been reached';
+      return "World block limit has been reached";
     case BlockValidationError.INVALID_METADATA:
-      return 'Invalid block metadata provided';
+      return "Invalid block metadata provided";
     case BlockValidationError.INVALID_COLOR:
-      return 'Invalid color format specified';
+      return "Invalid color format specified";
     case BlockValidationError.MISSING_REQUIRED_FIELDS:
-      return 'Required fields are missing';
+      return "Required fields are missing";
     default:
-      return 'Unknown validation error';
+      return "Unknown validation error";
   }
 }

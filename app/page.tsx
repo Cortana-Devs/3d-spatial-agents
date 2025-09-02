@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useWorldStore } from '../store/worldStore';
-import { BlockType } from '../types';
+import { BlockType, SelectionMode } from '../types';
 import BlockSelector from '../components/world/BlockSelector';
 import WorldInfo from '../components/world/WorldInfo';
 
@@ -29,6 +29,9 @@ export default function Home() {
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       switch (event.key) {
+        case '0':
+          useWorldStore.getState().setSelectionMode(SelectionMode.EMPTY);
+          break;
         case '1':
           setSelectedBlockType(BlockType.STONE);
           break;
@@ -58,7 +61,7 @@ export default function Home() {
               Living Metaverse Editor
             </p>
           </div>
-          
+
           <div className="floating-panel px-4 py-2">
             <div className="text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
               Click to place blocks • Drag to orbit • Scroll to zoom
@@ -87,6 +90,10 @@ export default function Home() {
         <div className="floating-panel px-6 py-3">
           <div className="flex items-center space-x-6 text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
             <div className="flex items-center space-x-2">
+              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">0</kbd>
+              <span>Select</span>
+            </div>
+            <div className="flex items-center space-x-2">
               <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">1</kbd>
               <span>Stone</span>
             </div>
@@ -99,7 +106,7 @@ export default function Home() {
               <span>Wood</span>
             </div>
             <div className="w-px h-4 bg-axiom-neutral-300 dark:bg-axiom-neutral-600"></div>
-            <div>Left click to place • Right click to remove</div>
+            <div>Select mode: Click to inspect • Place mode: Click to place, Right click to remove</div>
           </div>
         </div>
       </div>

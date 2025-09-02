@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserClient } from "@supabase/ssr";
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -50,7 +49,7 @@ export type Database = {
           color: string;
           created_at: string;
           created_by: string;
-          metadata: any;
+          metadata: Record<string, unknown>;
         };
         Insert: {
           id?: string;
@@ -61,12 +60,12 @@ export type Database = {
           block_type: string;
           color: string;
           created_by: string;
-          metadata?: any;
+          metadata?: Record<string, unknown>;
         };
         Update: {
           block_type?: string;
           color?: string;
-          metadata?: any;
+          metadata?: Record<string, unknown>;
         };
       };
       simulants: {
@@ -81,7 +80,7 @@ export type Database = {
           gemini_session_id: string | null;
           created_at: string;
           last_active: string;
-          personality: any;
+          personality: Record<string, unknown>;
           capabilities: string[];
         };
         Insert: {
@@ -93,7 +92,7 @@ export type Database = {
           position_z?: number;
           status?: string;
           gemini_session_id?: string;
-          personality?: any;
+          personality?: Record<string, unknown>;
           capabilities?: string[];
         };
         Update: {
@@ -104,7 +103,7 @@ export type Database = {
           status?: string;
           gemini_session_id?: string;
           last_active?: string;
-          personality?: any;
+          personality?: Record<string, unknown>;
           capabilities?: string[];
         };
       };
@@ -117,7 +116,7 @@ export type Database = {
           content: string;
           message_type: string;
           target_id: string | null;
-          world_position: any;
+          world_position: { x: number; y: number; z: number } | null;
           created_at: string;
         };
         Insert: {
@@ -128,7 +127,7 @@ export type Database = {
           content: string;
           message_type?: string;
           target_id?: string;
-          world_position?: any;
+          world_position?: { x: number; y: number; z: number } | null;
         };
         Update: {
           content?: string;
@@ -151,7 +150,10 @@ export const supabaseHelpers = {
 
   // Get current user
   getCurrentUser: async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     return { user, error };
   },
 

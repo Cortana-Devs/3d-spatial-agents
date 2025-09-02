@@ -1,19 +1,18 @@
-import { Vector3 } from 'three';
-import { v4 as uuidv4 } from 'uuid';
+import { Vector3 } from "three";
+import { v4 as uuidv4 } from "uuid";
 import {
   Block,
   BlockType,
   BlockMetadata,
   CreateBlockParams,
   UpdateBlockParams,
-  BLOCK_DEFINITIONS,
-  getBlockDefinition
-} from '../types/blocks';
+  getBlockDefinition,
+} from "../types/blocks";
 import {
   BlockValidator,
   createDefaultMetadata,
-  validateBlockType
-} from './blockValidation';
+  validateBlockType,
+} from "./blockValidation";
 
 /**
  * Block Factory - Handles creation and modification of blocks with validation
@@ -25,28 +24,32 @@ export class BlockFactory {
   static createBlock(
     params: CreateBlockParams,
     existingBlocks: Map<string, Block>,
-    worldLimits: { maxBlocks: number }
+    worldLimits: { maxBlocks: number },
   ): { block: Block | null; errors: string[] } {
     // Validate the creation parameters
-    const validation = BlockValidator.validateCreateBlock(params, existingBlocks, worldLimits);
-    
+    const validation = BlockValidator.validateCreateBlock(
+      params,
+      existingBlocks,
+      worldLimits,
+    );
+
     if (!validation.isValid) {
       return {
         block: null,
-        errors: validation.errors.map(error => this.getErrorMessage(error))
+        errors: validation.errors.map((error) => this.getErrorMessage(error)),
       };
     }
 
     // Normalize position
     const position = this.normalizePosition(params.position);
-    
+
     // Get block definition
     const definition = getBlockDefinition(params.type);
-    
+
     // Create metadata
     const metadata: BlockMetadata = {
       ...createDefaultMetadata(params.createdBy),
-      ...params.metadata
+      ...params.metadata,
     };
 
     // Determine block color (custom or default)
@@ -58,12 +61,12 @@ export class BlockFactory {
       position,
       type: params.type,
       color,
-      metadata
+      metadata,
     };
 
     return {
       block,
-      errors: []
+      errors: [],
     };
   }
 
@@ -72,15 +75,18 @@ export class BlockFactory {
    */
   static updateBlock(
     params: UpdateBlockParams,
-    existingBlock: Block
+    existingBlock: Block,
   ): { block: Block | null; errors: string[] } {
     // Validate the update parameters
-    const validation = BlockValidator.validateUpdateBlock(params, existingBlock);
-    
+    const validation = BlockValidator.validateUpdateBlock(
+      params,
+      existingBlock,
+    );
+
     if (!validation.isValid) {
       return {
         block: null,
-        errors: validation.errors.map(error => this.getErrorMessage(error))
+        errors: validation.errors.map((error) => this.getErrorMessage(error)),
       };
     }
 
@@ -91,13 +97,13 @@ export class BlockFactory {
       metadata: {
         ...existingBlock.metadata,
         ...params.metadata,
-        modifiedAt: Date.now()
-      }
+        modifiedAt: Date.now(),
+      },
     };
 
     return {
       block: updatedBlock,
-      errors: []
+      errors: [],
     };
   }
 
@@ -107,7 +113,7 @@ export class BlockFactory {
   static createDefaultBlock(
     type: BlockType,
     position: Vector3 | { x: number; y: number; z: number },
-    createdBy: string
+    createdBy: string,
   ): Block {
     if (!validateBlockType(type)) {
       throw new Error(`Invalid block type: ${type}`);
@@ -121,7 +127,7 @@ export class BlockFactory {
       position: normalizedPosition,
       type,
       color: definition.color,
-      metadata: createDefaultMetadata(createdBy)
+      metadata: createDefaultMetadata(createdBy),
     };
   }
 
@@ -133,7 +139,7 @@ export class BlockFactory {
     positions: (Vector3 | { x: number; y: number; z: number })[],
     createdBy: string,
     existingBlocks: Map<string, Block>,
-    worldLimits: { maxBlocks: number }
+    worldLimits: { maxBlocks: number },
   ): { blocks: Block[]; errors: string[]; skipped: number } {
     const blocks: Block[] = [];
     const errors: string[] = [];
@@ -151,10 +157,10 @@ export class BlockFactory {
         {
           position,
           type,
-          createdBy
+          createdBy,
         },
         existingBlocks,
-        worldLimits
+        worldLimits,
       );
 
       if (result.block) {
@@ -177,10 +183,10 @@ export class BlockFactory {
   static cloneBlock(
     originalBlock: Block,
     newPosition: Vector3 | { x: number; y: number; z: number },
-    createdBy: string
+    createdBy: string,
   ): Block {
     const normalizedPosition = this.normalizePosition(newPosition);
-    
+
     return {
       id: uuidv4(),
       position: normalizedPosition,
@@ -191,8 +197,8 @@ export class BlockFactory {
         createdAt: Date.now(),
         modifiedAt: Date.now(),
         createdBy,
-        version: 1 // Reset version for cloned block
-      }
+        version: 1, // Reset version for cloned block
+      },
     };
   }
 
@@ -203,19 +209,19 @@ export class BlockFactory {
     type: BlockType,
     position: Vector3 | { x: number; y: number; z: number },
     createdBy: string,
-    glowIntensity: number = 0.5
+    glowIntensity: number = 0.5,
   ): Block {
     const definition = getBlockDefinition(type);
-    
+
     if (!definition.glowable) {
       throw new Error(`Block type ${type} does not support glow effects`);
     }
 
     const block = this.createDefaultBlock(type, position, createdBy);
-    
+
     // Add glow metadata
     block.metadata.glow = Math.max(0, Math.min(1, glowIntensity));
-    
+
     // Enhance color with emissive properties if available
     if (definition.emissive) {
       block.color = definition.emissive;
@@ -227,53 +233,91 @@ export class BlockFactory {
   /**
    * Validates and sanitizes block data from external sources
    */
-  static sanitizeBlock(blockData: any): Block | null {
+  static sanitizeBlock(blockData: unknown): Block | null {
     try {
       // Basic structure validation
-      if (!blockData || typeof blockData !== 'object') {
+      if (!blockData || typeof blockData !== "object") {
         return null;
       }
 
+      // Narrow input object shape and validate required fields
+      type BlockInput = {
+        id: unknown;
+        position: unknown;
+        type: unknown;
+        color?: unknown;
+        metadata: unknown;
+      };
+      if (
+        !("id" in blockData) ||
+        !("position" in blockData) ||
+        !("type" in blockData) ||
+        !("metadata" in blockData)
+      ) {
+        return null;
+      }
+      const data = blockData as BlockInput;
+
       // Required fields validation
-      if (!blockData.id || !blockData.position || !blockData.type || !blockData.metadata) {
+      if (!data.id || !data.position || !data.type || !data.metadata) {
         return null;
       }
 
       // Type validation
-      if (!validateBlockType(blockData.type)) {
+      if (typeof data.type !== "string" || !validateBlockType(data.type)) {
         return null;
       }
 
       // Position validation
-      const position = this.normalizePosition(blockData.position);
-      if (!Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(position.z)) {
+      const position = this.normalizePosition(
+        data.position as Vector3 | { x: number; y: number; z: number },
+      );
+      if (
+        !Number.isFinite(position.x) ||
+        !Number.isFinite(position.y) ||
+        !Number.isFinite(position.z)
+      ) {
         return null;
       }
 
+      // Prepare metadata object for safe access
+      const meta = (data.metadata as Record<string, unknown>) || {};
       // Create sanitized block
       const sanitizedBlock: Block = {
-        id: String(blockData.id),
+        id: String(data.id),
         position,
-        type: blockData.type as BlockType,
-        color: String(blockData.color || getBlockDefinition(blockData.type).color),
+        type: data.type as BlockType,
+        color: String(
+          data.color || getBlockDefinition(data.type as BlockType).color,
+        ),
         metadata: {
-          createdAt: Number(blockData.metadata.createdAt) || Date.now(),
-          modifiedAt: Number(blockData.metadata.modifiedAt) || Date.now(),
-          createdBy: String(blockData.metadata.createdBy || 'unknown'),
-          glow: blockData.metadata.glow ? Math.max(0, Math.min(1, Number(blockData.metadata.glow))) : undefined,
-          durability: blockData.metadata.durability ? Math.max(0, Math.min(1, Number(blockData.metadata.durability))) : undefined,
-          tags: Array.isArray(blockData.metadata.tags) ? blockData.metadata.tags.filter((tag: any) => typeof tag === 'string') : undefined,
-          version: Number(blockData.metadata.version) || 1,
-          customProperties: blockData.metadata.customProperties || undefined
-        }
+          createdAt: Number(meta.createdAt) || Date.now(),
+          modifiedAt: Number(meta.modifiedAt) || Date.now(),
+          createdBy: String(meta.createdBy ?? "unknown"),
+          glow:
+            meta.glow !== undefined
+              ? Math.max(0, Math.min(1, Number(meta.glow)))
+              : undefined,
+          durability:
+            meta.durability !== undefined
+              ? Math.max(0, Math.min(1, Number(meta.durability)))
+              : undefined,
+          tags: Array.isArray(meta.tags)
+            ? ((meta.tags as unknown[]).filter(
+                (tag: unknown) => typeof tag === "string",
+              ) as string[])
+            : undefined,
+          version: Number(meta.version) || 1,
+          customProperties:
+            (meta.customProperties as Record<string, unknown>) || undefined,
+        },
       };
 
       // Final validation
       const validation = BlockValidator.validateBlock(sanitizedBlock);
       return validation.isValid ? sanitizedBlock : null;
-
     } catch (error) {
-      console.error('Error sanitizing block data:', error);
+      console.error("Error sanitizing block data:", error);
       return null;
     }
   }
@@ -281,26 +325,32 @@ export class BlockFactory {
   /**
    * Utility methods
    */
-  private static normalizePosition(position: Vector3 | { x: number; y: number; z: number }): { x: number; y: number; z: number } {
+  private static normalizePosition(
+    position: Vector3 | { x: number; y: number; z: number },
+  ): { x: number; y: number; z: number } {
     if (position instanceof Vector3) {
       return {
         x: Math.round(position.x),
         y: Math.round(position.y),
-        z: Math.round(position.z)
+        z: Math.round(position.z),
       };
     }
     return {
       x: Math.round(position.x),
       y: Math.round(position.y),
-      z: Math.round(position.z)
+      z: Math.round(position.z),
     };
   }
 
-  private static positionToKey(position: { x: number; y: number; z: number }): string {
+  private static positionToKey(position: {
+    x: number;
+    y: number;
+    z: number;
+  }): string {
     return `${position.x},${position.y},${position.z}`;
   }
 
-  private static getErrorMessage(error: any): string {
+  private static getErrorMessage(error: unknown): string {
     // This would map to the validation error messages
     return String(error);
   }
@@ -316,31 +366,41 @@ export class BlockFactory {
 export function createBlockLine(
   startPos: Vector3 | { x: number; y: number; z: number },
   endPos: Vector3 | { x: number; y: number; z: number },
+): (Vector3 | { x: number; y: number; z: number })[];
+export function createBlockLine(
+  startPos: Vector3 | { x: number; y: number; z: number },
+  endPos: Vector3 | { x: number; y: number; z: number },
   type: BlockType,
-  createdBy: string
+  createdBy: string,
+): (Vector3 | { x: number; y: number; z: number })[];
+export function createBlockLine(
+  startPos: Vector3 | { x: number; y: number; z: number },
+  endPos: Vector3 | { x: number; y: number; z: number },
+  ...args: unknown[]
 ): (Vector3 | { x: number; y: number; z: number })[] {
+  void args.length;
   const start = normalizePosition(startPos);
   const end = normalizePosition(endPos);
-  
+
   const positions: { x: number; y: number; z: number }[] = [];
-  
+
   const dx = Math.abs(end.x - start.x);
   const dy = Math.abs(end.y - start.y);
   const dz = Math.abs(end.z - start.z);
-  
+
   const sx = start.x < end.x ? 1 : -1;
   const sy = start.y < end.y ? 1 : -1;
   const sz = start.z < end.z ? 1 : -1;
-  
+
   let x = start.x;
   let y = start.y;
   let z = start.z;
-  
+
   const maxSteps = Math.max(dx, dy, dz);
-  
+
   for (let i = 0; i <= maxSteps; i++) {
     positions.push({ x, y, z });
-    
+
     if (i < maxSteps) {
       // Simple step-by-step movement
       if (x !== end.x) x += sx;
@@ -348,23 +408,25 @@ export function createBlockLine(
       if (z !== end.z) z += sz;
     }
   }
-  
+
   return positions;
 }
 
 // Helper function to normalize position
-function normalizePosition(position: Vector3 | { x: number; y: number; z: number }): { x: number; y: number; z: number } {
+function normalizePosition(
+  position: Vector3 | { x: number; y: number; z: number },
+): { x: number; y: number; z: number } {
   if (position instanceof Vector3) {
     return {
       x: Math.round(position.x),
       y: Math.round(position.y),
-      z: Math.round(position.z)
+      z: Math.round(position.z),
     };
   }
   return {
     x: Math.round(position.x),
     y: Math.round(position.y),
-    z: Math.round(position.z)
+    z: Math.round(position.z),
   };
 }
 
@@ -374,30 +436,50 @@ function normalizePosition(position: Vector3 | { x: number; y: number; z: number
 export function createBlockRectangle(
   corner1: Vector3 | { x: number; y: number; z: number },
   corner2: Vector3 | { x: number; y: number; z: number },
+  hollow?: boolean,
+): (Vector3 | { x: number; y: number; z: number })[];
+export function createBlockRectangle(
+  corner1: Vector3 | { x: number; y: number; z: number },
+  corner2: Vector3 | { x: number; y: number; z: number },
   type: BlockType,
   createdBy: string,
-  hollow: boolean = false
+  hollow?: boolean,
+): (Vector3 | { x: number; y: number; z: number })[];
+export function createBlockRectangle(
+  corner1: Vector3 | { x: number; y: number; z: number },
+  corner2: Vector3 | { x: number; y: number; z: number },
+  ...args: unknown[]
 ): (Vector3 | { x: number; y: number; z: number })[] {
+  let hollow = false;
+  if (typeof args[0] === "boolean") {
+    hollow = args[0] as boolean;
+  } else if (typeof args[2] === "boolean") {
+    hollow = args[2] as boolean;
+  }
   const pos1 = normalizePosition(corner1);
   const pos2 = normalizePosition(corner2);
-  
+
   const minX = Math.min(pos1.x, pos2.x);
   const maxX = Math.max(pos1.x, pos2.x);
   const minY = Math.min(pos1.y, pos2.y);
   const maxY = Math.max(pos1.y, pos2.y);
   const minZ = Math.min(pos1.z, pos2.z);
   const maxZ = Math.max(pos1.z, pos2.z);
-  
+
   const positions: { x: number; y: number; z: number }[] = [];
-  
+
   for (let x = minX; x <= maxX; x++) {
     for (let y = minY; y <= maxY; y++) {
       for (let z = minZ; z <= maxZ; z++) {
         if (hollow) {
           // Only add blocks on the faces for hollow rectangles (not interior)
-          const isOnFace = x === minX || x === maxX || 
-                          y === minY || y === maxY || 
-                          z === minZ || z === maxZ;
+          const isOnFace =
+            x === minX ||
+            x === maxX ||
+            y === minY ||
+            y === maxY ||
+            z === minZ ||
+            z === maxZ;
           if (isOnFace) {
             positions.push({ x, y, z });
           }
@@ -407,7 +489,7 @@ export function createBlockRectangle(
       }
     }
   }
-  
+
   return positions;
 }
 
@@ -424,7 +506,7 @@ export function getBlockTypeInfo(type: BlockType) {
     category: definition.category,
     canGlow: definition.glowable,
     durability: definition.durability,
-    textureUrl: definition.textureUrl
+    textureUrl: definition.textureUrl,
   };
 }
 
@@ -432,5 +514,5 @@ export function getBlockTypeInfo(type: BlockType) {
  * Gets all block types with their information
  */
 export function getAllBlockTypeInfo() {
-  return Object.values(BlockType).map(type => getBlockTypeInfo(type));
+  return Object.values(BlockType).map((type) => getBlockTypeInfo(type));
 }

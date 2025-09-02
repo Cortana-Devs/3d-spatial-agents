@@ -1,8 +1,8 @@
-import { Vector3 } from 'three';
-import { BlockFactory } from './blockFactory';
-import { BlockValidator } from './blockValidation';
-import { BlockType, CreateBlockParams } from '../types/blocks';
-import { useWorldStore } from '../store/worldStore';
+import { Vector3 } from "three";
+import { BlockFactory } from "./blockFactory";
+import { BlockValidator } from "./blockValidation";
+import { Block, BlockType, CreateBlockParams } from "../types/blocks";
+import { useWorldStore } from "../store/worldStore";
 
 /**
  * Integration utilities for block system with world store
@@ -16,46 +16,48 @@ export function createValidatedBlock(
   position: Vector3 | { x: number; y: number; z: number },
   type: BlockType,
   createdBy: string,
-  customColor?: string
+  customColor?: string,
 ): { success: boolean; blockId?: string; errors: string[] } {
   const store = useWorldStore.getState();
-  
+
   // Create block using factory with validation
   const result = BlockFactory.createBlock(
     {
       position,
       type,
       createdBy,
-      customColor
+      customColor,
     },
     store.blockMap,
-    store.worldLimits
+    store.worldLimits,
   );
 
   if (!result.block) {
     return {
       success: false,
-      errors: result.errors
+      errors: result.errors,
     };
   }
 
   // Add to world store using existing method
   const success = store.addBlock(
-    position instanceof Vector3 ? position : new Vector3(position.x, position.y, position.z),
+    position instanceof Vector3
+      ? position
+      : new Vector3(position.x, position.y, position.z),
     type,
-    createdBy
+    createdBy,
   );
 
   if (success) {
     return {
       success: true,
       blockId: result.block.id,
-      errors: []
+      errors: [],
     };
   } else {
     return {
       success: false,
-      errors: ['Failed to add block to world store']
+      errors: ["Failed to add block to world store"],
     };
   }
 }
@@ -65,10 +67,10 @@ export function createValidatedBlock(
  */
 export function createBlockBatch(
   blocks: CreateBlockParams[],
-  validateAll: boolean = true
-): { 
-  successful: number; 
-  failed: number; 
+  validateAll: boolean = true,
+): {
+  successful: number;
+  failed: number;
   errors: string[];
   blockIds: string[];
 } {
@@ -77,25 +79,27 @@ export function createBlockBatch(
     successful: 0,
     failed: 0,
     errors: [] as string[],
-    blockIds: [] as string[]
+    blockIds: [] as string[],
   };
 
   // If validateAll is true, validate all blocks first before creating any
   if (validateAll) {
     const validationErrors: string[] = [];
-    
+
     for (const blockParams of blocks) {
       const validation = BlockValidator.validateCreateBlock(
         blockParams,
         store.blockMap,
-        store.worldLimits
+        store.worldLimits,
       );
-      
+
       if (!validation.isValid) {
-        validationErrors.push(`Block at ${JSON.stringify(blockParams.position)}: ${validation.errors.join(', ')}`);
+        validationErrors.push(
+          `Block at ${JSON.stringify(blockParams.position)}: ${validation.errors.join(", ")}`,
+        );
       }
     }
-    
+
     if (validationErrors.length > 0) {
       results.errors = validationErrors;
       results.failed = blocks.length;
@@ -109,7 +113,7 @@ export function createBlockBatch(
       blockParams.position,
       blockParams.type,
       blockParams.createdBy,
-      blockParams.customColor
+      blockParams.customColor,
     );
 
     if (result.success && result.blockId) {
@@ -135,16 +139,16 @@ export function getBlockTypeStatistics(): {
 } {
   const store = useWorldStore.getState();
   const blocks = store.getAllBlocks();
-  
+
   const stats = {
     totalBlocks: blocks.length,
     byType: {
       [BlockType.STONE]: 0,
       [BlockType.LEAF]: 0,
-      [BlockType.WOOD]: 0
+      [BlockType.WOOD]: 0,
     },
     byCreator: {} as Record<string, number>,
-    averageAge: 0
+    averageAge: 0,
   };
 
   let totalAge = 0;
@@ -153,12 +157,13 @@ export function getBlockTypeStatistics(): {
   for (const block of blocks) {
     // Count by type
     stats.byType[block.type]++;
-    
+
     // Count by creator
-    stats.byCreator[block.metadata.createdBy] = (stats.byCreator[block.metadata.createdBy] || 0) + 1;
-    
+    stats.byCreator[block.metadata.createdBy] =
+      (stats.byCreator[block.metadata.createdBy] || 0) + 1;
+
     // Calculate age
-    totalAge += (now - block.metadata.createdAt);
+    totalAge += now - block.metadata.createdAt;
   }
 
   if (blocks.length > 0) {
@@ -181,36 +186,42 @@ export function validateWorldState(): {
 } {
   const store = useWorldStore.getState();
   const blocks = store.getAllBlocks();
-  
+
   const result = {
     isValid: true,
     errors: [] as string[],
     warnings: [] as string[],
     blockCount: blocks.length,
     validBlocks: 0,
-    invalidBlocks: 0
+    invalidBlocks: 0,
   };
 
   // Check if block count matches
   if (blocks.length !== store.blockCount) {
-    result.errors.push(`Block count mismatch: store reports ${store.blockCount}, but found ${blocks.length} blocks`);
+    result.errors.push(
+      `Block count mismatch: store reports ${store.blockCount}, but found ${blocks.length} blocks`,
+    );
     result.isValid = false;
   }
 
   // Validate each block
   for (const block of blocks) {
     const validation = BlockValidator.validateBlock(block);
-    
+
     if (validation.isValid) {
       result.validBlocks++;
     } else {
       result.invalidBlocks++;
-      result.errors.push(`Invalid block ${block.id}: ${validation.errors.join(', ')}`);
+      result.errors.push(
+        `Invalid block ${block.id}: ${validation.errors.join(", ")}`,
+      );
       result.isValid = false;
     }
 
     if (validation.warnings) {
-      result.warnings.push(...validation.warnings.map(w => `Block ${block.id}: ${w}`));
+      result.warnings.push(
+        ...validation.warnings.map((w) => `Block ${block.id}: ${w}`),
+      );
     }
   }
 
@@ -226,7 +237,9 @@ export function validateWorldState(): {
 
   for (const [position, blockIds] of positionMap.entries()) {
     if (blockIds.length > 1) {
-      result.errors.push(`Duplicate blocks at position ${position}: ${blockIds.join(', ')}`);
+      result.errors.push(
+        `Duplicate blocks at position ${position}: ${blockIds.join(", ")}`,
+      );
       result.isValid = false;
     }
   }
@@ -243,18 +256,18 @@ export function cleanupInvalidBlocks(): {
 } {
   const store = useWorldStore.getState();
   const blocks = store.getAllBlocks();
-  
+
   const result = {
     removedBlocks: 0,
-    errors: [] as string[]
+    errors: [] as string[],
   };
 
   for (const block of blocks) {
     const validation = BlockValidator.validateBlock(block);
-    
+
     if (!validation.isValid) {
       try {
-        const success = store.removeBlockById(block.id, 'system');
+        const success = store.removeBlockById(block.id, "system");
         if (success) {
           result.removedBlocks++;
         } else {
@@ -275,7 +288,7 @@ export function cleanupInvalidBlocks(): {
 export function exportWorldData(): {
   success: boolean;
   data?: {
-    blocks: any[];
+    blocks: Block[];
     metadata: {
       exportedAt: number;
       blockCount: number;
@@ -285,11 +298,11 @@ export function exportWorldData(): {
   errors: string[];
 } {
   const validation = validateWorldState();
-  
+
   if (!validation.isValid) {
     return {
       success: false,
-      errors: [`World validation failed: ${validation.errors.join(', ')}`]
+      errors: [`World validation failed: ${validation.errors.join(", ")}`],
     };
   }
 
@@ -299,27 +312,27 @@ export function exportWorldData(): {
   return {
     success: true,
     data: {
-      blocks: blocks.map(block => ({
+      blocks: blocks.map((block) => ({
         id: block.id,
         position: block.position,
         type: block.type,
         color: block.color,
-        metadata: block.metadata
+        metadata: block.metadata,
       })),
       metadata: {
         exportedAt: Date.now(),
         blockCount: blocks.length,
-        version: '1.0.0'
-      }
+        version: "1.0.0",
+      },
     },
-    errors: []
+    errors: [],
   };
 }
 
 /**
  * Import world data with validation
  */
-export function importWorldData(data: any): {
+export function importWorldData(data: unknown): {
   success: boolean;
   importedBlocks: number;
   skippedBlocks: number;
@@ -329,37 +342,50 @@ export function importWorldData(data: any): {
     success: false,
     importedBlocks: 0,
     skippedBlocks: 0,
-    errors: [] as string[]
+    errors: [] as string[],
   };
 
   try {
+    // Type assertion for object access
+    if (!data || typeof data !== "object" || !("blocks" in data)) {
+      result.errors.push("Invalid data format: missing blocks array");
+      return result;
+    }
+    const importData = data as { blocks: unknown };
+
     // Validate data structure
-    if (!data || !Array.isArray(data.blocks)) {
-      result.errors.push('Invalid data format: missing blocks array');
+    if (!Array.isArray(importData.blocks)) {
+      result.errors.push("Invalid data format: missing blocks array");
       return result;
     }
 
     const store = useWorldStore.getState();
-    
+
     // Clear existing world
     store.clearWorld();
 
     // Import blocks
-    for (const blockData of data.blocks) {
+    for (const blockData of importData.blocks) {
       const sanitizedBlock = BlockFactory.sanitizeBlock(blockData);
-      
+
       if (sanitizedBlock) {
         const success = store.addBlock(
-          new Vector3(sanitizedBlock.position.x, sanitizedBlock.position.y, sanitizedBlock.position.z),
+          new Vector3(
+            sanitizedBlock.position.x,
+            sanitizedBlock.position.y,
+            sanitizedBlock.position.z,
+          ),
           sanitizedBlock.type,
-          sanitizedBlock.metadata.createdBy
+          sanitizedBlock.metadata.createdBy,
         );
-        
+
         if (success) {
           result.importedBlocks++;
         } else {
           result.skippedBlocks++;
-          result.errors.push(`Failed to import block at ${JSON.stringify(sanitizedBlock.position)}`);
+          result.errors.push(
+            `Failed to import block at ${JSON.stringify(sanitizedBlock.position)}`,
+          );
         }
       } else {
         result.skippedBlocks++;
@@ -368,7 +394,6 @@ export function importWorldData(data: any): {
     }
 
     result.success = result.importedBlocks > 0;
-    
   } catch (error) {
     result.errors.push(`Import error: ${error}`);
   }

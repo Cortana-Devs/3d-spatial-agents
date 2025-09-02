@@ -1,13 +1,13 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Vector3 } from 'three';
-import { Block, BlockType, BlockDefinition } from '@/types';
+import { Vector3 } from "three";
+import { Block, BlockType, BlockDefinition } from "@/types";
 
 // Export all block-related utilities
-export * from './blockValidation';
-export * from './blockFactory';
-export * from './blockIntegration';
-export * from '../types/blocks';
+export * from "./blockValidation";
+export * from "./blockFactory";
+export * from "./blockIntegration";
+export * from "../types/blocks";
 
 // Utility function for merging Tailwind classes
 export function cn(...inputs: ClassValue[]) {
@@ -17,43 +17,45 @@ export function cn(...inputs: ClassValue[]) {
 // Block type definitions with Axiom Design System aesthetics
 export const blockDefinitions: Record<BlockType, BlockDefinition> = {
   stone: {
-    color: '#666666',
+    color: "#666666",
     roughness: 0.8,
     metalness: 0.1,
-    description: 'Solid foundation material'
+    description: "Solid foundation material",
   },
   leaf: {
-    color: '#4CAF50',
+    color: "#4CAF50",
     roughness: 0.9,
     metalness: 0,
     transparency: 0.1,
-    description: 'Organic living material'
+    description: "Organic living material",
   },
   wood: {
-    color: '#8D6E63',
+    color: "#8D6E63",
     roughness: 0.7,
     metalness: 0,
-    description: 'Natural building material'
-  }
+    description: "Natural building material",
+  },
 };
 
 // Spatial utility functions
 export const spatialUtils = {
   // Convert Vector3 to position key for spatial hash map
-  positionToKey: (position: Vector3 | { x: number; y: number; z: number }): string => {
+  positionToKey: (
+    position: Vector3 | { x: number; y: number; z: number },
+  ): string => {
     return `${Math.round(position.x)},${Math.round(position.y)},${Math.round(position.z)}`;
   },
 
   // Convert position key back to coordinates
   keyToPosition: (key: string): { x: number; y: number; z: number } => {
-    const [x, y, z] = key.split(',').map(Number);
+    const [x, y, z] = key.split(",").map(Number);
     return { x, y, z };
   },
 
   // Calculate distance between two positions
   distance: (
     pos1: Vector3 | { x: number; y: number; z: number },
-    pos2: Vector3 | { x: number; y: number; z: number }
+    pos2: Vector3 | { x: number; y: number; z: number },
   ): number => {
     const dx = pos1.x - pos2.x;
     const dy = pos1.y - pos2.y;
@@ -62,12 +64,17 @@ export const spatialUtils = {
   },
 
   // Check if position is within bounds
-  isValidPosition: (position: Vector3 | { x: number; y: number; z: number }): boolean => {
+  isValidPosition: (
+    position: Vector3 | { x: number; y: number; z: number },
+  ): boolean => {
     // Basic bounds checking - can be expanded based on world limits
     return (
-      position.x >= -50 && position.x <= 50 &&
-      position.y >= 0 && position.y <= 50 &&
-      position.z >= -50 && position.z <= 50
+      position.x >= -50 &&
+      position.x <= 50 &&
+      position.y >= 0 &&
+      position.y <= 50 &&
+      position.z >= -50 &&
+      position.z <= 50
     );
   },
 
@@ -75,12 +82,12 @@ export const spatialUtils = {
   getBlocksInRadius: (
     blocks: Block[],
     center: Vector3 | { x: number; y: number; z: number },
-    radius: number
+    radius: number,
   ): Block[] => {
-    return blocks.filter(block => 
-      spatialUtils.distance(block.position, center) <= radius
+    return blocks.filter(
+      (block) => spatialUtils.distance(block.position, center) <= radius,
     );
-  }
+  },
 };
 
 // ID generation utilities
@@ -98,7 +105,7 @@ export const idUtils = {
   // Generate unique message ID
   generateMessageId: (): string => {
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
+  },
 };
 
 // Animation and timing utilities
@@ -109,7 +116,7 @@ export const animationUtils = {
   },
 
   easeOutQuart: (t: number): number => {
-    return 1 - (--t) * t * t * t;
+    return 1 - --t * t * t * t;
   },
 
   // Lerp function for smooth interpolation
@@ -122,17 +129,17 @@ export const animationUtils = {
     return new Vector3(
       animationUtils.lerp(start.x, end.x, factor),
       animationUtils.lerp(start.y, end.y, factor),
-      animationUtils.lerp(start.z, end.z, factor)
+      animationUtils.lerp(start.z, end.z, factor),
     );
-  }
+  },
 };
 
 // Performance utilities
 export const performanceUtils = {
   // Debounce function for performance optimization
-  debounce: <T extends (...args: any[]) => any>(
+  debounce: <T extends (...args: unknown[]) => unknown>(
     func: T,
-    wait: number
+    wait: number,
   ): ((...args: Parameters<T>) => void) => {
     let timeout: NodeJS.Timeout;
     return (...args: Parameters<T>) => {
@@ -142,16 +149,16 @@ export const performanceUtils = {
   },
 
   // Throttle function for performance optimization
-  throttle: <T extends (...args: any[]) => any>(
+  throttle: <T extends (...args: unknown[]) => unknown>(
     func: T,
-    limit: number
+    limit: number,
   ): ((...args: Parameters<T>) => void) => {
     let inThrottle: boolean;
     return (...args: Parameters<T>) => {
       if (!inThrottle) {
         func(...args);
         inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
+        setTimeout(() => (inThrottle = false), limit);
       }
     };
   },
@@ -159,15 +166,12 @@ export const performanceUtils = {
   // Check if device supports WebGL
   supportsWebGL: (): boolean => {
     try {
-      const canvas = document.createElement('canvas');
-      return !!(
-        window.WebGLRenderingContext &&
-        canvas.getContext('webgl')
-      );
-    } catch (e) {
+      const canvas = document.createElement("canvas");
+      return !!(window.WebGLRenderingContext && canvas.getContext("webgl"));
+    } catch {
       return false;
     }
-  }
+  },
 };
 
 // Color utilities for Axiom Design System
@@ -175,19 +179,21 @@ export const colorUtils = {
   // Convert hex to RGB
   hexToRgb: (hex: string): { r: number; g: number; b: number } | null => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
   },
 
   // Generate glow color based on block type using Axiom colors
   getGlowColor: (blockType: BlockType): string => {
     const glowMap: Record<BlockType, string> = {
-      stone: 'var(--color-axiom-glow-purple)', // Purple glow
-      leaf: 'var(--color-axiom-glow-green)',   // Green glow
-      wood: 'var(--color-axiom-glow-amber)'    // Amber glow
+      stone: "var(--color-axiom-glow-purple)", // Purple glow
+      leaf: "var(--color-axiom-glow-green)", // Green glow
+      wood: "var(--color-axiom-glow-amber)", // Amber glow
     };
     return glowMap[blockType];
   },
@@ -198,5 +204,5 @@ export const colorUtils = {
       return `var(--color-axiom-${colorName}-${shade})`;
     }
     return `var(--color-axiom-${colorName})`;
-  }
+  },
 };

@@ -131,6 +131,10 @@
   .glow-effect-purple {
     box-shadow: 0 0 20px theme(colors.axiom.glow.purple / 40%);
   }
+
+  .glow-effect-blue {
+    box-shadow: 0 0 20px theme(colors.axiom.primary.500 / 40%);
+  }
   
   /* Floating panel styles */
   .floating-panel {

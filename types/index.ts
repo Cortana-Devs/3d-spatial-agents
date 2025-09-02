@@ -1,25 +1,30 @@
-import { Vector3 } from 'three';
-import type { Block, BlockType } from './blocks';
+import { Vector3 } from "three";
+import type { Block, BlockType } from "./blocks";
 
 // Re-export block types from dedicated block module
-export * from './blocks';
+export * from "./blocks";
 
 // AI Simulant Types
 export interface AISimulant {
   id: string;
   name: string;
   position: { x: number; y: number; z: number };
-  status: 'active' | 'idle' | 'disconnected';
+  status: "active" | "idle" | "disconnected";
   lastAction: string;
   conversationHistory: ChatMessage[];
   geminiSessionId: string;
 }
 
-export type SimulantStatus = 'active' | 'idle' | 'disconnected';
-export type SimulantCapability = 'build' | 'destroy' | 'move' | 'communicate' | 'observe';
+export type SimulantStatus = "active" | "idle" | "disconnected";
+export type SimulantCapability =
+  | "build"
+  | "destroy"
+  | "move"
+  | "communicate"
+  | "observe";
 
 // Camera Types
-export type CameraMode = 'orbit' | 'fly' | 'follow-simulant' | 'cinematic';
+export type CameraMode = "orbit" | "fly" | "follow-simulant" | "cinematic";
 
 export interface CameraState {
   position: Vector3;
@@ -35,13 +40,13 @@ export interface ChatMessage {
   senderName: string;
   content: string;
   timestamp: number;
-  type: 'public' | 'private' | 'system';
+  type: "public" | "private" | "system";
   worldPosition?: Vector3; // For spatial chat
 }
 
 // Real-time Events
 export interface BlockChange {
-  type: 'add' | 'remove' | 'update';
+  type: "add" | "remove" | "update";
   block: Block;
   userId: string;
   timestamp: number;
@@ -60,23 +65,23 @@ export interface WorldState {
   // World Data
   blocks: Block[];
   worldLimits: { maxBlocks: 1000 };
-  
+
   // Human User State
   selectedBlockType: BlockType;
   activeCamera: CameraMode;
-  
+
   // AI Simulant State
   simulants: Map<string, AISimulant>;
-  
+
   // Real-time Synchronization
   lastUpdate: number;
-  syncStatus: 'connected' | 'disconnected' | 'syncing';
+  syncStatus: "connected" | "disconnected" | "syncing";
 }
 
 // Action Types
 export interface SimulantAction {
-  type: 'place_block' | 'remove_block' | 'move' | 'chat' | 'query_world';
-  parameters: Record<string, any>;
+  type: "place_block" | "remove_block" | "move" | "chat" | "query_world";
+  parameters: Record<string, unknown>;
   simulantId: string;
 }
 
@@ -116,6 +121,19 @@ export interface RenderingConfig {
   occlusionCulling: boolean;
 }
 
+// Grid System Configuration
+export interface GridConfig {
+  size: number; // Grid size (number of cells)
+  cellSize: number; // Size of each cell
+  opacity: number; // Base opacity (0-1)
+  visibility: boolean; // Show/hide grid
+  fadeDistance: number; // Distance at which grid starts fading
+  fadeStrength: number; // How quickly grid fades
+  rippleEnabled: boolean; // Enable interaction ripples
+  snapToGrid: boolean; // Enable snap-to-grid functionality
+  showSnapIndicators: boolean; // Show visual snap indicators
+}
+
 export interface PerformanceMetrics {
   frameRate: number; // Target: 60 FPS
   memoryUsage: number; // Target: < 500MB
@@ -126,11 +144,11 @@ export interface PerformanceMetrics {
 }
 
 // Connection and Presence
-export type ConnectionStatus = 'connected' | 'disconnected' | 'reconnecting';
+export type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
 
 export interface PresenceState {
   userId: string;
-  userType: 'human' | 'simulant';
+  userType: "human" | "simulant";
   position?: Vector3;
   lastSeen: number;
   isActive: boolean;

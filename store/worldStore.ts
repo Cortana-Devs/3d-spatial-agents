@@ -1,25 +1,32 @@
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
-import { subscribeWithSelector } from 'zustand/middleware';
-import { enableMapSet } from 'immer';
-import { v4 as uuidv4 } from 'uuid';
-import { Vector3 } from 'three';
+import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
+import { subscribeWithSelector } from "zustand/middleware";
+import { enableMapSet } from "immer";
+import { v4 as uuidv4 } from "uuid";
+import { Vector3 } from "three";
 import {
   Block,
   BlockType,
+  SelectionMode,
   AISimulant,
   CameraMode,
-  WorldState as BaseWorldState
-} from '../types';
+  WorldState as BaseWorldState,
+} from "../types";
 
 // Enable MapSet plugin for Immer to work with Map and Set
 enableMapSet();
 
 // Enhanced WorldState with optimized data structures
-interface WorldState extends Omit<BaseWorldState, 'blocks' | 'simulants'> {
+interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
   // Optimized block storage using spatial hash map
   blockMap: Map<string, Block>; // key: "x,y,z"
   blockCount: number; // Efficient O(1) counting
+
+  // Selection mode for UI interaction
+  selectionMode: SelectionMode;
+
+  // Grid configuration
+  gridConfig: import("../types").GridConfig;
 
   // AI Simulant State (keeping Map as specified in design)
   simulants: Map<string, AISimulant>;
@@ -34,7 +41,11 @@ interface WorldState extends Omit<BaseWorldState, 'blocks' | 'simulants'> {
 
   // Actions
   addBlock: (position: Vector3, type: BlockType, userId: string) => boolean;
-  addBlockInternal: (position: Vector3, type: BlockType, userId: string) => boolean;
+  addBlockInternal: (
+    position: Vector3,
+    type: BlockType,
+    userId: string,
+  ) => boolean;
   removeBlock: (position: Vector3, userId: string) => boolean;
   removeBlockById: (id: string, userId: string) => boolean;
   getBlock: (position: Vector3) => Block | undefined;
@@ -56,8 +67,10 @@ interface WorldState extends Omit<BaseWorldState, 'blocks' | 'simulants'> {
 
   // Utility functions
   setSelectedBlockType: (type: BlockType) => void;
+  setSelectionMode: (mode: SelectionMode) => void;
   setCameraMode: (mode: CameraMode) => void;
-  setSyncStatus: (status: 'connected' | 'disconnected' | 'syncing') => void;
+  setSyncStatus: (status: "connected" | "disconnected" | "syncing") => void;
+  updateGridConfig: (updates: Partial<import("../types").GridConfig>) => void;
 
   // World management
   clearWorld: () => void;
@@ -72,12 +85,7 @@ interface WorldSnapshot {
   timestamp: number;
 }
 
-// Action for undo/redo system
-interface WorldAction {
-  type: 'add_block' | 'remove_block' | 'clear_world';
-  data: any;
-  timestamp: number;
-}
+// (Removed unused WorldAction interface)
 
 interface WorldStats {
   totalBlocks: number;
@@ -92,24 +100,27 @@ const positionToKey = (position: Vector3): string => {
 };
 
 const keyToPosition = (key: string): Vector3 => {
-  const [x, y, z] = key.split(',').map(Number);
+  const [x, y, z] = key.split(",").map(Number);
   return new Vector3(x, y, z);
 };
 
 // Block definitions with Axiom Design System colors
-const blockDefinitions: Record<BlockType, { color: string; description: string }> = {
+const blockDefinitions: Record<
+  BlockType,
+  { color: string; description: string }
+> = {
   stone: {
-    color: '#666666',
-    description: 'Solid foundation material'
+    color: "#666666",
+    description: "Solid foundation material",
   },
   leaf: {
-    color: '#4CAF50',
-    description: 'Organic living material'
+    color: "#4CAF50",
+    description: "Organic living material",
   },
   wood: {
-    color: '#8D6E63',
-    description: 'Natural building material'
-  }
+    color: "#8D6E63",
+    description: "Natural building material",
+  },
 };
 
 // Create the Zustand store with immer for immutable updates
@@ -121,26 +132,44 @@ export const useWorldStore = create<WorldState>()(
       blockCount: 0,
       worldLimits: { maxBlocks: 1000 },
       selectedBlockType: BlockType.STONE,
-      activeCamera: 'orbit',
+      selectionMode: SelectionMode.EMPTY, // Start in empty hand mode
+      activeCamera: "orbit",
       simulants: new Map<string, AISimulant>(),
       lastUpdate: Date.now(),
-      syncStatus: 'disconnected',
+      syncStatus: "disconnected",
+
+      // Grid configuration with defaults
+      gridConfig: {
+        size: 50,
+        cellSize: 1,
+        opacity: 0.3,
+        visibility: true,
+        fadeDistance: 30,
+        fadeStrength: 1,
+        rippleEnabled: true,
+        snapToGrid: true,
+        showSnapIndicators: true,
+      },
 
       // Undo/Redo circular buffer
       history: {
         states: [],
         currentIndex: -1,
         maxStates: 50,
-        redoStates: []
+        redoStates: [],
       },
 
       // Block operations with collision detection and validation
-      addBlock: (position: Vector3, type: BlockType, userId: string): boolean => {
+      addBlock: (
+        position: Vector3,
+        type: BlockType,
+        userId: string,
+      ): boolean => {
         const state = get();
 
         // Check block limit
         if (state.blockCount >= state.worldLimits.maxBlocks) {
-          console.warn('Block limit reached:', state.worldLimits.maxBlocks);
+          console.warn("Block limit reached:", state.worldLimits.maxBlocks);
           return false;
         }
 
@@ -148,7 +177,7 @@ export const useWorldStore = create<WorldState>()(
 
         // Collision detection - check if block already exists at position
         if (state.blockMap.has(key)) {
-          console.warn('Block already exists at position:', position);
+          console.warn("Block already exists at position:", position);
           return false;
         }
 
@@ -158,15 +187,15 @@ export const useWorldStore = create<WorldState>()(
           position: {
             x: Math.round(position.x),
             y: Math.round(position.y),
-            z: Math.round(position.z)
+            z: Math.round(position.z),
           },
           type,
           color: blockDefinitions[type].color,
           metadata: {
             createdAt: Date.now(),
             modifiedAt: Date.now(),
-            createdBy: userId
-          }
+            createdBy: userId,
+          },
         };
 
         set((draft) => {
@@ -174,7 +203,7 @@ export const useWorldStore = create<WorldState>()(
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
             blockCount: draft.blockCount,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
 
           // Add the block first
@@ -207,16 +236,21 @@ export const useWorldStore = create<WorldState>()(
         return true;
       },
 
-      addBlockInternal: (position: Vector3, type: BlockType, userId: string): boolean => {
+      addBlockInternal: (
+        position: Vector3,
+        type: BlockType,
+        userId: string,
+      ): boolean => {
         return get().addBlock(position, type, userId);
       },
 
       removeBlock: (position: Vector3, userId: string): boolean => {
+        void userId;
         const state = get();
         const key = positionToKey(position);
 
         if (!state.blockMap.has(key)) {
-          console.warn('No block found at position:', position);
+          console.warn("No block found at position:", position);
           return false;
         }
 
@@ -225,7 +259,7 @@ export const useWorldStore = create<WorldState>()(
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
             blockCount: draft.blockCount,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
 
           // Remove the block first
@@ -259,6 +293,7 @@ export const useWorldStore = create<WorldState>()(
       },
 
       removeBlockById: (id: string, userId: string): boolean => {
+        void userId;
         const state = get();
 
         // Find block by ID (O(n) operation, but needed for ID-based removal)
@@ -271,7 +306,7 @@ export const useWorldStore = create<WorldState>()(
         }
 
         if (!blockKey) {
-          console.warn('No block found with ID:', id);
+          console.warn("No block found with ID:", id);
           return false;
         }
 
@@ -279,7 +314,7 @@ export const useWorldStore = create<WorldState>()(
         const snapshot: WorldSnapshot = {
           blockMap: new Map(state.blockMap),
           blockCount: state.blockCount,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
         set((draft) => {
@@ -302,7 +337,10 @@ export const useWorldStore = create<WorldState>()(
           }
 
           // Update current index
-          draft.history.currentIndex = Math.min(draft.history.currentIndex, maxStates - 1);
+          draft.history.currentIndex = Math.min(
+            draft.history.currentIndex,
+            maxStates - 1,
+          );
 
           // Remove the block
           draft.blockMap.delete(blockKey!);
@@ -383,7 +421,7 @@ export const useWorldStore = create<WorldState>()(
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
               blockCount: draft.blockCount,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             };
             draft.history.redoStates.push(currentState);
 
@@ -413,7 +451,7 @@ export const useWorldStore = create<WorldState>()(
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
               blockCount: draft.blockCount,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             };
             draft.history.currentIndex++;
             if (draft.history.currentIndex >= draft.history.states.length) {
@@ -434,7 +472,9 @@ export const useWorldStore = create<WorldState>()(
 
       canUndo: (): boolean => {
         const state = get();
-        return state.history.states.length > 0 && state.history.currentIndex >= 0;
+        return (
+          state.history.states.length > 0 && state.history.currentIndex >= 0
+        );
       },
 
       canRedo: (): boolean => {
@@ -446,6 +486,13 @@ export const useWorldStore = create<WorldState>()(
       setSelectedBlockType: (type: BlockType): void => {
         set((draft) => {
           draft.selectedBlockType = type;
+          draft.selectionMode = SelectionMode.PLACE; // Switch to place mode when selecting a block
+        });
+      },
+
+      setSelectionMode: (mode: SelectionMode): void => {
+        set((draft) => {
+          draft.selectionMode = mode;
         });
       },
 
@@ -455,9 +502,18 @@ export const useWorldStore = create<WorldState>()(
         });
       },
 
-      setSyncStatus: (status: 'connected' | 'disconnected' | 'syncing'): void => {
+      setSyncStatus: (
+        status: "connected" | "disconnected" | "syncing",
+      ): void => {
         set((draft) => {
           draft.syncStatus = status;
+          draft.lastUpdate = Date.now();
+        });
+      },
+
+      updateGridConfig: (updates: Partial<import("../types").GridConfig>): void => {
+        set((draft) => {
+          Object.assign(draft.gridConfig, updates);
           draft.lastUpdate = Date.now();
         });
       },
@@ -470,7 +526,7 @@ export const useWorldStore = create<WorldState>()(
         const snapshot: WorldSnapshot = {
           blockMap: new Map(state.blockMap),
           blockCount: state.blockCount,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
         set((draft) => {
@@ -493,7 +549,10 @@ export const useWorldStore = create<WorldState>()(
           }
 
           // Update current index
-          draft.history.currentIndex = Math.min(draft.history.currentIndex, maxStates - 1);
+          draft.history.currentIndex = Math.min(
+            draft.history.currentIndex,
+            maxStates - 1,
+          );
 
           // Clear the world
           draft.blockMap.clear();
@@ -511,13 +570,17 @@ export const useWorldStore = create<WorldState>()(
         const blocksByType: Record<BlockType, number> = {
           stone: 0,
           leaf: 0,
-          wood: 0
+          wood: 0,
         };
 
-        let minX = Infinity, minY = Infinity, minZ = Infinity;
-        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+        let minX = Infinity,
+          minY = Infinity,
+          minZ = Infinity;
+        let maxX = -Infinity,
+          maxY = -Infinity,
+          maxZ = -Infinity;
 
-        blocks.forEach(block => {
+        blocks.forEach((block) => {
           blocksByType[block.type]++;
 
           minX = Math.min(minX, block.position.x);
@@ -529,8 +592,9 @@ export const useWorldStore = create<WorldState>()(
         });
 
         // Count active simulants
-        const activeSimulants = Array.from(state.simulants.values())
-          .filter(s => s.status === 'active').length;
+        const activeSimulants = Array.from(state.simulants.values()).filter(
+          (s) => s.status === "active",
+        ).length;
 
         return {
           totalBlocks: state.blockCount,
@@ -540,14 +604,14 @@ export const useWorldStore = create<WorldState>()(
             min: new Vector3(
               blocks.length > 0 ? minX : 0,
               blocks.length > 0 ? minY : 0,
-              blocks.length > 0 ? minZ : 0
+              blocks.length > 0 ? minZ : 0,
             ),
             max: new Vector3(
               blocks.length > 0 ? maxX : 0,
               blocks.length > 0 ? maxY : 0,
-              blocks.length > 0 ? maxZ : 0
-            )
-          }
+              blocks.length > 0 ? maxZ : 0,
+            ),
+          },
         };
       },
 
@@ -558,20 +622,32 @@ export const useWorldStore = create<WorldState>()(
           blockCount: 0,
           worldLimits: { maxBlocks: 1000 },
           selectedBlockType: BlockType.STONE,
-          activeCamera: 'orbit',
+          selectionMode: SelectionMode.EMPTY,
+          activeCamera: "orbit",
           simulants: new Map<string, AISimulant>(),
           lastUpdate: Date.now(),
-          syncStatus: 'disconnected',
+          syncStatus: "disconnected",
+          gridConfig: {
+            size: 50,
+            cellSize: 1,
+            opacity: 0.3,
+            visibility: true,
+            fadeDistance: 30,
+            fadeStrength: 1,
+            rippleEnabled: true,
+            snapToGrid: true,
+            showSnapIndicators: true,
+          },
           history: {
             states: [],
             currentIndex: -1,
             maxStates: 50,
-            redoStates: []
-          }
+            redoStates: [],
+          },
         }));
-      }
-    }))
-  )
+      },
+    })),
+  ),
 );
 
 // Export utility functions for external use
