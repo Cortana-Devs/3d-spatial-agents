@@ -250,14 +250,15 @@ export function usePerformanceOptimization(
       }
     }
 
-    // Check for performance degradation
-    const isPerformanceDegraded = state.frameRate < 45 || state.isMemoryPressureHigh
+    // Check for performance degradation (more lenient thresholds)
+    const isPerformanceDegraded = state.frameRate < 30 && state.isMemoryPressureHigh
     if (isPerformanceDegraded !== state.isPerformanceDegraded) {
       setState(prev => ({ ...prev, isPerformanceDegraded }))
       
       if (isPerformanceDegraded) {
         const now = Date.now()
-        if (now - lastWarningTimeRef.current > warningCooldown) {
+        // Increased warning cooldown to reduce spam
+        if (now - lastWarningTimeRef.current > warningCooldown * 3) {
           config.onPerformanceWarning('Performance degradation detected - consider reducing quality')
           lastWarningTimeRef.current = now
         }

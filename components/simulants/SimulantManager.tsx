@@ -3,6 +3,9 @@
 import React, { useMemo } from "react";
 import { useWorldStore } from "../../store/worldStore";
 import ReadyPlayerMeSimulant from "./ReadyPlayerMeSimulant";
+import SimpleAnimatedAvatar from "./SimpleAnimatedAvatar";
+import BasicAnimationTest from "./BasicAnimationTest";
+import ExternalAnimationTest from "./ExternalAnimationTest";
 import { AISimulant } from "../../types";
 
 // Simulant manager configuration
@@ -76,14 +79,20 @@ export default function SimulantManager({
 
   return (
     <group name="simulant-manager">
-      {/* Render active simulants */}
+      {/* Debug Components (temporarily disabled to prevent infinite loops) */}
+      {false && process.env.NODE_ENV === "development" && (
+        <>
+          <ExternalAnimationTest />
+          <BasicAnimationTest />
+        </>
+      )}
+      
+      {/* Render active simulants - Using simple version to avoid infinite loops */}
       {activeSimulants.map((simulant) => (
-        <ReadyPlayerMeSimulant
+        <SimpleAnimatedAvatar
           key={simulant.id}
           simulant={simulant}
-          enableAnimations={enableAnimations}
-          enableGridSnap={enableGridSnap}
-          scale={0.8} // Slightly smaller than blocks for better proportion
+          scale={0.8}
         />
       ))}
 
@@ -110,7 +119,7 @@ export const SimulantUtils = {
     name: `Simulant-${id}`,
     position,
     status: "active",
-    lastAction: "Exploring the voxel world",
+    lastAction: "standing idle",
     conversationHistory: [],
     geminiSessionId: `session-${id}`,
   }),

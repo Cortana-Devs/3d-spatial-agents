@@ -36,7 +36,6 @@ import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
 import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
-import SimulantControls from "../simulants/SimulantControls";
 
 // LOD Configuration for performance optimization
 interface LODConfig {
@@ -875,15 +874,14 @@ export default function VoxelCanvas({
 }: VoxelCanvasProps) {
   const { blockMap, activeCamera, setCameraMode } = useWorldStore();
   const blockCount = blockMap.size;
-  const [cameraMode, setCameraModeLocal] = useState<CameraMode>(
-    activeCamera as CameraMode,
-  );
   const [followTarget] = useState<string | undefined>();
+  
+  // Use activeCamera directly from store instead of local state
+  const cameraMode = activeCamera as CameraMode;
 
   // Camera mode change handler
   const handleCameraModeChange = useCallback(
     (mode: CameraMode) => {
-      setCameraModeLocal(mode);
       setCameraMode(mode);
     },
     [setCameraMode],
@@ -969,31 +967,21 @@ export default function VoxelCanvas({
         <SceneContent cameraMode={cameraMode} followTarget={followTarget} />
       </Canvas>
 
-      {/* Camera controls UI */}
-      <CameraControls
-        currentMode={cameraMode}
-        onModeChange={handleCameraModeChange}
-        onPresetApply={handlePresetApply}
-        onFocusOnBlock={handleFocusOnBlock}
-      />
+      {/* Camera controls UI - hidden since moved into FloatingSidebar; keep for large screens if desired */}
+      <div className="hidden">
+        <CameraControls
+          currentMode={cameraMode}
+          onModeChange={handleCameraModeChange}
+          onPresetApply={handlePresetApply}
+          onFocusOnBlock={handleFocusOnBlock}
+        />
+      </div>
 
       {enablePerformanceStats && <PerformanceStats />}
       
-      {/* Simulant Controls */}
-      <SimulantControls maxSimulants={10} />
+      {/* Simulant Controls are now inside FloatingSidebar */}
       
-      {/* Fly mode indicator */}
-      {cameraMode === "fly" && (
-        <div className="absolute top-4 left-4 bg-blue-500/80 text-white px-3 py-2 rounded-lg text-sm font-medium">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            Fly Mode Active
-          </div>
-          <div className="text-xs mt-1 opacity-80">
-            WASD to move, Shift/Space for up/down, Click to look around
-          </div>
-        </div>
-      )}
+      {/* Removed fly mode indicator; information available in sidebar */}
     </div>
   );
 }

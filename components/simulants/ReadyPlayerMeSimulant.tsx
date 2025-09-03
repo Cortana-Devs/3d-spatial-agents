@@ -78,7 +78,7 @@ export default function ReadyPlayerMeSimulant({
   const distanceRef = useRef<number>(0);
   const lastUpdateTimeRef = useRef<number>(0);
 
-  // Performance optimization system
+  // Performance optimization system (reduced warning sensitivity)
   const performanceOptimization = usePerformanceOptimization([simulant], {
     enableAutoQualityAdjustment: true,
     enableMemoryManagement: true,
@@ -86,13 +86,14 @@ export default function ReadyPlayerMeSimulant({
     enableLOD: true,
     initialQuality: performanceMode === 'quality' ? 'high' : performanceMode === 'performance' ? 'low' : 'medium',
     maxRenderDistance: 100,
-    enableLogging: process.env.NODE_ENV === 'development',
+    enableLogging: false, // Reduced logging
     onQualityChange: (quality) => {
       if (process.env.NODE_ENV === 'development') {
         console.log(`🎯 Quality changed for ${simulant.id}:`, quality.name);
       }
     },
     onPerformanceWarning: (warning) => {
+      // Only log severe performance issues
       if (process.env.NODE_ENV === 'development') {
         console.warn(`⚠️ Performance warning for ${simulant.id}:`, warning);
       }
@@ -102,11 +103,16 @@ export default function ReadyPlayerMeSimulant({
   // Load the Ready Player Me model
   const avatarGLTF = useGLTF(modelPath);
   
+  // Debug: Log animation paths being used (only once)
+  useEffect(() => {
+    console.log(`🗂️ Animation paths for ${simulant.id}:`, animationPaths);
+  }, [simulant.id]); // Only log when simulant changes, not paths
+
   // Load external animation clips
   const externalAnimations = useExternalAnimations(animationPaths, {
     enableCaching: true,
     enableConcurrentLoading: true,
-    enableLogging: process.env.NODE_ENV === 'development',
+    enableLogging: false, // Disable to reduce console spam
     enableRetry: true,
   });
 
@@ -115,12 +121,13 @@ export default function ReadyPlayerMeSimulant({
     avatarGLTF,
     externalAnimations.clips,
     {
-      autoPlay: 'idle_female_1',
+      autoPlay: 'tpose_male',
       crossFadeDuration: RPM_CONFIG.performanceSettings[performanceMode].crossFadeDuration,
       enableLOD: true,
       performanceMode,
-      enableLogging: process.env.NODE_ENV === 'development',
+      enableLogging: false, // Disable to reduce console spam
       onAnimationStart: (name) => {
+        console.log(`🎬 Animation started: ${name} for simulant ${simulant.id}`);
         if (onAnimationChange) {
           onAnimationChange(name);
         }
@@ -128,12 +135,33 @@ export default function ReadyPlayerMeSimulant({
     }
   );
 
+  // Debug: Log animation loading state (only when loading completes)
+  useEffect(() => {
+    if (!externalAnimations.loading && externalAnimations.clips.size > 0) {
+      console.log(`🎭 Animation loading completed for ${simulant.id}:`, {
+        clipsLoaded: Array.from(externalAnimations.clips.keys()),
+        availableAnimations: animationManager.availableAnimations,
+        totalLoaded: externalAnimations.loadedCount
+      });
+    }
+    
+    if (externalAnimations.error) {
+      console.error(`❌ Animation loading error for ${simulant.id}:`, externalAnimations.error);
+    }
+  }, [
+    externalAnimations.loading,
+    externalAnimations.clips.size,
+    externalAnimations.error,
+    animationManager.availableAnimations.length,
+    simulant.id
+  ]);
+
   // Animation state controller
   const animationController = useAnimationController(
     animationManager,
     simulant,
     {
-      enableLogging: process.env.NODE_ENV === 'development',
+      enableLogging: false, // Disable to reduce console spam
       autoTransition: true,
       transitionDelay: 100,
       enableBlending: RPM_CONFIG.performanceSettings[performanceMode].enableBlending,

@@ -4,6 +4,7 @@ import React from "react";
 import dynamic from "next/dynamic";
 import BlockSelector from "../components/world/BlockSelector";
 import WorldInfo from "../components/world/WorldInfo";
+import FloatingSidebar from "../components/FloatingSidebar";
 
 // Dynamically import VoxelCanvas to avoid SSR issues with Three.js
 const VoxelCanvas = dynamic(() => import("../components/world/VoxelCanvas"), {
@@ -28,20 +29,21 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-axiom-neutral-50 to-axiom-neutral-100 dark:from-axiom-neutral-900 dark:to-axiom-neutral-950">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10 p-6">
+      <header className="absolute top-0 left-0 right-0 z-10 p-4 md:p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-axiom-primary bg-gradient-to-r from-axiom-primary-600 to-axiom-glow-purple bg-clip-text text-transparent">
+          <div className="flex-shrink-0">
+            <h1 className="text-xl md:text-2xl font-bold text-axiom-primary bg-gradient-to-r from-axiom-primary-600 to-axiom-glow-purple bg-clip-text text-transparent">
               Descendants™
             </h1>
-            <p className="text-sm text-axiom-neutral-600 dark:text-axiom-neutral-400">
+            <p className="text-xs md:text-sm text-axiom-neutral-600 dark:text-axiom-neutral-400">
               Living Metaverse Editor
             </p>
           </div>
 
-          <div className="floating-panel px-4 py-2">
+          <div className="floating-panel px-3 py-2 ml-4 md:ml-8 hidden sm:block">
             <div className="text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
-              Click to place blocks • Drag to orbit • Scroll to zoom
+              <span className="hidden md:inline">Click to place blocks • Drag to orbit • Scroll to zoom</span>
+              <span className="md:hidden">Tap to place • Drag to orbit</span>
             </div>
           </div>
         </div>
@@ -52,51 +54,17 @@ export default function Home() {
         <VoxelCanvas />
       </main>
 
-      {/* Left Panel - Block Selector */}
-      <div className="absolute left-6 bottom-6 z-10">
-        <BlockSelector />
-      </div>
+      {/* Floating Sidebar with Tabs (Animation, Simulants, Camera) */}
+      <FloatingSidebar />
 
       {/* Right Panel - World Info */}
-      <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10">
+      <div className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
         <WorldInfo />
       </div>
 
-      {/* Bottom Instructions - Camera and Navigation Help */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
-        <div className="floating-panel px-6 py-3">
-          <div className="flex items-center space-x-6 text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
-            <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
-                0-4
-              </kbd>
-              <span>Block Selection</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
-                ⌘C
-              </kbd>
-              <span>Camera Modes</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
-                G
-              </kbd>
-              <span>Toggle Grid</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <kbd className="px-2 py-1 bg-axiom-neutral-200 dark:bg-axiom-neutral-700 rounded text-xs">
-                WASD
-              </kbd>
-              <span>Fly Mode</span>
-            </div>
-            <div className="w-px h-4 bg-axiom-neutral-300 dark:bg-axiom-neutral-600"></div>
-            <div>
-              Click canvas in fly mode to lock cursor • Drag to orbit • Scroll
-              to zoom
-            </div>
-          </div>
-        </div>
+      {/* Bottom Center - Minecraft-style Block Selector */}
+      <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-10">
+        <BlockSelector />
       </div>
     </div>
   );

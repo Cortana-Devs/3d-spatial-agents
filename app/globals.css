@@ -230,6 +230,96 @@
     box-shadow: 0 0 12px theme(colors.axiom.primary.400 / 70%);
     transform: scale(1.1);
   }
+
+  /* Minecraft-style hotbar */
+  .minecraft-hotbar {
+    @apply flex flex-col items-center gap-3;
+  }
+
+  .hotbar-slot {
+    @apply relative w-10 h-10 sm:w-12 sm:h-12 bg-black/40 border-2 border-gray-600 rounded cursor-pointer 
+           transition-all duration-200 hover:border-gray-400 flex items-center justify-center;
+  }
+
+  .hotbar-slot.selected {
+    @apply border-white bg-white/10 shadow-lg;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.1);
+  }
+
+  .hotbar-slot.disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .hotbar-slot:hover:not(.disabled) {
+    @apply scale-105;
+  }
+
+  .hotbar-icon {
+    @apply w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white/80;
+  }
+
+  .hotbar-block {
+    @apply rounded border border-black/20 shadow-inner;
+    background-image: 
+      linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%), 
+      linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%), 
+      linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.1) 75%), 
+      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.1) 75%);
+    background-size: 4px 4px;
+    background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+  }
+
+  .block-texture {
+    @apply w-full h-full rounded;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(255,255,255,0.2) 1px, transparent 1px),
+      radial-gradient(circle at 75% 75%, rgba(0,0,0,0.1) 1px, transparent 1px);
+    background-size: 6px 6px;
+  }
+
+  .hotbar-number {
+    @apply absolute -top-1 -right-1 text-xs font-bold text-white bg-black/60 
+           rounded-full w-4 h-4 flex items-center justify-center;
+  }
+
+  .hotbar-slot.selected .hotbar-number {
+    @apply bg-white/20 text-white;
+  }
+
+  /* Detailed block card for expanded view */
+  .detailed-block-card {
+    @apply p-3 bg-black/40 border border-gray-600 rounded-lg cursor-pointer 
+           transition-all duration-200 hover:border-gray-400 hover:bg-black/60;
+  }
+
+  .detailed-block-card.selected {
+    @apply border-white bg-white/10;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  }
+
+  .detailed-block-card.disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .detailed-block-card:hover:not(.disabled) {
+    @apply scale-[1.02];
+  }
+
+  /* Draggable sidebar styling */
+  .draggable-sidebar {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  .draggable-sidebar.dragging {
+    pointer-events: none;
+  }
+
+  .draggable-sidebar.dragging * {
+    pointer-events: none;
+  }
 }
 
 @theme inline {

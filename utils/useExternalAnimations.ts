@@ -244,13 +244,7 @@ export function useExternalAnimations(
               
               loadedCount++
               
-              // Update progress
-              setState(prev => ({
-                ...prev,
-                clips: new Map(clipMap),
-                loadedCount,
-                progress: (loadedCount / animationPaths.length) * 100
-              }))
+              // Note: We'll update state only at the end, not here
             } catch (error) {
               if (config.enableLogging) {
                 console.warn(`Failed to load ${path}:`, error)
@@ -282,13 +276,7 @@ export function useExternalAnimations(
           
           loadedCount++
           
-          // Update progress
-          setState(prev => ({
-            ...prev,
-            clips: new Map(clipMap),
-            loadedCount,
-            progress: (loadedCount / animationPaths.length) * 100
-          }))
+          // Note: We'll update state only at the end, not here
         }
       }
 

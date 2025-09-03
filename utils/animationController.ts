@@ -69,64 +69,64 @@ export interface StateTransition {
  */
 export const ENHANCED_ANIMATION_MAPPING: Record<AnimationState, AnimationMapping> = {
   idle: {
-    primary: ['F_Standing_Idle_Variations_001', 'F_Standing_Idle_Variations_002', 'F_Standing_Idle_Variations_006'],
-    fallback: ['Masculine_TPose'],
+    primary: ['tpose_male'],
+    fallback: ['idle_female_1', 'idle_female_2', 'idle_female_3'],
     priority: 1,
     looping: true,
     timeScale: 1.0,
     blendWeight: 1.0
   },
   walking: {
-    primary: ['M_Walk_001'],
-    fallback: ['M_Crouch_Walk_003'],
+    primary: ['walk_male'],
+    fallback: ['crouch_walk_male'],
     priority: 3,
     looping: true,
     timeScale: 1.0,
     blendWeight: 1.0
   },
   running: {
-    primary: ['M_Run_001'],
-    fallback: ['M_Walk_001'],
+    primary: ['run_male'],
+    fallback: ['walk_male'],
     priority: 4,
     looping: true,
     timeScale: 1.2,
     blendWeight: 1.0
   },
   jumping: {
-    primary: ['M_Walk_Jump_002'],
-    fallback: ['M_Walk_001'],
+    primary: ['jump_male'],
+    fallback: ['walk_male'],
     priority: 5,
     looping: false,
     timeScale: 1.0,
     blendWeight: 1.0
   },
   building: {
-    primary: ['M_Standing_Expressions_013'],
-    fallback: ['F_Standing_Idle_Variations_006'],
+    primary: ['expression_male'],
+    fallback: ['idle_female_3'],
     priority: 2,
     looping: true,
     timeScale: 0.8,
     blendWeight: 1.0
   },
   communicating: {
-    primary: ['M_Talking_Variations_005'],
-    fallback: ['M_Standing_Expressions_013'],
+    primary: ['talk_male'],
+    fallback: ['expression_male'],
     priority: 2,
     looping: true,
     timeScale: 1.0,
     blendWeight: 1.0
   },
   celebrating: {
-    primary: ['F_Dances_007'],
-    fallback: ['F_Standing_Idle_Variations_001'],
+    primary: ['dance_female'],
+    fallback: ['idle_female_1'],
     priority: 2,
     looping: true,
     timeScale: 1.0,
     blendWeight: 1.0
   },
   thinking: {
-    primary: ['M_Standing_Expressions_013'],
-    fallback: ['F_Standing_Idle_Variations_002'],
+    primary: ['expression_male'],
+    fallback: ['idle_female_2'],
     priority: 1,
     looping: true,
     timeScale: 0.7,
@@ -290,6 +290,7 @@ export class AnimationController {
 
     if (this.enableLogging) {
       console.log('🎮 AnimationController initialized with', this.availableAnimations.size, 'animations')
+      console.log('🎮 Available animation names:', Array.from(this.availableAnimations))
     }
   }
 
@@ -372,6 +373,8 @@ export class AnimationController {
     
     if (this.enableLogging) {
       console.warn(`⚠️ No animation found for state: ${state}`)
+      console.warn(`🔍 Looking for animations:`, mapping.primary, 'or fallbacks:', mapping.fallback)
+      console.warn(`🔍 Available animations:`, Array.from(this.availableAnimations))
     }
     
     return null
