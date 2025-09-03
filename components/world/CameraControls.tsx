@@ -196,7 +196,7 @@ export default function CameraControls({
         </div>
       )}
 
-      <div className={`fixed top-4 left-4 z-50 ${className}`}>
+      <div className={`fixed top-16 md:top-20 left-4 md:left-6 z-50 ${className}`}>
         <Card className="bg-black/20 backdrop-blur-md border-white/10 text-white">
           {/* Main camera mode toggle */}
           <div className="p-3">

@@ -397,87 +397,148 @@ export default function BlockSelector({ className = '' }: BlockSelectorProps) {
       };
 
   return (
-    <div className={`floating-panel ${isExpanded ? 'p-6 space-y-4 min-w-[280px]' : 'p-3'} ${className}`}>
-      {/* Collapsed Header */}
-      {!isExpanded && (
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="flex items-center gap-3 w-full text-left hover:bg-white/10 rounded-lg p-2 transition-colors"
+    <div className={`minecraft-hotbar ${className}`}>
+      {/* Minecraft-style horizontal hotbar */}
+      <div className="flex items-center gap-1 p-2 bg-black/60 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl">
+        {/* Empty Hand Tool */}
+        <div 
+          className={`hotbar-slot ${isEmptyHandSelected ? 'selected' : ''}`}
+          onClick={() => setSelectionMode(SelectionMode.EMPTY)}
+          title="Select Tool (0)"
         >
-          <div className="text-lg">{currentSelection.icon}</div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-axiom-neutral-800 dark:text-axiom-neutral-200 truncate">
-              {currentSelection.name}
-            </div>
-            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
-              Press {currentSelection.shortcut} • Click to expand
-            </div>
+          <div className="hotbar-icon">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+            </svg>
           </div>
-          <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
-            {blockCount}/{worldLimits.maxBlocks}
-          </div>
-        </button>
-      )}
+          <div className="hotbar-number">0</div>
+        </div>
 
-      {/* Expanded Header */}
-      {isExpanded && (
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-axiom-neutral-800 dark:text-axiom-neutral-200">
-            Block Palette
-          </h3>
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
-              {blockCount}/{worldLimits.maxBlocks}
+        {/* Block Types */}
+        {blockTypes.map((type, index) => {
+          const definition = BLOCK_DEFINITIONS[type];
+          const isSelected = selectedBlockType === type && selectionMode === SelectionMode.PLACE;
+          
+          return (
+            <div 
+              key={type}
+              className={`hotbar-slot ${isSelected ? 'selected' : ''} ${isAtLimit && !isSelected ? 'disabled' : ''}`}
+              onClick={() => {
+                if (!isAtLimit || isSelected) {
+                  setSelectedBlockType(type);
+                  setSelectionMode(SelectionMode.PLACE);
+                }
+              }}
+              title={`${definition.displayName} (${index + 1})`}
+            >
+              <div className="hotbar-icon hotbar-block" style={{ backgroundColor: definition.color }}>
+                <div className="block-texture" />
+              </div>
+              <div className="hotbar-number">{index + 1}</div>
             </div>
+          );
+        })}
+
+        {/* Block Counter */}
+        <div className="ml-2 sm:ml-3 px-2 sm:px-3 py-1 bg-black/40 rounded text-xs text-white/80 font-mono">
+          <span className="hidden sm:inline">{blockCount}/{worldLimits.maxBlocks}</span>
+          <span className="sm:hidden">{blockCount}</span>
+        </div>
+
+        {/* Expand Button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="ml-1 sm:ml-2 px-1 sm:px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-white/60 hover:text-white/80 transition-colors"
+          title="Expand Block Palette"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Expanded View - Detailed Block Palette */}
+      {isExpanded && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-black/80 backdrop-blur-md border border-white/20 rounded-lg p-3 md:p-4 w-[350px] sm:w-[400px] md:min-w-[400px] shadow-2xl max-w-[90vw]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">Block Palette</h3>
             <button
               onClick={() => setIsExpanded(false)}
-              className="text-axiom-neutral-500 hover:text-axiom-neutral-700 dark:hover:text-axiom-neutral-300 p-1 rounded"
+              className="text-white/60 hover:text-white p-1 rounded"
             >
               ✕
             </button>
           </div>
-        </div>
-      )}
 
-      {/* Expanded Content */}
-      {isExpanded && (
-        <>
           {/* Block limit warning */}
           {isAtLimit && (
-            <div className="p-3 rounded-lg bg-axiom-glow-amber/10 border border-axiom-glow-amber/30 text-axiom-glow-amber text-sm">
+            <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm mb-4">
               ⚠️ Block limit reached! Remove blocks to place new ones.
             </div>
           )}
 
-          {/* Tools Section */}
-          <div className="space-y-3">
+          {/* Detailed Block Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4">
             {/* Empty Hand Tool */}
-            <EmptyHandTool
-              isSelected={isEmptyHandSelected}
-              onSelect={() => setSelectionMode(SelectionMode.EMPTY)}
-            />
+            <div 
+              className={`detailed-block-card ${isEmptyHandSelected ? 'selected' : ''}`}
+              onClick={() => setSelectionMode(SelectionMode.EMPTY)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-600 rounded flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-white font-medium">Select Tool</div>
+                  <div className="text-white/60 text-xs">Press 0</div>
+                </div>
+              </div>
+            </div>
 
             {/* Block Types */}
-            {blockTypes.map((type, index) => (
-              <BlockSelectorItem
-                key={type}
-                type={type}
-                isSelected={selectedBlockType === type && selectionMode === SelectionMode.PLACE}
-                onSelect={() => setSelectedBlockType(type)}
-                keyboardShortcut={(index + 1).toString()}
-              />
-            ))}
+            {blockTypes.map((type, index) => {
+              const definition = BLOCK_DEFINITIONS[type];
+              const isSelected = selectedBlockType === type && selectionMode === SelectionMode.PLACE;
+              
+              return (
+                <div 
+                  key={type}
+                  className={`detailed-block-card ${isSelected ? 'selected' : ''} ${isAtLimit && !isSelected ? 'disabled' : ''}`}
+                  onClick={() => {
+                    if (!isAtLimit || isSelected) {
+                      setSelectedBlockType(type);
+                      setSelectionMode(SelectionMode.PLACE);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-10 h-10 rounded hotbar-block" 
+                      style={{ backgroundColor: definition.color }}
+                    >
+                      <div className="block-texture" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-white font-medium">{definition.displayName}</div>
+                      <div className="text-white/60 text-xs">Press {index + 1}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Footer Instructions */}
-          <div className="pt-4 border-t border-axiom-neutral-200 dark:border-axiom-neutral-700">
-            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500 space-y-1">
-              <div>• Use keyboard shortcuts for quick selection</div>
-              <div>• Hover for 3D preview animations</div>
-              <div>• Selected tool shows enhanced glow effects</div>
-            </div>
+          <div className="text-xs text-white/60 space-y-1 border-t border-white/20 pt-3">
+            <div>• Use keyboard shortcuts (0-4) for quick selection</div>
+            <div>• Left click to place blocks • Right click to remove</div>
+            <div>• Current: {blockCount}/{worldLimits.maxBlocks} blocks placed</div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
