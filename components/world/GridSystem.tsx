@@ -383,7 +383,7 @@ export default function GridSystem({
     return null;
   }
 
-  console.log("Rendering grid with config:", gridConfig);
+
 
   return (
     <group>
