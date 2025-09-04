@@ -3,7 +3,7 @@
  * Provides concurrent loading, caching, and error handling for RPM animations
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AnimationClip } from 'three'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { extractClipName, getDefaultAnimationPaths } from './animationUtils'
@@ -67,10 +67,10 @@ const globalLoadingPromises = new Map<string, Promise<AnimationClip | null>>()
  * @returns Hook state with clips, loading status, and error information
  */
 export function useExternalAnimations(
-  animationPaths: string[] = getDefaultAnimationPaths(),
+  animationPaths: readonly string[] = getDefaultAnimationPaths(),
   options: UseExternalAnimationsOptions = {}
 ): UseExternalAnimationsState {
-  const config = { ...DEFAULT_OPTIONS, ...options }
+  const config = useMemo(() => ({ ...DEFAULT_OPTIONS, ...options }), [options])
   const [state, setState] = useState<UseExternalAnimationsState>({
     clips: new Map(),
     loading: true,
@@ -111,6 +111,10 @@ export function useExternalAnimations(
     attempt: number = 0
   ): Promise<AnimationClip | null> => {
     const clipName = extractClipName(path)
+    
+    if (config.enableLogging) {
+      console.log(`🔄 Loading animation: ${path} -> ${clipName} (attempt ${attempt + 1})`)
+    }
     
     // Check cache first if caching is enabled
     if (config.enableCaching && globalAnimationCache.has(clipName)) {
@@ -203,7 +207,46 @@ export function useExternalAnimations(
    */
   const loadAnimations = useCallback(async () => {
     if (!isMountedRef.current || animationPaths.length === 0) {
+      if (config.enableLogging) {
+        console.log(`🚫 Animation loading skipped: mounted=${isMountedRef.current}, paths=${animationPaths.length}`)
+      }
       return
+    }
+
+    // Check if animations are already loaded globally
+    const allPathsLoaded = animationPaths.every(path => {
+      const clipName = extractClipName(path)
+      return globalAnimationCache.has(clipName)
+    })
+
+    if (allPathsLoaded) {
+      if (config.enableLogging) {
+        console.log(`✅ All animations already loaded from cache`)
+      }
+      // Load from cache
+      const clipMap = new Map<string, AnimationClip>()
+      animationPaths.forEach(path => {
+        const clipName = extractClipName(path)
+        const cachedClip = globalAnimationCache.get(clipName)
+        if (cachedClip) {
+          clipMap.set(clipName, cachedClip)
+        }
+      })
+      
+      if (isMountedRef.current) {
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          clips: clipMap,
+          loadedCount: clipMap.size,
+          progress: 100
+        }))
+      }
+      return
+    }
+
+    if (config.enableLogging) {
+      console.log(`🚀 Starting animation loading: ${animationPaths.length} paths`)
     }
 
     // Create abort controller for this load operation
@@ -223,14 +266,16 @@ export function useExternalAnimations(
       let loadedCount = 0
 
       if (config.enableConcurrentLoading) {
-        // Concurrent loading with semaphore
-        const semaphore = new Array(config.maxConcurrentLoads).fill(null)
-        let pathIndex = 0
-
-        const loadNext = async (): Promise<void> => {
-          while (pathIndex < animationPaths.length && isMountedRef.current) {
-            const currentIndex = pathIndex++
-            const path = animationPaths[currentIndex]
+        // Concurrent loading with proper worker distribution
+        const maxConcurrent = Math.min(config.maxConcurrentLoads, animationPaths.length)
+        const pathsPerWorker = Math.ceil(animationPaths.length / maxConcurrent)
+        
+        const loadWorker = async (workerIndex: number): Promise<void> => {
+          const startIndex = workerIndex * pathsPerWorker
+          const endIndex = Math.min(startIndex + pathsPerWorker, animationPaths.length)
+          
+          for (let i = startIndex; i < endIndex && isMountedRef.current; i++) {
+            const path = animationPaths[i]
             
             try {
               const clip = await loadSingleClip(path)
@@ -255,7 +300,8 @@ export function useExternalAnimations(
         }
 
         // Start concurrent workers
-        await Promise.all(semaphore.map(() => loadNext()))
+        const workers = Array.from({ length: maxConcurrent }, (_, i) => loadWorker(i))
+        await Promise.all(workers)
       } else {
         // Sequential loading
         for (let i = 0; i < animationPaths.length && isMountedRef.current; i++) {
@@ -281,6 +327,11 @@ export function useExternalAnimations(
       }
 
       if (isMountedRef.current) {
+        if (config.enableLogging) {
+          console.log(`🎬 Animation loading complete: ${clipMap.size}/${animationPaths.length} clips loaded`)
+          console.log(`📋 Loaded clips:`, Array.from(clipMap.keys()))
+        }
+
         setState(prev => ({
           ...prev,
           loading: false,
@@ -288,10 +339,6 @@ export function useExternalAnimations(
           loadedCount,
           progress: 100
         }))
-
-        if (config.enableLogging) {
-          console.log(`🎬 Animation loading complete: ${clipMap.size}/${animationPaths.length} clips loaded`)
-        }
       }
     } catch (error) {
       if (isMountedRef.current) {

@@ -125,8 +125,8 @@ export const ENHANCED_ANIMATION_MAPPING: Record<AnimationState, AnimationMapping
     blendWeight: 1.0
   },
   thinking: {
-    primary: ['expression_male'],
-    fallback: ['idle_female_2'],
+    primary: ['idle_female_2'],
+    fallback: ['expression_male'],
     priority: 1,
     looping: true,
     timeScale: 0.7,
@@ -359,6 +359,12 @@ export class AnimationController {
   getAnimationForState(state: AnimationState): string | null {
     const mapping = ENHANCED_ANIMATION_MAPPING[state]
     
+    if (this.enableLogging) {
+      console.log(`🔍 Getting animation for state: ${state}`)
+      console.log(`🔍 Mapping:`, mapping)
+      console.log(`🔍 Available animations:`, Array.from(this.availableAnimations))
+    }
+    
     // Special handling for idle state to support cycling
     if (state === 'idle') {
       const availableIdleAnimations = mapping.primary.filter(name => 
@@ -377,6 +383,9 @@ export class AnimationController {
       // Try primary animations first for non-idle states
       for (const animName of mapping.primary) {
         if (this.availableAnimations.has(animName)) {
+          if (this.enableLogging) {
+            console.log(`✅ Found primary animation: ${animName} for state: ${state}`)
+          }
           return animName
         }
       }
@@ -385,6 +394,9 @@ export class AnimationController {
     // Fall back to fallback animations
     for (const animName of mapping.fallback) {
       if (this.availableAnimations.has(animName)) {
+        if (this.enableLogging) {
+          console.log(`✅ Found fallback animation: ${animName} for state: ${state}`)
+        }
         return animName
       }
     }
@@ -437,6 +449,10 @@ export class AnimationController {
     customDuration?: number
     customEasing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'
   } = {}): boolean {
+    if (this.enableLogging) {
+      console.log(`🎬 Attempting transition: ${this.currentState} -> ${newState}`)
+    }
+    
     if (!options.force && !this.canTransitionTo(newState)) {
       if (this.enableLogging) {
         console.log(`🚫 Transition blocked: ${this.currentState} -> ${newState}`)
@@ -456,6 +472,7 @@ export class AnimationController {
     if (!action) {
       if (this.enableLogging) {
         console.warn(`⚠️ Animation action not found: ${animationName}`)
+        console.warn(`🔍 Available actions:`, Object.keys(this.actions))
       }
       return false
     }

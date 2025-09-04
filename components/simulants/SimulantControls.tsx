@@ -75,7 +75,7 @@ export default function SimulantControls({
       3 + simulants.size * 0.5 // Expanding radius
     );
     
-    const spawnPosition = spawnPositions[simulants.size] || { x: 0, y: 0, z: 0 };
+    const spawnPosition = spawnPositions[simulants.size] || spawnPositions[0] || { x: 0, y: 0, z: 0 };
 
     const newSimulant: AISimulant = {
       id: simulantId,
