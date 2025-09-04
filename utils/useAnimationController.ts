@@ -17,6 +17,8 @@ export interface UseAnimationControllerOptions {
   autoTransition?: boolean
   transitionDelay?: number
   enableBlending?: boolean
+  enableIdleCycling?: boolean
+  idleCycleInterval?: number
 }
 
 /**
@@ -58,7 +60,9 @@ const DEFAULT_OPTIONS: Required<UseAnimationControllerOptions> = {
   enableLogging: false,
   autoTransition: true,
   transitionDelay: 100, // ms
-  enableBlending: true
+  enableBlending: true,
+  enableIdleCycling: true,
+  idleCycleInterval: 8000 // ms
 }
 
 /**
@@ -134,6 +138,15 @@ export function useAnimationController(
         }
         
         controllerRef.current.transitionTo(newState)
+        
+        // Handle idle cycling
+        if (config.enableIdleCycling) {
+          if (newState === 'idle') {
+            controllerRef.current.startIdleCycling(config.idleCycleInterval)
+          } else {
+            controllerRef.current.stopIdleCycling()
+          }
+        }
       }
     }, config.transitionDelay)
 
@@ -142,7 +155,7 @@ export function useAnimationController(
         clearTimeout(transitionTimeoutRef.current)
       }
     }
-  }, [simulant.lastAction, config.autoTransition, config.transitionDelay, config.enableLogging])
+  }, [simulant.lastAction, config.autoTransition, config.transitionDelay, config.enableLogging, config.enableIdleCycling, config.idleCycleInterval])
 
   // Update controller state
   const updateControllerState = useCallback(() => {

@@ -165,6 +165,8 @@ export default function ReadyPlayerMeSimulant({
       autoTransition: true,
       transitionDelay: 100,
       enableBlending: RPM_CONFIG.performanceSettings[performanceMode].enableBlending,
+      enableIdleCycling: true, // Enable idle animation cycling
+      idleCycleInterval: 8000, // Cycle every 8 seconds
     }
   );
 

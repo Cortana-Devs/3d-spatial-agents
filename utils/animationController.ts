@@ -69,8 +69,8 @@ export interface StateTransition {
  */
 export const ENHANCED_ANIMATION_MAPPING: Record<AnimationState, AnimationMapping> = {
   idle: {
-    primary: ['tpose_male'],
-    fallback: ['idle_female_1', 'idle_female_2', 'idle_female_3'],
+    primary: ['idle_female_1', 'idle_female_2', 'idle_female_3'],
+    fallback: ['tpose_male'],
     priority: 1,
     looping: true,
     timeScale: 1.0,
@@ -269,6 +269,8 @@ export class AnimationController {
   private blendAnimations: Map<string, BlendAnimation> = new Map()
   private availableAnimations: Set<string> = new Set()
   private enableLogging: boolean = false
+  private currentIdleIndex: number = 0
+  private idleCycleTimer: NodeJS.Timeout | null = null
 
   constructor(
     private mixer: AnimationMixer,
@@ -357,10 +359,26 @@ export class AnimationController {
   getAnimationForState(state: AnimationState): string | null {
     const mapping = ENHANCED_ANIMATION_MAPPING[state]
     
-    // Try primary animations first
-    for (const animName of mapping.primary) {
-      if (this.availableAnimations.has(animName)) {
-        return animName
+    // Special handling for idle state to support cycling
+    if (state === 'idle') {
+      const availableIdleAnimations = mapping.primary.filter(name => 
+        this.availableAnimations.has(name)
+      )
+      
+      if (availableIdleAnimations.length > 0) {
+        // Use current idle index for cycling
+        const selectedAnimation = availableIdleAnimations[this.currentIdleIndex % availableIdleAnimations.length]
+        if (this.enableLogging) {
+          console.log(`🎭 Selected idle animation: ${selectedAnimation} (index: ${this.currentIdleIndex})`)
+        }
+        return selectedAnimation
+      }
+    } else {
+      // Try primary animations first for non-idle states
+      for (const animName of mapping.primary) {
+        if (this.availableAnimations.has(animName)) {
+          return animName
+        }
       }
     }
     
@@ -584,9 +602,77 @@ export class AnimationController {
   }
 
   /**
+   * Start idle animation cycling
+   */
+  startIdleCycling(cycleInterval: number = 8000): void {
+    if (this.currentState !== 'idle') return
+    
+    this.stopIdleCycling()
+    
+    this.idleCycleTimer = setInterval(() => {
+      if (this.currentState === 'idle' && !this.isTransitioning) {
+        this.cycleToNextIdleAnimation()
+      }
+    }, cycleInterval)
+    
+    if (this.enableLogging) {
+      console.log(`🔄 Started idle animation cycling (${cycleInterval}ms interval)`)
+    }
+  }
+
+  /**
+   * Stop idle animation cycling
+   */
+  stopIdleCycling(): void {
+    if (this.idleCycleTimer) {
+      clearInterval(this.idleCycleTimer)
+      this.idleCycleTimer = null
+      
+      if (this.enableLogging) {
+        console.log('⏹️ Stopped idle animation cycling')
+      }
+    }
+  }
+
+  /**
+   * Cycle to the next idle animation variation
+   */
+  private cycleToNextIdleAnimation(): void {
+    const mapping = ENHANCED_ANIMATION_MAPPING.idle
+    const availableIdleAnimations = mapping.primary.filter(name => 
+      this.availableAnimations.has(name)
+    )
+    
+    if (availableIdleAnimations.length <= 1) return
+    
+    // Move to next idle animation
+    this.currentIdleIndex = (this.currentIdleIndex + 1) % availableIdleAnimations.length
+    const nextIdleAnimation = availableIdleAnimations[this.currentIdleIndex]
+    
+    if (this.enableLogging) {
+      console.log(`🔄 Cycling to idle animation: ${nextIdleAnimation}`)
+    }
+    
+    // Transition to the same state but with different animation
+    this.transitionTo('idle', { 
+      force: true, 
+      customDuration: 0.5,
+      customEasing: 'ease-in-out'
+    })
+  }
+
+  /**
+   * Get current idle animation index
+   */
+  getCurrentIdleIndex(): number {
+    return this.currentIdleIndex
+  }
+
+  /**
    * Dispose of the controller
    */
   dispose(): void {
+    this.stopIdleCycling()
     this.mixer.stopAllAction()
     this.blendAnimations.clear()
     this.availableAnimations.clear()

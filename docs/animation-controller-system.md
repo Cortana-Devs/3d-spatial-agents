@@ -111,16 +111,16 @@ The system uses a priority-based mapping system with primary and fallback animat
 ```typescript
 export const ENHANCED_ANIMATION_MAPPING = {
   idle: {
-    primary: ['F_Standing_Idle_Variations_001', 'F_Standing_Idle_Variations_002'],
-    fallback: ['Masculine_TPose'],
+    primary: ['idle_female_1', 'idle_female_2', 'idle_female_3'],
+    fallback: ['tpose_male'],
     priority: 1,
     looping: true,
     timeScale: 1.0,
     blendWeight: 1.0
   },
   walking: {
-    primary: ['M_Walk_001'],
-    fallback: ['M_Crouch_Walk_003'],
+    primary: ['walk_male'],
+    fallback: ['crouch_walk_male'],
     priority: 3,
     looping: true,
     timeScale: 1.0,
@@ -161,6 +161,32 @@ The system includes a comprehensive state machine with transition rules:
 { from: 'building', to: 'idle', priority: 1, duration: 0.5 }
 ```
 
+## Idle Animation Cycling
+
+The system now supports automatic cycling between idle animation variations to create more natural and varied idle behavior:
+
+```typescript
+// Enable idle cycling in the animation controller
+const animationController = useAnimationController(animationManager, simulant, {
+  enableIdleCycling: true,    // Enable automatic idle cycling
+  idleCycleInterval: 8000,    // Cycle every 8 seconds
+  enableLogging: true         // See cycling in console
+})
+
+// Manual control of idle cycling
+animationController.startIdleCycling(6000)  // Start with 6s interval
+animationController.stopIdleCycling()       // Stop cycling
+animationController.getCurrentIdleIndex()   // Get current idle variation index
+```
+
+### How Idle Cycling Works
+
+1. **Automatic Detection**: When a simulant enters the `idle` state, cycling automatically starts
+2. **Variation Selection**: The system cycles through available idle animations (`idle_female_1`, `idle_female_2`, `idle_female_3`)
+3. **Smooth Transitions**: Each cycle uses a smooth cross-fade transition (0.5s duration)
+4. **State Awareness**: Cycling stops when the simulant transitions to any other state
+5. **Configurable Timing**: Default 8-second intervals, customizable per simulant
+
 ## Configuration Options
 
 ### AnimationController Options
@@ -180,6 +206,8 @@ interface UseAnimationControllerOptions {
   autoTransition?: boolean     // Auto-transition on action changes
   transitionDelay?: number     // Debounce delay in milliseconds
   enableBlending?: boolean     // Enable animation blending
+  enableIdleCycling?: boolean  // Enable automatic idle animation cycling
+  idleCycleInterval?: number   // Idle cycling interval in milliseconds
 }
 ```
 

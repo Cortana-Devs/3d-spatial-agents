@@ -4,6 +4,8 @@ import React from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Separator } from "./ui/separator";
+import { Slider } from "./ui/slider";
+import { Label } from "./ui/label";
 import {
   Users,
   Video,
@@ -17,11 +19,19 @@ import {
   Play,
   Pause,
   GripVertical,
+  Square,
+  Activity,
+  User,
+  Zap,
+  Clock,
+  Repeat,
+  Shuffle,
 } from "lucide-react";
 import { useWorldStore } from "../store/worldStore";
 import { CAMERA_PRESETS } from "./world/CameraController";
 import { SimulantUtils } from "./simulants/SimulantManager";
 import type { AISimulant, CameraMode } from "../types";
+import type { AnimationState } from "../utils/animationController";
 
 type TabKey = "animation" | "simulants" | "camera";
 
@@ -30,6 +40,18 @@ const CAMERA_MODE_CONFIG = {
   fly: { icon: Move3D, label: "Fly" },
   cinematic: { icon: Video, label: "Cinematic" },
   "follow-simulant": { icon: Eye, label: "Follow" },
+} as const;
+
+// Animation configuration for the sidebar
+const ANIMATION_CONFIG = {
+  idle: { icon: User, label: "Idle", color: "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30", description: "Standing idle variations" },
+  walking: { icon: Activity, label: "Walk", color: "bg-green-500/20 text-green-300 hover:bg-green-500/30", description: "Walking forward" },
+  running: { icon: Zap, label: "Run", color: "bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30", description: "Running fast" },
+  jumping: { icon: Square, label: "Jump", color: "bg-purple-500/20 text-purple-300 hover:bg-purple-500/30", description: "Jumping action" },
+  building: { icon: Settings, label: "Build", color: "bg-orange-500/20 text-orange-300 hover:bg-orange-500/30", description: "Building/constructing" },
+  communicating: { icon: Users, label: "Talk", color: "bg-pink-500/20 text-pink-300 hover:bg-pink-500/30", description: "Talking/communicating" },
+  thinking: { icon: Clock, label: "Think", color: "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30", description: "Thinking/analyzing" },
+  celebrating: { icon: Repeat, label: "Celebrate", color: "bg-red-500/20 text-red-300 hover:bg-red-500/30", description: "Celebrating/dancing" },
 } as const;
 
 export default function FloatingSidebar() {
@@ -46,6 +68,13 @@ export default function FloatingSidebar() {
 
   const [activeTab, setActiveTab] = React.useState<TabKey>("animation");
   const [selectedPreset, setSelectedPreset] = React.useState(0);
+  
+  // Animation state management
+  const [currentAnimation, setCurrentAnimation] = React.useState<AnimationState | null>(null);
+  const [crossFadeDuration, setCrossFadeDuration] = React.useState(0.3);
+  const [animationSpeed, setAnimationSpeed] = React.useState(1.0);
+  const [enableIdleCycling, setEnableIdleCycling] = React.useState(true);
+  const [idleCycleInterval, setIdleCycleInterval] = React.useState(8);
   
   // Drag functionality
   const [isDragging, setIsDragging] = React.useState(false);
@@ -194,6 +223,50 @@ export default function FloatingSidebar() {
     }
   }, [isDragging, handleMouseMove, handleTouchMove, handleMouseUp]);
 
+  // Animation control functions
+  const handlePlayAnimation = (animationState: AnimationState) => {
+    setCurrentAnimation(animationState);
+    
+    // Map animation states to actions
+    const actionMap: Record<AnimationState, string> = {
+      idle: "standing idle",
+      walking: "walk forward",
+      running: "run forward",
+      jumping: "jump up",
+      building: "building a structure",
+      communicating: "talking to someone",
+      thinking: "thinking deeply",
+      celebrating: "celebrating victory"
+    };
+    
+    const action = actionMap[animationState];
+    simulants.forEach((simulant) => {
+      updateSimulant(simulant.id, { 
+        lastAction: action, 
+        status: animationState === "idle" ? "idle" : "active" 
+      });
+    });
+  };
+
+  const handleStopAllAnimations = () => {
+    setCurrentAnimation(null);
+    simulants.forEach((simulant) => {
+      updateSimulant(simulant.id, { lastAction: "standing idle", status: "idle" });
+    });
+  };
+
+  const handleRandomAnimation = () => {
+    const animations: AnimationState[] = ["idle", "walking", "running", "jumping", "building", "communicating", "thinking", "celebrating"];
+    const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
+    handlePlayAnimation(randomAnimation);
+  };
+
+  const handleToggleIdleCycling = () => {
+    setEnableIdleCycling(!enableIdleCycling);
+    // Note: The actual cycling is handled by the animation controller
+    // This is just for UI state management
+  };
+
   // Animation tab actions
   const handleAddTestSimulant = () => {
     const simulantId = `simulant-${Date.now()}`;
@@ -207,18 +280,6 @@ export default function FloatingSidebar() {
       geminiSessionId: `session-${simulantId}`,
     };
     addSimulant(newSimulant);
-  };
-
-  const handleStartWalking = () => {
-    simulants.forEach((simulant) => {
-      updateSimulant(simulant.id, { lastAction: "walk forward", status: "active" });
-    });
-  };
-
-  const handleStopWalking = () => {
-    simulants.forEach((simulant) => {
-      updateSimulant(simulant.id, { lastAction: "standing idle", status: "idle" });
-    });
   };
 
   // Simulants tab actions (compact copy of existing controls)
@@ -355,22 +416,146 @@ export default function FloatingSidebar() {
 
         {/* Tab content */}
         {activeTab === "animation" && (
-          <div className="p-3 space-y-2">
-            <div className="text-xs text-white/60">Animation Test Controls</div>
+          <div className="p-3 space-y-3 max-h-[500px] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-white/60">Animation Controls</div>
+              <div className="text-[10px] text-white/50">Simulants: {simulants.size}</div>
+            </div>
+
+            {/* Add Simulant */}
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" className="flex-1 text-white/80 hover:bg-white/10" onClick={handleAddTestSimulant}>
-                <Plus size={12} className="mr-1" /> Add Test Simulant
+                <Plus size={12} className="mr-1" /> Add Simulant
               </Button>
             </div>
-            <div className="flex gap-2">
-              <Button variant="default" size="sm" className="flex-1" onClick={handleStartWalking}>
-                <Play size={12} className="mr-1" /> Start Walking
-              </Button>
-              <Button variant="ghost" size="sm" className="flex-1 text-white/80 hover:bg-white/10" onClick={handleStopWalking}>
-                <Pause size={12} className="mr-1" /> T-Pose
-              </Button>
+
+            <Separator className="bg-white/10" />
+
+            {/* Animation Grid */}
+            <div className="space-y-2">
+              <div className="text-xs text-white/60">Play Animations</div>
+              <div className="grid grid-cols-2 gap-2">
+                {(Object.keys(ANIMATION_CONFIG) as AnimationState[]).map((animationState) => {
+                  const config = ANIMATION_CONFIG[animationState];
+                  const Icon = config.icon;
+                  const isActive = currentAnimation === animationState;
+                  
+                  return (
+                    <Button
+                      key={animationState}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePlayAnimation(animationState)}
+                      disabled={simulants.size === 0}
+                      className={`${config.color} ${isActive ? 'ring-2 ring-white/30' : ''} flex items-center gap-2 h-10 text-left justify-start`}
+                      title={config.description}
+                    >
+                      <Icon size={14} />
+                      <span className="text-sm font-medium">{config.label}</span>
+                      {isActive && (
+                        <div className="ml-auto w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="text-[10px] text-white/50 pt-1">Simulants: {simulants.size} • Default: Idle • Walking: loop</div>
+
+            <Separator className="bg-white/10" />
+
+            {/* Control Buttons */}
+            <div className="space-y-2">
+              <div className="text-xs text-white/60">Controls</div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex-1 text-white/80 hover:bg-white/10" 
+                  onClick={handleStopAllAnimations}
+                  disabled={simulants.size === 0}
+                >
+                  <Square size={12} className="mr-1" /> Stop All
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex-1 text-white/80 hover:bg-white/10" 
+                  onClick={handleRandomAnimation}
+                  disabled={simulants.size === 0}
+                >
+                  <Shuffle size={12} className="mr-1" /> Random
+                </Button>
+              </div>
+            </div>
+
+            <Separator className="bg-white/10" />
+
+            {/* Animation Settings */}
+            <div className="space-y-3">
+              <div className="text-xs text-white/60">Settings</div>
+              
+              {/* Cross-fade Duration */}
+              <div className="space-y-1">
+                <Label className="text-[10px] text-white/70">Cross-fade Duration: {crossFadeDuration}s</Label>
+                <Slider
+                  value={[crossFadeDuration]}
+                  onValueChange={(value) => setCrossFadeDuration(value[0])}
+                  min={0.1}
+                  max={2.0}
+                  step={0.1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Animation Speed */}
+              <div className="space-y-1">
+                <Label className="text-[10px] text-white/70">Animation Speed: {animationSpeed}x</Label>
+                <Slider
+                  value={[animationSpeed]}
+                  onValueChange={(value) => setAnimationSpeed(value[0])}
+                  min={0.5}
+                  max={2.0}
+                  step={0.1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Idle Cycling */}
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] text-white/70">Idle Cycling</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToggleIdleCycling}
+                  className={`text-xs ${enableIdleCycling ? 'text-green-300' : 'text-white/50'}`}
+                >
+                  {enableIdleCycling ? 'ON' : 'OFF'}
+                </Button>
+              </div>
+
+              {enableIdleCycling && (
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-white/70">Cycle Interval: {idleCycleInterval}s</Label>
+                  <Slider
+                    value={[idleCycleInterval]}
+                    onValueChange={(value) => setIdleCycleInterval(value[0])}
+                    min={3}
+                    max={15}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Current Animation Status */}
+            {currentAnimation && (
+              <div className="text-[10px] text-white/50 pt-2 border-t border-white/10">
+                Playing: {ANIMATION_CONFIG[currentAnimation].label}
+                {enableIdleCycling && currentAnimation === "idle" && " (cycling)"}
+              </div>
+            )}
           </div>
         )}
 
