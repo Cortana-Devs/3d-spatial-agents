@@ -18,7 +18,7 @@ interface SimulantManagerProps {
 
 // Performance optimization settings
 const PERFORMANCE_CONFIG = {
-  maxSimulants: 10,
+  maxSimulants: 50,
   lodDistances: {
     high: 15, // Full detail
     medium: 30, // Reduced animations
@@ -87,10 +87,10 @@ export default function SimulantManager({
         </>
       )}
       
-      {/* Render active simulants - Using simple version to avoid infinite loops */}
+      {/* Render active simulants with working animation system */}
       {activeSimulants.map((simulant) => (
         <SimpleAnimatedAvatar
-          key={simulant.id}
+          key={`simulant-${simulant.id}`}
           simulant={simulant}
           scale={0.8}
         />

@@ -270,10 +270,18 @@ export default function FloatingSidebar() {
   // Animation tab actions
   const handleAddTestSimulant = () => {
     const simulantId = `simulant-${Date.now()}`;
+    const spawnPositions = SimulantUtils.calculateSpawnPositions(
+      simulants.size + 1,
+      0,
+      0,
+      3 + simulants.size * 0.5,
+    );
+    const spawnPosition = spawnPositions[simulants.size] || spawnPositions[0] || { x: 0, y: 0, z: 0 };
+    
     const newSimulant: AISimulant = {
       id: simulantId,
       name: `Test Simulant`,
-      position: { x: 0, y: 0, z: 0 },
+      position: spawnPosition,
       status: "idle",
       lastAction: "standing idle",
       conversationHistory: [],
@@ -308,7 +316,7 @@ export default function FloatingSidebar() {
       0,
       3 + simulants.size * 0.5,
     );
-    const spawnPosition = spawnPositions[simulants.size] || { x: 0, y: 0, z: 0 };
+    const spawnPosition = spawnPositions[simulants.size] || spawnPositions[0] || { x: 0, y: 0, z: 0 };
 
     const newSimulant: AISimulant = {
       id: simulantId,

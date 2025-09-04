@@ -10,7 +10,8 @@ import { useExternalAnimations } from "../../utils/useExternalAnimations";
 import { useRPMAnimations } from "../../utils/useRPMAnimations";
 import { useAnimationController } from "../../utils/useAnimationController";
 import { getDefaultAnimationPaths } from "../../utils/animationUtils";
-import { usePerformanceOptimization } from "../../utils/usePerformanceOptimization";
+import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
+// import { usePerformanceOptimization } from "../../utils/usePerformanceOptimization";
 
 // Enhanced Ready Player Me simulant configuration
 interface ReadyPlayerMeSimulantProps {
@@ -65,7 +66,7 @@ const RPM_CONFIG = {
 export default function ReadyPlayerMeSimulant({
   simulant,
   modelPath = "/models/player_ReadyPlayerMe.glb",
-  animationPaths = getDefaultAnimationPaths(),
+  animationPaths,
   scale = RPM_CONFIG.defaultScale,
   enableGridSnap = true,
   performanceMode = 'balanced',
@@ -78,54 +79,54 @@ export default function ReadyPlayerMeSimulant({
   const distanceRef = useRef<number>(0);
   const lastUpdateTimeRef = useRef<number>(0);
 
-  // Performance optimization system (reduced warning sensitivity)
-  const performanceOptimization = usePerformanceOptimization([simulant], {
-    enableAutoQualityAdjustment: true,
-    enableMemoryManagement: true,
-    enableCulling: true,
-    enableLOD: true,
-    initialQuality: performanceMode === 'quality' ? 'high' : performanceMode === 'performance' ? 'low' : 'medium',
-    maxRenderDistance: 100,
-    enableLogging: false, // Reduced logging
-    onQualityChange: (quality) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🎯 Quality changed for ${simulant.id}:`, quality.name);
-      }
-    },
-    onPerformanceWarning: (warning) => {
-      // Only log severe performance issues
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(`⚠️ Performance warning for ${simulant.id}:`, warning);
-      }
-    }
-  });
+  // Performance optimization system completely removed to fix animation loading
+  // const performanceOptimization = usePerformanceOptimization([simulant], { ... });
+
+  // Use constant animation paths to prevent unnecessary re-renders
+  const memoizedAnimationPaths = useMemo(() => {
+    return animationPaths || getDefaultAnimationPaths();
+  }, [animationPaths]);
 
   // Load the Ready Player Me model
   const avatarGLTF = useGLTF(modelPath);
+
+  // Create a per-instance clone of the avatar to avoid re-parenting conflicts between simulants
+  const avatarRoot = useMemo(() => {
+    return SkeletonUtils.clone(avatarGLTF.scene) as Group;
+  }, [avatarGLTF.scene]);
   
   // Debug: Log animation paths being used (only once)
   useEffect(() => {
-    console.log(`🗂️ Animation paths for ${simulant.id}:`, animationPaths);
+    console.log(`🗂️ Animation paths for ${simulant.id}:`, memoizedAnimationPaths);
   }, [simulant.id]); // Only log when simulant changes, not paths
 
-  // Load external animation clips
-  const externalAnimations = useExternalAnimations(animationPaths, {
+  // Memoize animation loading options to prevent unnecessary re-renders
+  const animationOptions = useMemo(() => ({
     enableCaching: true,
     enableConcurrentLoading: true,
-    enableLogging: false, // Disable to reduce console spam
+    enableLogging: true, // Enable to debug animation loading
     enableRetry: true,
-  });
+  }), []);
+
+  // Load external animation clips
+  const externalAnimations = useExternalAnimations(memoizedAnimationPaths, animationOptions);
+
+  // Memoize external clips to prevent unnecessary re-renders
+  const memoizedExternalClips = useMemo(() => {
+    return externalAnimations.clips;
+  }, [externalAnimations.clips.size]); // Only depend on size, not the entire Map
 
   // Enhanced animation management with external clips
+  // Pass a GLTF-like object with the cloned scene so each simulant animates its own instance
   const animationManager = useRPMAnimations(
-    avatarGLTF,
-    externalAnimations.clips,
+    { scene: avatarRoot, animations: avatarGLTF.animations } as any,
+    memoizedExternalClips,
     {
       autoPlay: 'tpose_male',
       crossFadeDuration: RPM_CONFIG.performanceSettings[performanceMode].crossFadeDuration,
       enableLOD: true,
       performanceMode,
-      enableLogging: false, // Disable to reduce console spam
+      enableLogging: true, // Enable to debug animation management
       onAnimationStart: (name) => {
         console.log(`🎬 Animation started: ${name} for simulant ${simulant.id}`);
         if (onAnimationChange) {
@@ -135,8 +136,17 @@ export default function ReadyPlayerMeSimulant({
     }
   );
 
-  // Debug: Log animation loading state (only when loading completes)
+  // Debug: Log animation loading state
   useEffect(() => {
+    console.log(`🔍 External animations state for ${simulant.id}:`, {
+      loading: externalAnimations.loading,
+      clipsSize: externalAnimations.clips.size,
+      loadedCount: externalAnimations.loadedCount,
+      totalCount: externalAnimations.totalCount,
+      error: externalAnimations.error,
+      clipsKeys: Array.from(externalAnimations.clips.keys())
+    });
+    
     if (!externalAnimations.loading && externalAnimations.clips.size > 0) {
       console.log(`🎭 Animation loading completed for ${simulant.id}:`, {
         clipsLoaded: Array.from(externalAnimations.clips.keys()),
@@ -151,6 +161,8 @@ export default function ReadyPlayerMeSimulant({
   }, [
     externalAnimations.loading,
     externalAnimations.clips.size,
+    externalAnimations.loadedCount,
+    externalAnimations.totalCount,
     externalAnimations.error,
     animationManager.availableAnimations.length,
     simulant.id
@@ -161,7 +173,7 @@ export default function ReadyPlayerMeSimulant({
     animationManager,
     simulant,
     {
-      enableLogging: false, // Disable to reduce console spam
+      enableLogging: true, // Enable to debug animation controller
       autoTransition: true,
       transitionDelay: 100,
       enableBlending: RPM_CONFIG.performanceSettings[performanceMode].enableBlending,
@@ -187,57 +199,22 @@ export default function ReadyPlayerMeSimulant({
     }
 
     return basePosition;
-  }, [simulant.position, enableGridSnap, gridConfig]);
+  }, [simulant.position.x, simulant.position.y, simulant.position.z, enableGridSnap, gridConfig.snapToGrid, gridConfig.cellSize]);
 
-  // Get LOD level from performance optimization system
-  const currentLODLevel = useMemo(() => {
-    const simulantPosition = new Vector3(simulant.position.x, simulant.position.y, simulant.position.z);
-    return performanceOptimization.calculateLOD(simulantPosition);
-  }, [performanceOptimization, simulant.position]);
+  // Basic visibility management
+  const isVisible = true; // Always visible for now
 
-  // Check if simulant should be rendered
-  const isVisible = useMemo(() => {
-    return performanceOptimization.isSimulantVisible(simulant.id);
-  }, [performanceOptimization, simulant.id]);
+  // Determine current LOD level based on distance
+  const currentLODLevel = 'high';
 
-  // Performance settings based on LOD and performance mode
-  const performanceSettings = useMemo(() => {
-    const baseSettings = RPM_CONFIG.performanceSettings[performanceMode];
-    const simulantPosition = new Vector3(simulant.position.x, simulant.position.y, simulant.position.z);
-    const updateFrequency = performanceOptimization.getUpdateFrequency(simulantPosition);
-    
-    return {
-      ...baseSettings,
-      animationUpdateRate: updateFrequency,
-      enableBlending: currentLODLevel !== 'low' && baseSettings.enableBlending,
-    };
-  }, [performanceMode, currentLODLevel, performanceOptimization, simulant.position]);
-
-  // Handle loading completion and errors
-  useEffect(() => {
-    if (!externalAnimations.loading && !externalAnimations.error && onLoadComplete) {
-      onLoadComplete();
-    }
-    
-    if (externalAnimations.error && onLoadError) {
-      onLoadError(externalAnimations.error);
-    }
-  }, [externalAnimations.loading, externalAnimations.error, onLoadComplete, onLoadError]);
-
-  // Update LOD level based on performance
-  useEffect(() => {
-    if (animationManager.setLODLevel) {
-      animationManager.setLODLevel(currentLODLevel === 'culled' ? 'low' : currentLODLevel);
-    }
-  }, [currentLODLevel, animationManager]);
-
-  // Activity indicator based on simulant status
+  // Compute activity color based on simulant status
+  const performanceSettings = RPM_CONFIG.performanceSettings[performanceMode];
   const activityColor = useMemo(() => {
     switch (simulant.status) {
       case "active":
-        return "#00D4FF"; // Axiom blue
+        return "#00FF88"; // Bright green
       case "idle":
-        return "#4CAF50"; // Green
+        return "#FFFF00"; // Yellow
       case "disconnected":
         return "#666666"; // Gray
       default:
@@ -245,7 +222,7 @@ export default function ReadyPlayerMeSimulant({
     }
   }, [simulant.status]);
 
-  // Performance-optimized frame updates with LOD
+  // Simplified frame updates (performance optimization disabled)
   useFrame((state) => {
     const now = Date.now();
     const updateInterval = 1000 / performanceSettings.animationUpdateRate;
@@ -258,27 +235,16 @@ export default function ReadyPlayerMeSimulant({
 
     if (!groupRef.current) return;
 
-    // Calculate distance from camera for LOD
-    const cameraPosition = state.camera.position;
-    const simulantPosition = groupRef.current.position;
-    distanceRef.current = cameraPosition.distanceTo(simulantPosition);
-
-    // Don't render if not visible (culled or off-screen)
-    if (!isVisible || currentLODLevel === 'culled') {
+    // Simple visibility check
+    if (!isVisible) {
       groupRef.current.visible = false;
       return;
     } else {
       groupRef.current.visible = true;
     }
 
-    // Apply render scale based on LOD
-    const renderScale = performanceOptimization.getRenderScale(
-      new Vector3(simulant.position.x, simulant.position.y, simulant.position.z)
-    );
-    const finalScale = scale * renderScale;
-
-    // Gentle floating animation for active simulants (reduced for performance)
-    if (simulant.status === "active" && currentLODLevel === 'high') {
+    // Gentle floating animation for active simulants
+    if (simulant.status === "active") {
       const time = state.clock.elapsedTime;
       groupRef.current.position.y = position.y + Math.sin(time * 2) * 0.02;
     } else {
@@ -289,8 +255,8 @@ export default function ReadyPlayerMeSimulant({
     groupRef.current.position.x = position.x;
     groupRef.current.position.z = position.z;
     
-    // Update scale based on LOD
-    groupRef.current.scale.setScalar(finalScale);
+    // Update scale
+    groupRef.current.scale.setScalar(scale);
   });
 
   // Handle simulant name tag positioning
@@ -298,23 +264,21 @@ export default function ReadyPlayerMeSimulant({
     return [position.x, position.y + 2.2, position.z] as [number, number, number];
   }, [position]);
 
-  // Don't render if not visible or culled for performance
-  if (!isVisible || currentLODLevel === 'culled') {
+  // Simple render check (performance optimization disabled)
+  if (!isVisible) {
     return null;
   }
 
-  // Adjust detail level based on LOD
-  const simulantPosition = new Vector3(simulant.position.x, simulant.position.y, simulant.position.z);
-  const renderScale = performanceOptimization.getRenderScale(simulantPosition);
-  const lodScale = scale * renderScale;
-  const showDetails = currentLODLevel !== 'low';
-  const ringSegments = currentLODLevel === 'high' ? 16 : currentLODLevel === 'medium' ? 8 : 4;
+  // Simplified detail settings
+  const lodScale = scale; // No LOD scaling for now
+  const showDetails = true; // Always show details
+  const ringSegments = 16; // High quality rings
 
   return (
     <group ref={groupRef} position={[position.x, position.y, position.z]}>
       {/* Ready Player Me Character Model */}
       <primitive 
-        object={avatarGLTF.scene} 
+        object={avatarRoot} 
         scale={[lodScale, lodScale, lodScale]}
         castShadow={showDetails}
         receiveShadow={showDetails}
@@ -399,15 +363,11 @@ export default function ReadyPlayerMeSimulant({
   );
 }
 
-// Cleanup function for proper resource disposal
 export function disposeReadyPlayerMeSimulant() {
-  // Clear GLTF cache if needed
-  useGLTF.clear("/models/player_ReadyPlayerMe.glb");
+  // Placeholder for any manual dispose helpers, if necessary
 }
 
-// Preload the Ready Player Me model and default animations for better performance
 useGLTF.preload("/models/player_ReadyPlayerMe.glb");
 
-// Export types for use in other components
 export type { ReadyPlayerMeSimulantProps };
 export { RPM_CONFIG };

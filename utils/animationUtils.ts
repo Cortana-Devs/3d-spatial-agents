@@ -123,21 +123,24 @@ export function shouldAnimationLoop(name: string, category: string): boolean {
 /**
  * Get default animation paths for loading
  */
-export function getDefaultAnimationPaths(): string[] {
-  return [
-    '/animation_GLB/F_Standing_Idle_Variations_001.glb',
-    '/animation_GLB/F_Standing_Idle_Variations_002.glb',
-    '/animation_GLB/F_Standing_Idle_Variations_006.glb',
-    '/animation_GLB/M_Walk_001.glb',
-    '/animation_GLB/M_Run_001.glb',
-    '/animation_GLB/M_Walk_Jump_002.glb',
-    '/animation_GLB/M_Crouch_Walk_003.glb',
-    '/animation_GLB/M_Standing_Expressions_013.glb',
-    '/animation_GLB/M_Talking_Variations_005.glb',
-    '/animation_GLB/M_Walk_Backwards_001.glb',
-    '/animation_GLB/F_Dances_007.glb',
-    '/animation_GLB/Masculine_TPose.glb'
-  ]
+// Constant array to prevent recreation on every call
+const DEFAULT_ANIMATION_PATHS = [
+  '/animation_GLB/F_Standing_Idle_Variations_001.glb',
+  '/animation_GLB/F_Standing_Idle_Variations_002.glb',
+  '/animation_GLB/F_Standing_Idle_Variations_006.glb',
+  '/animation_GLB/M_Walk_001.glb',
+  '/animation_GLB/M_Run_001.glb',
+  '/animation_GLB/M_Walk_Jump_002.glb',
+  '/animation_GLB/M_Crouch_Walk_003.glb',
+  '/animation_GLB/M_Standing_Expressions_013.glb',
+  '/animation_GLB/M_Talking_Variations_005.glb',
+  '/animation_GLB/M_Walk_Backwards_001.glb',
+  '/animation_GLB/F_Dances_007.glb',
+  '/animation_GLB/Masculine_TPose.glb'
+] as const;
+
+export function getDefaultAnimationPaths(): readonly string[] {
+  return DEFAULT_ANIMATION_PATHS;
 }
 
 /**
