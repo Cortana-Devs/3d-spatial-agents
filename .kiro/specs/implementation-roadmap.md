@@ -3,6 +3,7 @@
 ## Master Implementation Prompts Tracker
 Track progress on every implementation prompt under `.kiro/specs/*/implementation-prompt.md`.
 
+**Core Feature Specs:**
 - [ ] .kiro/specs/ai-block-placement/implementation-prompt.md
 - [ ] .kiro/specs/ai-society-independence/implementation-prompt.md
 - [ ] .kiro/specs/ai-system-prompt-engineering/implementation-prompt.md
@@ -20,21 +21,36 @@ Track progress on every implementation prompt under `.kiro/specs/*/implementatio
 - [ ] .kiro/specs/user-registration-onboarding/implementation-prompt.md
 - [ ] .kiro/specs/voice-communication-system/implementation-prompt.md
 
+**Gap-Filling Infrastructure Specs:**
+- [ ] .kiro/specs/moderation-safety-system/implementation-prompt.md
+- [ ] .kiro/specs/audit-trail-system/implementation-prompt.md
+- [ ] .kiro/specs/feature-flags-system/implementation-prompt.md
+- [ ] .kiro/specs/asset-pipeline-optimization/implementation-prompt.md
+
 Notes:
 - Two animation prompt folders exist; treat `sophiticated-animation-system` as a typo and merge into `sophisticated-animation-system` when implementing.
 
 ## Phase-to-Prompts Map (LLM Execution Checklist)
 Use these per-phase prompt checklists to drive implementation.
 
+- Phase 1 — Project Foundation & World Core (Foundational Infrastructure)
+  - [ ] .kiro/specs/feature-flags-system/implementation-prompt.md
+  - [ ] .kiro/specs/audit-trail-system/implementation-prompt.md (basic tracking)
+
+- Phase 2 — Persistence & Realtime Foundation
+  - [ ] .kiro/specs/audit-trail-system/implementation-prompt.md (full implementation)
+
 - Phase 3 — AI Foundation & Prompt Engineering
   - [ ] .kiro/specs/ai-system-prompt-engineering/implementation-prompt.md
+  - [ ] .kiro/specs/moderation-safety-system/implementation-prompt.md
 
-- Phase 4 — Player Controller, RPM Avatars, Animation (advanced animation backlog)
+- Phase 4 — Player Controller, RPM Avatars, Animation
   - [ ] .kiro/specs/sophisticated-animation-system/implementation-prompt.md
   - [ ] .kiro/specs/sophiticated-animation-system/implementation-prompt.md  (duplicate; consolidate)
 
 - Phase 5 — Blocks & Items, Inventory, Advanced Placement
   - [ ] .kiro/specs/blocks-items-implementation/implementation-prompt.md
+  - [ ] .kiro/specs/asset-pipeline-optimization/implementation-prompt.md
 
 - Phase 6 — Skybox & Scene Atmospherics
   - [ ] .kiro/specs/skybox-implementation/implementation-prompt.md
@@ -83,7 +99,9 @@ How to use:
 - [ ] Enforce critical coding rules (no `any`, ESM only, hooks usage, typed mocks)
 - [ ] Initialize CI tasks: lint, type-check, unit tests
 - [ ] Add Error Boundaries for 3D canvas and critical UI shells
-- [ ] Introduce Feature Flags scaffold (e.g., LOD, culling toggles, AI capabilities)
+- [ ] **Implement Feature Flags System** (`.kiro/specs/feature-flags-system/`)
+- [ ] **Initialize Audit Trail System** (`.kiro/specs/audit-trail-system/`) - basic change tracking
+- [ ] **Set up Moderation Safety Layer** (`.kiro/specs/moderation-safety-system/`) - foundation for AI/chat filtering
 - [ ] Initialize Telemetry hooks (FPS, frame time) for later perf dashboards
 - [ ] Resolve duplicate folder: merge `sophisticated-animation-system` and `sophiticated-animation-system` (typo) into a single canonical spec
 - [ ] Establish Branch naming and PR templates
@@ -156,6 +174,7 @@ Deliverables:
 - [ ] Realtime channels: block changes, presence, sync status
 - [ ] Conflict resolver (timestamp priority) and rollback on mismatch
 - [ ] Event queue with backpressure handling; reconnect + replay logic
+- [ ] **Complete Audit Trail System** - full tracking, rollback, time-scrub capabilities
 
 Quality gates:
 - [ ] Migrations reversible; snapshot integrity validation
@@ -183,7 +202,7 @@ Deliverables:
 - [ ] Gemini integration: session management, auth, rate limits, timeout/backoff/retry
 - [ ] World context generation: nearby blocks, recent changes, simulant state
 - [ ] Typed action parser and validator (never `any`)
-- [ ] Safety/moderation layer for AI outputs and chat
+- [ ] **Complete Moderation Safety System** - text/voice/behavior filtering, escalation, audit logging
 
 Quality gates:
 - [ ] Action schemas are strictly typed; invalid actions rejected with clear feedback
@@ -245,6 +264,7 @@ Deliverables:
 - [ ] Model manager: LOD, caching, compression, shared textures; memory budgets
 - [ ] Placement validation with predictive feedback and ghost states
 - [ ] Ownership/permissions scaffold for shared worlds
+- [ ] **Asset Pipeline Optimization** - GLB/texture compression, validation, CDN delivery
 
 Quality gates:
 - [ ] Draw calls within target; concurrent model loads within limits
@@ -518,16 +538,22 @@ Milestone H — Polish & Readiness
 
 ---
 
-## Backlog & Gaps (Optional Enhancements)
+## Infrastructure Specs Completed
 
-- [ ] Content moderation: profanity/NSFW filters across chat/AI/voice
-- [ ] Audit trail visualization: timeline of world changes and AI actions
-- [ ] Replay/time-scrub: load historic snapshots for demos
-- [ ] Experiment flags: toggle AI behaviors/generation algorithms
+- [x] **Moderation & Safety System** - Centralized content filtering, safety checks, automated moderation
+- [x] **Audit Trail System** - Complete change tracking, rollback, time-scrub functionality
+- [x] **Feature Flags System** - Progressive rollouts, A/B testing, experimentation framework
+- [x] **Asset Pipeline Optimization** - GLB/texture optimization, validation, CDN integration
+
+## Remaining Backlog & Gaps (Optional Enhancements)
+
 - [ ] i18n: multi-language UI and AI prompts groundwork
 - [ ] Advanced analytics: cohort usage and feature adoption (privacy-safe)
 - [ ] Procedural generation seed management and conflict policies
-- [ ] Asset pipeline validation: automated GLB/texture linting pre-commit
+- [ ] Social media integration: sharing worlds and achievements
+- [ ] Mobile app optimization: touch controls and responsive 3D
+- [ ] VR/AR integration: immersive metaverse experiences
+- [ ] Blockchain integration: NFT assets and decentralized governance
 
 ---
 
