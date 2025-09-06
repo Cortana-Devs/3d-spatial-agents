@@ -11,6 +11,7 @@ Track progress on every implementation prompt under `.kiro/specs/*/implementatio
 - [ ] .kiro/specs/blocks-items-implementation/implementation-prompt.md
 - [ ] .kiro/specs/communication-news-system/implementation-prompt.md
 - [ ] .kiro/specs/final-testing-deployment/implementation-prompt.md
+- [ ] .kiro/specs/floor-implementation/implementation-prompt.md
 - [ ] .kiro/specs/ground-ai-navigation/implementation-prompt.md
 - [ ] .kiro/specs/grouping-gang-behavior/implementation-prompt.md
 - [ ] .kiro/specs/performance-optimization-monitoring/implementation-prompt.md
@@ -50,6 +51,7 @@ Use these per-phase prompt checklists to drive implementation.
 
 - Phase 5 — Blocks & Items, Inventory, Advanced Placement
   - [ ] .kiro/specs/blocks-items-implementation/implementation-prompt.md
+  - [ ] .kiro/specs/floor-implementation/implementation-prompt.md (frosted glass floors with rapid testing & feasibility study)
   - [ ] .kiro/specs/asset-pipeline-optimization/implementation-prompt.md
 
 - Phase 6 — Skybox & Scene Atmospherics
@@ -261,20 +263,25 @@ Deliverables:
 - [ ] Enhanced block schema: category, properties, interactions, placement rules (support/adjacency/height/biome)
 - [ ] Items system: tools/furniture/interactive; preview ghosting; rotation/snap
 - [ ] Inventory store: player + simulants; hotbar; containers; transfers
+- [ ] **Frosted Glass Floor System** - transparent, light-reflecting floors with modular design; includes feasibility study and rapid testing framework
 - [ ] Model manager: LOD, caching, compression, shared textures; memory budgets
 - [ ] Placement validation with predictive feedback and ghost states
 - [ ] Ownership/permissions scaffold for shared worlds
 - [ ] **Asset Pipeline Optimization** - GLB/texture compression, validation, CDN delivery
+- [ ] **Floor System Integration** - AI navigation over transparent surfaces, performance optimization, rapid testing validation
 
 Quality gates:
 - [ ] Draw calls within target; concurrent model loads within limits
 - [ ] Memory budgets enforced; eviction policies documented
 - [ ] Inventory sync: server authority + client prediction; conflict resolution tests pass
+- [ ] Frosted glass floor rendering maintains 60fps with transparency sorting; AI navigation works correctly on transparent surfaces
 
 Success criteria:
 - [ ] Items render with correct LOD; interactions trigger animations when applicable
 - [ ] Inventory operations (add/remove/move/transfer) validated
 - [ ] Invalid placements prevented with clear UX feedback
+- [ ] Frosted glass floors render with proper transparency, light reflection, and performance optimization
+- [ ] Rapid testing framework validates floor system functionality and integration
 
 Phase complete:
 - [ ] All deliverables, gates, and success criteria checked
@@ -494,6 +501,26 @@ Asset bloat (GLBs/textures)
 - [ ] CDN hosting with aggressive cache headers
 - [ ] Asset cache eviction policies
 
+Frosted Glass Floor Performance Issues
+- [ ] Transparency sorting causing frame drops below 60fps
+  → Mitigation: Implement depth-based batching and aggressive LOD system with fallback to opaque materials
+- [ ] Multiple reflection calculations overwhelming GPU
+  → Mitigation: Limit reflection probes to 10 max, use cached environment maps, disable reflections on low-end devices
+- [ ] Memory usage from frosting textures and normal maps
+  → Mitigation: Texture compression, shared material instances, memory budget monitoring with automatic cleanup
+- [ ] AI navigation confusion with transparent surfaces
+  → Mitigation: Generate specialized navigation markers, provide alternative pathfinding routes, clear visual cues
+
+Floor System Integration Failures
+- [ ] Existing block system incompatibility with transparent materials
+  → Mitigation: Extensive feasibility testing, gradual rollout with feature flags, backward compatibility layer
+- [ ] AI pathfinding breaking on see-through surfaces
+  → Mitigation: Enhanced AI perception system, transparent surface detection, emergency fallback to obstacle avoidance
+- [ ] Lighting system conflicts with glass reflections
+  → Mitigation: Lighting priority system, reflection intensity clamping, automatic quality scaling
+- [ ] Z-fighting artifacts in complex transparent arrangements
+  → Mitigation: Depth offset system, automatic spacing validation, rendering order optimization
+
 ---
 
 ## Milestones (Definition of Done)
@@ -518,9 +545,12 @@ Milestone D — Playable Character & Avatars
 - [ ] RPM avatars animated with blending
 - [ ] SSR-safe client init; fallbacks
 
-Milestone E — Rich Content
+Milestone E — Rich Content & Floors
 - [ ] Items/inventory operational with placement rules
+- [ ] Frosted glass floor system operational with transparency and light reflection
+- [ ] Floor system maintains 60fps with proper AI navigation integration
 - [ ] Model caching & LOD; skybox transitions integrated
+- [ ] Rapid testing framework validates floor performance and integration
 
 Milestone F — Navigation & Actioning
 - [ ] Pathfinding/spatial queries pass tests
@@ -531,7 +561,14 @@ Milestone G — Social Fabric
 - [ ] News/billboards tied to world events
 - [ ] Group behavior and basic governance
 
-Milestone H — Polish & Readiness
+Milestone H — Floor System Validation
+- [ ] Frosted glass materials render correctly with proper transparency sorting
+- [ ] Performance targets met: <5% FPS impact, <50MB memory usage
+- [ ] AI navigation works seamlessly on transparent surfaces
+- [ ] Rapid testing suite passes all integration and performance tests
+- [ ] Feasibility study confirms system robustness and maintainability
+
+Milestone I — Polish & Readiness
 - [ ] Perf overlay + adaptive quality
 - [ ] A11y checks pass; UI polish complete
 - [ ] CI/CD green; production monitoring online
