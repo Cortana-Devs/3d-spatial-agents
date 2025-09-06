@@ -9,6 +9,7 @@ export enum BlockType {
   NUMBER_4 = "number_4",
   NUMBER_5 = "number_5",
   NUMBER_6 = "number_6",
+  NUMBER_7 = "number_7",
 }
 
 // Selection Mode Enum - for UI interaction modes
@@ -174,7 +175,8 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
     transparency: 0.6, // More transparent for better blending
     emissive: "#FF9800", // Warm glow
     emissiveIntensity: 0.2,
-    description: "Premium frosted glass with perfect blending and sunset reflections",
+    description:
+      "Premium frosted glass with perfect blending and sunset reflections",
     category: "solid",
     durability: 8,
     stackable: true,
@@ -187,8 +189,25 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
       clearcoat: 1.0,
       clearcoatRoughness: 0.1,
       transmission: 0.95,
-      ior: 1.5
-    }
+      ior: 1.5,
+    },
+  },
+  [BlockType.NUMBER_7]: {
+    type: BlockType.NUMBER_7,
+    displayName: "Perfect Frosted Glass Block",
+    color: "#E8F4FD", // Ultra-light frosted blue
+    roughness: 0.05, // Optimized smoothness for performance
+    metalness: 0.0,
+    transparency: 0.7, // Balanced transparency for performance
+    emissive: "#F0F8FF", // Subtle white-blue glow
+    emissiveIntensity: 0.05, // Reduced for better performance
+    description:
+      "Perfect seamless frosted glass block with no visible edges or seams",
+    category: "solid",
+    durability: 9,
+    stackable: true,
+    buildable: true,
+    glowable: true,
   },
 };
 

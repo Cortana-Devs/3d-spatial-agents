@@ -23,7 +23,7 @@ const VoxelCanvas = dynamic(() => import("../components/world/VoxelCanvas"), {
 
 export default function Home() {
   // Note: Keyboard shortcuts are now handled by individual components
-  // BlockSelector handles 0-4 for block selection
+  // BlockSelector handles 0-9 for block selection (0=select tool, 1-7=blocks)
   // CameraControls handles Cmd/Ctrl+C for camera mode cycling
 
   return (
@@ -42,7 +42,9 @@ export default function Home() {
 
           <div className="floating-panel px-3 py-2 ml-4 md:ml-8 hidden sm:block">
             <div className="text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
-              <span className="hidden md:inline">Click to place blocks • Drag to orbit • Scroll to zoom</span>
+              <span className="hidden md:inline">
+                Click to place blocks • Drag to orbit • Scroll to zoom
+              </span>
               <span className="md:hidden">Tap to place • Drag to orbit</span>
             </div>
           </div>

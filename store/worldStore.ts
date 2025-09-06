@@ -154,7 +154,9 @@ export const useWorldStore = create<WorldState>()(
 
         // Check block limit
         if (state.blockCount >= state.worldLimits.maxBlocks) {
-          console.warn("Block limit reached:", state.worldLimits.maxBlocks);
+          console.warn(
+            `Block limit reached: ${state.blockCount}/${state.worldLimits.maxBlocks}`,
+          );
           return false;
         }
 
@@ -232,10 +234,31 @@ export const useWorldStore = create<WorldState>()(
       removeBlock: (position: Vector3, userId: string): boolean => {
         void userId;
         const state = get();
-        const key = positionToKey(position);
+
+        // Ensure position coordinates are properly rounded to match storage
+        const roundedPosition = new Vector3(
+          Math.round(position.x),
+          Math.round(position.y),
+          Math.round(position.z),
+        );
+        const key = positionToKey(roundedPosition);
+
+        // Check cooldown to prevent rapid-fire removal attempts
+        const now = Date.now();
+        const lastRemoval = state.lastUpdate || 0;
+        if (now - lastRemoval < 50) {
+          // 50ms cooldown between removals
+          return false;
+        }
 
         if (!state.blockMap.has(key)) {
-          console.warn("No block found at position:", position);
+          console.warn(
+            `No block found at position: (${position.x}, ${position.y}, ${position.z}), rounded: (${roundedPosition.x}, ${roundedPosition.y}, ${roundedPosition.z}), key: ${key}`,
+          );
+          console.warn(
+            "Available block keys:",
+            Array.from(state.blockMap.keys()).slice(0, 10),
+          );
           return false;
         }
 

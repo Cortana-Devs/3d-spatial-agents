@@ -23,6 +23,8 @@ import {
   InstancedBufferAttribute,
   PointsMaterial,
   AdditiveBlending,
+  DoubleSide,
+  NormalBlending,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
 import {
@@ -316,23 +318,48 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
             }}
             args={[undefined, undefined, maxInstances]}
           >
-            <boxGeometry args={[0.98, 0.98, 0.98]} />
-            <meshStandardMaterial
-              color={definition.color}
-              roughness={definition.roughness}
-              metalness={definition.metalness}
-              transparent={definition.transparency !== undefined}
-              opacity={
-                definition.transparency ? 1 - definition.transparency : 1
+            <boxGeometry
+              args={
+                type === BlockType.NUMBER_7
+                  ? [1.0, 1.0, 1.0]
+                  : [0.98, 0.98, 0.98]
               }
-              emissive={definition.emissive || "#000000"}
-              emissiveIntensity={definition.emissiveIntensity || 0}
-              vertexColors={true} // Enable vertex colors for per-instance coloring
-              toneMapped={false} // Prevent tone mapping artifacts
-              polygonOffset={true} // Prevent z-fighting
-              polygonOffsetFactor={1}
-              polygonOffsetUnits={1}
             />
+            {type === BlockType.NUMBER_7 ? (
+              <meshStandardMaterial
+                color={definition.color}
+                roughness={definition.roughness}
+                metalness={definition.metalness}
+                transparent={true}
+                opacity={
+                  definition.transparency ? 1 - definition.transparency : 1
+                }
+                emissive={definition.emissive || "#000000"}
+                emissiveIntensity={definition.emissiveIntensity || 0}
+                vertexColors={true}
+                toneMapped={false}
+                side={DoubleSide}
+                depthWrite={false}
+                alphaTest={0.01}
+              />
+            ) : (
+              <meshStandardMaterial
+                color={definition.color}
+                roughness={definition.roughness}
+                metalness={definition.metalness}
+                transparent={definition.transparency !== undefined}
+                opacity={
+                  definition.transparency ? 1 - definition.transparency : 1
+                }
+                emissive={definition.emissive || "#000000"}
+                emissiveIntensity={definition.emissiveIntensity || 0}
+                vertexColors={true} // Enable vertex colors for per-instance coloring
+                toneMapped={false} // Prevent tone mapping artifacts
+                polygonOffset={true} // Prevent z-fighting
+                polygonOffsetFactor={1}
+                polygonOffsetUnits={1}
+              />
+            )}
           </instancedMesh>
         );
       })}
@@ -397,7 +424,13 @@ function VoxelBlock({
         setShowParticles(true);
         // Delay the actual removal to show particle effect
         setTimeout(() => {
-          onRemove(new Vector3(...position));
+          // Ensure coordinates are properly rounded for consistent key matching
+          const roundedPosition = new Vector3(
+            Math.round(position[0]),
+            Math.round(position[1]),
+            Math.round(position[2]),
+          );
+          onRemove(roundedPosition);
         }, 100);
       }
     },
@@ -430,32 +463,65 @@ function VoxelBlock({
         onClick={handleClick}
         onContextMenu={handleRightClick}
       >
-        <boxGeometry args={geometryArgs} />
-        <meshStandardMaterial
-          color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
-          roughness={definition.roughness}
-          metalness={definition.metalness}
-          transparent={definition.transparency !== undefined}
-          opacity={definition.transparency ? 1 - definition.transparency : 1}
-          emissive={
-            isHovered
-              ? color
-              : isSelected
-                ? "#00D4FF"
-                : definition.emissive || "#000000"
-          }
-          emissiveIntensity={
-            isHovered
-              ? 0.2
-              : isSelected
-                ? 0.15
-                : definition.emissiveIntensity || 0
-          }
-          toneMapped={false} // Prevent tone mapping artifacts
-          polygonOffset={true} // Prevent z-fighting
-          polygonOffsetFactor={1}
-          polygonOffsetUnits={1}
+        <boxGeometry
+          args={type === BlockType.NUMBER_7 ? [1.0, 1.0, 1.0] : geometryArgs}
         />
+        {type === BlockType.NUMBER_7 ? (
+          <meshStandardMaterial
+            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
+            roughness={isHovered ? 0.1 : definition.roughness}
+            metalness={definition.metalness}
+            transparent={true}
+            opacity={
+              isSelected
+                ? 0.8
+                : definition.transparency
+                  ? 1 - definition.transparency
+                  : 1
+            }
+            emissive={
+              isHovered
+                ? color
+                : isSelected
+                  ? "#00D4FF"
+                  : definition.emissive || "#000000"
+            }
+            emissiveIntensity={
+              isHovered
+                ? 0.3
+                : isSelected
+                  ? 0.2
+                  : definition.emissiveIntensity || 0
+            }
+            toneMapped={false}
+            side={DoubleSide}
+            depthWrite={false}
+            alphaTest={0.01}
+          />
+        ) : (
+          <meshStandardMaterial
+            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
+            roughness={definition.roughness}
+            metalness={definition.metalness}
+            transparent={definition.transparency !== undefined}
+            opacity={definition.transparency ? 1 - definition.transparency : 1}
+            emissive={
+              isHovered
+                ? color
+                : isSelected
+                  ? "#00D4FF"
+                  : definition.emissive || "#000000"
+            }
+            emissiveIntensity={
+              isHovered
+                ? 0.2
+                : isSelected
+                  ? 0.15
+                  : definition.emissiveIntensity || 0
+            }
+            toneMapped={false} // Prevent tone mapping artifacts
+          />
+        )}
       </mesh>
 
       {showParticles && (
@@ -943,29 +1009,37 @@ export default function VoxelCanvas({
 
   // Dynamic performance settings based on block count
   const performanceSettings = useMemo(() => {
-    if (blockCount > 500) {
+    // Check for performance-heavy NUMBER_7 blocks
+    const number7Count = Array.from(blockMap.values()).filter(
+      (block) => block.type === BlockType.NUMBER_7,
+    ).length;
+
+    // Adjust performance settings based on NUMBER_7 blocks
+    const hasHeavyGlass = number7Count > 10;
+
+    if (blockCount > 500 || hasHeavyGlass) {
       return {
         shadows: false,
         antialias: false,
         dpr: [1, 1.5] as [number, number],
         performance: { min: 0.3, max: 0.8, debounce: 300 },
       };
-    } else if (blockCount > 200) {
+    } else if (blockCount > 200 || number7Count > 5) {
       return {
         shadows: true,
         antialias: false,
         dpr: [1, 2] as [number, number],
-        performance: { min: 0.4, max: 0.9, debounce: 250 },
+        performance: { min: 0.5, max: 0.9, debounce: 200 },
       };
     } else {
       return {
         shadows: true,
         antialias: true,
         dpr: [1, 2] as [number, number],
-        performance: { min: 0.5, max: 1, debounce: 200 },
+        performance: { min: 0.7, max: 1.0, debounce: 100 },
       };
     }
-  }, [blockCount]);
+  }, [blockCount, blockMap]);
 
   return (
     <div className={`w-full h-full relative ${className}`}>

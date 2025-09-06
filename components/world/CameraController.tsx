@@ -165,7 +165,11 @@ export default function CameraController({
       if (mode !== "fly") return;
 
       // Prevent default behavior for movement keys
-      if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space', 'ShiftLeft'].includes(event.code)) {
+      if (
+        ["KeyW", "KeyS", "KeyA", "KeyD", "Space", "ShiftLeft"].includes(
+          event.code,
+        )
+      ) {
         event.preventDefault();
       }
 
@@ -238,7 +242,7 @@ export default function CameraController({
   const handlePointerLockChange = useCallback(() => {
     flyControls.current.isPointerLocked =
       document.pointerLockElement === gl.domElement;
-    
+
     // Reset mouse movement when pointer lock changes
     flyControls.current.mouseMovement.x = 0;
     flyControls.current.mouseMovement.y = 0;
@@ -249,18 +253,6 @@ export default function CameraController({
       gl.domElement.requestPointerLock();
     }
   }, [mode, gl.domElement]);
-
-  // Double-click handler for block focusing
-  const handleDoubleClick = useCallback(
-    (event: MouseEvent) => {
-      if (!enableDoubleClickFocus) return;
-
-      // Implementation for double-click block focusing will be added
-      // This would involve raycasting to find the clicked block and focusing on it
-      console.log("Double-click focus not yet implemented", event);
-    },
-    [enableDoubleClickFocus],
-  );
 
   // Camera transition function
   const startTransition = useCallback(
@@ -286,6 +278,31 @@ export default function CameraController({
       };
     },
     [camera],
+  );
+
+  // Double-click handler for block focusing
+  const handleDoubleClick = useCallback(
+    (event: MouseEvent) => {
+      if (!enableDoubleClickFocus) return;
+
+      // Basic implementation to focus on clicked area
+      const rect = gl.domElement.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      // Create a basic focus position based on click location
+      const currentCamera = camera as THREE.PerspectiveCamera;
+      const focusDistance = 10;
+      const focusPosition = new Vector3(x * 5, 0, y * 5);
+
+      // Smooth transition to focus position
+      startTransition(
+        focusPosition.clone().add(new Vector3(0, 5, 5)),
+        focusPosition,
+        currentCamera.fov,
+      );
+    },
+    [enableDoubleClickFocus, gl.domElement, camera, startTransition],
   );
 
   // Mode change handler with smooth transitions
@@ -397,7 +414,7 @@ export default function CameraController({
       // Apply movement with frame rate independence
       const movement = controls.velocity
         .clone()
-        .multiplyScalar(Math.min(delta, 1/30) * config.moveSpeed); // Cap delta to prevent large jumps
+        .multiplyScalar(Math.min(delta, 1 / 30) * config.moveSpeed); // Cap delta to prevent large jumps
       camera.position.add(movement);
     },
     [camera],
