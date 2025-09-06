@@ -5,7 +5,10 @@ import type { Block, BlockType } from "./blocks";
 export * from "./blocks";
 
 // Re-export animation types
-export * from "./animations";
+export * as animationTypes from "./animations";
+
+// Re-export skybox types
+export * from "./skybox";
 
 // AI Simulant Types
 export interface AISimulant {
