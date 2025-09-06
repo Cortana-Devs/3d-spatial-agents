@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Suspense } from 'react';
-import ModularVoxelCanvas from '../../components/world/ModularVoxelCanvas';
-import { useWorldStore } from '../../store/worldStore';
-import { Vector3 } from 'three';
+import React, { useState } from "react";
+import { Suspense } from "react";
+import ModularVoxelCanvas from "../../components/world/ModularVoxelCanvas";
+import { useWorldStore } from "../../store/worldStore";
+import { Vector3 } from "three";
+import { BlockType } from "../../types";
 
 export default function ModularTestPage() {
-  const [performancePreset, setPerformancePreset] = useState<'AUTO' | 'HIGH_PERFORMANCE' | 'BALANCED' | 'LOW_END'>('AUTO');
+  const [performancePreset, setPerformancePreset] = useState<
+    "AUTO" | "HIGH_PERFORMANCE" | "BALANCED" | "LOW_END"
+  >("AUTO");
   const [enabledModules, setEnabledModules] = useState({
     animations: true,
     blockPlacement: true,
@@ -20,16 +23,16 @@ export default function ModularTestPage() {
   // Add some test blocks
   const addTestBlocks = () => {
     const blocks = [
-      { pos: new Vector3(0, 0, 0), type: 'stone' as const },
-      { pos: new Vector3(1, 0, 0), type: 'wood' as const },
-      { pos: new Vector3(2, 0, 0), type: 'leaf' as const },
-      { pos: new Vector3(0, 1, 0), type: 'stone' as const },
-      { pos: new Vector3(1, 1, 0), type: 'wood' as const },
-      { pos: new Vector3(0, 0, 1), type: 'leaf' as const },
+      { pos: new Vector3(0, 0, 0), type: BlockType.STONE },
+      { pos: new Vector3(1, 0, 0), type: BlockType.WOOD },
+      { pos: new Vector3(2, 0, 0), type: BlockType.LEAF },
+      { pos: new Vector3(0, 1, 0), type: BlockType.STONE },
+      { pos: new Vector3(1, 1, 0), type: BlockType.WOOD },
+      { pos: new Vector3(0, 0, 1), type: BlockType.LEAF },
     ];
 
     blocks.forEach(({ pos, type }) => {
-      addBlock(pos, type, 'human');
+      addBlock(pos, type, "human");
     });
   };
 
@@ -44,8 +47,8 @@ export default function ModularTestPage() {
           y: 0,
           z: 5,
         },
-        status: 'active' as const,
-        lastAction: i % 2 === 0 ? 'walking around' : 'standing idle',
+        status: "active" as const,
+        lastAction: i % 2 === 0 ? "walking around" : "standing idle",
         conversationHistory: [],
         geminiSessionId: `test-session-${i}`,
       };
@@ -54,7 +57,7 @@ export default function ModularTestPage() {
   };
 
   const toggleModule = (module: keyof typeof enabledModules) => {
-    setEnabledModules(prev => ({
+    setEnabledModules((prev) => ({
       ...prev,
       [module]: !prev[module],
     }));
@@ -70,18 +73,20 @@ export default function ModularTestPage() {
         <div className="mb-4">
           <h3 className="text-sm font-semibold mb-2">Performance Preset:</h3>
           <div className="space-y-2">
-            {(['AUTO', 'HIGH_PERFORMANCE', 'BALANCED', 'LOW_END'] as const).map((preset) => (
-              <label key={preset} className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="preset"
-                  checked={performancePreset === preset}
-                  onChange={() => setPerformancePreset(preset)}
-                  className="form-radio"
-                />
-                <span className="text-xs">{preset}</span>
-              </label>
-            ))}
+            {(["AUTO", "HIGH_PERFORMANCE", "BALANCED", "LOW_END"] as const).map(
+              (preset) => (
+                <label key={preset} className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="preset"
+                    checked={performancePreset === preset}
+                    onChange={() => setPerformancePreset(preset)}
+                    className="form-radio"
+                  />
+                  <span className="text-xs">{preset}</span>
+                </label>
+              ),
+            )}
           </div>
         </div>
 
@@ -94,13 +99,15 @@ export default function ModularTestPage() {
                 <input
                   type="checkbox"
                   checked={enabled}
-                  onChange={() => toggleModule(module as keyof typeof enabledModules)}
+                  onChange={() =>
+                    toggleModule(module as keyof typeof enabledModules)
+                  }
                   className="form-checkbox"
                 />
                 <span className="text-xs capitalize">{module}</span>
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    enabled ? 'bg-green-400' : 'bg-gray-500'
+                    enabled ? "bg-green-400" : "bg-gray-500"
                   }`}
                 />
               </label>
@@ -140,25 +147,33 @@ export default function ModularTestPage() {
       {/* Info Panel */}
       <div className="absolute bottom-4 left-4 z-20 bg-black bg-opacity-80 p-3 rounded text-xs">
         <div className="space-y-1">
-          <p><strong>Purpose:</strong> Test module isolation & performance</p>
-          <p><strong>Expected:</strong> No lag between systems</p>
-          <p><strong>Watch for:</strong> Animation + Block placement conflicts</p>
+          <p>
+            <strong>Purpose:</strong> Test module isolation & performance
+          </p>
+          <p>
+            <strong>Expected:</strong> No lag between systems
+          </p>
+          <p>
+            <strong>Watch for:</strong> Animation + Block placement conflicts
+          </p>
         </div>
       </div>
 
       {/* Performance Warning */}
-      {performancePreset === 'LOW_END' && (
+      {performancePreset === "LOW_END" && (
         <div className="absolute top-20 right-4 z-20 bg-yellow-900 bg-opacity-90 text-yellow-200 p-3 rounded text-xs">
           ⚠️ Low-end mode active - some features disabled for performance
         </div>
       )}
 
       {/* Modular Canvas */}
-      <Suspense fallback={
-        <div className="flex items-center justify-center w-full h-full">
-          <div className="text-white text-lg">Loading Modular System...</div>
-        </div>
-      }>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center w-full h-full">
+            <div className="text-white text-lg">Loading Modular System...</div>
+          </div>
+        }
+      >
         <ModularVoxelCanvas
           className="w-full h-full"
           enablePerformanceStats={true}
@@ -173,12 +188,14 @@ export default function ModularTestPage() {
       </Suspense>
 
       {/* Development Notes */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === "development" && (
         <div className="absolute bottom-4 right-4 z-20 bg-purple-900 bg-opacity-80 p-2 rounded text-xs max-w-xs">
-          <p><strong>Dev Notes:</strong></p>
+          <p>
+            <strong>Dev Notes:</strong>
+          </p>
           <p>• Each module runs in isolated performance context</p>
-          <p>• Animation updates don't affect block placement</p>
-          <p>• Block operations don't slow down animations</p>
+          <p>• Animation updates don&apos;t affect block placement</p>
+          <p>• Block operations don&apos;t slow down animations</p>
           <p>• Module stats show individual frame times</p>
         </div>
       )}
