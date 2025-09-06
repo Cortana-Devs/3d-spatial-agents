@@ -48,6 +48,8 @@ const GPU_CONFIG = {
   ENABLE_DEPTH_PREPASS: true,
   USE_INSTANCED_ARRAYS: true,
   TRANSPARENCY_OPTIMIZATION: true,
+  ENABLE_GPU_TIMING: false, // Disable to prevent WebGL errors
+  ENABLE_DEBUG_LOGGING: process.env.NODE_ENV === "development",
   MAX_TRANSPARENT_BLOCKS: 100,
 } as const;
 
@@ -378,6 +380,8 @@ export default function GPUOptimizedRenderer({
 
   // Initialize renderers with transparency optimization
   useEffect(() => {
+    if (!camera) return; // Wait for camera to be available
+
     const renderers = new Map<BlockType, GPUBlockTypeRenderer>();
 
     // Initialize transparency optimizer
@@ -450,8 +454,9 @@ export default function GPUOptimizedRenderer({
     let culledInstances = 0;
 
     // Apply transparency optimization for performance-critical blocks
-    const transparencyResults =
-      transparencyOptimizer.optimizeTransparentBlocks(blocks);
+    const transparencyResults = camera
+      ? transparencyOptimizer.optimizeTransparentBlocks(blocks)
+      : { visibleTransparentBlocks: [], culledCount: 0, performanceGain: 0 };
     const optimizedTransparentBlocks = new Set(
       transparencyResults.visibleTransparentBlocks.map((tb) => tb.block.id),
     );
@@ -629,15 +634,24 @@ export default function GPUOptimizedRenderer({
 
   // Main update loop with performance profiling
   useFrame((state) => {
-    // Start GPU timing
+    // Start GPU profiling only if enabled and supported
     if (
+      GPU_CONFIG.ENABLE_GPU_TIMING &&
       process.env.NODE_ENV === "development" &&
+      typeof state.gl.getContext === "function" &&
       ShaderUtils.isWebGL2(state.gl.getContext())
     ) {
-      ShaderProfiler.startTiming(
-        state.gl.getContext() as WebGL2RenderingContext,
-        "gpu-render",
-      );
+      try {
+        ShaderProfiler.startTiming(
+          state.gl.getContext() as WebGL2RenderingContext,
+          "gpu-render",
+        );
+      } catch (error) {
+        // Silently fail to prevent console spam
+        if (process.env.NODE_ENV === "development") {
+          console.warn("GPU timing start failed:", error);
+        }
+      }
     }
 
     // Update shader uniforms for advanced materials
@@ -661,26 +675,36 @@ export default function GPUOptimizedRenderer({
     }
 
     // End GPU timing
+    // End GPU profiling only if enabled and supported
     if (
+      GPU_CONFIG.ENABLE_GPU_TIMING &&
       process.env.NODE_ENV === "development" &&
+      typeof state.gl.getContext === "function" &&
       ShaderUtils.isWebGL2(state.gl.getContext())
     ) {
       ShaderProfiler.endTiming(
         state.gl.getContext() as WebGL2RenderingContext,
         "gpu-render",
-      ).then((time) => {
-        if (time > 16) {
-          console.warn(
-            `⚠️ GPU frame time: ${time.toFixed(2)}ms (target: <16ms)`,
-          );
-        }
-      });
+      )
+        .then((time) => {
+          if (time > 16 && process.env.NODE_ENV === "development") {
+            console.warn(
+              `⚠️ GPU frame time: ${time.toFixed(2)}ms (target: <16ms)`,
+            );
+          }
+        })
+        .catch((error) => {
+          // Silently handle WebGL timing errors in production
+          if (process.env.NODE_ENV === "development") {
+            console.warn("GPU timing failed:", error);
+          }
+        });
     }
   });
 
   // Enhanced performance monitoring with transparency optimization
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
+    if (GPU_CONFIG.ENABLE_DEBUG_LOGGING) {
       const interval = setInterval(() => {
         const metrics = performanceMetrics.current;
         const memoryStats = gpuMemoryManager.getMemoryStats();

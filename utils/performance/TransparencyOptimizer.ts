@@ -28,6 +28,7 @@ export class TransparencyOptimizer {
   private frustum = new Frustum();
   private cameraMatrix = new Matrix4();
   private frameCount = 0;
+  private hasWarnedAboutCamera = false;
   private performanceMetrics = {
     transparentBlocksProcessed: 0,
     culledBlocks: 0,
@@ -81,16 +82,24 @@ export class TransparencyOptimizer {
   }
 
   // Process transparent blocks with performance optimization
-  optimizeTransparentBlocks(
-    allBlocks: Map<string, Block>
-  ): {
+  optimizeTransparentBlocks(allBlocks: Map<string, Block>): {
     visibleTransparentBlocks: TransparentBlock[];
     culledCount: number;
     performanceGain: number;
   } {
     if (!this.camera) {
-      console.warn("TransparencyOptimizer: Camera not initialized");
-      return { visibleTransparentBlocks: [], culledCount: 0, performanceGain: 0 };
+      // Only warn once per session to avoid spam
+      if (!this.hasWarnedAboutCamera) {
+        console.warn(
+          "TransparencyOptimizer: Camera not initialized - transparency optimization disabled",
+        );
+        this.hasWarnedAboutCamera = true;
+      }
+      return {
+        visibleTransparentBlocks: [],
+        culledCount: 0,
+        performanceGain: 0,
+      };
     }
 
     const startTime = performance.now();
@@ -126,7 +135,9 @@ export class TransparencyOptimizer {
   }
 
   // Extract blocks that need transparency rendering
-  private extractTransparentBlocks(allBlocks: Map<string, Block>): TransparentBlock[] {
+  private extractTransparentBlocks(
+    allBlocks: Map<string, Block>,
+  ): TransparentBlock[] {
     const transparentBlocks: TransparentBlock[] = [];
     const cameraPosition = this.camera!.position;
 
@@ -136,7 +147,7 @@ export class TransparencyOptimizer {
         const blockPosition = new Vector3(
           block.position.x,
           block.position.y,
-          block.position.z
+          block.position.z,
         );
 
         const distance = cameraPosition.distanceTo(blockPosition);
@@ -156,9 +167,11 @@ export class TransparencyOptimizer {
 
   // Check if block type requires transparency rendering
   private requiresTransparency(blockType: BlockType): boolean {
-    return blockType === BlockType.NUMBER_7 ||
-           blockType === BlockType.FROSTED_GLASS ||
-           blockType === BlockType.NUMBER_6; // Sunset glass
+    return (
+      blockType === BlockType.NUMBER_7 ||
+      blockType === BlockType.FROSTED_GLASS ||
+      blockType === BlockType.NUMBER_6
+    ); // Sunset glass
   }
 
   // Calculate render priority for sorting
@@ -175,7 +188,7 @@ export class TransparencyOptimizer {
 
   // Apply comprehensive optimization pipeline
   private applyOptimizationPipeline(
-    transparentBlocks: TransparentBlock[]
+    transparentBlocks: TransparentBlock[],
   ): TransparentBlock[] {
     let optimizedBlocks = [...transparentBlocks];
 
@@ -203,7 +216,7 @@ export class TransparencyOptimizer {
 
   // Distance-based culling
   private applyDistanceCulling(blocks: TransparentBlock[]): TransparentBlock[] {
-    return blocks.filter(transparentBlock => {
+    return blocks.filter((transparentBlock) => {
       if (transparentBlock.distance > this.config.cullingDistance) {
         transparentBlock.isVisible = false;
         return false;
@@ -214,11 +227,11 @@ export class TransparencyOptimizer {
 
   // Frustum culling for off-screen blocks
   private applyFrustumCulling(blocks: TransparentBlock[]): TransparentBlock[] {
-    return blocks.filter(transparentBlock => {
+    return blocks.filter((transparentBlock) => {
       const blockPosition = new Vector3(
         transparentBlock.block.position.x,
         transparentBlock.block.position.y,
-        transparentBlock.block.position.z
+        transparentBlock.block.position.z,
       );
 
       if (!this.frustum.containsPoint(blockPosition)) {
@@ -231,7 +244,9 @@ export class TransparencyOptimizer {
   }
 
   // Performance-based adaptive culling
-  private applyPerformanceCulling(blocks: TransparentBlock[]): TransparentBlock[] {
+  private applyPerformanceCulling(
+    blocks: TransparentBlock[],
+  ): TransparentBlock[] {
     // Get current performance metrics
     const isPerformanceCritical = this.performanceMetrics.renderTime > 16; // >60 FPS threshold
 
@@ -276,7 +291,7 @@ export class TransparencyOptimizer {
 
     this.cameraMatrix.multiplyMatrices(
       this.camera.projectionMatrix,
-      this.camera.matrixWorldInverse
+      this.camera.matrixWorldInverse,
     );
     this.frustum.setFromProjectionMatrix(this.cameraMatrix);
   }
@@ -307,12 +322,17 @@ export class TransparencyOptimizer {
     }
 
     if (this.performanceMetrics.transparentBlocksProcessed > 300) {
-      recommendations.push("Too many transparent blocks - consider using opaque alternatives");
+      recommendations.push(
+        "Too many transparent blocks - consider using opaque alternatives",
+      );
     }
 
     return {
-      totalTransparentBlocks: this.performanceMetrics.transparentBlocksProcessed,
-      visibleBlocks: this.performanceMetrics.transparentBlocksProcessed - this.performanceMetrics.culledBlocks,
+      totalTransparentBlocks:
+        this.performanceMetrics.transparentBlocksProcessed,
+      visibleBlocks:
+        this.performanceMetrics.transparentBlocksProcessed -
+        this.performanceMetrics.culledBlocks,
       culledBlocks: this.performanceMetrics.culledBlocks,
       cullingEfficiency,
       averageRenderTime: this.performanceMetrics.renderTime,
@@ -334,7 +354,9 @@ export class TransparencyOptimizer {
       }
 
       this.updatePerformanceSettings();
-      console.log(`🔧 Transparency optimizer: Reduced to ${this.config.performanceMode} mode`);
+      console.log(
+        `🔧 Transparency optimizer: Reduced to ${this.config.performanceMode} mode`,
+      );
     } else if (currentFPS > targetFPS * 1.1) {
       // Performance is good, can increase quality
       if (this.config.performanceMode === "low") {
@@ -346,12 +368,16 @@ export class TransparencyOptimizer {
       }
 
       this.updatePerformanceSettings();
-      console.log(`🚀 Transparency optimizer: Increased to ${this.config.performanceMode} mode`);
+      console.log(
+        `🚀 Transparency optimizer: Increased to ${this.config.performanceMode} mode`,
+      );
     }
   }
 
   // Batch process transparent blocks for GPU efficiency
-  createRenderBatches(transparentBlocks: TransparentBlock[]): TransparentBlock[][] {
+  createRenderBatches(
+    transparentBlocks: TransparentBlock[],
+  ): TransparentBlock[][] {
     const batches: TransparentBlock[][] = [];
     const batchSize = this.config.batchSize;
 
@@ -380,10 +406,10 @@ Visible After Culling: ${stats.visibleBlocks}
 Culled Blocks: ${stats.culledBlocks}
 Culling Efficiency: ${(stats.cullingEfficiency * 100).toFixed(1)}%
 Average Render Time: ${stats.averageRenderTime.toFixed(2)}ms
-Frame Rate Impact: ${stats.averageRenderTime < 16 ? 'Low' : 'High'}
+Frame Rate Impact: ${stats.averageRenderTime < 16 ? "Low" : "High"}
 
 Recommendations:
-${stats.recommendations.map(rec => `• ${rec}`).join('\n')}
+${stats.recommendations.map((rec) => `• ${rec}`).join("\n")}
 =====================================
     `;
   }
@@ -401,8 +427,8 @@ export const TransparencyUtils = {
 
   // Get recommended settings based on device capabilities
   getRecommendedConfig: (): Partial<TransparencyConfig> => {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl") || canvas.getContext("webgl2");
 
     if (!gl) {
       return { performanceMode: "low", maxTransparentBlocks: 50 };
@@ -421,27 +447,30 @@ export const TransparencyUtils = {
   },
 
   // Auto-configure based on scene complexity
-  autoConfigureForScene: (totalBlocks: number, transparentBlocks: number): Partial<TransparencyConfig> => {
+  autoConfigureForScene: (
+    totalBlocks: number,
+    transparentBlocks: number,
+  ): Partial<TransparencyConfig> => {
     const transparentRatio = transparentBlocks / totalBlocks;
 
     if (transparentRatio > 0.3 || totalBlocks > 2000) {
       return {
         performanceMode: "low",
         maxTransparentBlocks: 100,
-        enableOcclusionCulling: true
+        enableOcclusionCulling: true,
       };
     } else if (transparentRatio > 0.15 || totalBlocks > 1000) {
       return {
         performanceMode: "balanced",
-        maxTransparentBlocks: 200
+        maxTransparentBlocks: 200,
       };
     } else {
       return {
         performanceMode: "high",
-        maxTransparentBlocks: 300
+        maxTransparentBlocks: 300,
       };
     }
-  }
+  },
 };
 
 export default TransparencyOptimizer;

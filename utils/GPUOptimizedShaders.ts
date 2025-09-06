@@ -627,53 +627,128 @@ export class ShaderUtils {
 // Performance profiler for shaders
 export class ShaderProfiler {
   private static queries = new Map<string, WebGLQuery>();
+  private static timerExtension: any = null;
+  private static isTimerSupported: boolean | null = null;
+  private static startTimes = new Map<string, number>();
+
+  private static checkTimerSupport(gl: WebGL2RenderingContext): boolean {
+    if (this.isTimerSupported !== null) {
+      return this.isTimerSupported;
+    }
+
+    if (!this.isWebGL2(gl)) {
+      this.isTimerSupported = false;
+      return false;
+    }
+
+    // Check for timer query extension
+    this.timerExtension = gl.getExtension("EXT_disjoint_timer_query_webgl2");
+    this.isTimerSupported = this.timerExtension !== null;
+
+    if (!this.isTimerSupported) {
+      console.warn(
+        "WebGL timer queries not supported - using fallback performance measurement",
+      );
+    }
+
+    return this.isTimerSupported;
+  }
 
   static startTiming(gl: WebGL2RenderingContext, name: string) {
-    if (!this.isWebGL2(gl)) return;
+    if (!this.checkTimerSupport(gl)) {
+      // Fallback to performance.now()
+      this.startTimes.set(name, performance.now());
+      return;
+    }
 
     const query = gl.createQuery();
-    if (!query) return;
+    if (!query) {
+      this.startTimes.set(name, performance.now());
+      return;
+    }
 
     this.queries.set(name, query);
-    gl.beginQuery(0x88bf, query); // gl.TIME_ELAPSED_EXT
+
+    try {
+      // Use the correct constant from the extension
+      gl.beginQuery(this.timerExtension.TIME_ELAPSED_EXT, query);
+    } catch (error) {
+      console.warn(
+        "WebGL timer query failed, falling back to performance.now():",
+        error,
+      );
+      gl.deleteQuery(query);
+      this.queries.delete(name);
+      this.startTimes.set(name, performance.now());
+    }
   }
 
   static endTiming(gl: WebGL2RenderingContext, name: string): Promise<number> {
     return new Promise((resolve) => {
-      if (!this.isWebGL2(gl)) {
-        resolve(0);
+      if (!this.checkTimerSupport(gl)) {
+        // Fallback timing
+        const startTime = this.startTimes.get(name);
+        if (startTime !== undefined) {
+          const elapsed = performance.now() - startTime;
+          this.startTimes.delete(name);
+          resolve(elapsed);
+        } else {
+          resolve(0);
+        }
         return;
       }
 
       const query = this.queries.get(name);
       if (!query) {
-        resolve(0);
+        // Try fallback timing
+        const startTime = this.startTimes.get(name);
+        if (startTime !== undefined) {
+          const elapsed = performance.now() - startTime;
+          this.startTimes.delete(name);
+          resolve(elapsed);
+        } else {
+          resolve(0);
+        }
         return;
       }
 
-      gl.endQuery(0x88bf); // gl.TIME_ELAPSED_EXT
+      try {
+        gl.endQuery(this.timerExtension.TIME_ELAPSED_EXT);
 
-      const checkResult = () => {
-        const available = gl.getQueryParameter(
-          query,
-          gl.QUERY_RESULT_AVAILABLE,
-        );
-        if (available) {
-          const result = gl.getQueryParameter(query, gl.QUERY_RESULT);
-          gl.deleteQuery(query);
-          this.queries.delete(name);
-          resolve(result / 1000000); // Convert to milliseconds
-        } else {
-          setTimeout(checkResult, 1);
-        }
-      };
+        const checkResult = () => {
+          try {
+            const available = gl.getQueryParameter(
+              query,
+              gl.QUERY_RESULT_AVAILABLE,
+            );
+            if (available) {
+              const result = gl.getQueryParameter(query, gl.QUERY_RESULT);
+              gl.deleteQuery(query);
+              this.queries.delete(name);
+              resolve(result / 1000000); // Convert nanoseconds to milliseconds
+            } else {
+              setTimeout(checkResult, 1);
+            }
+          } catch (error) {
+            console.warn("WebGL query result failed:", error);
+            gl.deleteQuery(query);
+            this.queries.delete(name);
+            resolve(0);
+          }
+        };
 
-      checkResult();
+        checkResult();
+      } catch (error) {
+        console.warn("WebGL endQuery failed:", error);
+        gl.deleteQuery(query);
+        this.queries.delete(name);
+        resolve(0);
+      }
     });
   }
 
   private static isWebGL2(gl: any): gl is WebGL2RenderingContext {
-    return "createQuery" in gl;
+    return gl && "createQuery" in gl;
   }
 }
 
