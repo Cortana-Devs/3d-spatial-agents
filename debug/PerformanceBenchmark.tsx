@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
 import { FloorFactory } from '../utils/floorFactory'
 import { usePerformanceMonitor } from '../systems/PerformanceMonitor'
 import { FloorLODManager } from '../systems/FloorLODManager'
 import { TransparencyBatcher } from '../systems/TransparencyBatcher'
+import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface BenchmarkTest {
@@ -142,18 +143,26 @@ export const PerformanceBenchmark: React.FC = () => {
   }
 
   const runAllBenchmarks = async () => {
-    for (const test of benchmarkTests) {
-      await runBenchmark(test.id)
-      // Brief pause between tests
-      await new Promise(resolve => setTimeout(resolve, 2000))
+    const concurrencyLimit = 1; // Run tests one at a time to prevent interference
+    const queue = [...benchmarkTests];
+    const results: BenchmarkResult[] = [];
+
+    while (queue.length > 0) {
+      const batch = queue.splice(0, concurrencyLimit);
+      const batchResults = await Promise.all(batch.map(test => runBenchmark(test.id)));
+      results.push(...batchResults.filter(Boolean));
+      if (queue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Cool-down period
+      }
     }
+    return results;
   }
 
   const simulateBenchmark = async (test: BenchmarkTest): Promise<BenchmarkResult> => {
-    const samples: PerformanceSample[] = []
-    const startTime = Date.now()
-    const sampleInterval = 100 // Sample every 100ms
-    const totalSamples = (test.duration * 1000) / sampleInterval
+    const samples: PerformanceSample[] = [];
+    const startTime = performance.now(); // More precise than Date.now()
+    const sampleInterval = 100; // Sample every 100ms
+    const totalSamples = Math.floor((test.duration * 1000) / sampleInterval);
 
     for (let i = 0; i < totalSamples; i++) {
       // Simulate performance degradation over time
@@ -161,8 +170,21 @@ export const PerformanceBenchmark: React.FC = () => {
       const baseFPS = 60 - (degradation * 20)
       const fps = baseFPS + (Math.random() - 0.5) * 10
       
+      const currentTime = performance.now();
+      const elapsedTime = currentTime - startTime;
+      const targetTime = i * sampleInterval;
+      
+      // Ensure consistent timing by adjusting delays
+      const delay = Math.max(0, targetTime - elapsedTime);
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      // Use RAF for more accurate timing and prevent event loop blocking
+      await new Promise(requestAnimationFrame);
+      
       const sample: PerformanceSample = {
-        timestamp: startTime + (i * sampleInterval),
+        timestamp: performance.now(),
         fps: Math.max(10, fps),
         frameTime: 1000 / Math.max(10, fps),
         memoryUsage: 200 + (degradation * 100) + Math.random() * 50,
@@ -170,11 +192,13 @@ export const PerformanceBenchmark: React.FC = () => {
         triangles: 10000 + Math.floor(degradation * 5000) + Math.floor(Math.random() * 2000)
       }
       
-      samples.push(sample)
-      setProgress((i + 1) / totalSamples)
+      samples.push(sample);
       
-      // Simulate real-time delay
-      await new Promise(resolve => setTimeout(resolve, 10))
+      // Use a callback-based setState to prevent race conditions
+      setProgress(prev => {
+        const newProgress = (i + 1) / totalSamples;
+        return newProgress > prev ? newProgress : prev;
+      });
     }
 
     const endTime = Date.now()

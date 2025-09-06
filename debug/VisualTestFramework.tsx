@@ -6,6 +6,16 @@ import { FloorFactory } from '../utils/floorFactory'
 import { MATERIAL_PRESETS } from '../presets/MaterialPresets'
 import { usePerformanceMonitor } from '../systems/PerformanceMonitor'
 import * as THREE from 'three'
+import { TestResult } from '../types/test'
+import {
+  BasicMaterialTest,
+  AdvancedMaterialTest,
+  LODPerformanceTest,
+  BatchingPerformanceTest,
+  InteractionTest,
+  AINavigationTest,
+  FullIntegrationTest
+} from '../components/test/TestComponents'
 
 interface VisualTest {
   id: string

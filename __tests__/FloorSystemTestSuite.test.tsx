@@ -6,9 +6,9 @@ import { FrostedGlassMaterial } from '../materials/FrostedGlassMaterial'
 import { FloorLODManager } from '../systems/FloorLODManager'
 import { TransparencyBatcher } from '../systems/TransparencyBatcher'
 import { PerformanceMonitor } from '../systems/PerformanceMonitor'
-import { FloorNavigationAnalyzer } from '../ai/FloorNavigationProperties'
+import { FloorNavigationProperties } from '../ai/FloorNavigationProperties'
 import { TransparentNavMeshGenerator } from '../ai/TransparentNavMeshGenerator'
-import { MATERIAL_PRESETS } from '../presets/MaterialPresets'
+import { MaterialPresetManager } from '../utils/MaterialPresetManager'
 import * as THREE from 'three'
 
 describe('Comprehensive Floor System Test Suite', () => {
@@ -305,7 +305,7 @@ describe('Comprehensive Floor System Test Suite', () => {
 
       // Verify node properties
       const nodes = Array.from(navMesh.nodes.values())
-      nodes.forEach(node => {
+      nodes.forEach((node: any) => {
         expect(node.id).toBeTruthy()
         expect(node.position).toBeInstanceOf(THREE.Vector3)
         expect(typeof node.walkable).toBe('boolean')

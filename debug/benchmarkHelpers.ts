@@ -1,41 +1,23 @@
-import { BenchmarkScenario } from './types'
-import { FloorFactory } from '../utils/floorFactory'
-import * as THREE from 'three'
+import { BenchmarkScenario } from './types';
+import { FloorFactory } from '../utils/floorFactory';
+import { Scene, Object3D, Light, DirectionalLight, AmbientLight, Mesh, BoxGeometry, MeshStandardMaterial, Vector3 } from 'three';
 
-export const setupBasicRenderingTest = (scene: THREE.Scene): BenchmarkScenario => {
-  const floors = []
-  const objects = []
-  const lights = []
-
-  // Create floors in a grid pattern
-  for (let x = -10; x <= 10; x += 2) {
-    for (let z = -10; z <= 10; z += 2) {
-      const floor = FloorFactory.createFrostedGlassFloor(
-        new THREE.Vector3(x, 0, z),
-        'medium_frosted'
-      )
-      floors.push(floor)
-    }
-  }
-
-  // Add some reference geometry
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(2),
-    new THREE.MeshStandardMaterial({ color: 0xff6b6b })
-  )
-  sphere.position.set(0, 3, 0)
-  objects.push(sphere)
-
-  return {
-    floors,
-    objects,
-    lights,
-    cleanup: () => {
-      objects.forEach(obj => scene.remove(obj))
-      lights.forEach(light => scene.remove(light))
-    }
-  }
+export interface TestScene {
+  scene: Scene;
+  objects: Object3D[];
+  lights: Light[];
+  cleanup: () => void;
 }
+
+export interface BenchmarkTest {
+  name: string;
+  setup: () => TestScene;
+  description: string;
+}
+
+export const benchmarkHelpers = {
+  setupBasicRenderingTest: (): TestScene => {
+    const scene = new Scene();
 
 export const setupTransparencyStressTest = (scene: THREE.Scene): BenchmarkScenario => {
   const floors = []
