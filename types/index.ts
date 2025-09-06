@@ -7,6 +7,9 @@ export * from "./blocks";
 // Re-export animation types
 export * from "./animations";
 
+// Re-export skybox types
+export * from "./skybox";
+
 // AI Simulant Types
 export interface AISimulant {
   id: string;

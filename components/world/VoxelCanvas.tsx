@@ -36,6 +36,7 @@ import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
 import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
+import { SimpleSkybox } from "../skybox/EnhancedSkybox";
 
 // LOD Configuration for performance optimization
 interface LODConfig {
@@ -532,9 +533,7 @@ function SceneLighting() {
       />
 
       {/* Additional hemisphere light for better overall illumination */}
-      <hemisphereLight
-        args={["#87CEEB", "#362d1a", 0.4]}
-      />
+      <hemisphereLight args={["#87CEEB", "#362d1a", 0.4]} />
     </>
   );
 }
@@ -777,6 +776,9 @@ function SceneContent({
     <>
       <SceneLighting />
 
+      {/* Enhanced skybox with flashing prevention */}
+      <SimpleSkybox />
+
       {/* Multi-modal camera controller */}
       <CameraController
         mode={cameraMode}
@@ -808,7 +810,7 @@ function SceneContent({
       <GridSystem config={gridConfig} />
 
       {/* AI Simulant System */}
-      <SimulantManager 
+      <SimulantManager
         enableAnimations={true}
         enableGridSnap={gridConfig.snapToGrid}
         maxSimulants={10}
@@ -875,7 +877,7 @@ export default function VoxelCanvas({
   const { blockMap, activeCamera, setCameraMode } = useWorldStore();
   const blockCount = blockMap.size;
   const [followTarget] = useState<string | undefined>();
-  
+
   // Use activeCamera directly from store instead of local state
   const cameraMode = activeCamera as CameraMode;
 
@@ -978,9 +980,9 @@ export default function VoxelCanvas({
       </div>
 
       {enablePerformanceStats && <PerformanceStats />}
-      
+
       {/* Simulant Controls are now inside FloatingSidebar */}
-      
+
       {/* Removed fly mode indicator; information available in sidebar */}
     </div>
   );
