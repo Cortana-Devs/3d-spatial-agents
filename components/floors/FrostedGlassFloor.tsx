@@ -7,6 +7,7 @@ import { FrostedGlassFloor as FrostedGlassFloorType } from '../../types/floorTyp
 interface Props {
   floor: FrostedGlassFloorType
   onInteract?: (floor: FrostedGlassFloorType) => void
+  materialPreset?: string
 }
 
 export const FrostedGlassFloor: React.FC<Props> = ({ floor, onInteract }) => {

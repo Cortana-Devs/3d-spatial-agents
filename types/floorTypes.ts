@@ -17,6 +17,7 @@ export interface FrostedGlassFloor extends Block {
   colorTint: Color
   position: Vector3
   metadata: FloorMetadata
+  materialPreset?: string // Optional preset name for advanced materials
 }
 
 export type GlassType = 
