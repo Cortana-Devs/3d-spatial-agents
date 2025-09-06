@@ -8,6 +8,8 @@ interface Props {
   floor: FrostedGlassFloorType
   onInteract?: (floor: FrostedGlassFloorType) => void
   materialPreset?: string
+  lodEnabled?: boolean
+  batchingEnabled?: boolean
 }
 
 export const FrostedGlassFloor: React.FC<Props> = ({ floor, onInteract }) => {

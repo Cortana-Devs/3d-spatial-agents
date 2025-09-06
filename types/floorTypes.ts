@@ -18,6 +18,8 @@ export interface FrostedGlassFloor extends Block {
   position: Vector3
   metadata: FloorMetadata
   materialPreset?: string // Optional preset name for advanced materials
+  lodLevel?: string // Current LOD level name
+  renderQuality?: import('../systems/FloorLODManager').LODLevel // Current render quality settings
 }
 
 export type GlassType = 
