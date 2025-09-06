@@ -38,6 +38,10 @@ import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
 import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
+import { Stats } from "@react-three/drei";
+import GPUOptimizedRenderer from "./GPUOptimizedRenderer";
+import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
+import ExternalGPUDashboard, { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
 import {
   useIsolatedRender,
@@ -863,24 +867,13 @@ function SceneContent({
         enableDoubleClickFocus={true}
       />
 
-      {/* Optimized block rendering */}
-      {useInstancedRendering ? (
-        <OptimizedBlockRenderer blocks={blocks} />
-      ) : (
-        // Individual block rendering for smaller counts or when precision is needed
-        blocks.map((block) => (
-          <VoxelBlock
-            key={block.id}
-            position={[block.position.x, block.position.y, block.position.z]}
-            type={block.type}
-            color={block.color}
-            isHovered={block.isHovered}
-            isSelected={block.isSelected}
-            onSelect={() => handleBlockClick(block.id)}
-            onRemove={handleBlockRemove}
-          />
-        ))
-      )}
+      {/* GPU-Optimized high-performance block rendering */}
+      <GPUOptimizedRenderer
+        blocks={blockMap}
+        maxRenderDistance={500}
+        enableAdvancedEffects={true}
+        performanceMode="ultra"
+      />
 
       {/* Intelligent grid system with spatial indexing */}
       <GridSystem config={gridConfig} />
@@ -895,6 +888,9 @@ function SceneContent({
 
       {/* Click handler and ghost preview */}
       <ClickHandler />
+
+      {/* GPU Performance Monitor (Canvas-internal) */}
+      <CanvasGPUMonitor />
     </>
   );
 }
@@ -1007,36 +1003,49 @@ export default function VoxelCanvas({
     [blockMap],
   );
 
-  // Dynamic performance settings based on block count
+  // Ultra-optimized performance settings with GPU monitoring
   const performanceSettings = useMemo(() => {
     // Check for performance-heavy NUMBER_7 blocks
     const number7Count = Array.from(blockMap.values()).filter(
       (block) => block.type === BlockType.NUMBER_7,
     ).length;
 
-    // Adjust performance settings based on NUMBER_7 blocks
-    const hasHeavyGlass = number7Count > 10;
+    // Get GPU memory pressure
+    const memoryStats = gpuMemoryManager.getMemoryStats();
+    const memoryPressure = memoryStats.pressure;
 
-    if (blockCount > 500 || hasHeavyGlass) {
+    // Advanced performance scaling
+    if (blockCount > 2000 || number7Count > 50 || memoryPressure > 0.8) {
       return {
         shadows: false,
         antialias: false,
-        dpr: [1, 1.5] as [number, number],
-        performance: { min: 0.3, max: 0.8, debounce: 300 },
+        dpr: [0.5, 1] as [number, number],
+        performance: { min: 0.2, max: 0.6, debounce: 500 },
+        powerPreference: "high-performance",
       };
-    } else if (blockCount > 200 || number7Count > 5) {
+    } else if (blockCount > 1000 || number7Count > 20 || memoryPressure > 0.6) {
+      return {
+        shadows: false,
+        antialias: false,
+        dpr: [1, 1.25] as [number, number],
+        performance: { min: 0.3, max: 0.7, debounce: 300 },
+        powerPreference: "high-performance",
+      };
+    } else if (blockCount > 500 || number7Count > 10 || memoryPressure > 0.4) {
       return {
         shadows: true,
         antialias: false,
-        dpr: [1, 2] as [number, number],
-        performance: { min: 0.5, max: 0.9, debounce: 200 },
+        dpr: [1, 1.5] as [number, number],
+        performance: { min: 0.4, max: 0.8, debounce: 200 },
+        powerPreference: "high-performance",
       };
     } else {
       return {
         shadows: true,
         antialias: true,
         dpr: [1, 2] as [number, number],
-        performance: { min: 0.7, max: 1.0, debounce: 100 },
+        performance: { min: 0.6, max: 1.0, debounce: 100 },
+        powerPreference: "high-performance",
       };
     }
   }, [blockCount, blockMap]);
@@ -1057,10 +1066,22 @@ export default function VoxelCanvas({
           powerPreference: "high-performance",
           stencil: false,
           depth: true,
-          logarithmicDepthBuffer: blockCount > 800, // For very large worlds
+          logarithmicDepthBuffer: blockCount > 1500,
           preserveDrawingBuffer: false,
           premultipliedAlpha: false,
           failIfMajorPerformanceCaveat: false,
+          precision: "highp",
+        }}
+        onCreated={(state) => {
+          // Initialize GPU memory manager with renderer
+          gpuMemoryManager.initialize(state.gl);
+
+          // Enable GPU optimizations
+          const gl = state.gl.getContext();
+          gl.getExtension("OES_vertex_array_object");
+          gl.getExtension("WEBGL_draw_buffers");
+          gl.getExtension("OES_texture_float");
+          gl.getExtension("OES_texture_float_linear");
         }}
         dpr={performanceSettings.dpr}
         performance={performanceSettings.performance}
@@ -1080,6 +1101,12 @@ export default function VoxelCanvas({
       </div>
 
       {enablePerformanceStats && <PerformanceStats />}
+
+      {/* GPU Performance Monitor for development */}
+      {process.env.NODE_ENV === "development" && <Stats />}
+
+      {/* Advanced GPU Performance Dashboard */}
+      <ExternalGPUDashboard updateInterval={1000} />
 
       {/* Simulant Controls are now inside FloatingSidebar */}
 
