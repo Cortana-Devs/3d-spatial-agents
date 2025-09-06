@@ -19,6 +19,7 @@ import {
   UniformsUtils,
   DoubleSide,
   AdditiveBlending,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   MeshPhysicalMaterial,
 } from "three";
@@ -315,14 +316,21 @@ export default function GPUOptimizedRenderer({
   // Create optimized materials with performance-first approach
   const materials = useMemo(() => {
     const createGlassMaterial = () => {
-      // Ultra-performance optimized material for transparent blocks
-      return new MeshBasicMaterial({
-        transparent: false, // Disable transparency for maximum performance
-        opacity: 1.0,
-        color: new Color(0.85, 0.9, 0.95), // Light tint to simulate glass
-        wireframe: false,
-        fog: false,
-        toneMapped: false,
+      // Frosted glass material with transparency and refraction
+      return new MeshPhysicalMaterial({
+        color: new Color(0.9, 0.95, 1.0), // Slight blue tint
+        metalness: 0.0,
+        roughness: 0.1, // Slight roughness for frosted effect
+        transparent: true,
+        opacity: 0.3, // Semi-transparent
+        transmission: 0.9, // High transmission for glass-like refraction
+        thickness: 0.5, // Glass thickness for refraction calculation
+        ior: 1.5, // Index of refraction for glass
+        clearcoat: 1.0, // Clear coat for glossy surface
+        clearcoatRoughness: 0.1,
+        envMapIntensity: 1.0,
+        side: DoubleSide, // Render both sides for proper transparency
+        alphaTest: 0.01,
       });
     };
 
