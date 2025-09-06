@@ -37,6 +37,17 @@ import CameraController, { CAMERA_PRESETS } from "./CameraController";
 import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
+import {
+  useIsolatedRender,
+  useBlockPlacementRender,
+  useAnimationRender,
+  useBatchedUpdates,
+  usePerformanceMonitor,
+} from "../../hooks/performance/useIsolatedRender";
+import {
+  performanceManager,
+  MODULE_CONFIGS,
+} from "../../utils/performance/PerformanceManager";
 
 // LOD Configuration for performance optimization
 interface LODConfig {
@@ -823,42 +834,58 @@ function SceneContent({
   );
 }
 
-// Performance monitoring hook
-function usePerformanceMonitor() {
+// Isolated performance monitoring hook
+function useIsolatedPerformanceMonitor() {
   const [fps, setFps] = useState(60);
   const [frameTime, setFrameTime] = useState(16.67);
   const frameCount = useRef(0);
   const lastTime = useRef(performance.now());
 
-  useFrame(() => {
-    frameCount.current++;
-    const now = performance.now();
+  // Use isolated render to prevent interference
+  useIsolatedRender(
+    () => {
+      frameCount.current++;
+      const now = performance.now();
 
-    if (now - lastTime.current >= 1000) {
-      const currentFps = (frameCount.current * 1000) / (now - lastTime.current);
-      setFps(Math.round(currentFps));
-      setFrameTime(1000 / currentFps);
+      if (now - lastTime.current >= 1000) {
+        const currentFps =
+          (frameCount.current * 1000) / (now - lastTime.current);
+        setFps(Math.round(currentFps));
+        setFrameTime(1000 / currentFps);
 
-      frameCount.current = 0;
-      lastTime.current = now;
-    }
-  });
+        frameCount.current = 0;
+        lastTime.current = now;
+      }
+    },
+    {
+      moduleName: "performance-monitor",
+      priority: 1,
+      maxFrameTime: 0.5,
+      updateFrequency: 60,
+      canBeThrottled: true,
+      dependencies: [],
+    },
+  );
 
   return { fps, frameTime };
 }
 
 // Performance stats display (development only)
 function PerformanceStats() {
-  const { fps, frameTime } = usePerformanceMonitor();
+  const { fps, frameTime } = useIsolatedPerformanceMonitor();
   const { blockMap } = useWorldStore();
+  const systemMetrics = usePerformanceMonitor().system;
 
   if (process.env.NODE_ENV !== "development") return null;
 
   return (
     <div className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded text-xs font-mono">
       <div>FPS: {fps}</div>
-      <div>Frame: {frameTime.toFixed(1)}ms</div>
+      <div>Frame Time: {frameTime.toFixed(2)}ms</div>
       <div>Blocks: {blockMap.size}</div>
+      <div>Active Modules: {systemMetrics.activeLoops}</div>
+      <div>Throttled: {systemMetrics.throttledModules}</div>
+      <div>Budget: {systemMetrics.budgetUtilization.toFixed(1)}%</div>
     </div>
   );
 }
