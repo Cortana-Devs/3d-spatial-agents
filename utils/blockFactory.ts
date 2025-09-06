@@ -231,6 +231,131 @@ export class BlockFactory {
   }
 
   /**
+   * Creates a frosted glass block with transparency and frosting effects
+   */
+  static createFrostedGlassBlock(
+    position: Vector3 | { x: number; y: number; z: number },
+    createdBy: string,
+    transparency: number = 0.3,
+    colorTint?: string,
+  ): Block {
+    const block = this.createDefaultBlock(
+      BlockType.FROSTED_GLASS,
+      position,
+      createdBy,
+    );
+
+    // Apply custom transparency if provided
+    if (transparency !== 0.3) {
+      block.metadata.customProperties = {
+        ...block.metadata.customProperties,
+        transparency: Math.max(0.1, Math.min(0.9, transparency)),
+      };
+    }
+
+    // Apply color tint if provided
+    if (colorTint) {
+      block.color = colorTint;
+    }
+
+    // Enable subtle glow for frosted glass
+    block.metadata.glow = 0.2;
+
+    return block;
+  }
+
+  /**
+   * Creates a number 4 block with enhanced glow and special properties
+   */
+  static createNumber4Block(
+    position: Vector3 | { x: number; y: number; z: number },
+    createdBy: string,
+    glowIntensity: number = 0.8,
+  ): Block {
+    const block = this.createDefaultBlock(
+      BlockType.NUMBER_4,
+      position,
+      createdBy,
+    );
+
+    // Set high glow intensity for number 4 blocks
+    block.metadata.glow = Math.max(0.3, Math.min(1, glowIntensity));
+
+    // Mark as special block
+    block.metadata.tags = ["special", "number", "glowing"];
+    block.metadata.customProperties = {
+      ...block.metadata.customProperties,
+      specialType: "number_4",
+      animated: true,
+      soundEffect: "magical_chime",
+    };
+
+    return block;
+  }
+
+  /**
+   * Creates a block with enhanced material properties
+   */
+  static createEnhancedBlock(
+    type: BlockType,
+    position: Vector3 | { x: number; y: number; z: number },
+    createdBy: string,
+    options: {
+      glow?: number;
+      transparency?: number;
+      color?: string;
+      durability?: number;
+      tags?: string[];
+      animated?: boolean;
+    } = {},
+  ): Block {
+    const block = this.createDefaultBlock(type, position, createdBy);
+
+    // Apply glow if specified and block supports it
+    const definition = getBlockDefinition(type);
+    if (options.glow !== undefined && definition.glowable) {
+      block.metadata.glow = Math.max(0, Math.min(1, options.glow));
+    }
+
+    // Apply custom color
+    if (options.color) {
+      block.color = options.color;
+    }
+
+    // Apply durability
+    if (options.durability !== undefined) {
+      block.metadata.durability = Math.max(0, Math.min(1, options.durability));
+    }
+
+    // Add tags
+    if (options.tags && options.tags.length > 0) {
+      block.metadata.tags = [...(block.metadata.tags || []), ...options.tags];
+    }
+
+    // Store custom properties
+    const customProperties: Record<string, unknown> = {
+      ...block.metadata.customProperties,
+    };
+
+    if (options.transparency !== undefined) {
+      customProperties.transparency = Math.max(
+        0.1,
+        Math.min(0.9, options.transparency),
+      );
+    }
+
+    if (options.animated !== undefined) {
+      customProperties.animated = options.animated;
+    }
+
+    if (Object.keys(customProperties).length > 0) {
+      block.metadata.customProperties = customProperties;
+    }
+
+    return block;
+  }
+
+  /**
    * Validates and sanitizes block data from external sources
    */
   static sanitizeBlock(blockData: unknown): Block | null {
