@@ -5,6 +5,8 @@ export enum BlockType {
   STONE = "stone",
   LEAF = "leaf",
   WOOD = "wood",
+  FROSTED_GLASS = "frosted_glass",
+  NUMBER_4 = "number_4",
 }
 
 // Selection Mode Enum - for UI interaction modes
@@ -102,6 +104,38 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
     stackable: true,
     buildable: true,
     glowable: false,
+  },
+  [BlockType.FROSTED_GLASS]: {
+    type: BlockType.FROSTED_GLASS,
+    displayName: "Frosted Glass Block",
+    color: "#E3F2FD",
+    roughness: 0.1,
+    metalness: 0.0,
+    transparency: 0.3,
+    emissive: "#BBDEFB",
+    emissiveIntensity: 0.05,
+    description:
+      "Transparent frosted glass block with subtle light transmission",
+    category: "solid",
+    durability: 4,
+    stackable: true,
+    buildable: true,
+    glowable: true,
+  },
+  [BlockType.NUMBER_4]: {
+    type: BlockType.NUMBER_4,
+    displayName: "Number 4 Block",
+    color: "#FFD54F",
+    roughness: 0.5,
+    metalness: 0.2,
+    emissive: "#FFF176",
+    emissiveIntensity: 0.3,
+    description: "Special numbered block displaying '4' with golden glow",
+    category: "solid",
+    durability: 8,
+    stackable: true,
+    buildable: true,
+    glowable: true,
   },
 };
 
