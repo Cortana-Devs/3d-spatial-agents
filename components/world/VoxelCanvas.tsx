@@ -472,35 +472,19 @@ function VoxelBlock({
         />
         {type === BlockType.NUMBER_7 ? (
           <meshStandardMaterial
-            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
-            roughness={isHovered ? 0.1 : definition.roughness}
-            metalness={definition.metalness}
+            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#ffffff"}
+            roughness={isHovered ? 0.01 : 0.01}
+            metalness={0.0}
             transparent={true}
-            opacity={
-              isSelected
-                ? 0.8
-                : definition.transparency
-                  ? 1 - definition.transparency
-                  : 1
-            }
+            opacity={isHovered ? 0.15 : isSelected ? 0.1 : 0.03}
             emissive={
-              isHovered
-                ? color
-                : isSelected
-                  ? "#00D4FF"
-                  : definition.emissive || "#000000"
+              isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#ffffff"
             }
-            emissiveIntensity={
-              isHovered
-                ? 0.3
-                : isSelected
-                  ? 0.2
-                  : definition.emissiveIntensity || 0
-            }
+            emissiveIntensity={isHovered ? 0.1 : isSelected ? 0.05 : 0.0}
             toneMapped={false}
             side={DoubleSide}
             depthWrite={false}
-            alphaTest={0.01}
+            alphaTest={0.001}
           />
         ) : (
           <meshStandardMaterial

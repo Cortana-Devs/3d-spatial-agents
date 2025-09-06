@@ -595,6 +595,7 @@ export default function BlockSelector({ className = "" }: BlockSelectorProps) {
           <div className="text-xs text-white/60 space-y-1 border-t border-white/20 pt-3">
             <div>• Use keyboard shortcuts (0-9) for quick selection</div>
             <div>• Left click to place blocks • Right click to remove</div>
+            <div>• Key 8: Perfect Clear Glass Block (fully transparent)</div>
             <div>
               • Current: {blockCount}/{worldLimits.maxBlocks} blocks placed
             </div>

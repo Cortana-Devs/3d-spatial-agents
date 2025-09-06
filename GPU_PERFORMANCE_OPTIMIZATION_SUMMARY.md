@@ -124,29 +124,31 @@ if (frameTime > 16) {
 The NUMBER_7 block represents the pinnacle of our glass rendering technology:
 
 **Key Features:**
-- **Seamless geometry**: Full 1.0x1.0x1.0 scale with no gaps
+- **Seamless geometry**: Full 1.002x1.002x1.002 scale with no gaps
 - **Advanced material**: Uses `meshPhysicalMaterial` with transmission
 - **Real-time effects**: Fresnel-based reflections and refractions
 - **Performance optimized**: Minimal impact on frame rate
+- **Full transparency**: Nearly invisible with perfect clarity
 
 **Glass Properties:**
 ```typescript
 {
   type: BlockType.NUMBER_7,
-  displayName: "Perfect Frosted Glass Block",
-  transparency: 0.7,
-  transmission: 0.98,
+  displayName: "Perfect Clear Glass Block",
+  transparency: 0.95,
+  transmission: 0.99,
   ior: 1.52,
-  roughness: 0.05,
-  emissiveIntensity: 0.05,
+  roughness: 0.01,
+  emissiveIntensity: 0.0,
 }
 ```
 
 **Rendering Optimizations:**
 - **DoubleSide rendering** for proper transparency
 - **Depth write disabled** to prevent sorting issues
-- **Alpha testing** for early fragment rejection
-- **Temporal shimmer** effects for premium quality
+- **Ultra-low alpha testing** (0.001) for early fragment rejection
+- **No shimmer effects** for perfect clarity
+- **Minimal opacity** (0.03) for full transparency
 
 ---
 
@@ -164,7 +166,7 @@ The keyboard shortcut system now supports unlimited block types dynamically:
 - **Key 5**: Number 4 Block
 - **Key 6**: Number 5 Block
 - **Key 7**: Sunset Glass Block
-- **Key 8**: Perfect Frosted Glass Block (NUMBER_7) ⭐
+- **Key 8**: Perfect Clear Glass Block (NUMBER_7) ⭐
 
 **Implementation:**
 ```typescript
@@ -369,7 +371,7 @@ console.log("🚀 GPU Renderer Metrics:", {
 
 The GPU performance optimization system represents a comprehensive approach to high-performance 3D rendering in web browsers. By implementing advanced techniques including instanced rendering, dynamic LOD, smart memory management, and adaptive quality scaling, we've achieved **desktop-class performance** in a web application.
 
-The **Perfect NUMBER_7 glass block** showcases the visual quality possible with these optimizations, delivering **seamless transparency effects** without compromising performance.
+The **Perfect NUMBER_7 clear glass block** showcases the visual quality possible with these optimizations, delivering **seamless full transparency** without compromising performance.
 
 **Key Success Metrics:**
 - **🚀 4x Performance Improvement**: From 20 FPS to 60+ FPS

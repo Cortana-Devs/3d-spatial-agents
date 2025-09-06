@@ -263,7 +263,7 @@ export const GPU_OPTIMIZED_SHADERS = {
 
     out vec4 fragColor;
 
-    // Optimized chromatic aberration
+    // Optimized chromatic aberration for clear glass
     vec3 chromaticAberration(samplerCube envMap, vec3 direction, float strength) {
       vec3 color;
       color.r = textureLod(envMap, direction + vec3(strength, 0.0, 0.0), 0.0).r;
@@ -273,27 +273,30 @@ export const GPU_OPTIMIZED_SHADERS = {
     }
 
     void main() {
-      // Sample environment map for reflection
-      vec3 reflectedColor = textureLod(envMap, vReflect, 0.0).rgb;
+      // Sample environment map for reflection (minimal for full transparency)
+      vec4 reflectedColor = textureLod(envMap, vReflect, 0.0);
 
-      // Sample environment map for refraction with chromatic aberration
-      vec3 refractedColor = chromaticAberration(envMap, vRefract, 0.003);
+      // Sample environment map for refraction with minimal chromatic aberration
+      vec3 refractedColor = chromaticAberration(envMap, vRefract, 0.001);
 
-      // Mix reflection and refraction based on Fresnel
-      vec3 finalColor = mix(refractedColor, reflectedColor, vFresnelFactor);
+      // Heavily favor refraction for clear glass appearance
+      vec3 finalColor = mix(refractedColor, reflectedColor.rgb, vFresnelFactor * 0.1);
 
-      // Add base glass tint
-      finalColor = mix(finalColor, vColor, 0.1);
+      // No tint for perfectly clear glass
+      finalColor = mix(finalColor, vec3(1.0), 0.0);
 
-      // Add subtle shimmer effect
-      float shimmer = sin(time * 4.0 + vWorldPosition.x * 2.0 + vWorldPosition.z * 2.0) * 0.02 + 0.98;
+      // No shimmer for pure clarity
+      float shimmer = 1.0;
       finalColor *= shimmer;
 
-      // Add emissive glow
-      finalColor += emissive * emissiveIntensity;
+      // No emissive for clear glass
+      finalColor += vec3(0.0);
 
-      // Calculate final opacity with transmission
-      float finalOpacity = opacity * (1.0 - transmission * 0.8);
+      // Ultra-low opacity for full transparency
+      float finalOpacity = opacity * (1.0 - transmission * 0.95);
+
+      // Early discard for nearly invisible fragments
+      if (finalOpacity < 0.01) discard;
 
       fragColor = vec4(finalColor, finalOpacity);
     }

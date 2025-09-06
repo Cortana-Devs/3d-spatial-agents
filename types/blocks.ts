@@ -194,20 +194,19 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
   },
   [BlockType.NUMBER_7]: {
     type: BlockType.NUMBER_7,
-    displayName: "Perfect Frosted Glass Block",
-    color: "#E8F4FD", // Ultra-light frosted blue
-    roughness: 0.05, // Optimized smoothness for performance
+    displayName: "Perfect Clear Glass Block",
+    color: "#FFFFFF", // Pure white for full transparency
+    roughness: 0.01, // Ultra smooth for perfect clarity
     metalness: 0.0,
-    transparency: 0.7, // Balanced transparency for performance
-    emissive: "#F0F8FF", // Subtle white-blue glow
-    emissiveIntensity: 0.05, // Reduced for better performance
-    description:
-      "Perfect seamless frosted glass block with no visible edges or seams",
+    transparency: 0.95, // Nearly fully transparent
+    emissive: "#FFFFFF", // No tint, pure clear
+    emissiveIntensity: 0.0, // No glow for pure transparency
+    description: "Perfect fully transparent glass block with seamless clarity",
     category: "solid",
     durability: 9,
     stackable: true,
     buildable: true,
-    glowable: true,
+    glowable: false,
   },
 };
 

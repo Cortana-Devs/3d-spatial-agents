@@ -316,10 +316,10 @@ export default function GPUOptimizedRenderer({
           uniforms: {
             time: { value: 0 },
             envMap: { value: null },
-            opacity: { value: 0.3 },
-            transmission: { value: 0.98 },
-            emissive: { value: new Vector3(0.94, 0.97, 1.0) },
-            emissiveIntensity: { value: 0.05 },
+            opacity: { value: 0.05 },
+            transmission: { value: 0.99 },
+            emissive: { value: new Vector3(1.0, 1.0, 1.0) },
+            emissiveIntensity: { value: 0.0 },
           },
           transparent: true,
           side: DoubleSide,
@@ -329,12 +329,12 @@ export default function GPUOptimizedRenderer({
       } else {
         return new MeshStandardMaterial({
           transparent: true,
-          opacity: 0.7,
-          roughness: 0.05,
+          opacity: 0.05,
+          roughness: 0.01,
           metalness: 0.0,
           side: DoubleSide,
           depthWrite: false,
-          alphaTest: 0.01,
+          alphaTest: 0.001,
         });
       }
     };
@@ -567,7 +567,7 @@ export default function GPUOptimizedRenderer({
         if (blockType === BlockType.NUMBER_7) {
           // Use full 1.0 scale for seamless blocks
           dummy.copy(instance.matrix);
-          dummy.scale(new Vector3(1.001, 1.001, 1.001));
+          dummy.scale(new Vector3(1.002, 1.002, 1.002));
           renderer.instancedMesh.setMatrixAt(i, dummy);
 
           // Apply perfect glass material if available
@@ -576,6 +576,7 @@ export default function GPUOptimizedRenderer({
             renderer.material instanceof ShaderMaterial
           ) {
             renderer.material.uniforms.time.value = performance.now() * 0.001;
+            renderer.material.uniforms.opacity.value = 0.03; // Nearly invisible
           }
         }
       }
