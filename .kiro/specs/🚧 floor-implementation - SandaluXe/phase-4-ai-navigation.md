@@ -1550,5 +1550,641 @@ describe('AI Navigation Integration', () => {
         specialProperties: []
       }
       const safeNode2 = {
-        id: 'safe2', 
-        position
+        id: 'safe2',
+        position: new THREE.Vector3(2, 0, 0),
+        walkable: true,
+        cost: 1.0,
+        safetyLevel: 'safe',
+        connectedNodes: ['safe1'],
+        specialProperties: []
+      }
+
+      navNodes.set('safe1', safeNode1)
+      navNodes.set('safe2', safeNode2)
+
+      const edges = [{
+        from: 'safe1',
+        to: 'safe2',
+        cost: 2.0,
+        bidirectional: true,
+        restrictions: [],
+        safetyRequirement: 'safe'
+      }]
+
+      const pathfinder = new TransparentPathfinder(navNodes, edges)
+      const result = pathfinder.findPath(
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(2, 0, 0)
+      )
+
+      expect(result.path.length).toBeGreaterThan(0)
+      expect(result.safetyAssessment).toBe('SAFE')
+      expect(result.warnings.length).toBe(0)
+    })
+
+    test('avoids dangerous paths when safety_first option is used', () => {
+      const navNodes = new Map()
+      const dangerousNode = {
+        id: 'danger1',
+        position: new THREE.Vector3(1, 0, 0),
+        walkable: true,
+        cost: 1.0,
+        safetyLevel: 'dangerous',
+        connectedNodes: ['safe1', 'safe2'],
+        specialProperties: ['hazardous']
+      }
+      
+      navNodes.set('danger1', dangerousNode)
+
+      const pathfinder = new TransparentPathfinder(navNodes, [])
+      const result = pathfinder.findPath(
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(2, 0, 0),
+        { 
+          maxCost: 1000,
+          safetyPreference: 'safety_first',
+          avoidTransparent: false,
+          allowRiskyPaths: false,
+          preferAlternatives: true,
+          maxPathLength: 100
+        }
+      )
+
+      // Should either find alternative path or warn about dangers
+      expect(result.safetyAssessment).not.toBe('HIGH RISK')
+    })
+
+    test('generates warnings for transparent surfaces', () => {
+      const navNodes = new Map()
+      const transparentNode = {
+        id: 'transparent1',
+        position: new THREE.Vector3(1, 0, 0),
+        walkable: true,
+        cost: 1.5,
+        safetyLevel: 'caution',
+        connectedNodes: [],
+        specialProperties: ['high_transparency', 'requires_caution']
+      }
+
+      navNodes.set('transparent1', transparentNode)
+
+      const pathfinder = new TransparentPathfinder(navNodes, [])
+      const pathNodes = [{
+        nodeId: 'transparent1',
+        position: transparentNode.position,
+        gCost: 0,
+        hCost: 0,
+        fCost: 0,
+        parent: null,
+        safetyLevel: 'caution',
+        specialInstructions: ['Verify surface visibility before proceeding']
+      }]
+
+      const warnings = pathfinder['generatePathWarnings'](pathNodes, {
+        maxCost: 1000,
+        safetyPreference: 'balanced',
+        avoidTransparent: false,
+        allowRiskyPaths: true,
+        preferAlternatives: false,
+        maxPathLength: 100
+      })
+
+      expect(warnings.length).toBeGreaterThan(0)
+      expect(warnings.some(w => w.includes('transparent'))).toBe(true)
+    })
+  })
+})
+```
+
+## VISUAL VALIDATION
+
+### Task 4.6: AI Navigation Test Scene
+**File**: `debug/AINavigationTestScene.tsx`
+
+```typescript
+import React, { useState, useEffect, useMemo } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { OrbitControls, Environment, Text } from '@react-three/drei'
+import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
+import { FloorFactory } from '../utils/floorFactory'
+import { FloorNavigationAnalyzer } from '../ai/FloorNavigationProperties'
+import { TransparentSurfacePerception } from '../ai/TransparentSurfacePerception'
+import { TransparentNavMeshGenerator } from '../ai/TransparentNavMeshGenerator'
+import { TransparentPathfinder } from '../ai/TransparentPathfinder'
+import * as THREE from 'three'
+
+interface AIAgent {
+  id: string
+  position: THREE.Vector3
+  target: THREE.Vector3 | null
+  currentPath: any[]
+  pathIndex: number
+  speed: number
+  safetyPreference: 'safety_first' | 'balanced' | 'efficiency_first'
+  color: string
+}
+
+export const AINavigationTestScene: React.FC = () => {
+  const [showNavMesh, setShowNavMesh] = useState(true)
+  const [showSafetyColors, setShowSafetyColors] = useState(true)
+  const [showPaths, setShowPaths] = useState(true)
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null)
+  const [paused, setPaused] = useState(false)
+
+  const testFloors = useMemo(() => {
+    const floors = []
+    
+    // Create a varied floor layout for testing
+    const floorConfigs = [
+      { pos: [0, 0, 0], type: 'medium_frosted', safety: 'safe' },
+      { pos: [2, 0, 0], type: 'clear_frosted', safety: 'risky' },
+      { pos: [4, 0, 0], type: 'heavy_frosted', safety: 'safe' },
+      { pos: [0, 0, 2], type: 'light_frosted', safety: 'caution' },
+      { pos: [2, 0, 2], type: 'clear_frosted', safety: 'dangerous' }, // Very risky
+      { pos: [4, 0, 2], type: 'medium_frosted', safety: 'safe' },
+      { pos: [0, 0, 4], type: 'heavy_frosted', safety: 'safe' },
+      { pos: [2, 0, 4], type: 'light_frosted', safety: 'caution' },
+      { pos: [4, 0, 4], type: 'medium_frosted', safety: 'safe' }
+    ]
+
+    floorConfigs.forEach((config, index) => {
+      const floor = FloorFactory.createFrostedGlassFloor(
+        new THREE.Vector3(config.pos[0], config.pos[1], config.pos[2]),
+        config.type as any
+      )
+      
+      // Adjust properties based on intended safety level
+      if (config.safety === 'dangerous') {
+        floor.transparency = 0.95
+        floor.metadata.durability = 20
+      } else if (config.safety === 'risky') {
+        floor.transparency = 0.85
+        floor.metadata.durability = 40
+      } else if (config.safety === 'caution') {
+        floor.transparency = 0.6
+        floor.metadata.durability = 70
+      }
+      
+      floors.push(floor)
+    })
+    
+    return floors
+  }, [])
+
+  // Generate navigation mesh
+  const navMesh = useMemo(() => {
+    const generator = new TransparentNavMeshGenerator()
+    const worldBounds = new THREE.Box3(
+      new THREE.Vector3(-5, -1, -5),
+      new THREE.Vector3(10, 1, 10)
+    )
+    return generator.generateNavMesh(testFloors, worldBounds)
+  }, [testFloors])
+
+  // Create AI agents with different preferences
+  const [agents, setAgents] = useState<AIAgent[]>(() => [
+    {
+      id: 'safety_agent',
+      position: new THREE.Vector3(-1, 0.5, -1),
+      target: new THREE.Vector3(5, 0.5, 5),
+      currentPath: [],
+      pathIndex: 0,
+      speed: 1.0,
+      safetyPreference: 'safety_first',
+      color: '#4CAF50'
+    },
+    {
+      id: 'balanced_agent',
+      position: new THREE.Vector3(-1, 0.5, 1),
+      target: new THREE.Vector3(5, 0.5, 3),
+      currentPath: [],
+      pathIndex: 0,
+      speed: 1.5,
+      safetyPreference: 'balanced',
+      color: '#FF9800'
+    },
+    {
+      id: 'efficient_agent',
+      position: new THREE.Vector3(-1, 0.5, 3),
+      target: new THREE.Vector3(5, 0.5, 1),
+      currentPath: [],
+      pathIndex: 0,
+      speed: 2.0,
+      safetyPreference: 'efficiency_first',
+      color: '#F44336'
+    }
+  ])
+
+  // Generate paths for agents
+  useEffect(() => {
+    if (!navMesh) return
+
+    const pathfinder = new TransparentPathfinder(navMesh.nodes, navMesh.edges)
+    
+    const updatedAgents = agents.map(agent => {
+      if (!agent.target) return agent
+
+      const pathResult = pathfinder.findPath(
+        agent.position,
+        agent.target,
+        {
+          maxCost: 1000,
+          safetyPreference: agent.safetyPreference,
+          avoidTransparent: agent.safetyPreference === 'safety_first',
+          allowRiskyPaths: agent.safetyPreference !== 'safety_first',
+          preferAlternatives: agent.safetyPreference === 'safety_first',
+          maxPathLength: 100
+        }
+      )
+
+      return {
+        ...agent,
+        currentPath: pathResult.path,
+        pathIndex: 0
+      }
+    })
+
+    setAgents(updatedAgents)
+  }, [navMesh])
+
+  const getSafetyColor = (floor: any) => {
+    const analysis = FloorNavigationAnalyzer.analyzeFloorForAI(floor)
+    const safetyColors = {
+      'safe': '#4CAF50',
+      'caution': '#FF9800', 
+      'risky': '#FF5722',
+      'dangerous': '#F44336',
+      'avoid': '#9C27B0'
+    }
+    return safetyColors[analysis.safetyLevel] || '#808080'
+  }
+
+  return (
+    <>
+      <div style={{ 
+        position: 'absolute', 
+        top: 10, 
+        left: 10, 
+        zIndex: 100,
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        color: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        maxWidth: '400px',
+        fontSize: '14px'
+      }}>
+        <h3>AI Navigation Testing - Phase 4</h3>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <h4>AI Agents:</h4>
+          {agents.map(agent => (
+            <div key={agent.id} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              margin: '5px 0',
+              padding: '5px',
+              backgroundColor: selectedAgent === agent.id ? 'rgba(255,255,255,0.2)' : 'transparent',
+              cursor: 'pointer'
+            }}
+            onClick={() => setSelectedAgent(selectedAgent === agent.id ? null : agent.id)}
+            >
+              <div style={{ 
+                width: '12px', 
+                height: '12px', 
+                backgroundColor: agent.color,
+                marginRight: '8px',
+                borderRadius: '50%'
+              }}></div>
+              <span>{agent.id.replace('_', ' ')}</span>
+              <span style={{ marginLeft: 'auto', fontSize: '12px', opacity: 0.7 }}>
+                Path: {agent.currentPath.length} nodes
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginBottom: '15px' }}>
+          <h4>Visualization Options:</h4>
+          <label style={{ display: 'block', margin: '5px 0' }}>
+            <input 
+              type="checkbox" 
+              checked={showNavMesh} 
+              onChange={(e) => setShowNavMesh(e.target.checked)}
+            />
+            Show Navigation Mesh
+          </label>
+          <label style={{ display: 'block', margin: '5px 0' }}>
+            <input 
+              type="checkbox" 
+              checked={showSafetyColors} 
+              onChange={(e) => setShowSafetyColors(e.target.checked)}
+            />
+            Show Safety Color Coding
+          </label>
+          <label style={{ display: 'block', margin: '5px 0' }}>
+            <input 
+              type="checkbox" 
+              checked={showPaths} 
+              onChange={(e) => setShowPaths(e.target.checked)}
+            />
+            Show AI Paths
+          </label>
+        </div>
+
+        <div style={{ marginBottom: '15px' }}>
+          <button 
+            onClick={() => setPaused(!paused)}
+            style={{ 
+              padding: '8px 16px',
+              backgroundColor: paused ? '#4CAF50' : '#FF9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          
+          <button 
+            onClick={() => {
+              // Reset agent positions
+              setAgents(agents.map(agent => ({
+                ...agent,
+                position: new THREE.Vector3(-1, 0.5, agent.id === 'safety_agent' ? -1 : agent.id === 'balanced_agent' ? 1 : 3),
+                pathIndex: 0
+              })))
+            }}
+            style={{ 
+              padding: '8px 16px',
+              backgroundColor: '#2196F3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Reset Positions
+          </button>
+        </div>
+
+        {selectedAgent && (
+          <div style={{ fontSize: '12px', opacity: 0.9 }}>
+            <h4>Selected Agent Details:</h4>
+            <p><strong>Safety Preference:</strong> {agents.find(a => a.id === selectedAgent)?.safetyPreference}</p>
+            <p><strong>Current Path Length:</strong> {agents.find(a => a.id === selectedAgent)?.currentPath.length} nodes</p>
+            <p><strong>Speed:</strong> {agents.find(a => a.id === selectedAgent)?.speed}x</p>
+          </div>
+        )}
+
+        <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '15px' }}>
+          <p><strong>Legend:</strong></p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <span>🟢 Safe</span>
+            <span>🟡 Caution</span>
+            <span>🟠 Risky</span>
+            <span>🔴 Dangerous</span>
+            <span>🟣 Avoid</span>
+          </div>
+        </div>
+      </div>
+
+      <Canvas camera={{ position: [8, 8, 8] }}>
+        <ambientLight intensity={0.4} />
+        <pointLight position={[5, 8, 5]} intensity={1.2} />
+        <pointLight position={[-2, 4, -2]} intensity={0.8} color="#4ecdc4" />
+        
+        <Environment preset="city" />
+
+        {/* Render floors with safety color coding */}
+        {testFloors.map(floor => (
+          <group key={floor.id}>
+            <FrostedGlassFloor
+              floor={floor}
+              aiNavigationEnabled={true}
+            />
+            {showSafetyColors && (
+              <mesh position={[floor.position.x, floor.position.y + 0.01, floor.position.z]}>
+                <ringGeometry args={[0.4, 0.5, 16]} />
+                <meshBasicMaterial 
+                  color={getSafetyColor(floor)} 
+                  transparent 
+                  opacity={0.6}
+                />
+              </mesh>
+            )}
+          </group>
+        ))}
+
+        {/* Render navigation mesh */}
+        {showNavMesh && navMesh && (
+          <NavigationMeshVisualization navMesh={navMesh} />
+        )}
+
+        {/* Render AI agents */}
+        {agents.map(agent => (
+          <AIAgentVisualization 
+            key={agent.id}
+            agent={agent}
+            showPath={showPaths}
+            selected={selectedAgent === agent.id}
+            paused={paused}
+          />
+        ))}
+
+        {/* Ground reference */}
+        <mesh position={[2, -1, 2]}>
+          <boxGeometry args={[12, 0.1, 12]} />
+          <meshStandardMaterial color="#2c3e50" />
+        </mesh>
+
+        <OrbitControls />
+      </Canvas>
+    </>
+  )
+}
+
+// Helper component for visualizing navigation mesh
+const NavigationMeshVisualization: React.FC<{ navMesh: any }> = ({ navMesh }) => {
+  const nodes = Array.from(navMesh.nodes.values())
+  
+  return (
+    <group>
+      {/* Render navigation nodes */}
+      {nodes.map(node => (
+        <mesh key={node.id} position={node.position}>
+          <sphereGeometry args={[0.05]} />
+          <meshBasicMaterial 
+            color={node.walkable ? '#00ff00' : '#ff0000'} 
+            transparent 
+            opacity={0.6}
+          />
+        </mesh>
+      ))}
+      
+      {/* Render navigation edges */}
+      {navMesh.edges.map((edge: any, index: number) => {
+        const fromNode = navMesh.nodes.get(edge.from)
+        const toNode = navMesh.nodes.get(edge.to)
+        
+        if (!fromNode || !toNode) return null
+        
+        const midPoint = new THREE.Vector3().addVectors(fromNode.position, toNode.position).multiplyScalar(0.5)
+        const direction = new THREE.Vector3().subVectors(toNode.position, fromNode.position)
+        const distance = direction.length()
+        
+        return (
+          <mesh key={`edge-${index}`} position={midPoint}>
+            <cylinderGeometry args={[0.01, 0.01, distance]} />
+            <meshBasicMaterial color="#00ffff" transparent opacity={0.3} />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+// Helper component for AI agent visualization
+const AIAgentVisualization: React.FC<{ 
+  agent: AIAgent
+  showPath: boolean
+  selected: boolean
+  paused: boolean 
+}> = ({ agent, showPath, selected, paused }) => {
+  const meshRef = React.useRef<THREE.Mesh>(null)
+  
+  useFrame((state, delta) => {
+    if (paused || !agent.currentPath.length || agent.pathIndex >= agent.currentPath.length) return
+    
+    const targetNode = agent.currentPath[agent.pathIndex]
+    if (!targetNode) return
+    
+    const direction = new THREE.Vector3().subVectors(targetNode.position, agent.position)
+    const distance = direction.length()
+    
+    if (distance < 0.1) {
+      // Reached current waypoint, move to next
+      agent.pathIndex++
+    } else {
+      // Move towards current waypoint
+      direction.normalize().multiplyScalar(agent.speed * delta)
+      agent.position.add(direction)
+      
+      if (meshRef.current) {
+        meshRef.current.position.copy(agent.position)
+      }
+    }
+  })
+  
+  return (
+    <group>
+      {/* Agent representation */}
+      <mesh 
+        ref={meshRef} 
+        position={agent.position}
+        scale={selected ? [1.2, 1.2, 1.2] : [1, 1, 1]}
+      >
+        <capsuleGeometry args={[0.2, 0.5]} />
+        <meshStandardMaterial 
+          color={agent.color} 
+          emissive={selected ? agent.color : '#000000'}
+          emissiveIntensity={selected ? 0.3 : 0}
+        />
+      </mesh>
+      
+      {/* Agent label */}
+      <Text
+        position={[agent.position.x, agent.position.y + 0.8, agent.position.z]}
+        fontSize={0.2}
+        color={agent.color}
+        anchorX="center"
+        anchorY="middle"
+      >
+        {agent.id.replace('_agent', '')}
+      </Text>
+      
+      {/* Path visualization */}
+      {showPath && agent.currentPath.map((pathNode: any, index: number) => (
+        <mesh key={`path-${index}`} position={pathNode.position}>
+          <sphereGeometry args={[0.03]} />
+          <meshBasicMaterial 
+            color={agent.color} 
+            transparent 
+            opacity={index <= agent.pathIndex ? 0.8 : 0.4}
+          />
+        </mesh>
+      ))}
+      
+      {/* Path lines */}
+      {showPath && agent.currentPath.length > 1 && (
+        <PathLineVisualization path={agent.currentPath} color={agent.color} />
+      )}
+    </group>
+  )
+}
+
+// Helper component for drawing path lines
+const PathLineVisualization: React.FC<{ path: any[], color: string }> = ({ path, color }) => {
+  const points = path.map(node => node.position)
+  
+  const geometry = React.useMemo(() => {
+    const geom = new THREE.BufferGeometry().setFromPoints(points)
+    return geom
+  }, [points])
+  
+  return (
+    <line geometry={geometry}>
+      <lineBasicMaterial color={color} transparent opacity={0.6} />
+    </line>
+  )
+}
+```
+
+## SUCCESS CRITERIA
+
+### AI Navigation Validation Checklist:
+- [ ] AI agents correctly identify floor safety levels
+- [ ] Pathfinding avoids dangerous floors when safety_first is enabled
+- [ ] Alternative paths are generated around risky areas
+- [ ] Visual cues are properly analyzed based on lighting and viewing angle
+- [ ] Navigation mesh includes appropriate connection costs
+- [ ] AI agents move smoothly along generated paths
+- [ ] Different safety preferences result in different path choices
+- [ ] Transparent surfaces are handled appropriately in pathfinding
+- [ ] Performance remains acceptable with AI navigation active
+
+### Technical Validation:
+- [ ] Floor analysis system correctly calculates safety levels
+- [ ] Perception system adapts to experience and environmental factors
+- [ ] Navigation mesh generation handles complex floor layouts
+- [ ] Pathfinding algorithms work efficiently with transparent surfaces
+- [ ] AI agents respect surface properties (slippery, structural concerns)
+- [ ] Special instructions are generated for hazardous areas
+- [ ] Memory and performance usage remain within acceptable limits
+
+### Behavioral Validation:
+- [ ] Safety-first agents avoid risky paths even if longer
+- [ ] Balanced agents find reasonable compromises between safety and efficiency
+- [ ] Efficiency-first agents take calculated risks for shorter paths
+- [ ] AI agents slow down on dangerous surfaces
+- [ ] Alternative path suggestions are practical and safe
+- [ ] Agents learn from repeated interactions with surfaces
+
+## INTEGRATION POINTS
+
+### Integration with Previous Phases:
+- AI navigation uses LOD system data for performance-based pathfinding
+- Performance monitoring affects AI navigation complexity
+- Advanced materials influence AI perception and safety calculations
+- Foundation floor types determine base navigation properties
+
+### Preparation for Phase 5:
+- AI behavior data will inform testing scenarios
+- Navigation performance metrics will be tested
+- Safety assessment accuracy will be validated
+- Integration points with existing AI systems will be tested
+
+## ESTIMATED TIME: 6-7 days
+
+This phase creates a sophisticated AI navigation system that enables realistic and intelligent interaction with transparent floor surfaces while maintaining safety and performance considerations.
