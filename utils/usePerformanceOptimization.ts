@@ -250,8 +250,8 @@ export function usePerformanceOptimization(
       }
     }
 
-    // Check for performance degradation (more lenient thresholds)
-    const isPerformanceDegraded = state.frameRate < 30 && state.isMemoryPressureHigh
+    // Check for performance degradation (more sensitive thresholds)
+    const isPerformanceDegraded = state.frameRate < 30 || state.isMemoryPressureHigh
     if (isPerformanceDegraded !== state.isPerformanceDegraded) {
       setState(prev => ({ ...prev, isPerformanceDegraded }))
       
