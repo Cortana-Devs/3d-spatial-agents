@@ -81,8 +81,11 @@ export type {
 export { FloorControlPanel } from "../components/ui/FloorControlPanel";
 
 // Types
-export type { GlassType, FloorMetadata } from "../types/floorTypes";
-export type { FrostedGlassFloor } from "../types/floorTypes";
+export type {
+  GlassType,
+  FloorMetadata,
+  FrostedGlassFloor,
+} from "../types/floorTypes";
 
 // Block Types
 export type {

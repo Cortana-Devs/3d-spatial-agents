@@ -316,22 +316,27 @@ export default function GPUOptimizedRenderer({
   // Create optimized materials with performance-first approach
   const materials = useMemo(() => {
     const createGlassMaterial = () => {
-      // Frosted glass material with transparency and refraction
-      return new MeshPhysicalMaterial({
-        color: new Color(0.9, 0.95, 1.0), // Slight blue tint
+      // High-performance frosted glass optimized for 60+ FPS
+      console.log("Creating glass material with MeshStandardMaterial");
+      const material = new MeshStandardMaterial({
+        color: new Color(0.85, 0.92, 0.98), // Subtle glass tint
         metalness: 0.0,
-        roughness: 0.1, // Slight roughness for frosted effect
+        roughness: 0.15, // Slight frosting effect
         transparent: true,
-        opacity: 0.3, // Semi-transparent
-        transmission: 0.9, // High transmission for glass-like refraction
-        thickness: 0.5, // Glass thickness for refraction calculation
-        ior: 1.5, // Index of refraction for glass
-        clearcoat: 1.0, // Clear coat for glossy surface
-        clearcoatRoughness: 0.1,
-        envMapIntensity: 1.0,
-        side: DoubleSide, // Render both sides for proper transparency
-        alphaTest: 0.01,
+        opacity: 0.4, // Semi-transparent for glass look
+        envMapIntensity: 0.8, // Reduced for performance
+        alphaTest: 0.1, // Skip very transparent pixels
+        depthWrite: false, // Optimize depth sorting
+        side: DoubleSide,
       });
+
+      // Performance optimizations
+      material.toneMapped = false;
+      material.fog = false;
+      material.dithering = false;
+
+      console.log("Glass material created successfully:", material);
+      return material;
     };
 
     const materialMap = new Map<BlockType, Material>();

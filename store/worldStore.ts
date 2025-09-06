@@ -583,6 +583,9 @@ export const useWorldStore = create<WorldState>()(
           [BlockType.WOOD]: 0,
           [BlockType.FROSTED_GLASS]: 0,
           [BlockType.NUMBER_4]: 0,
+          [BlockType.NUMBER_5]: 0,
+          [BlockType.NUMBER_6]: 0,
+          [BlockType.NUMBER_7]: 0,
         };
 
         let minX = Infinity,

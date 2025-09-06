@@ -246,7 +246,7 @@ export class FloorSystemManager {
 
 export const useFloorSystem = (config?: Partial<FloorSystemConfig>) => {
   const { camera, gl, scene } = useThree();
-  const systemRef = useRef<FloorSystemManager>();
+  const systemRef = useRef<FloorSystemManager | null>(null);
   const [systemState, setSystemState] = useState<FloorSystemState>();
 
   useEffect(() => {

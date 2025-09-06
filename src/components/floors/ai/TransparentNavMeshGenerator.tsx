@@ -481,7 +481,7 @@ export class TransparentNavMeshGenerator {
   }
 }
 
-interface NavMesh {
+export interface NavMesh {
   nodes: Map<string, NavMeshNode>;
   edges: NavMeshEdge[];
   floorAssociations: Map<string, string>; // nodeId -> floorId
