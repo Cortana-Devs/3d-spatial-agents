@@ -7,6 +7,8 @@ export enum BlockType {
   WOOD = "wood",
   FROSTED_GLASS = "frosted_glass",
   NUMBER_4 = "number_4",
+  NUMBER_5 = "number_5",
+  NUMBER_6 = "number_6",
 }
 
 // Selection Mode Enum - for UI interaction modes
@@ -29,6 +31,16 @@ export interface BlockMaterialProperties {
   category: "solid" | "organic" | "natural";
 }
 
+// Glass specific properties for enhanced rendering
+export interface GlassProperties {
+  refractionRatio?: number;
+  envMapIntensity?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  transmission?: number;
+  ior?: number;
+}
+
 // Enhanced Block Definition with all properties
 export interface BlockDefinition extends BlockMaterialProperties {
   type: BlockType;
@@ -37,6 +49,7 @@ export interface BlockDefinition extends BlockMaterialProperties {
   stackable: boolean;
   buildable: boolean; // Can AI simulants use this block type
   glowable: boolean; // Can this block emit light
+  customProperties?: GlassProperties; // Advanced glass properties
 }
 
 // Block Metadata Structure with creation timestamps and extended properties
@@ -136,6 +149,46 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
     stackable: true,
     buildable: true,
     glowable: true,
+  },
+  [BlockType.NUMBER_5]: {
+    type: BlockType.NUMBER_5,
+    displayName: "Number 5 Block",
+    color: "#FFEB3B", // Bright yellow
+    roughness: 0.5,
+    metalness: 0.2,
+    emissive: "#FFF59D",
+    emissiveIntensity: 0.3,
+    description: "Special numbered block displaying '5' with yellow glow",
+    category: "solid",
+    durability: 8,
+    stackable: true,
+    buildable: true,
+    glowable: true,
+  },
+  [BlockType.NUMBER_6]: {
+    type: BlockType.NUMBER_6,
+    displayName: "Sunset Glass Block",
+    color: "#FFB74D", // Warm sunset orange base
+    roughness: 0.05, // Very smooth for better reflections
+    metalness: 0.1,
+    transparency: 0.6, // More transparent for better blending
+    emissive: "#FF9800", // Warm glow
+    emissiveIntensity: 0.2,
+    description: "Premium frosted glass with perfect blending and sunset reflections",
+    category: "solid",
+    durability: 8,
+    stackable: true,
+    buildable: true,
+    glowable: true,
+    // Custom properties for enhanced glass effects
+    customProperties: {
+      refractionRatio: 0.98,
+      envMapIntensity: 1.2,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+      transmission: 0.95,
+      ior: 1.5
+    }
   },
 };
 

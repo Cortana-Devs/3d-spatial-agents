@@ -380,6 +380,20 @@ export default function BlockSelector({ className = '' }: BlockSelectorProps) {
             setSelectionMode(SelectionMode.PLACE);
           }
           break;
+        case "5":
+          event.preventDefault();
+          if (blockTypes[4]) {
+            setSelectedBlockType(blockTypes[4]);
+            setSelectionMode(SelectionMode.PLACE);
+          }
+          break;
+        case "6":
+          event.preventDefault();
+          if (blockTypes[5]) {
+            setSelectedBlockType(blockTypes[5]);
+            setSelectionMode(SelectionMode.PLACE);
+          }
+          break;
       }
     };
 
