@@ -717,17 +717,22 @@ function ClickHandler() {
   }, [handleClick, handleRightClick, handleMouseMove]);
 
   // Get block definition for ghost preview
-  const blockDefinitions = {
-    stone: { color: "#666666" },
-    leaf: { color: "#4CAF50" },
-    wood: { color: "#8D6E63" },
+  const blockDefinitions: Record<BlockType, { color: string }> = {
+    [BlockType.STONE]: { color: "#666666" },
+    [BlockType.LEAF]: { color: "#4CAF50" },
+    [BlockType.WOOD]: { color: "#8D6E63" },
+    [BlockType.FROSTED_GLASS]: { color: "#FFFFFF" },
+    [BlockType.NUMBER_4]: { color: "#FF4081" },
   };
+
+  // Safely get color with a fallback
+  const blockColor = blockDefinitions[selectedBlockType]?.color || "#FF0000";
 
   return (
     <GhostBlock
       position={ghostPosition}
       type={selectedBlockType}
-      color={blockDefinitions[selectedBlockType].color}
+      color={blockColor}
     />
   );
 }
