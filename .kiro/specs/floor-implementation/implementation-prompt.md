@@ -1,7 +1,7 @@
 # Floor Implementation - Comprehensive Development Prompt
 
 ## CONTEXT
-You are implementing an advanced floor system for the Descendants metaverse that focuses on transparent, frosted glass-like flooring with light reflection properties. This system provides modular, robust, and developable flooring options that integrate seamlessly with the existing world and AI simulant systems while maintaining high performance and visual appeal.
+You are implementing an floor system for the Descendants metaverse that focuses on transparent, frosted glass-like flooring with light reflection properties. This system provides modular, robust, and developable flooring options that integrate seamlessly with the existing world and AI simulant systems while maintaining high performance and visual appeal.
 
 Current Architecture:
 - Existing basic block system (stone, wood, leaf)
@@ -34,23 +34,23 @@ const FLOOR_TYPES = {
       'clear_frosted', 'light_frosted', 'medium_frosted',    // Transparency levels
       'heavy_frosted', 'textured_frosted', 'patterned_frosted' // Surface variations
     ],
-    
+
     colored: [
       'blue_frosted', 'green_frosted', 'amber_frosted',      // Tinted variants
       'rose_frosted', 'purple_frosted', 'neutral_frosted'    // Color options
     ],
-    
+
     functional: [
       'illuminated_frosted', 'reactive_frosted', 'smart_frosted', // Interactive
       'heated_frosted', 'pressure_sensitive', 'sound_dampening'   // Special properties
     ],
-    
+
     structural: [
       'reinforced_frosted', 'tempered_frosted', 'layered_frosted', // Durability
       'flexible_frosted', 'composite_frosted', 'impact_resistant'  // Engineering variants
     ]
   },
-  
+
   complementary: [
     'glass_border', 'metal_frame', 'led_strip',            // Support elements
     'anti_slip_coating', 'privacy_film', 'decorative_etch' // Surface treatments
@@ -205,14 +205,14 @@ const FEASIBILITY_ANALYSIS = {
     lightReflections: 'MEDIUM',      // Environment mapping + basic reflections
     frostingEffects: 'LOW',          // Normal maps + noise textures
     performance: 'MANAGEABLE',       // With proper LOD and culling
-    
+
     challenges: [
       'Transparent object sorting',
       'Multiple light reflections',
       'Performance with many transparent surfaces',
       'AI navigation through transparent surfaces'
     ],
-    
+
     solutions: [
       'Depth sorting and batching',
       'Limited reflection probes with caching',
@@ -220,13 +220,13 @@ const FEASIBILITY_ANALYSIS = {
       'Special AI navigation markers'
     ]
   },
-  
+
   integrationComplexity: {
     blockSystem: 'LOW',              // Standard block interface
     aiNavigation: 'MEDIUM',          // Requires transparency handling
     lighting: 'MEDIUM',              // Additional light calculations
     performance: 'MEDIUM',           // Requires optimization systems
-    
+
     dependencies: [
       'Existing block placement system',
       'AI navigation mesh generation',
@@ -234,19 +234,19 @@ const FEASIBILITY_ANALYSIS = {
       'Performance monitoring tools'
     ]
   },
-  
+
   developmentComplexity: {
     timeEstimate: '2-3 weeks',
     complexity: 'MODERATE',
     maintainability: 'HIGH',
     testability: 'HIGH',
-    
+
     riskFactors: [
       'Performance on lower-end devices',
       'Transparent sorting issues',
       'AI behavior with transparent surfaces'
     ],
-    
+
     mitigationStrategies: [
       'Comprehensive performance testing',
       'Fallback opaque materials for low-end devices',
@@ -277,7 +277,7 @@ const RAPID_TEST_SUITE = {
     'navigation_property_generation',
     'performance_optimization_triggers'
   ],
-  
+
   integrationTests: [
     'block_placement_with_glass_floors',
     'ai_pathfinding_over_transparent_surfaces',
@@ -285,7 +285,7 @@ const RAPID_TEST_SUITE = {
     'inventory_system_compatibility',
     'world_save_load_with_glass_floors'
   ],
-  
+
   performanceTests: [
     'transparent_rendering_fps_impact',
     'memory_usage_with_multiple_glass_floors',
@@ -293,7 +293,7 @@ const RAPID_TEST_SUITE = {
     'lod_system_performance_gains',
     'reflection_system_overhead'
   ],
-  
+
   visualTests: [
     'frosting_effect_quality',
     'light_transmission_accuracy',
@@ -312,19 +312,19 @@ const ERROR_HANDLING = {
     recovery: 'retry_with_reduced_quality',
     logging: 'detailed_material_properties'
   },
-  
+
   performanceIssues: {
     detection: 'fps_monitoring_below_threshold',
     response: 'automatic_lod_adjustment',
     fallback: 'disable_reflections_temporarily'
   },
-  
+
   transparencySorting: {
     detection: 'z_fighting_artifacts',
     response: 'force_depth_sorting',
     fallback: 'render_as_opaque'
   },
-  
+
   aiNavigationIssues: {
     detection: 'pathfinding_failures',
     response: 'generate_alternative_navmesh',
@@ -363,7 +363,7 @@ interface DebugVisualization {
 - Performance optimization triggers and responses
 - Navigation property generation for AI systems
 
-### Integration Tests  
+### Integration Tests
 - Block placement system compatibility
 - AI pathfinding over transparent surfaces
 - Lighting system interaction and reflection accuracy
