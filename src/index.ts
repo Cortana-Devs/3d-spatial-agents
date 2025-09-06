@@ -12,10 +12,10 @@ export type {
 } from "../systems/integration/FloorSystemIntegrator";
 
 // Floor Components
-export { FrostedGlassFloor } from "../components/floors/FrostedGlassFloor";
+export { FrostedGlassFloor as FrostedGlassFloorComponent } from "../components/floors/FrostedGlassFloor";
 
 // Block Components
-export { default as Block } from "../components/world/Block";
+export { default as BlockComponent } from "../components/world/Block";
 export { default as FrostedGlassBlock } from "../components/world/FrostedGlassBlock";
 export { default as Number4Block } from "../components/world/Number4Block";
 export {

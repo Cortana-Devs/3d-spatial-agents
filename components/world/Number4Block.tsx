@@ -76,7 +76,7 @@ export const Number4Block: React.FC<Number4BlockProps> = ({
 
   // Number 4 material with bright glow
   const numberMaterial = useMemo(() => {
-    return new THREE.MeshBasicMaterial({
+    return new THREE.MeshStandardMaterial({
       color: "#ffffff",
       emissive: "#ffffff",
       emissiveIntensity: 0.8 * glowIntensity,

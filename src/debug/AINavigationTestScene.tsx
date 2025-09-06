@@ -4,15 +4,23 @@ import { OrbitControls, Environment, Text, Line } from "@react-three/drei";
 import { FloorFactory } from "../../utils/floorFactory";
 import { FloorNavigationAnalyzer } from "../components/floors/ai/FloorNavigationProperties";
 import { TransparentSurfacePerception } from "../components/floors/ai/TransparentSurfacePerception";
-import { TransparentNavMeshGenerator } from "../components/floors/ai/TransparentNavMeshGenerator";
-import { TransparentPathfinder } from "../components/floors/ai/TransparentPathfinder";
+import {
+  TransparentNavMeshGenerator,
+  NavMesh,
+  NavMeshNode,
+} from "../components/floors/ai/TransparentNavMeshGenerator";
+import {
+  TransparentPathfinder,
+  PathNode,
+} from "../components/floors/ai/TransparentPathfinder";
+import { FrostedGlassFloor } from "../../types/floorTypes";
 import * as THREE from "three";
 
 interface AIAgent {
   id: string;
   position: THREE.Vector3;
   target: THREE.Vector3 | null;
-  currentPath: any[];
+  currentPath: PathNode[];
   pathIndex: number;
   speed: number;
   safetyPreference: "safety_first" | "balanced" | "efficiency_first";
@@ -21,7 +29,7 @@ interface AIAgent {
 }
 
 interface FloorVisualizationProps {
-  floor: any;
+  floor: FrostedGlassFloor;
   showSafetyColors: boolean;
 }
 
@@ -94,18 +102,18 @@ const FloorVisualization: React.FC<FloorVisualizationProps> = ({
 };
 
 interface NavigationMeshVisualizationProps {
-  navMesh: any;
+  navMesh: NavMesh;
 }
 
 const NavigationMeshVisualization: React.FC<
   NavigationMeshVisualizationProps
 > = ({ navMesh }) => {
-  const nodes = Array.from(navMesh.nodes.values());
+  const nodes: NavMeshNode[] = Array.from(navMesh.nodes.values());
 
   return (
     <group>
       {/* Render navigation nodes */}
-      {nodes.map((node) => (
+      {nodes.map((node: NavMeshNode) => (
         <mesh key={node.id} position={node.position}>
           <sphereGeometry args={[0.05]} />
           <meshBasicMaterial
@@ -278,8 +286,8 @@ export const AINavigationTestScene: React.FC = () => {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
 
-  const testFloors = useMemo(() => {
-    const floors = [];
+  const testFloors = useMemo((): FrostedGlassFloor[] => {
+    const floors: FrostedGlassFloor[] = [];
 
     // Create a varied floor layout for testing
     const floorConfigs = [
@@ -297,7 +305,11 @@ export const AINavigationTestScene: React.FC = () => {
     floorConfigs.forEach((config, index) => {
       const floor = FloorFactory.createFrostedGlassFloor(
         new THREE.Vector3(config.pos[0], config.pos[1], config.pos[2]),
-        config.type as any,
+        config.type as
+          | "medium_frosted"
+          | "clear_frosted"
+          | "heavy_frosted"
+          | "light_frosted",
       );
 
       // Adjust properties based on intended safety level
