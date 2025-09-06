@@ -7,6 +7,7 @@ import { Vector3, Euler, MathUtils } from "three";
 import * as THREE from "three";
 import { useWorldStore } from "../../store/worldStore";
 import { CameraMode, CameraState } from "../../types";
+import { useSafeCameraMode } from "../../hooks/useSafeCameraMode";
 
 // Camera configuration constants
 const CAMERA_CONFIG = {
@@ -120,6 +121,13 @@ export default function CameraController({
   const orbitControlsRef = useRef<React.ElementRef<typeof OrbitControls>>(null);
   const { simulants } = useWorldStore();
 
+  // Use safe camera mode management
+  const safeCameraMode = useSafeCameraMode({
+    enableDoubleClickFocus,
+    preventUnintentionalSwitches: true,
+    minModeChangeDelay: 500,
+  });
+
   // Fly mode controls state
   const flyControls = useRef<FlyControls>({
     keys: {
@@ -158,6 +166,10 @@ export default function CameraController({
 
   // Store previous mode for smooth transitions
   const previousMode = useRef<CameraMode>(mode);
+
+  // Protection against rapid mode switches
+  const lastModeChange = useRef<number>(0);
+  const modeChangeDelay = 500; // Minimum time between mode changes (ms)
 
   // Keyboard event handlers for fly mode
   const handleKeyDown = useCallback(
@@ -280,10 +292,15 @@ export default function CameraController({
     [camera],
   );
 
-  // Double-click handler for block focusing
+  // Double-click handler for block focusing - only trigger in orbit mode
   const handleDoubleClick = useCallback(
     (event: MouseEvent) => {
-      if (!enableDoubleClickFocus) return;
+      // Use safe camera mode handler
+      if (!safeCameraMode.handleDoubleClickFocus(event)) return;
+
+      // Only trigger if we're not already in a transition
+      if (transition.current.isTransitioning || safeCameraMode.isTransitioning)
+        return;
 
       // Basic implementation to focus on clicked area
       const rect = gl.domElement.getBoundingClientRect();
@@ -291,23 +308,34 @@ export default function CameraController({
       const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       // Create a basic focus position based on click location
-      const currentCamera = camera as THREE.PerspectiveCamera;
-      const focusDistance = 10;
       const focusPosition = new Vector3(x * 5, 0, y * 5);
 
-      // Smooth transition to focus position
-      startTransition(
-        focusPosition.clone().add(new Vector3(0, 5, 5)),
-        focusPosition,
-        currentCamera.fov,
-      );
+      // Only do a smooth transition within orbit mode, don't switch modes
+      if (orbitControlsRef.current && mode === "orbit") {
+        orbitControlsRef.current.target.copy(focusPosition);
+        orbitControlsRef.current.update();
+      }
     },
-    [enableDoubleClickFocus, gl.domElement, camera, startTransition],
+    [safeCameraMode, gl.domElement, mode],
   );
 
   // Mode change handler with smooth transitions
   useEffect(() => {
+    const now = Date.now();
+
+    // Prevent rapid mode switches that might cause unwanted cinematic mode
+    if (
+      previousMode.current !== mode &&
+      now - lastModeChange.current < modeChangeDelay
+    ) {
+      console.warn(
+        `Camera mode change blocked: too soon after last change (${now - lastModeChange.current}ms)`,
+      );
+      return;
+    }
+
     if (previousMode.current !== mode) {
+      lastModeChange.current = now;
       // Save current camera state
       cameraState.current = {
         position: camera.position.clone(),
@@ -336,12 +364,19 @@ export default function CameraController({
           if (orbitControlsRef.current) {
             orbitControlsRef.current.enabled = false;
           }
-          // Start cinematic transition to overview position
-          startTransition(
-            CAMERA_PRESETS.overview.position,
-            CAMERA_PRESETS.overview.target,
-            CAMERA_PRESETS.overview.fov,
-          );
+          // Only start cinematic transition if explicitly switched to cinematic mode
+          // and not already transitioning, and it's a safe mode change
+          if (
+            !transition.current.isTransitioning &&
+            !safeCameraMode.isTransitioning
+          ) {
+            console.log("Starting cinematic mode transition");
+            startTransition(
+              CAMERA_PRESETS.overview.position,
+              CAMERA_PRESETS.overview.target,
+              CAMERA_PRESETS.overview.fov,
+            );
+          }
           break;
 
         case "follow-simulant":
@@ -457,8 +492,17 @@ export default function CameraController({
 
     // Mouse events for fly mode
     document.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("click", requestPointerLock);
-    canvas.addEventListener("dblclick", handleDoubleClick);
+    // Only add click handler for fly mode
+    if (mode === "fly") {
+      canvas.addEventListener("click", requestPointerLock);
+    }
+
+    // Only add double-click handler in orbit mode to prevent accidental mode switches
+    if (mode === "orbit" && enableDoubleClickFocus) {
+      canvas.addEventListener("dblclick", handleDoubleClick, {
+        passive: false,
+      });
+    }
 
     // Pointer lock events
     document.addEventListener("pointerlockchange", handlePointerLockChange);
@@ -482,6 +526,9 @@ export default function CameraController({
     requestPointerLock,
     handleDoubleClick,
     handlePointerLockChange,
+    mode,
+    enableDoubleClickFocus,
+    safeCameraMode,
   ]);
 
   // Main camera update loop

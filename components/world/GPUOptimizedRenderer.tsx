@@ -36,21 +36,116 @@ import {
 } from "../../utils/performance/TransparencyOptimizer";
 
 // GPU Performance Configuration
+// Mobile device detection utility
+const detectMobileDevice = () => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isMobile =
+    /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+      userAgent,
+    );
+  const isTablet =
+    /ipad|tablet/.test(userAgent) || (isMobile && window.innerWidth > 768);
+
+  // GPU detection for performance tier
+  const canvas = document.createElement("canvas");
+  const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+  let performanceTier: "low" | "mid" | "high" = "mid";
+
+  if (gl) {
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    if (debugInfo) {
+      const renderer = gl
+        .getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+        .toLowerCase();
+      const lowEndGPUs = [
+        "adreno 4",
+        "adreno 5",
+        "mali-4",
+        "mali-t6",
+        "powervr sgx",
+      ];
+      const highEndGPUs = [
+        "adreno 6",
+        "adreno 7",
+        "mali-g7",
+        "apple a1",
+        "apple m1",
+      ];
+
+      if (lowEndGPUs.some((gpu) => renderer.includes(gpu)))
+        performanceTier = "low";
+      else if (highEndGPUs.some((gpu) => renderer.includes(gpu)))
+        performanceTier = "high";
+    }
+  }
+
+  // Memory-based adjustment
+  if ("deviceMemory" in navigator && (navigator as any).deviceMemory <= 2) {
+    performanceTier = "low";
+  }
+
+  return { isMobile, isTablet, performanceTier };
+};
+
+const device = detectMobileDevice();
+
+// Adaptive configuration based on device capabilities
 const GPU_CONFIG = {
-  MAX_INSTANCES: 50000,
+  // Base configuration
+  MAX_INSTANCES: device.isMobile
+    ? device.performanceTier === "low"
+      ? 5000
+      : device.performanceTier === "mid"
+        ? 15000
+        : 25000
+    : 50000,
   FRUSTUM_CULLING: true,
-  OCCLUSION_CULLING: true,
-  LOD_DISTANCES: [25, 75, 150],
-  BATCH_SIZE: 2000,
-  MEMORY_POOL_SIZE: 10000,
-  USE_COMPUTE_SHADERS: true,
-  TEMPORAL_UPSAMPLING: true,
-  ENABLE_DEPTH_PREPASS: true,
+  OCCLUSION_CULLING: !device.isMobile || device.performanceTier === "high",
+  LOD_DISTANCES: device.isMobile
+    ? device.performanceTier === "low"
+      ? [15, 35, 60]
+      : [20, 50, 100]
+    : [25, 75, 150],
+  BATCH_SIZE: device.isMobile ? 200 : 2000,
+  MEMORY_POOL_SIZE: device.isMobile
+    ? device.performanceTier === "low"
+      ? 1000
+      : 5000
+    : 10000,
+  USE_COMPUTE_SHADERS: device.performanceTier === "high" && !device.isMobile,
+  TEMPORAL_UPSAMPLING: !device.isMobile || device.performanceTier === "high",
+  ENABLE_DEPTH_PREPASS: device.performanceTier !== "low",
   USE_INSTANCED_ARRAYS: true,
   TRANSPARENCY_OPTIMIZATION: true,
   ENABLE_GPU_TIMING: false, // Disable to prevent WebGL errors
   ENABLE_DEBUG_LOGGING: process.env.NODE_ENV === "development",
-  MAX_TRANSPARENT_BLOCKS: 100,
+  MAX_TRANSPARENT_BLOCKS: device.isMobile
+    ? device.performanceTier === "low"
+      ? 50
+      : 100
+    : 200,
+
+  // Mobile-specific optimizations
+  MOBILE_OPTIMIZATIONS: {
+    ENABLE_THERMAL_THROTTLING: device.isMobile,
+    ENABLE_BATTERY_OPTIMIZATION: device.isMobile,
+    ADAPTIVE_QUALITY: device.isMobile,
+    TARGET_FPS: device.isMobile ? 30 : 60,
+    PIXEL_RATIO_CAP: device.isMobile ? 2.0 : 3.0,
+    SHADOW_MAP_SIZE:
+      device.performanceTier === "low"
+        ? 512
+        : device.performanceTier === "mid"
+          ? 1024
+          : 2048,
+    ENABLE_SHADOWS: device.performanceTier !== "low",
+    CULL_DISTANCE:
+      device.performanceTier === "low"
+        ? 80
+        : device.performanceTier === "mid"
+          ? 120
+          : 180,
+  },
 } as const;
 
 // Memory Pool for Object Reuse

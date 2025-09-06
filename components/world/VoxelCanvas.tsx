@@ -54,6 +54,7 @@ import {
   performanceManager,
   MODULE_CONFIGS,
 } from "../../utils/performance/PerformanceManager";
+import { CameraModeDebug } from "../debug/CameraModeDebug";
 
 // LOD Configuration for performance optimization
 interface LODConfig {
@@ -1079,6 +1080,15 @@ export default function VoxelCanvas({
 
       {/* Advanced GPU Performance Dashboard */}
       <ExternalGPUDashboard updateInterval={1000} />
+
+      {/* Camera Mode Debug Monitor for development */}
+      {process.env.NODE_ENV === "development" && (
+        <CameraModeDebug
+          enabled={true}
+          position="bottom-left"
+          compact={false}
+        />
+      )}
 
       {/* Simulant Controls are now inside FloatingSidebar */}
 

@@ -32,6 +32,7 @@ import { CAMERA_PRESETS } from "./world/CameraController";
 import { SimulantUtils } from "./simulants/SimulantManager";
 import type { AISimulant, CameraMode } from "../types";
 import type { AnimationState } from "../utils/animationController";
+import { useSafeCameraMode } from "../hooks/useSafeCameraMode";
 
 type TabKey = "animation" | "simulants" | "camera";
 
@@ -62,20 +63,25 @@ export default function FloatingSidebar() {
     updateSimulant,
     gridConfig,
     updateGridConfig,
-    setCameraMode,
     activeCamera,
   } = useWorldStore();
 
+  // Use safe camera mode management
+  const safeCameraMode = useSafeCameraMode({
+    enableKeyboardShortcuts: false, // Handle keyboard shortcuts manually here
+    preventUnintentionalSwitches: true,
+  });
+
   const [activeTab, setActiveTab] = React.useState<TabKey>("animation");
   const [selectedPreset, setSelectedPreset] = React.useState(0);
-  
+
   // Animation state management
   const [currentAnimation, setCurrentAnimation] = React.useState<AnimationState | null>(null);
   const [crossFadeDuration, setCrossFadeDuration] = React.useState(0.3);
   const [animationSpeed, setAnimationSpeed] = React.useState(1.0);
   const [enableIdleCycling, setEnableIdleCycling] = React.useState(true);
   const [idleCycleInterval, setIdleCycleInterval] = React.useState(8);
-  
+
   // Drag functionality
   const [isDragging, setIsDragging] = React.useState(false);
   const [position, setPosition] = React.useState(() => {
@@ -104,19 +110,13 @@ export default function FloatingSidebar() {
       ) {
         return;
       }
-      if ((event.metaKey || event.ctrlKey) && (event.key === "c" || event.key === "C")) {
-        event.preventDefault();
-        const modes: CameraMode[] = ["orbit", "fly", "cinematic", "follow-simulant"];
-        const idx = modes.indexOf(activeCamera as CameraMode);
-        const next = modes[(idx + 1) % modes.length];
-        // Skip follow-simulant if no active simulants
-        if (next === "follow-simulant" && Array.from(simulants.values()).every(s => s.status !== "active")) {
-          const afterNext = modes[(idx + 2) % modes.length];
-          setCameraMode(afterNext);
-        } else {
-          setCameraMode(next);
+      const handler = (event: KeyboardEvent) => {
+        // Camera mode cycling with Cmd/Ctrl + C
+        if ((event.metaKey || event.ctrlKey) && (event.key === "c" || event.key === "C")) {
+          event.preventDefault();
+          safeCameraMode.cycleCameraMode();
+          return;
         }
-      }
       if (event.key === "g" || event.key === "G") {
         event.preventDefault();
         updateGridConfig({ visibility: !gridConfig.visibility });
@@ -124,7 +124,7 @@ export default function FloatingSidebar() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [activeCamera, simulants, setCameraMode, gridConfig.visibility, updateGridConfig]);
+  }, [activeCamera, simulants, safeCameraMode, gridConfig.visibility, updateGridConfig]);
 
   // Drag event handlers
   const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
@@ -156,17 +156,17 @@ export default function FloatingSidebar() {
       if (isDragging) {
         const newX = e.clientX - dragStart.x;
         const newY = e.clientY - dragStart.y;
-        
+
         // Constrain to viewport bounds
         const maxX = window.innerWidth - 320; // sidebar width
         const maxY = window.innerHeight - 400; // approximate sidebar height
-        
+
         const newPosition = {
           x: Math.max(0, Math.min(newX, maxX)),
           y: Math.max(80, Math.min(newY, maxY)), // Keep below header (80px min)
         };
         setPosition(newPosition);
-        
+
         // Save position to localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem('floatingSidebarPosition', JSON.stringify(newPosition));
@@ -183,17 +183,17 @@ export default function FloatingSidebar() {
         const touch = e.touches[0];
         const newX = touch.clientX - dragStart.x;
         const newY = touch.clientY - dragStart.y;
-        
+
         // Constrain to viewport bounds
         const maxX = window.innerWidth - 320; // sidebar width
         const maxY = window.innerHeight - 400; // approximate sidebar height
-        
+
         const newPosition = {
           x: Math.max(0, Math.min(newX, maxX)),
           y: Math.max(80, Math.min(newY, maxY)), // Keep below header (80px min)
         };
         setPosition(newPosition);
-        
+
         // Save position to localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem('floatingSidebarPosition', JSON.stringify(newPosition));
@@ -226,7 +226,7 @@ export default function FloatingSidebar() {
   // Animation control functions
   const handlePlayAnimation = (animationState: AnimationState) => {
     setCurrentAnimation(animationState);
-    
+
     // Map animation states to actions
     const actionMap: Record<AnimationState, string> = {
       idle: "standing idle",
@@ -238,12 +238,12 @@ export default function FloatingSidebar() {
       thinking: "thinking deeply",
       celebrating: "celebrating victory"
     };
-    
+
     const action = actionMap[animationState];
     simulants.forEach((simulant) => {
-      updateSimulant(simulant.id, { 
-        lastAction: action, 
-        status: animationState === "idle" ? "idle" : "active" 
+      updateSimulant(simulant.id, {
+        lastAction: action,
+        status: animationState === "idle" ? "idle" : "active"
       });
     });
   };
@@ -277,7 +277,7 @@ export default function FloatingSidebar() {
       3 + simulants.size * 0.5,
     );
     const spawnPosition = spawnPositions[simulants.size] || spawnPositions[0] || { x: 0, y: 0, z: 0 };
-    
+
     const newSimulant: AISimulant = {
       id: simulantId,
       name: `Test Simulant`,
@@ -365,22 +365,24 @@ export default function FloatingSidebar() {
     simulants.forEach((s) => removeSimulant(s.id));
   }, [simulants, removeSimulant]);
 
-  // Camera tab actions
-  const handleChangeCameraMode = (mode: CameraMode) => setCameraMode(mode);
+  // Camera tab actions with safe mode management
+  const handleChangeCameraMode = (mode: CameraMode) => {
+    safeCameraMode.changeCameraMode(mode, false, 'user');
+  };
 
   return (
-    <div 
+    <div
       ref={dragRef}
       className={`fixed z-50 draggable-sidebar ${isDragging ? 'dragging' : ''}`}
-      style={{ 
-        left: `${position.x}px`, 
+      style={{
+        left: `${position.x}px`,
         top: `${position.y}px`,
         cursor: isDragging ? 'grabbing' : 'default',
       }}
     >
       <Card className="bg-black/20 backdrop-blur-md border-white/10 text-white w-[320px] shadow-xl">
         {/* Drag handle */}
-        <div 
+        <div
           className="flex items-center justify-center py-1 px-2 cursor-grab active:cursor-grabbing border-b border-white/10 touch-none"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
@@ -388,7 +390,7 @@ export default function FloatingSidebar() {
         >
           <GripVertical size={16} className="text-white/40 hover:text-white/60" />
         </div>
-        
+
         {/* Tab bar */}
         <div className="flex items-center gap-1 p-2">
           <button
@@ -448,7 +450,7 @@ export default function FloatingSidebar() {
                   const config = ANIMATION_CONFIG[animationState];
                   const Icon = config.icon;
                   const isActive = currentAnimation === animationState;
-                  
+
                   return (
                     <Button
                       key={animationState}
@@ -476,19 +478,19 @@ export default function FloatingSidebar() {
             <div className="space-y-2">
               <div className="text-xs text-white/60">Controls</div>
               <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex-1 text-white/80 hover:bg-white/10" 
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 text-white/80 hover:bg-white/10"
                   onClick={handleStopAllAnimations}
                   disabled={simulants.size === 0}
                 >
                   <Square size={12} className="mr-1" /> Stop All
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex-1 text-white/80 hover:bg-white/10" 
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 text-white/80 hover:bg-white/10"
                   onClick={handleRandomAnimation}
                   disabled={simulants.size === 0}
                 >
@@ -502,7 +504,7 @@ export default function FloatingSidebar() {
             {/* Animation Settings */}
             <div className="space-y-3">
               <div className="text-xs text-white/60">Settings</div>
-              
+
               {/* Cross-fade Duration */}
               <div className="space-y-1">
                 <Label className="text-[10px] text-white/70">Cross-fade Duration: {crossFadeDuration}s</Label>
@@ -682,5 +684,3 @@ export default function FloatingSidebar() {
     </div>
   );
 }
-
-
