@@ -14,6 +14,17 @@ export type {
 // Floor Components
 export { FrostedGlassFloor } from "../components/floors/FrostedGlassFloor";
 
+// Block Components
+export { default as Block } from "../components/world/Block";
+export { default as FrostedGlassBlock } from "../components/world/FrostedGlassBlock";
+export { default as Number4Block } from "../components/world/Number4Block";
+export {
+  default as BlockRenderer,
+  FrostedGlassBlockRenderer,
+  Number4BlockRenderer,
+  FloorRenderer,
+} from "../components/world/BlockRenderer";
+
 // Materials and Presets
 export {
   MATERIAL_PRESETS,
@@ -23,6 +34,13 @@ export type { MaterialPreset } from "../types/materialTypes";
 
 // Factory and Utilities
 export { FloorFactory } from "../utils/floorFactory";
+export {
+  BlockFactory,
+  createBlockLine,
+  createBlockRectangle,
+  getBlockTypeInfo,
+  getAllBlockTypeInfo,
+} from "../utils/blockFactory";
 
 // Performance Systems
 export { FloorLODManager } from "../systems/FloorLODManager";
@@ -63,9 +81,27 @@ export type {
 export { FloorControlPanel } from "../components/ui/FloorControlPanel";
 
 // Types
-export type { GlassType, FloorMetadata, Block } from "../types/floorTypes";
-
+export type { GlassType, FloorMetadata } from "../types/floorTypes";
 export type { FrostedGlassFloor } from "../types/floorTypes";
+
+// Block Types
+export type {
+  Block,
+  BlockDefinition,
+  BlockMetadata,
+  BlockMaterialProperties,
+  CreateBlockParams,
+  UpdateBlockParams,
+  BlockQuery,
+  BlockValidationResult,
+  PositionConstraints,
+} from "../types/blocks";
+export {
+  BlockType,
+  SelectionMode,
+  BlockValidationError,
+  BLOCK_DEFINITIONS,
+} from "../types/blocks";
 
 // Build Optimization
 export { BuildOptimizer, optimizeForProduction } from "../build/BuildOptimizer";
@@ -75,6 +111,7 @@ export { FLOOR_CONSTANTS } from "../config/floorConstants";
 
 // Examples and Demos
 export { CompleteFloorSystemDemo } from "../examples/CompleteFloorSystemDemo";
+export { default as FrostedGlassAndNumber4Demo } from "../examples/FrostedGlassAndNumber4Demo";
 
 // Debug Tools
 export { default as AdvancedDebugInterface } from "./debug/AdvancedDebugInterface";
