@@ -719,11 +719,14 @@ function ClickHandler() {
   // Get block definition for ghost preview
   const blockDefinitions = BLOCK_DEFINITIONS;
 
+  // Safely get color with a fallback
+  const blockColor = blockDefinitions[selectedBlockType]?.color || "#FF0000";
+
   return (
     <GhostBlock
       position={ghostPosition}
       type={selectedBlockType}
-      color={blockDefinitions[selectedBlockType]?.color || "#cccccc"}
+      color={blockColor}
     />
   );
 }
