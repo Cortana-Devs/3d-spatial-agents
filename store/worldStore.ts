@@ -11,6 +11,7 @@ import {
   AISimulant,
   CameraMode,
   WorldState as BaseWorldState,
+  BLOCK_DEFINITIONS,
 } from "../types";
 
 // Enable MapSet plugin for Immer to work with Map and Set
@@ -104,24 +105,8 @@ const keyToPosition = (key: string): Vector3 => {
   return new Vector3(x, y, z);
 };
 
-// Block definitions with Axiom Design System colors
-const blockDefinitions: Record<
-  BlockType,
-  { color: string; description: string }
-> = {
-  stone: {
-    color: "#666666",
-    description: "Solid foundation material",
-  },
-  leaf: {
-    color: "#4CAF50",
-    description: "Organic living material",
-  },
-  wood: {
-    color: "#8D6E63",
-    description: "Natural building material",
-  },
-};
+// Use imported block definitions
+const blockDefinitions = BLOCK_DEFINITIONS;
 
 // Create the Zustand store with immer for immutable updates
 export const useWorldStore = create<WorldState>()(
@@ -511,7 +496,9 @@ export const useWorldStore = create<WorldState>()(
         });
       },
 
-      updateGridConfig: (updates: Partial<import("../types").GridConfig>): void => {
+      updateGridConfig: (
+        updates: Partial<import("../types").GridConfig>,
+      ): void => {
         set((draft) => {
           Object.assign(draft.gridConfig, updates);
           draft.lastUpdate = Date.now();
@@ -566,11 +553,13 @@ export const useWorldStore = create<WorldState>()(
         const state = get();
         const blocks = Array.from(state.blockMap.values());
 
-        // Calculate block counts by type
+        // Calculate block counts by type - initialize all block types
         const blocksByType: Record<BlockType, number> = {
-          stone: 0,
-          leaf: 0,
-          wood: 0,
+          [BlockType.STONE]: 0,
+          [BlockType.LEAF]: 0,
+          [BlockType.WOOD]: 0,
+          [BlockType.FROSTED_GLASS]: 0,
+          [BlockType.NUMBER_4]: 0,
         };
 
         let minX = Infinity,

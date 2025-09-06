@@ -5,7 +5,7 @@ import { useThree, useFrame } from "@react-three/fiber";
 import { Vector3, Vector2, Raycaster, Plane } from "three";
 import { useModuleSystem } from "./ModuleManager";
 import { useWorldStore } from "../../store/worldStore";
-import { SelectionMode, BlockType } from "../../types";
+import { SelectionMode, BlockType, BLOCK_DEFINITIONS } from "../../types";
 
 interface BlockPlacementModuleProps {
   enableGhostPreview?: boolean;
@@ -335,14 +335,7 @@ export function BlockPlacementModule({
   }, [selectionMode, setEnabled]);
 
   // Block definitions for ghost preview
-  const blockDefinitions = useMemo(
-    () => ({
-      stone: { color: "#666666" },
-      leaf: { color: "#4CAF50" },
-      wood: { color: "#8D6E63" },
-    }),
-    [],
-  );
+  const blockDefinitions = BLOCK_DEFINITIONS;
 
   return (
     <group name="block-placement-module">
@@ -351,10 +344,7 @@ export function BlockPlacementModule({
         <GhostBlock
           position={ghostPosition}
           blockType={selectedBlockType}
-          color={
-            blockDefinitions[selectedBlockType as keyof typeof blockDefinitions]
-              ?.color || "#cccccc"
-          }
+          color={blockDefinitions[selectedBlockType]?.color || "#cccccc"}
         />
       )}
 

@@ -717,17 +717,13 @@ function ClickHandler() {
   }, [handleClick, handleRightClick, handleMouseMove]);
 
   // Get block definition for ghost preview
-  const blockDefinitions = {
-    stone: { color: "#666666" },
-    leaf: { color: "#4CAF50" },
-    wood: { color: "#8D6E63" },
-  };
+  const blockDefinitions = BLOCK_DEFINITIONS;
 
   return (
     <GhostBlock
       position={ghostPosition}
       type={selectedBlockType}
-      color={blockDefinitions[selectedBlockType].color}
+      color={blockDefinitions[selectedBlockType]?.color || "#cccccc"}
     />
   );
 }
