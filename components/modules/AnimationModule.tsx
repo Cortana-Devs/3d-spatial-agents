@@ -137,7 +137,7 @@ export function AnimationModule({
   }, [activeSimulants, enableLOD, animationQuality]);
 
   // Update camera position for LOD calculations (runs in module's isolated frame)
-  const updateCameraPosition = useCallback((camera: any) => {
+  const updateCameraPosition = useCallback((camera: THREE.Camera) => {
     if (camera) {
       cameraPositionRef.current = {
         x: camera.position.x,
