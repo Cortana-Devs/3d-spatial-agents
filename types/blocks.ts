@@ -194,14 +194,15 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
   },
   [BlockType.NUMBER_7]: {
     type: BlockType.NUMBER_7,
-    displayName: "Perfect Clear Glass Block",
-    color: "#FFFFFF", // Pure white for full transparency
-    roughness: 0.01, // Ultra smooth for perfect clarity
+    displayName: "Ultra-Light Glass Block",
+    color: "#F0F8FF", // Barely visible tint
+    roughness: 0.1, // Slight roughness for performance
     metalness: 0.0,
-    transparency: 0.95, // Nearly fully transparent
-    emissive: "#FFFFFF", // No tint, pure clear
-    emissiveIntensity: 0.0, // No glow for pure transparency
-    description: "Perfect fully transparent glass block with seamless clarity",
+    transparency: 0.85, // Performance-optimized transparency
+    emissive: "#000000", // No emissive for performance
+    emissiveIntensity: 0.0,
+    description:
+      "Performance-optimized ultra-light glass with minimal rendering cost",
     category: "solid",
     durability: 9,
     stackable: true,

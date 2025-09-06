@@ -330,21 +330,15 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
               }
             />
             {type === BlockType.NUMBER_7 ? (
-              <meshStandardMaterial
+              <meshBasicMaterial
                 color={definition.color}
-                roughness={definition.roughness}
-                metalness={definition.metalness}
                 transparent={true}
-                opacity={
-                  definition.transparency ? 1 - definition.transparency : 1
-                }
-                emissive={definition.emissive || "#000000"}
-                emissiveIntensity={definition.emissiveIntensity || 0}
+                opacity={0.15}
                 vertexColors={true}
-                toneMapped={false}
                 side={DoubleSide}
-                depthWrite={false}
-                alphaTest={0.01}
+                depthWrite={true}
+                alphaTest={0.1}
+                fog={false}
               />
             ) : (
               <meshStandardMaterial
@@ -471,20 +465,14 @@ function VoxelBlock({
           args={type === BlockType.NUMBER_7 ? [1.0, 1.0, 1.0] : geometryArgs}
         />
         {type === BlockType.NUMBER_7 ? (
-          <meshStandardMaterial
-            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#ffffff"}
-            roughness={isHovered ? 0.01 : 0.01}
-            metalness={0.0}
+          <meshBasicMaterial
+            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#F0F8FF"}
             transparent={true}
-            opacity={isHovered ? 0.15 : isSelected ? 0.1 : 0.03}
-            emissive={
-              isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#ffffff"
-            }
-            emissiveIntensity={isHovered ? 0.1 : isSelected ? 0.05 : 0.0}
-            toneMapped={false}
+            opacity={isHovered ? 0.25 : isSelected ? 0.2 : 0.15}
             side={DoubleSide}
-            depthWrite={false}
-            alphaTest={0.001}
+            depthWrite={true}
+            alphaTest={0.1}
+            fog={false}
           />
         ) : (
           <meshStandardMaterial

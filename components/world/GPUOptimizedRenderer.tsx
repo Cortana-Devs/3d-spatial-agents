@@ -29,6 +29,10 @@ import {
   ShaderProfiler,
 } from "../../utils/GPUOptimizedShaders";
 import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
+import {
+  transparencyOptimizer,
+  TransparencyUtils,
+} from "../../utils/performance/TransparencyOptimizer";
 
 // GPU Performance Configuration
 const GPU_CONFIG = {
@@ -42,6 +46,8 @@ const GPU_CONFIG = {
   TEMPORAL_UPSAMPLING: true,
   ENABLE_DEPTH_PREPASS: true,
   USE_INSTANCED_ARRAYS: true,
+  TRANSPARENCY_OPTIMIZATION: true,
+  MAX_TRANSPARENT_BLOCKS: 100,
 } as const;
 
 // Memory Pool for Object Reuse
@@ -306,37 +312,18 @@ export default function GPUOptimizedRenderer({
     };
   }, []);
 
-  // Create optimized materials
+  // Create optimized materials with performance-first approach
   const materials = useMemo(() => {
     const createGlassMaterial = () => {
-      if (enableAdvancedEffects && performanceMode === "ultra") {
-        return new ShaderMaterial({
-          vertexShader: GPU_OPTIMIZED_SHADERS.perfectGlassVertex,
-          fragmentShader: GPU_OPTIMIZED_SHADERS.perfectGlassFragment,
-          uniforms: {
-            time: { value: 0 },
-            envMap: { value: null },
-            opacity: { value: 0.05 },
-            transmission: { value: 0.99 },
-            emissive: { value: new Vector3(1.0, 1.0, 1.0) },
-            emissiveIntensity: { value: 0.0 },
-          },
-          transparent: true,
-          side: DoubleSide,
-          depthWrite: false,
-          blending: AdditiveBlending,
-        });
-      } else {
-        return new MeshStandardMaterial({
-          transparent: true,
-          opacity: 0.05,
-          roughness: 0.01,
-          metalness: 0.0,
-          side: DoubleSide,
-          depthWrite: false,
-          alphaTest: 0.001,
-        });
-      }
+      // Ultra-performance optimized material for transparent blocks
+      return new MeshBasicMaterial({
+        transparent: false, // Disable transparency for maximum performance
+        opacity: 1.0,
+        color: new Color(0.85, 0.9, 0.95), // Light tint to simulate glass
+        wireframe: false,
+        fog: false,
+        toneMapped: false,
+      });
     };
 
     const materialMap = new Map<BlockType, Material>();
@@ -376,9 +363,15 @@ export default function GPUOptimizedRenderer({
     new Map(),
   );
 
-  // Initialize renderers
+  // Initialize renderers with transparency optimization
   useEffect(() => {
     const renderers = new Map<BlockType, GPUBlockTypeRenderer>();
+
+    // Initialize transparency optimizer
+    transparencyOptimizer.initialize(camera);
+    transparencyOptimizer.updateConfig(
+      TransparencyUtils.getRecommendedConfig(),
+    );
 
     Object.values(BlockType).forEach((blockType) => {
       const renderer: GPUBlockTypeRenderer = {
@@ -394,7 +387,7 @@ export default function GPUOptimizedRenderer({
     });
 
     blockRenderers.current = renderers;
-  }, [materials, geometries]);
+  }, [materials, geometries, camera]);
 
   // Update frustum for culling
   const updateFrustum = useCallback(() => {
@@ -431,7 +424,7 @@ export default function GPUOptimizedRenderer({
     [geometries],
   );
 
-  // Update instance data with culling and LOD
+  // Update instance data with advanced transparency optimization
   const updateInstances = useCallback(() => {
     const startTime = performance.now();
     updateFrustum();
@@ -443,13 +436,20 @@ export default function GPUOptimizedRenderer({
     let visibleInstances = 0;
     let culledInstances = 0;
 
+    // Apply transparency optimization for performance-critical blocks
+    const transparencyResults =
+      transparencyOptimizer.optimizeTransparentBlocks(blocks);
+    const optimizedTransparentBlocks = new Set(
+      transparencyResults.visibleTransparentBlocks.map((tb) => tb.block.id),
+    );
+
     // Clear all renderers
     blockRenderers.current.forEach((renderer) => {
       renderer.instances.length = 0;
       renderer.visibleCount = 0;
     });
 
-    // Process each block
+    // Process each block with transparency optimization
     blocks.forEach((block) => {
       totalInstances++;
 
@@ -463,6 +463,16 @@ export default function GPUOptimizedRenderer({
 
       // Distance culling
       if (distance > maxRenderDistance) {
+        culledInstances++;
+        vector3Pool.current.release(blockPosition);
+        return;
+      }
+
+      // Skip transparent blocks that were culled by transparency optimizer
+      if (
+        block.type === BlockType.NUMBER_7 &&
+        !optimizedTransparentBlocks.has(block.id)
+      ) {
         culledInstances++;
         vector3Pool.current.release(blockPosition);
         return;
@@ -563,21 +573,14 @@ export default function GPUOptimizedRenderer({
         renderer.instancedMesh.setMatrixAt(i, instance.matrix);
         renderer.instancedMesh.setColorAt(i, instance.color);
 
-        // Special handling for NUMBER_7 blocks
+        // Special handling for NUMBER_7 blocks - ultra-performance mode
         if (blockType === BlockType.NUMBER_7) {
-          // Use full 1.0 scale for seamless blocks
-          dummy.copy(instance.matrix);
-          dummy.scale(new Vector3(1.002, 1.002, 1.002));
-          renderer.instancedMesh.setMatrixAt(i, dummy);
+          // Use standard scale for performance (no seamless scaling)
+          renderer.instancedMesh.setMatrixAt(i, instance.matrix);
 
-          // Apply perfect glass material if available
-          if (
-            enableAdvancedEffects &&
-            renderer.material instanceof ShaderMaterial
-          ) {
-            renderer.material.uniforms.time.value = performance.now() * 0.001;
-            renderer.material.uniforms.opacity.value = 0.03; // Nearly invisible
-          }
+          // Apply performance-optimized color tinting
+          const performanceColor = new Color(0.85, 0.9, 0.95);
+          renderer.instancedMesh.setColorAt(i, performanceColor);
         }
       }
 
@@ -662,12 +665,13 @@ export default function GPUOptimizedRenderer({
     }
   });
 
-  // Enhanced performance monitoring
+  // Enhanced performance monitoring with transparency optimization
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
       const interval = setInterval(() => {
         const metrics = performanceMetrics.current;
         const memoryStats = gpuMemoryManager.getMemoryStats();
+        const transparencyStats = transparencyOptimizer.getOptimizationStats();
 
         console.log("🚀 GPU Renderer Metrics:", {
           totalBlocks: metrics.totalInstances,
@@ -678,10 +682,17 @@ export default function GPUOptimizedRenderer({
           cullingEfficiency: `${((metrics.culledInstances / Math.max(metrics.totalInstances, 1)) * 100).toFixed(1)}%`,
           memoryPressure: `${(memoryStats.pressure * 100).toFixed(1)}%`,
           performanceMode,
+          transparencyOptimization: {
+            transparentBlocks: transparencyStats.totalTransparentBlocks,
+            transparentCulled: transparencyStats.culledBlocks,
+            transparencyEfficiency: `${(transparencyStats.cullingEfficiency * 100).toFixed(1)}%`,
+            recommendations: transparencyStats.recommendations.slice(0, 2),
+          },
           gpuOptimizations: {
             frustumCulling: GPU_CONFIG.FRUSTUM_CULLING,
             lodEnabled: true,
             instancedRendering: true,
+            transparencyOptimized: GPU_CONFIG.TRANSPARENCY_OPTIMIZATION,
             advancedEffects: enableAdvancedEffects,
           },
         });
