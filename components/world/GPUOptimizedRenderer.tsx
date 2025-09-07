@@ -18,6 +18,7 @@ import {
   ShaderMaterial,
   UniformsUtils,
   DoubleSide,
+  FrontSide,
   AdditiveBlending,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -34,6 +35,10 @@ import {
   transparencyOptimizer,
   TransparencyUtils,
 } from "../../utils/performance/TransparencyOptimizer";
+import {
+  transparencySortingFix,
+  TransparencyFixUtils,
+} from "../../utils/TransparencySortingFix";
 
 // GPU Performance Configuration
 // Mobile device detection utility
@@ -413,26 +418,13 @@ export default function GPUOptimizedRenderer({
   // Create optimized materials with performance-first approach
   const materials = useMemo(() => {
     const createGlassMaterial = () => {
-      // High-performance frosted glass optimized for 60+ FPS
-      console.log("Creating glass material with MeshStandardMaterial");
-      const material = new MeshStandardMaterial({
-        color: new Color(0.85, 0.92, 0.98), // Subtle glass tint
-        metalness: 0.0,
-        roughness: 0.15, // Slight frosting effect
-        transparent: true,
-        opacity: 0.4, // Semi-transparent for glass look
-        envMapIntensity: 0.8, // Reduced for performance
-        alphaTest: 0.1, // Skip very transparent pixels
-        depthWrite: false, // Optimize depth sorting
-        side: DoubleSide,
-      });
+      // Use the optimized transparency sorting fix for glass material
+      console.log(
+        "Creating optimized glass material with TransparencySortingFix",
+      );
+      const material = TransparencyFixUtils.createGlassMaterial();
 
-      // Performance optimizations
-      material.toneMapped = false;
-      material.fog = false;
-      material.dithering = false;
-
-      console.log("Glass material created successfully:", material);
+      console.log("Optimized glass material created successfully:", material);
       return material;
     };
 
@@ -686,14 +678,22 @@ export default function GPUOptimizedRenderer({
         renderer.instancedMesh.setMatrixAt(i, instance.matrix);
         renderer.instancedMesh.setColorAt(i, instance.color);
 
-        // Special handling for NUMBER_7 blocks - ultra-performance mode
+        // Special handling for NUMBER_7 blocks - proper transparency rendering
         if (blockType === BlockType.NUMBER_7) {
-          // Use standard scale for performance (no seamless scaling)
-          renderer.instancedMesh.setMatrixAt(i, instance.matrix);
+          // Apply transparency sorting fix
+          TransparencyFixUtils.quickFixGlassBlock(renderer.instancedMesh);
 
-          // Apply performance-optimized color tinting
-          const performanceColor = new Color(0.85, 0.9, 0.95);
-          renderer.instancedMesh.setColorAt(i, performanceColor);
+          // Register with transparency sorting system
+          transparencySortingFix.registerTransparentObject(
+            `${blockType}_${i}`,
+            renderer.instancedMesh,
+            blockType,
+            0.75,
+          );
+
+          // Apply stable color without per-instance variations
+          const glassColor = new Color(0.96, 0.98, 1.0); // Consistent glass color
+          renderer.instancedMesh.setColorAt(i, glassColor);
         }
       }
 
@@ -750,14 +750,25 @@ export default function GPUOptimizedRenderer({
     }
 
     // Update shader uniforms for advanced materials
-    if (enableAdvancedEffects) {
-      const glassMaterial = materials.get(BlockType.NUMBER_7) as ShaderMaterial;
-      if (glassMaterial && glassMaterial.uniforms) {
-        glassMaterial.uniforms.time.value = state.clock.elapsedTime;
+    // Update transparency sorting and glass materials
+    if (camera) {
+      // Update transparency sorting system
+      transparencySortingFix.updateTransparencySorting(camera);
+    }
 
-        // Set environment map if available
-        if (state.scene.environment && !glassMaterial.uniforms.envMap.value) {
-          glassMaterial.uniforms.envMap.value = state.scene.environment;
+    // Update glass materials
+    if (enableAdvancedEffects) {
+      const glassMaterial = materials.get(
+        BlockType.NUMBER_7,
+      ) as MeshPhysicalMaterial;
+      if (glassMaterial) {
+        // Update environment map if available
+        if (
+          state.scene.environment &&
+          glassMaterial.envMap !== state.scene.environment
+        ) {
+          glassMaterial.envMap = state.scene.environment;
+          glassMaterial.needsUpdate = true;
         }
       }
     }

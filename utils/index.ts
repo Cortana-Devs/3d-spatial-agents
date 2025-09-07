@@ -9,6 +9,17 @@ export * from "./blockFactory";
 export * from "./blockIntegration";
 export * from "../types/blocks";
 
+// Export island generation utilities
+export * from "./generation/islands/types";
+export * from "./generation/islands/IslandGenerator";
+export * from "./generation/islands/ArchipelagoGenerator";
+export * from "./generation/islands/MassiveArchipelagoGenerator";
+export * from "./generation/islands/MassiveArchipelagoPresets";
+export * from "./generation/islands/integration";
+export * from "./generation/islands/debug";
+export * from "./generation/rng/DeterministicRNG";
+export * from "./generation/noise/NoiseGenerator";
+
 // Export animation utilities
 export * from "./animationUtils";
 export * from "./animationLoader";

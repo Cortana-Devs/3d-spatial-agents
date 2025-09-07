@@ -38,11 +38,11 @@ import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
 import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
-import { Stats } from "@react-three/drei";
 import GPUOptimizedRenderer from "./GPUOptimizedRenderer";
 import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
-import ExternalGPUDashboard, { CanvasGPUMonitor } from "./CanvasGPUMonitor";
+import { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
+import FloorBlock from "./FloorBlock";
 import {
   useIsolatedRender,
   useBlockPlacementRender,
@@ -54,7 +54,7 @@ import {
   performanceManager,
   MODULE_CONFIGS,
 } from "../../utils/performance/PerformanceManager";
-import { CameraModeDebug } from "../debug/CameraModeDebug";
+import { UnifiedDebugPanel } from "../debug/UnifiedDebugPanel";
 
 // LOD Configuration for performance optimization
 interface LODConfig {
@@ -848,6 +848,14 @@ function SceneContent({
         performanceMode="ultra"
       />
 
+      {/* Floor Block covering the full grid area */}
+      <FloorBlock
+        size={gridConfig.size}
+        position={new Vector3(0, -0.5, 0)}
+        blockType={BlockType.STONE}
+        textureRepeat={gridConfig.size / 2}
+      />
+
       {/* Intelligent grid system with spatial indexing */}
       <GridSystem config={gridConfig} />
 
@@ -864,8 +872,28 @@ function SceneContent({
 
       {/* GPU Performance Monitor (Canvas-internal) */}
       <CanvasGPUMonitor />
+
+      {/* Camera Bridge for external components */}
+      <CameraBridge />
     </>
   );
+}
+
+// Bridge component to provide camera data to external components
+function CameraBridge() {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    // Update transparency sorting with current camera
+    if (camera) {
+      const {
+        transparencySortingFix,
+      } = require("../../utils/TransparencySortingFix");
+      transparencySortingFix.updateTransparencySorting(camera);
+    }
+  });
+
+  return null;
 }
 
 // Isolated performance monitoring hook
@@ -1073,20 +1101,13 @@ export default function VoxelCanvas({
         />
       </div>
 
-      {enablePerformanceStats && <PerformanceStats />}
-
-      {/* GPU Performance Monitor for development */}
-      {process.env.NODE_ENV === "development" && <Stats />}
-
-      {/* Advanced GPU Performance Dashboard */}
-      <ExternalGPUDashboard updateInterval={1000} />
-
-      {/* Camera Mode Debug Monitor for development */}
+      {/* Unified Debug Panel for development */}
       {process.env.NODE_ENV === "development" && (
-        <CameraModeDebug
+        <UnifiedDebugPanel
           enabled={true}
-          position="bottom-left"
-          compact={false}
+          position="top-right"
+          cameraMode={cameraMode}
+          followTarget={followTarget}
         />
       )}
 
