@@ -187,7 +187,7 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
     color: "#FFB74D", // Warm sunset orange base
     roughness: 0.05, // Very smooth for better reflections
     metalness: 0.1,
-    transparency: 0.6, // More transparent for better blending
+    transparency: 0.2, // Further reduced for better visibility (80% visible)
     emissive: "#FF9800", // Warm glow
     emissiveIntensity: 0.2,
     description:
@@ -210,19 +210,19 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
   [BlockType.NUMBER_7]: {
     type: BlockType.NUMBER_7,
     displayName: "Ultra-Light Glass Block",
-    color: "#F0F8FF", // Barely visible tint
+    color: "#B3E5FC", // More visible light blue tint
     roughness: 0.1, // Slight roughness for performance
     metalness: 0.0,
-    transparency: 0.85, // Performance-optimized transparency
-    emissive: "#000000", // No emissive for performance
-    emissiveIntensity: 0.0,
+    transparency: 0.25, // Further reduced for better visibility (75% visible)
+    emissive: "#81D4FA", // Subtle emissive for visibility
+    emissiveIntensity: 0.08,
     description:
       "Performance-optimized ultra-light glass with minimal rendering cost",
     category: "solid",
     durability: 9,
     stackable: true,
     buildable: true,
-    glowable: false,
+    glowable: true,
   },
 };
 

@@ -308,6 +308,23 @@ export default function GPUOptimizedRenderer({
         filtered.set(key, block);
       }
     });
+
+    console.log("🚀 GPUOptimizedRenderer: Total blocks received:", blocks.size);
+    console.log(
+      "🔧 GPUOptimizedRenderer: Non-glass blocks to render:",
+      filtered.size,
+    );
+
+    if (filtered.size > 0) {
+      const blockTypes = [
+        ...new Set(Array.from(filtered.values()).map((b) => b.type)),
+      ];
+      console.log(
+        "🎨 GPUOptimizedRenderer: Non-glass block types:",
+        blockTypes,
+      );
+    }
+
     return filtered;
   }, [blocks]);
 
@@ -572,6 +589,37 @@ export default function GPUOptimizedRenderer({
       renderer.visibleCount = 0;
     });
 
+    console.log(
+      "🔄 GPUOptimizedRenderer: Updating instances for",
+      nonGlassBlocks.size,
+      "non-glass blocks",
+    );
+
+    // Debug: Check for floor blocks (throttled logging)
+    let floorBlockCount = 0;
+    let floorBlocksAtZero = 0;
+    blocks.forEach((block) => {
+      if (block.position.y <= 0.5 && block.position.y >= -0.5) {
+        floorBlockCount++;
+        if (block.position.y === 0) {
+          floorBlocksAtZero++;
+        }
+      }
+    });
+
+    // Debug logging disabled to prevent console spam
+    // Uncomment below for debugging when needed
+    /*
+    if (
+      process.env.NODE_ENV === "development" &&
+      frameCounter.current % 60 === 0
+    ) {
+      console.log(
+        `🏗️ GPU Renderer: ${floorBlockCount} floor blocks found, ${blocks.size} total blocks`,
+      );
+    }
+    */
+
     // Process each block with transparency optimization (excluding glass blocks)
     nonGlassBlocks.forEach((block) => {
       totalInstances++;
@@ -598,13 +646,30 @@ export default function GPUOptimizedRenderer({
         return;
       }
 
-      // Frustum culling
+      // Improved frustum culling logic with special handling for floor blocks
       if (GPU_CONFIG.FRUSTUM_CULLING) {
-        const sphere = new Sphere(blockPosition, 0.866); // sqrt(3)/2 for unit cube
-        if (!frustum.current.intersectsSphere(sphere)) {
-          culledInstances++;
-          vector3Pool.current.release(blockPosition);
-          return;
+        const isFloorBlock = blockPosition.y <= 1 && blockPosition.y >= -1;
+        const cameraDistance = camera.position.distanceTo(blockPosition);
+
+        if (isFloorBlock) {
+          // More generous culling for floor blocks - only cull if very far
+          const sphere = new Sphere(blockPosition, 1.5);
+          if (
+            cameraDistance > 150 &&
+            !frustum.current.intersectsSphere(sphere)
+          ) {
+            culledInstances++;
+            vector3Pool.current.release(blockPosition);
+            return;
+          }
+        } else {
+          // Standard frustum culling for other blocks
+          const sphere = new Sphere(blockPosition, 0.866);
+          if (!frustum.current.intersectsSphere(sphere)) {
+            culledInstances++;
+            vector3Pool.current.release(blockPosition);
+            return;
+          }
         }
       }
 
@@ -807,21 +872,19 @@ export default function GPUOptimizedRenderer({
         const memoryStats = gpuMemoryManager.getMemoryStats();
         const transparencyStats = transparencyOptimizer.getOptimizationStats();
 
+        const floorVisibleCount = Array.from(blocks.values()).filter(
+          (b) => b.position.y <= 0.5 && b.position.y >= -0.5,
+        ).length;
+
         console.log("🚀 GPU Renderer Metrics:", {
           totalBlocks: metrics.totalInstances,
           visibleBlocks: metrics.visibleInstances,
           culledBlocks: metrics.culledInstances,
+          floorBlocks: floorVisibleCount,
           drawCalls: metrics.drawCalls,
           averageFrameTime: `${metrics.averageFrameTime.toFixed(2)}ms`,
           cullingEfficiency: `${((metrics.culledInstances / Math.max(metrics.totalInstances, 1)) * 100).toFixed(1)}%`,
-          memoryPressure: `${(memoryStats.pressure * 100).toFixed(1)}%`,
-          performanceMode,
-          transparencyOptimization: {
-            transparentBlocks: transparencyStats.totalTransparentBlocks,
-            transparentCulled: transparencyStats.culledBlocks,
-            transparencyEfficiency: `${(transparencyStats.cullingEfficiency * 100).toFixed(1)}%`,
-            recommendations: transparencyStats.recommendations.slice(0, 2),
-          },
+          cameraPosition: `(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`,
           gpuOptimizations: {
             frustumCulling: GPU_CONFIG.FRUSTUM_CULLING,
             lodEnabled: true,
@@ -830,7 +893,7 @@ export default function GPUOptimizedRenderer({
             advancedEffects: enableAdvancedEffects,
           },
         });
-      }, 5000);
+      }, 30000); // Reduced to every 30 seconds to prevent spam
 
       return () => clearInterval(interval);
     }

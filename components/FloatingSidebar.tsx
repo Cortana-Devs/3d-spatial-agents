@@ -107,6 +107,9 @@ export default function FloatingSidebar() {
     gridConfig,
     updateGridConfig,
     activeCamera,
+    blockCount,
+    worldLimits,
+    clearAllBlocks,
   } = useWorldStore();
 
   // Use safe camera mode management
@@ -189,7 +192,15 @@ export default function FloatingSidebar() {
       if (event.key === "f" || event.key === "F") {
         event.preventDefault();
         handleDebouncedFloorAction(() => {
+          // Clear blocks first if near limit
+          if (blockCount > worldLimits.maxBlocks * 0.9) {
+            console.log("Clearing blocks before placing floor due to limit");
+            clearAllBlocks();
+          }
           // Normalize placement to y=0 via FloorManager defaults
+          console.log(
+            `Placing floor with size: ${gridConfig.size} (total blocks: ${gridConfig.size * gridConfig.size})`,
+          );
           quickFloorUtils.placeStoneFloor(gridConfig.size);
           console.log(
             `Quick stone floor placed at y=0 (${gridConfig.size}×${gridConfig.size})`,
@@ -852,6 +863,34 @@ export default function FloatingSidebar() {
 
         {activeTab === "floor" && (
           <div className="p-2 space-y-2">
+            {/* Debug Info */}
+            <div className="bg-white/5 rounded p-2 text-xs">
+              <div className="text-white/60 mb-1">World Status</div>
+              <div className="text-white">
+                Blocks: {blockCount} / {worldLimits.maxBlocks}
+              </div>
+              <div className="text-white/70">
+                Usage: {((blockCount / worldLimits.maxBlocks) * 100).toFixed(1)}
+                %
+              </div>
+            </div>
+
+            {/* Clear Blocks Button */}
+            <button
+              onClick={() => {
+                if (
+                  confirm(
+                    `Clear all ${blockCount} blocks? This cannot be undone.`,
+                  )
+                ) {
+                  clearAllBlocks();
+                }
+              }}
+              className="w-full px-3 py-2 bg-red-600/80 hover:bg-red-600 text-white text-xs rounded transition-colors"
+            >
+              Clear All Blocks ({blockCount})
+            </button>
+
             <div className="text-xs text-white/60">Quick Floor Actions</div>
 
             {/* Quick floor buttons */}
@@ -860,9 +899,12 @@ export default function FloatingSidebar() {
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  handleDebouncedFloorAction(() =>
-                    quickFloorUtils.placeStoneFloor(gridConfig.size),
-                  )
+                  handleDebouncedFloorAction(() => {
+                    console.log(
+                      `Floor button: Placing floor with size: ${gridConfig.size}`,
+                    );
+                    quickFloorUtils.placeStoneFloor(gridConfig.size);
+                  })
                 }
                 className="text-white hover:bg-white/10 flex items-center gap-2"
               >

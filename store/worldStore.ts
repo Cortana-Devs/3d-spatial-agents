@@ -40,6 +40,9 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
     redoStates: WorldSnapshot[]; // Store states for redo
   };
 
+  // Internal state
+  lastBlockLimitWarning: number;
+
   // Actions
   addBlock: (position: Vector3, type: BlockType, userId: string) => boolean;
   addBlockInternal: (
@@ -48,6 +51,7 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
     userId: string,
   ) => boolean;
   removeBlock: (position: Vector3, userId: string) => boolean;
+  clearAllBlocks: () => void;
   removeBlockById: (id: string, userId: string) => boolean;
   getBlock: (position: Vector3) => Block | undefined;
   getBlockById: (id: string) => Block | undefined;
@@ -120,7 +124,8 @@ export const useWorldStore = create<WorldState>()(
       // Initial state
       blockMap: new Map<string, Block>(),
       blockCount: 0,
-      worldLimits: { maxBlocks: 1000 },
+      worldLimits: { maxBlocks: 10000 },
+      lastBlockLimitWarning: 0,
       selectedBlockType: BlockType.STONE,
       selectionMode: SelectionMode.EMPTY, // Start in empty hand mode
       activeCamera: "orbit",
@@ -159,9 +164,17 @@ export const useWorldStore = create<WorldState>()(
 
         // Check block limit
         if (state.blockCount >= state.worldLimits.maxBlocks) {
-          console.warn(
-            `Block limit reached: ${state.blockCount}/${state.worldLimits.maxBlocks}`,
-          );
+          // Only log once per second to prevent spam
+          const now = Date.now();
+          if (
+            !state.lastBlockLimitWarning ||
+            now - state.lastBlockLimitWarning > 1000
+          ) {
+            console.warn(
+              `Block limit reached: ${state.blockCount}/${state.worldLimits.maxBlocks}`,
+            );
+            set({ lastBlockLimitWarning: now });
+          }
           return false;
         }
 
@@ -235,6 +248,17 @@ export const useWorldStore = create<WorldState>()(
         userId: string,
       ): boolean => {
         return get().addBlock(position, type, userId);
+      },
+
+      clearAllBlocks: (): void => {
+        set((state) => {
+          console.log(
+            `Clearing all blocks: ${state.blockCount} blocks removed`,
+          );
+          state.blockMap.clear();
+          state.blockCount = 0;
+          state.lastUpdate = Date.now();
+        });
       },
 
       removeBlock: (position: Vector3, userId: string): boolean => {
@@ -643,7 +667,8 @@ export const useWorldStore = create<WorldState>()(
         set(() => ({
           blockMap: new Map<string, Block>(),
           blockCount: 0,
-          worldLimits: { maxBlocks: 1000 },
+          worldLimits: { maxBlocks: 10000 },
+          lastBlockLimitWarning: 0,
           selectedBlockType: BlockType.STONE,
           selectionMode: SelectionMode.EMPTY,
           activeCamera: "orbit",

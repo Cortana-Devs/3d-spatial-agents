@@ -322,10 +322,10 @@ export default function SeamlessGlassRenderer({
       const material = new MeshPhysicalMaterial({
         color: definition.color,
         transparent: true,
-        opacity: definition.transparency ? 1 - definition.transparency : 0.3,
+        opacity: definition.transparency ? 1 - definition.transparency : 0.8,
         roughness: definition.roughness || 0.1,
         metalness: definition.metalness || 0.0,
-        transmission: 0.9,
+        transmission: 0.7,
         ior: 1.5,
         thickness: 0.1,
         side: DoubleSide,
@@ -335,20 +335,32 @@ export default function SeamlessGlassRenderer({
 
       // Special handling for different glass types
       if (blockType === BlockType.NUMBER_7) {
-        // Ultra-light glass
-        material.opacity = 0.15;
+        // Ultra-light glass - improved visibility
+        material.opacity = 0.75;
         material.roughness = 0.05;
-        material.transmission = 0.95;
+        material.transmission = 0.5;
         material.ior = 1.33;
+        if (definition.emissive) {
+          material.emissive = new Color(definition.emissive);
+          material.emissiveIntensity = definition.emissiveIntensity || 0.05;
+        }
       } else if (blockType === BlockType.NUMBER_6) {
         // Sunset glass
-        material.opacity = 0.4;
+        material.opacity = 0.8;
         material.roughness = 0.05;
-        material.transmission = 0.8;
+        material.transmission = 0.5;
         material.ior = 1.5;
         if (definition.emissive) {
           material.emissive = new Color(definition.emissive);
           material.emissiveIntensity = definition.emissiveIntensity || 0.1;
+        }
+      } else if (blockType === BlockType.FROSTED_GLASS) {
+        // Frosted glass
+        material.opacity = 0.8;
+        material.transmission = 0.6;
+        if (definition.emissive) {
+          material.emissive = new Color(definition.emissive);
+          material.emissiveIntensity = definition.emissiveIntensity || 0.05;
         }
       }
 

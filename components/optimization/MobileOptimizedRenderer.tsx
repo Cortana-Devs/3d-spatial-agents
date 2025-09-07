@@ -1,7 +1,13 @@
-'use client'
+"use client";
 
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
-import { useThree, useFrame } from '@react-three/fiber'
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import { useThree, useFrame } from "@react-three/fiber";
 import {
   WebGLRenderer,
   Scene,
@@ -16,30 +22,30 @@ import {
   HalfFloatType,
   RGBAFormat,
   LinearFilter,
-  ClampToEdgeWrapping
-} from 'three'
+  ClampToEdgeWrapping,
+} from "three";
 
 // Mobile device detection and capabilities
 interface MobileCapabilities {
-  isMobile: boolean
-  isLowEndDevice: boolean
-  supportsWebGPU: boolean
-  supportsWebGL2: boolean
-  hasHardwareAntialias: boolean
-  maxTextureSize: number
-  maxVertexTextures: number
-  devicePixelRatio: number
+  isMobile: boolean;
+  isLowEndDevice: boolean;
+  supportsWebGPU: boolean;
+  supportsWebGL2: boolean;
+  hasHardwareAntialias: boolean;
+  maxTextureSize: number;
+  maxVertexTextures: number;
+  devicePixelRatio: number;
   memoryInfo: {
-    totalJSHeapSize?: number
-    usedJSHeapSize?: number
-    jsHeapSizeLimit?: number
-  }
+    totalJSHeapSize?: number;
+    usedJSHeapSize?: number;
+    jsHeapSizeLimit?: number;
+  };
   gpu?: {
-    vendor: string
-    renderer: string
-  }
-  thermalState: 'nominal' | 'fair' | 'serious' | 'critical'
-  batteryLevel?: number
+    vendor: string;
+    renderer: string;
+  };
+  thermalState: "nominal" | "fair" | "serious" | "critical";
+  batteryLevel?: number;
 }
 
 // Mobile-specific configuration
@@ -80,8 +86,8 @@ const MOBILE_CONFIG = {
     targetFPS: 60,
     adaptiveQuality: false,
     thermalThrottling: false,
-  }
-} as const
+  },
+} as const;
 
 // WebGL2 optimized mobile shaders
 const mobileVertexShader = `#version 300 es
@@ -138,7 +144,7 @@ void main() {
     vUv = uv;
     vColor = instanceColor;
 }
-`
+`;
 
 const mobileFragmentShader = `#version 300 es
 precision mediump float;
@@ -201,204 +207,231 @@ void main() {
 
     fragColor = vec4(litColor, alpha);
 }
-`
+`;
 
 // Mobile device detection utility
 function detectMobileCapabilities(): MobileCapabilities {
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-  const canvas = document.createElement('canvas')
-  const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+  const isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    );
+  const canvas = document.createElement("canvas");
+  const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
 
   let capabilities: MobileCapabilities = {
     isMobile,
     isLowEndDevice: false,
-    supportsWebGPU: 'gpu' in navigator,
-    supportsWebGL2: !!canvas.getContext('webgl2'),
+    supportsWebGPU: "gpu" in navigator,
+    supportsWebGL2: !!canvas.getContext("webgl2"),
     hasHardwareAntialias: false,
     maxTextureSize: 2048,
     maxVertexTextures: 8,
     devicePixelRatio: Math.min(window.devicePixelRatio, 2), // Cap at 2x for performance
     memoryInfo: {},
-    thermalState: 'nominal',
-  }
+    thermalState: "nominal",
+  };
 
   if (gl) {
-    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info')
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
     if (debugInfo) {
-      const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL)
-      const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
-      capabilities.gpu = { vendor, renderer }
+      const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+      const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+      capabilities.gpu = { vendor, renderer };
 
       // Detect low-end devices based on GPU
       const lowEndGPUs = [
-        'adreno 530', 'adreno 540', 'mali-g71', 'mali-g72',
-        'powervr', 'intel', 'adreno 4', 'adreno 5'
-      ]
-      capabilities.isLowEndDevice = lowEndGPUs.some(gpu =>
-        renderer.toLowerCase().includes(gpu)
-      )
+        "adreno 530",
+        "adreno 540",
+        "mali-g71",
+        "mali-g72",
+        "powervr",
+        "intel",
+        "adreno 4",
+        "adreno 5",
+      ];
+      capabilities.isLowEndDevice = lowEndGPUs.some((gpu) =>
+        renderer.toLowerCase().includes(gpu),
+      );
     }
 
-    capabilities.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE)
-    capabilities.maxVertexTextures = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS)
-    capabilities.hasHardwareAntialias = gl.getContextAttributes()?.antialias || false
+    capabilities.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    capabilities.maxVertexTextures = gl.getParameter(
+      gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS,
+    );
+    capabilities.hasHardwareAntialias =
+      gl.getContextAttributes()?.antialias || false;
   }
 
   // Memory info (Chrome only)
-  if ('memory' in performance) {
-    const memory = (performance as any).memory
+  if ("memory" in performance) {
+    const memory = (performance as any).memory;
     capabilities.memoryInfo = {
       totalJSHeapSize: memory.totalJSHeapSize,
       usedJSHeapSize: memory.usedJSHeapSize,
-      jsHeapSizeLimit: memory.jsHeapSizeLimit
-    }
+      jsHeapSizeLimit: memory.jsHeapSizeLimit,
+    };
 
     // Low-end detection based on memory
-    if (memory.jsHeapSizeLimit < 1073741824) { // < 1GB
-      capabilities.isLowEndDevice = true
+    if (memory.jsHeapSizeLimit < 1073741824) {
+      // < 1GB
+      capabilities.isLowEndDevice = true;
     }
   }
 
   // Hardware concurrency as device performance indicator
   if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) {
-    capabilities.isLowEndDevice = true
+    capabilities.isLowEndDevice = true;
   }
 
-  return capabilities
+  return capabilities;
 }
 
 // Thermal management for mobile devices
 class MobileThermalManager {
-  private thermalState: MobileCapabilities['thermalState'] = 'nominal'
-  private performanceObserver?: PerformanceObserver
-  private frameTimings: number[] = []
-  private throttleLevel = 0
+  private thermalState: MobileCapabilities["thermalState"] = "nominal";
+  private performanceObserver?: PerformanceObserver;
+  private frameTimings: number[] = [];
+  private throttleLevel = 0;
 
-  constructor(private onThermalChange: (state: MobileCapabilities['thermalState']) => void) {
-    this.initThermalMonitoring()
+  constructor(
+    private onThermalChange: (
+      state: MobileCapabilities["thermalState"],
+    ) => void,
+  ) {
+    this.initThermalMonitoring();
   }
 
   private initThermalMonitoring() {
     // Monitor frame timing for thermal throttling detection
-    if ('PerformanceObserver' in window) {
+    if ("PerformanceObserver" in window) {
       this.performanceObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries()
+        const entries = list.getEntries();
         for (const entry of entries) {
-          if (entry.entryType === 'measure') {
-            this.frameTimings.push(entry.duration)
+          if (entry.entryType === "measure") {
+            this.frameTimings.push(entry.duration);
             if (this.frameTimings.length > 60) {
-              this.frameTimings.shift()
+              this.frameTimings.shift();
             }
           }
         }
-        this.checkThermalState()
-      })
+        this.checkThermalState();
+      });
 
-      this.performanceObserver.observe({ entryTypes: ['measure'] })
+      this.performanceObserver.observe({ entryTypes: ["measure"] });
     }
   }
 
   private checkThermalState() {
-    if (this.frameTimings.length < 30) return
+    if (this.frameTimings.length < 30) return;
 
-    const avgFrameTime = this.frameTimings.reduce((a, b) => a + b, 0) / this.frameTimings.length
-    const recentFrameTime = this.frameTimings.slice(-10).reduce((a, b) => a + b, 0) / 10
+    const avgFrameTime =
+      this.frameTimings.reduce((a, b) => a + b, 0) / this.frameTimings.length;
+    const recentFrameTime =
+      this.frameTimings.slice(-10).reduce((a, b) => a + b, 0) / 10;
 
-    let newState: MobileCapabilities['thermalState'] = 'nominal'
+    let newState: MobileCapabilities["thermalState"] = "nominal";
 
     if (recentFrameTime > avgFrameTime * 2) {
-      newState = 'critical'
+      newState = "critical";
     } else if (recentFrameTime > avgFrameTime * 1.5) {
-      newState = 'serious'
+      newState = "serious";
     } else if (recentFrameTime > avgFrameTime * 1.2) {
-      newState = 'fair'
+      newState = "fair";
     }
 
     if (newState !== this.thermalState) {
-      this.thermalState = newState
-      this.onThermalChange(newState)
+      this.thermalState = newState;
+      this.onThermalChange(newState);
     }
   }
 
   getThrottleLevel(): number {
     switch (this.thermalState) {
-      case 'critical': return 0.5
-      case 'serious': return 0.7
-      case 'fair': return 0.85
-      default: return 1.0
+      case "critical":
+        return 0.5;
+      case "serious":
+        return 0.7;
+      case "fair":
+        return 0.85;
+      default:
+        return 1.0;
     }
   }
 
   dispose() {
     if (this.performanceObserver) {
-      this.performanceObserver.disconnect()
+      this.performanceObserver.disconnect();
     }
   }
 }
 
 // Adaptive quality manager for mobile
 class MobileAdaptiveQuality {
-  private targetFPS: number
-  private currentQuality = 1.0
-  private frameTimings: number[] = []
-  private adjustmentCooldown = 0
+  private targetFPS: number;
+  private currentQuality = 1.0;
+  private frameTimings: number[] = [];
+  private adjustmentCooldown = 0;
 
   constructor(targetFPS: number = 30) {
-    this.targetFPS = targetFPS
+    this.targetFPS = targetFPS;
   }
 
   updateFrameTiming(deltaTime: number) {
-    const frameTime = deltaTime * 1000 // Convert to ms
-    this.frameTimings.push(frameTime)
+    const frameTime = deltaTime * 1000; // Convert to ms
+    this.frameTimings.push(frameTime);
 
     if (this.frameTimings.length > 30) {
-      this.frameTimings.shift()
+      this.frameTimings.shift();
     }
 
     if (this.adjustmentCooldown > 0) {
-      this.adjustmentCooldown--
-      return this.currentQuality
+      this.adjustmentCooldown--;
+      return this.currentQuality;
     }
 
     if (this.frameTimings.length >= 10) {
-      const avgFrameTime = this.frameTimings.slice(-10).reduce((a, b) => a + b, 0) / 10
-      const targetFrameTime = 1000 / this.targetFPS
+      const avgFrameTime =
+        this.frameTimings.slice(-10).reduce((a, b) => a + b, 0) / 10;
+      const targetFrameTime = 1000 / this.targetFPS;
 
       if (avgFrameTime > targetFrameTime * 1.2) {
         // Performance too low, reduce quality
-        this.currentQuality = Math.max(0.3, this.currentQuality - 0.1)
-        this.adjustmentCooldown = 60 // Wait 60 frames before next adjustment
-      } else if (avgFrameTime < targetFrameTime * 0.8 && this.currentQuality < 1.0) {
+        this.currentQuality = Math.max(0.3, this.currentQuality - 0.1);
+        this.adjustmentCooldown = 60; // Wait 60 frames before next adjustment
+      } else if (
+        avgFrameTime < targetFrameTime * 0.8 &&
+        this.currentQuality < 1.0
+      ) {
         // Performance good, can increase quality
-        this.currentQuality = Math.min(1.0, this.currentQuality + 0.05)
-        this.adjustmentCooldown = 60
+        this.currentQuality = Math.min(1.0, this.currentQuality + 0.05);
+        this.adjustmentCooldown = 60;
       }
     }
 
-    return this.currentQuality
+    return this.currentQuality;
   }
 
   getCurrentQuality(): number {
-    return this.currentQuality
+    return this.currentQuality;
   }
 }
 
 interface MobileOptimizedRendererProps {
-  children: React.ReactNode
-  forceConfig?: keyof typeof MOBILE_CONFIG
-  enableAdaptiveQuality?: boolean
-  enableThermalManagement?: boolean
-  onPerformanceChange?: (metrics: MobilePerformanceMetrics) => void
+  children: React.ReactNode;
+  forceConfig?: keyof typeof MOBILE_CONFIG;
+  enableAdaptiveQuality?: boolean;
+  enableThermalManagement?: boolean;
+  onPerformanceChange?: (metrics: MobilePerformanceMetrics) => void;
 }
 
 interface MobilePerformanceMetrics {
-  fps: number
-  frameTime: number
-  quality: number
-  thermalState: MobileCapabilities['thermalState']
-  memoryUsage: number
-  drawCalls: number
-  instanceCount: number
+  fps: number;
+  frameTime: number;
+  quality: number;
+  thermalState: MobileCapabilities["thermalState"];
+  memoryUsage: number;
+  drawCalls: number;
+  instanceCount: number;
 }
 
 export function MobileOptimizedRenderer({
@@ -406,123 +439,138 @@ export function MobileOptimizedRenderer({
   forceConfig,
   enableAdaptiveQuality = true,
   enableThermalManagement = true,
-  onPerformanceChange
+  onPerformanceChange,
 }: MobileOptimizedRendererProps) {
-  const { gl, scene, camera } = useThree()
+  const { gl, scene, camera } = useThree();
 
   // Device capabilities and configuration
-  const [capabilities] = useState<MobileCapabilities>(() => detectMobileCapabilities())
+  const [capabilities] = useState<MobileCapabilities>(() =>
+    detectMobileCapabilities(),
+  );
   const [config] = useState(() => {
-    if (forceConfig) return MOBILE_CONFIG[forceConfig]
+    if (forceConfig) return MOBILE_CONFIG[forceConfig];
 
-    if (capabilities.isLowEndDevice) return MOBILE_CONFIG.LOW_END
-    if (capabilities.isMobile) return MOBILE_CONFIG.MID_RANGE
-    return MOBILE_CONFIG.HIGH_END
-  })
+    if (capabilities.isLowEndDevice) return MOBILE_CONFIG.LOW_END;
+    if (capabilities.isMobile) return MOBILE_CONFIG.MID_RANGE;
+    return MOBILE_CONFIG.HIGH_END;
+  });
 
   // Performance management
-  const thermalManagerRef = useRef<MobileThermalManager>()
-  const adaptiveQualityRef = useRef<MobileAdaptiveQuality>()
-  const [thermalState, setThermalState] = useState<MobileCapabilities['thermalState']>('nominal')
+  const thermalManagerRef = useRef<MobileThermalManager | undefined>(undefined);
+  const adaptiveQualityRef = useRef<MobileAdaptiveQuality | undefined>(
+    undefined,
+  );
+  const [thermalState, setThermalState] =
+    useState<MobileCapabilities["thermalState"]>("nominal");
 
   // Performance metrics
-  const frameTimesRef = useRef<number[]>([])
-  const lastPerformanceUpdate = useRef<number>(0)
+  const frameTimesRef = useRef<number[]>([]);
+  const lastPerformanceUpdate = useRef<number>(0);
 
   // Initialize mobile-specific managers
   useEffect(() => {
     if (enableThermalManagement && capabilities.isMobile) {
-      thermalManagerRef.current = new MobileThermalManager(setThermalState)
+      thermalManagerRef.current = new MobileThermalManager(setThermalState);
     }
 
     if (enableAdaptiveQuality) {
-      adaptiveQualityRef.current = new MobileAdaptiveQuality(config.targetFPS)
+      adaptiveQualityRef.current = new MobileAdaptiveQuality(config.targetFPS);
     }
 
     return () => {
-      thermalManagerRef.current?.dispose()
-    }
-  }, [config.targetFPS, enableThermalManagement, enableAdaptiveQuality, capabilities.isMobile])
+      thermalManagerRef.current?.dispose();
+    };
+  }, [
+    config.targetFPS,
+    enableThermalManagement,
+    enableAdaptiveQuality,
+    capabilities.isMobile,
+  ]);
 
   // Configure WebGL renderer for mobile
   useEffect(() => {
-    if (!gl) return
+    if (!gl) return;
 
     // Mobile-specific WebGL settings
-    gl.setPixelRatio(Math.min(capabilities.devicePixelRatio, config.targetFPS >= 60 ? 2 : 1.5))
+    gl.setPixelRatio(
+      Math.min(capabilities.devicePixelRatio, config.targetFPS >= 60 ? 2 : 1.5),
+    );
 
     // Optimize for mobile GPUs
-    gl.sortObjects = false // Disable sorting for performance
-    gl.shadowMap.enabled = config.shadowMapSize > 0
-    gl.shadowMap.type = 2 // PCFShadowMap for mobile compatibility
-    gl.shadowMap.setSize(config.shadowMapSize, config.shadowMapSize)
+    gl.sortObjects = false; // Disable sorting for performance
+    gl.shadowMap.enabled = config.shadowMapSize > 0;
+    gl.shadowMap.type = 2; // PCFShadowMap for mobile compatibility
+    gl.shadowMap.setSize(config.shadowMapSize);
 
     // Mobile-specific optimizations
     if (capabilities.isMobile) {
-      gl.powerPreference = 'high-performance'
-      gl.antialias = capabilities.hasHardwareAntialias && config.targetFPS >= 45
-      gl.depth = true
-      gl.stencil = false // Disable stencil buffer to save memory
+      gl.powerPreference = "high-performance";
+      gl.antialias =
+        capabilities.hasHardwareAntialias && config.targetFPS >= 45;
+      gl.depth = true;
+      gl.stencil = false; // Disable stencil buffer to save memory
 
       // Enable mobile-specific extensions
       const extensions = [
-        'OES_vertex_array_object',
-        'ANGLE_instanced_arrays',
-        'EXT_disjoint_timer_query_webgl2',
-        'WEBGL_lose_context'
-      ]
+        "OES_vertex_array_object",
+        "ANGLE_instanced_arrays",
+        "EXT_disjoint_timer_query_webgl2",
+        "WEBGL_lose_context",
+      ];
 
-      extensions.forEach(ext => {
+      extensions.forEach((ext) => {
         try {
-          gl.getExtension(ext)
+          gl.getExtension(ext);
         } catch (e) {
-          console.warn(`Failed to enable extension ${ext}:`, e)
+          console.warn(`Failed to enable extension ${ext}:`, e);
         }
-      })
+      });
     }
-  }, [gl, capabilities, config])
+  }, [gl, capabilities, config]);
 
   // Adaptive quality and thermal management frame loop
   useFrame((state, deltaTime) => {
-    if (!gl) return
+    if (!gl) return;
 
-    const now = performance.now()
-    const frameTime = deltaTime * 1000
+    const now = performance.now();
+    const frameTime = deltaTime * 1000;
 
     // Update frame timing
-    frameTimesRef.current.push(frameTime)
+    frameTimesRef.current.push(frameTime);
     if (frameTimesRef.current.length > 60) {
-      frameTimesRef.current.shift()
+      frameTimesRef.current.shift();
     }
 
     // Update adaptive quality
-    let currentQuality = 1.0
+    let currentQuality = 1.0;
     if (adaptiveQualityRef.current && enableAdaptiveQuality) {
-      currentQuality = adaptiveQualityRef.current.updateFrameTiming(deltaTime)
+      currentQuality = adaptiveQualityRef.current.updateFrameTiming(deltaTime);
     }
 
     // Apply thermal throttling
-    let thermalMultiplier = 1.0
+    let thermalMultiplier = 1.0;
     if (thermalManagerRef.current && enableThermalManagement) {
-      thermalMultiplier = thermalManagerRef.current.getThrottleLevel()
+      thermalMultiplier = thermalManagerRef.current.getThrottleLevel();
     }
 
     // Apply quality adjustments
-    const finalQuality = currentQuality * thermalMultiplier
+    const finalQuality = currentQuality * thermalMultiplier;
     if (finalQuality < 1.0) {
       // Reduce render resolution
-      const targetSize = Math.max(0.5, finalQuality)
-      gl.setPixelRatio(capabilities.devicePixelRatio * targetSize)
+      const targetSize = Math.max(0.5, finalQuality);
+      gl.setPixelRatio(capabilities.devicePixelRatio * targetSize);
 
       // Adjust LOD distances
-      const lodMultiplier = Math.max(0.7, finalQuality)
+      const lodMultiplier = Math.max(0.7, finalQuality);
       // This would be applied to your LOD system
     }
 
     // Report performance metrics
     if (onPerformanceChange && now - lastPerformanceUpdate.current > 1000) {
-      const avgFrameTime = frameTimesRef.current.reduce((a, b) => a + b, 0) / frameTimesRef.current.length
-      const fps = 1000 / avgFrameTime
+      const avgFrameTime =
+        frameTimesRef.current.reduce((a, b) => a + b, 0) /
+        frameTimesRef.current.length;
+      const fps = 1000 / avgFrameTime;
 
       const metrics: MobilePerformanceMetrics = {
         fps,
@@ -531,35 +579,42 @@ export function MobileOptimizedRenderer({
         thermalState,
         memoryUsage: capabilities.memoryInfo.usedJSHeapSize || 0,
         drawCalls: gl.info.render.calls,
-        instanceCount: 0 // This would come from your instance manager
-      }
+        instanceCount: 0, // This would come from your instance manager
+      };
 
-      onPerformanceChange(metrics)
-      lastPerformanceUpdate.current = now
+      onPerformanceChange(metrics);
+      lastPerformanceUpdate.current = now;
     }
-  })
+  });
 
   // WebGPU fallback preparation (future-proofing)
   const webgpuRenderer = useMemo(() => {
     if (capabilities.supportsWebGPU && !capabilities.isLowEndDevice) {
       // WebGPU implementation would go here
       // This is preparation for future WebGPU adoption
-      console.log('WebGPU capable device detected - preparing for future implementation')
+      console.log(
+        "WebGPU capable device detected - preparing for future implementation",
+      );
     }
-    return null
-  }, [capabilities])
+    return null;
+  }, [capabilities]);
 
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 // Mobile performance monitoring hook
 export function useMobilePerformance() {
-  const [metrics, setMetrics] = useState<MobilePerformanceMetrics | null>(null)
-  const [capabilities] = useState<MobileCapabilities>(() => detectMobileCapabilities())
+  const [metrics, setMetrics] = useState<MobilePerformanceMetrics | null>(null);
+  const [capabilities] = useState<MobileCapabilities>(() =>
+    detectMobileCapabilities(),
+  );
 
-  const handlePerformanceChange = useCallback((newMetrics: MobilePerformanceMetrics) => {
-    setMetrics(newMetrics)
-  }, [])
+  const handlePerformanceChange = useCallback(
+    (newMetrics: MobilePerformanceMetrics) => {
+      setMetrics(newMetrics);
+    },
+    [],
+  );
 
   return {
     metrics,
@@ -567,8 +622,8 @@ export function useMobilePerformance() {
     handlePerformanceChange,
     isMobile: capabilities.isMobile,
     isLowEndDevice: capabilities.isLowEndDevice,
-    supportsWebGPU: capabilities.supportsWebGPU
-  }
+    supportsWebGPU: capabilities.supportsWebGPU,
+  };
 }
 
-export default MobileOptimizedRenderer
+export default MobileOptimizedRenderer;

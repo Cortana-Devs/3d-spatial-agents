@@ -43,7 +43,7 @@ import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
 import { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
 import FloorBlock from "./FloorBlock";
-import SeamlessGlassRenderer from "./SeamlessGlassRenderer";
+import AdaptiveGlassRenderer from "./AdaptiveGlassRenderer";
 import {
   useIsolatedRender,
   useBlockPlacementRender,
@@ -792,7 +792,7 @@ function SceneContent({
   const [useInstancedRendering, setUseInstancedRendering] = useState(true);
 
   const blocks = useMemo(() => {
-    return Array.from(blockMap.values()).map((block) => ({
+    const blockArray = Array.from(blockMap.values()).map((block) => ({
       id: block.id,
       position: new Vector3(
         block.position.x,
@@ -804,6 +804,28 @@ function SceneContent({
       isHovered: block.id === hoveredBlockId,
       isSelected: block.id === selectedBlockId,
     }));
+
+    console.log(
+      "🔄 VoxelCanvas: Block array updated. Total blocks:",
+      blockArray.length,
+    );
+    if (blockArray.length > 0) {
+      const blockTypes = [...new Set(blockArray.map((b) => b.type))];
+      console.log("🎨 VoxelCanvas: Block types present:", blockTypes);
+
+      // Log first few blocks for debugging
+      const sampleBlocks = blockArray.slice(0, 5);
+      console.log(
+        "📦 VoxelCanvas: Sample blocks:",
+        sampleBlocks.map((b) => ({
+          type: b.type,
+          position: `(${b.position.x}, ${b.position.y}, ${b.position.z})`,
+          color: b.color,
+        })),
+      );
+    }
+
+    return blockArray;
   }, [blockMap, hoveredBlockId, selectedBlockId]);
 
   const handleBlockClick = useCallback(
@@ -831,32 +853,73 @@ function SceneContent({
 
   // Create default mixed glass floor if no blocks exist
   useEffect(() => {
+    console.log(
+      "🔍 VoxelCanvas: Checking block creation. Current blockMap size:",
+      blockMap.size,
+    );
+
     if (blockMap.size === 0) {
+      console.log(
+        "🟡 VoxelCanvas: No blocks found, creating default floor and test blocks",
+      );
       const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
       const halfSize = Math.floor(floorSize / 2);
 
-      // Create mixed pattern of frosted glass and ultra-light glass
+      // Create mixed pattern with more visible blocks for debugging
       for (let x = -halfSize; x <= halfSize; x++) {
         for (let z = -halfSize; z <= halfSize; z++) {
           const position = new Vector3(x, -0.5, z); // Center at y=-0.5 so top is at y=0
 
-          // Create checkerboard pattern with glass types
+          // Create more visible pattern with better block distribution
           const isEven = (x + z) % 2 === 0;
-          const blockType = isEven
-            ? BlockType.FROSTED_GLASS
-            : BlockType.NUMBER_7;
-
-          // Add some accent blocks with NUMBER_6 (sunset glass) at corners and center
           const isCorner = Math.abs(x) === halfSize && Math.abs(z) === halfSize;
           const isCenter = x === 0 && z === 0;
-          const finalBlockType =
-            isCorner || isCenter ? BlockType.NUMBER_6 : blockType;
+          const isInnerRing = Math.abs(x) <= 2 && Math.abs(z) <= 2;
+
+          let finalBlockType: BlockType;
+
+          // Create highly visible pattern
+          if (isCorner) {
+            finalBlockType = BlockType.STONE; // Solid corners for reference
+          } else if (isCenter) {
+            finalBlockType = BlockType.NUMBER_4; // Glowing center beacon
+          } else if (isInnerRing) {
+            // Inner area - mix of solid and visible glass
+            finalBlockType = isEven ? BlockType.WOOD : BlockType.FROSTED_GLASS;
+          } else {
+            // Outer area - use more visible glass types
+            finalBlockType = isEven
+              ? BlockType.FROSTED_GLASS
+              : BlockType.NUMBER_6; // Use NUMBER_6 instead of NUMBER_7 for better visibility
+          }
 
           addBlock(position, finalBlockType, "system");
         }
       }
+
+      // Add prominent test blocks above the floor for visibility testing
+      console.log("🧱 VoxelCanvas: Adding test blocks above floor");
+      addBlock(new Vector3(0, 1, 0), BlockType.NUMBER_4, "system"); // Glowing center beacon
+      addBlock(new Vector3(3, 1, 0), BlockType.STONE, "system"); // Solid reference block
+      addBlock(new Vector3(-3, 1, 0), BlockType.WOOD, "system"); // Wood reference block
+      addBlock(new Vector3(0, 1, 3), BlockType.LEAF, "system"); // Leaf reference block
+      addBlock(new Vector3(0, 2, 0), BlockType.FROSTED_GLASS, "system"); // Glass visibility test
+      addBlock(new Vector3(1, 1, 1), BlockType.NUMBER_6, "system"); // Sunset glass test
+      addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
+
+      console.log("✅ VoxelCanvas: Finished creating default blocks");
+    } else {
+      console.log(
+        "✅ VoxelCanvas: Blocks already exist, count:",
+        blockMap.size,
+      );
     }
   }, [blockMap.size, gridConfig.size, addBlock]);
+
+  console.log(
+    "🎬 VoxelCanvas: Rendering scene with blockMap size:",
+    blockMap.size,
+  );
 
   return (
     <>
@@ -881,16 +944,14 @@ function SceneContent({
         performanceMode="ultra"
       />
 
-      {/* Seamless Glass Renderer for continuous glass surfaces */}
-      <SeamlessGlassRenderer
+      {/* Adaptive Glass Renderer for intelligent optimization */}
+      <AdaptiveGlassRenderer
         blocks={blockMap}
         glassBlockTypes={[
           BlockType.FROSTED_GLASS,
           BlockType.NUMBER_6,
           BlockType.NUMBER_7,
         ]}
-        enableOptimization={true}
-        maxClusterSize={1000}
       />
 
       {/* Intelligent grid system with spatial indexing */}
