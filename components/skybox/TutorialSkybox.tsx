@@ -71,7 +71,9 @@ export function TutorialSkybox({
       () => {
         setTexture(loadedTexture);
         isLoadedRef.current = true;
-        console.log("✅ Skybox loaded successfully");
+        if (process.env.NODE_ENV === "development") {
+          console.log("✅ Skybox loaded successfully");
+        }
         onLoad?.();
       },
       // onProgress callback
@@ -79,8 +81,12 @@ export function TutorialSkybox({
       // onError callback
       (error) => {
         console.warn("❌ Skybox failed to load:", error);
-        console.log(`📁 Make sure you have 6 images in: ${path}`);
-        console.log(`Expected files:`, urls);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`📁 Make sure you have 6 images in: ${path}`);
+        }
+        if (process.env.NODE_ENV === "development") {
+          console.log(`Expected files:`, urls);
+        }
         onError?.(error);
       },
     );

@@ -56,8 +56,10 @@ import {
   MODULE_CONFIGS,
 } from "../../utils/performance/PerformanceManager";
 import { UnifiedDebugPanel } from "../debug/UnifiedDebugPanel";
+import { createLogger } from "../../utils/logging/logger";
 
 // LOD Configuration for performance optimization
+const log = createLogger("world:VoxelCanvas");
 interface LODConfig {
   highDetail: number; // 0-30 units
   mediumDetail: number; // 30-60 units
@@ -531,9 +533,7 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
     }
   });
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("👻 GhostBlock render:", { position, type, color });
-  }
+  // dev: ghost render log suppressed to reduce noise
 
   if (!position) return null;
 
@@ -645,26 +645,23 @@ function ClickHandler() {
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
         if (process.env.NODE_ENV === "development") {
-          console.log("🖱️ Click Handler: Attempting block placement", {
-            intersectionPoint: intersectionPoint.toArray(),
-            snappedPosition: snappedPosition.toArray(),
+          console.debug("🖱️ Click: place attempt", {
             positionKey,
             hasExistingBlock,
             atLimit,
             selectedBlockType,
             selectionMode,
-            blockMapSize: blockMap.size,
           });
         }
 
         if (!hasExistingBlock && !atLimit) {
           const success = addBlock(snappedPosition, selectedBlockType, "human");
           if (process.env.NODE_ENV === "development") {
-            console.log("🖱️ Click Handler: Block placement result:", success);
+            console.debug("🖱️ Click: place result", { success });
           }
         } else {
           if (process.env.NODE_ENV === "development") {
-            console.log("🖱️ Click Handler: Block placement blocked:", {
+            console.debug("🖱️ Click: place blocked", {
               hasExistingBlock,
               atLimit,
               reason: hasExistingBlock
@@ -725,14 +722,7 @@ function ClickHandler() {
         if (!hasExistingBlock) {
           setGhostPosition(snappedPosition);
           // Debug ghost position
-          if (process.env.NODE_ENV === "development") {
-            console.log(
-              "👻 Ghost position set:",
-              snappedPosition,
-              "for type:",
-              selectedBlockType,
-            );
-          }
+          // dev: ghost preview logging suppressed
         } else {
           setGhostPosition(null);
         }
@@ -847,42 +837,16 @@ function SceneContent({
     }));
 
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "🔄 VoxelCanvas: Block array updated. Total blocks:",
-        blockArray.length,
-      );
-      console.log("🗺️ VoxelCanvas: Raw blockMap size:", blockMap.size);
-      console.log(
-        "🗺️ VoxelCanvas: BlockMap entries:",
-        Array.from(blockMap.entries()).slice(0, 3),
-      );
+      log.debug("🔄 VoxelCanvas: blocks updated", {
+        count: blockArray.length,
+        mapSize: blockMap.size,
+      });
     }
 
     if (blockArray.length > 0) {
-      const blockTypes = [...new Set(blockArray.map((b) => b.type))];
-      if (process.env.NODE_ENV === "development") {
-        console.log("🎨 VoxelCanvas: Block types present:", blockTypes);
-
-        // Log first few blocks for debugging
-        const sampleBlocks = blockArray.slice(0, 5);
-        console.log(
-          "📦 VoxelCanvas: Sample blocks:",
-          sampleBlocks.map((b) => ({
-            id: b.id,
-            type: b.type,
-            position: `(${b.position.x}, ${b.position.y}, ${b.position.z})`,
-            color: b.color,
-          })),
-        );
-      }
+      // dev: suppressed detailed block type/sample logs
     } else {
-      if (process.env.NODE_ENV === "development") {
-        console.warn(
-          "⚠️ VoxelCanvas: No blocks in array but blockMap has:",
-          blockMap.size,
-          "entries",
-        );
-      }
+      // dev: suppressed empty block-array warning
     }
 
     return blockArray;
@@ -913,18 +877,11 @@ function SceneContent({
 
   // Create default mixed glass floor if no blocks exist
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        "🔍 VoxelCanvas: Checking block creation. Current blockMap size:",
-        blockMap.size,
-      );
-    }
+    // dev: suppressed frequent block creation check log
 
     if (blockMap.size === 0) {
       if (process.env.NODE_ENV === "development") {
-        console.log(
-          "🟡 VoxelCanvas: No blocks found, creating default floor and test blocks",
-        );
+        console.info("VoxelCanvas: creating default floor and test blocks");
       }
       const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
       const halfSize = Math.floor(floorSize / 2);
@@ -962,9 +919,7 @@ function SceneContent({
       }
 
       // Add prominent test blocks above the floor for visibility testing
-      if (process.env.NODE_ENV === "development") {
-        console.log("🧱 VoxelCanvas: Adding test blocks above floor");
-      }
+      // dev: suppressed test block placement log
       addBlock(new Vector3(0, 1, 0), BlockType.NUMBER_4, "system"); // Glowing center beacon
       addBlock(new Vector3(3, 1, 0), BlockType.STONE, "system"); // Solid reference block
       addBlock(new Vector3(-3, 1, 0), BlockType.WOOD, "system"); // Wood reference block
@@ -974,24 +929,16 @@ function SceneContent({
       addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
 
       if (process.env.NODE_ENV === "development") {
-        console.log("✅ VoxelCanvas: Finished creating default blocks");
+        console.info("VoxelCanvas: default blocks created");
       }
     } else {
       if (process.env.NODE_ENV === "development") {
-        console.log(
-          "✅ VoxelCanvas: Blocks already exist, count:",
-          blockMap.size,
-        );
+        console.debug("VoxelCanvas: blocks already exist", blockMap.size);
       }
     }
   }, [blockMap.size, gridConfig.size, addBlock]);
 
-  if (process.env.NODE_ENV === "development") {
-    console.log(
-      "🎬 VoxelCanvas: Rendering scene with blockMap size:",
-      blockMap.size,
-    );
-  }
+  // dev: suppressed render-size log
 
   return (
     <>
@@ -1170,7 +1117,7 @@ export default function VoxelCanvas({
   const handlePresetApply = useCallback(
     (presetName: keyof typeof CAMERA_PRESETS) => {
       // This will be handled by the CameraController component
-      console.log("Applying preset:", presetName);
+      log.debug("Camera preset apply", presetName);
     },
     [],
   );
@@ -1185,7 +1132,7 @@ export default function VoxelCanvas({
           block.position.y,
           block.position.z,
         );
-        console.log("Focusing on block at:", blockPosition);
+        log.debug("Focusing on block", { position: blockPosition });
         // The actual focusing will be handled by the CameraController
       }
     },

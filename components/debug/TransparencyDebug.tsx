@@ -115,17 +115,23 @@ export function TransparencyDebug({
 
   const handleForceSort = useCallback(() => {
     // Force sort will be handled by the CameraBridge component
-    console.log("Forced transparency sorting update requested");
+    if (process.env.NODE_ENV === "development") {
+      console.log("Forced transparency sorting update requested");
+    }
   }, []);
 
   const handleClearObjects = useCallback(() => {
     transparencySortingFix.clear();
-    console.log("Cleared all transparent objects from sorting system");
+    if (process.env.NODE_ENV === "development") {
+      console.log("Cleared all transparent objects from sorting system");
+    }
   }, []);
 
   const handleToggleDebugLogging = useCallback(() => {
     transparencySortingFix.enableDebugLogging();
-    console.log("Enabled debug logging for transparency sorting");
+    if (process.env.NODE_ENV === "development") {
+      console.log("Enabled debug logging for transparency sorting");
+    }
   }, []);
 
   if (!enabled || !stats) return null;

@@ -79,21 +79,23 @@ export class GPUMemoryManager {
     const gl = this.renderer.getContext();
     const info = this.renderer.info;
 
-    console.log("🚀 GPU Capabilities:", {
-      renderer: info.render.calls,
-      triangles: info.render.triangles,
-      points: info.render.points,
-      lines: info.render.lines,
-      memory: {
-        geometries: info.memory.geometries,
-        textures: info.memory.textures,
-      },
-      maxTextures: gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS),
-      maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
-      maxVaryingVectors: gl.getParameter(gl.MAX_VARYING_VECTORS),
-      maxFragmentUniforms: gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
-      maxVertexUniforms: gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),
-    });
+    if (process.env.NODE_ENV === "development") {
+      console.debug("🚀 GPU Capabilities:", {
+        renderer: info.render.calls,
+        triangles: info.render.triangles,
+        points: info.render.points,
+        lines: info.render.lines,
+        memory: {
+          geometries: info.memory.geometries,
+          textures: info.memory.textures,
+        },
+        maxTextures: gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS),
+        maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
+        maxVaryingVectors: gl.getParameter(gl.MAX_VARYING_VECTORS),
+        maxFragmentUniforms: gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
+        maxVertexUniforms: gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),
+      });
+    }
   }
 
   // Smart geometry allocation with automatic batching
@@ -269,7 +271,7 @@ export class GPUMemoryManager {
       this.checkMemoryPressure();
 
       if (process.env.NODE_ENV === "development") {
-        console.log("💾 Memory Manager Stats:", {
+        console.debug("💾 Memory Manager Stats:", {
           memoryUsage: this.memoryUsage,
           metrics: this.metrics,
           resourceCount: this.resources.size,

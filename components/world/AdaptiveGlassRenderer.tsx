@@ -385,20 +385,26 @@ export default function AdaptiveGlassRenderer({
       }
     });
 
-    console.log(
-      "🔮 AdaptiveGlassRenderer: Total blocks received:",
-      blocks.size,
-    );
-    console.log(
-      "✨ AdaptiveGlassRenderer: Glass blocks to render:",
-      filtered.size,
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "🔮 AdaptiveGlassRenderer: Total blocks received:",
+        blocks.size,
+      );
+    }
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "✨ AdaptiveGlassRenderer: Glass blocks to render:",
+        filtered.size,
+      );
+    }
 
     if (filtered.size > 0) {
       const blockTypes = [
         ...new Set(Array.from(filtered.values()).map((b) => b.type)),
       ];
-      console.log("🎨 AdaptiveGlassRenderer: Glass block types:", blockTypes);
+      if (process.env.NODE_ENV === "development") {
+        console.log("🎨 AdaptiveGlassRenderer: Glass block types:", blockTypes);
+      }
     }
 
     return filtered;
@@ -441,18 +447,22 @@ export default function AdaptiveGlassRenderer({
           ) {
             setActiveRenderer("ultra");
             lastSwitchTime.current = now;
-            console.log(
-              "🚀 Adaptive Glass: Switching to UltraOptimized renderer for better quality",
-            );
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                "🚀 Adaptive Glass: Switching to UltraOptimized renderer for better quality",
+              );
+            }
           } else if (
             recommendation === "downgrade" &&
             activeRenderer === "ultra"
           ) {
             setActiveRenderer("standard");
             lastSwitchTime.current = now;
-            console.log(
-              "⚡ Adaptive Glass: Switching to Standard renderer for better performance",
-            );
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                "⚡ Adaptive Glass: Switching to Standard renderer for better performance",
+              );
+            }
           }
         }
       }
@@ -470,9 +480,11 @@ export default function AdaptiveGlassRenderer({
   const renderActiveRenderer = () => {
     const config = getRendererConfig();
 
-    console.log(
-      `🎯 AdaptiveGlassRenderer: Using ${activeRenderer} renderer for ${glassBlocks.size} glass blocks`,
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `🎯 AdaptiveGlassRenderer: Using ${activeRenderer} renderer for ${glassBlocks.size} glass blocks`,
+      );
+    }
 
     if (activeRenderer === "ultra") {
       return (

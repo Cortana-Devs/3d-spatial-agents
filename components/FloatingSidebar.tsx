@@ -194,17 +194,23 @@ export default function FloatingSidebar() {
         handleDebouncedFloorAction(() => {
           // Clear blocks first if near limit
           if (blockCount > worldLimits.maxBlocks * 0.9) {
-            console.log("Clearing blocks before placing floor due to limit");
+            if (process.env.NODE_ENV === "development") {
+              console.log("Clearing blocks before placing floor due to limit");
+            }
             clearAllBlocks();
           }
           // Normalize placement to y=0 via FloorManager defaults
-          console.log(
-            `Placing floor with size: ${gridConfig.size} (total blocks: ${gridConfig.size * gridConfig.size})`,
-          );
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              `Placing floor with size: ${gridConfig.size} (total blocks: ${gridConfig.size * gridConfig.size})`,
+            );
+          }
           quickFloorUtils.placeStoneFloor(gridConfig.size);
-          console.log(
-            `Quick stone floor placed at y=0 (${gridConfig.size}×${gridConfig.size})`,
-          );
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              `Quick stone floor placed at y=0 (${gridConfig.size}×${gridConfig.size})`,
+            );
+          }
         });
       }
     };
@@ -900,9 +906,11 @@ export default function FloatingSidebar() {
                 size="sm"
                 onClick={() =>
                   handleDebouncedFloorAction(() => {
-                    console.log(
-                      `Floor button: Placing floor with size: ${gridConfig.size}`,
-                    );
+                    if (process.env.NODE_ENV === "development") {
+                      console.log(
+                        `Floor button: Placing floor with size: ${gridConfig.size}`,
+                      );
+                    }
                     quickFloorUtils.placeStoneFloor(gridConfig.size);
                   })
                 }

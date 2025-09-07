@@ -328,13 +328,17 @@ export function MobilePerformanceMonitor({
   useEffect(() => {
     if (enableThermalManagement) {
       thermalManagerRef.current = new ThermalManager((state) => {
-        console.log(`Thermal state changed to: ${state}`);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`Thermal state changed to: ${state}`);
+        }
       });
     }
 
     if (enableBatteryOptimization && deviceCapabilities.isMobile) {
       batteryOptimizerRef.current = new BatteryOptimizer((mode) => {
-        console.log(`Battery mode changed to: ${mode}`);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`Battery mode changed to: ${mode}`);
+        }
       });
     }
 

@@ -5,6 +5,9 @@ import { useThree } from "@react-three/fiber";
 import { CubeTextureLoader, CubeTexture } from "three";
 import { useSkyboxStore } from "../../store/skyboxStore";
 import { DEFAULT_SKYBOX_PRESET } from "../../utils/skybox/defaultPreset";
+import { createLogger } from "../../utils/logging/logger";
+
+const log = createLogger("skybox:EnhancedSkybox");
 
 interface EnhancedSkyboxProps {
   /**
@@ -51,7 +54,7 @@ export function EnhancedSkybox({
   const { scene } = useThree();
   const [texture, setTexture] = useState<CubeTexture | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const loaderRef = useRef<CubeTextureLoader>();
+  const loaderRef = useRef<CubeTextureLoader | null>(null);
   const isLoadedRef = useRef(false);
 
   // Store integration (optional)
@@ -87,7 +90,7 @@ export function EnhancedSkybox({
         setIsLoading(false);
         isLoadedRef.current = true;
         if (process.env.NODE_ENV === "development") {
-          console.log("✅ Skybox loaded successfully (simple mode)");
+          log.debug("Skybox loaded (simple mode)");
         }
         onLoad?.();
       },
@@ -164,8 +167,8 @@ export function EnhancedSkybox({
       scene.environment = texture;
 
       if (process.env.NODE_ENV === "development") {
-        console.log(
-          `🌅 Skybox applied to scene (${useStore ? "store" : "simple"} mode)`,
+        log.debug(
+          `Skybox applied to scene (${useStore ? "store" : "simple"} mode)`,
         );
       }
 
@@ -184,7 +187,7 @@ export function EnhancedSkybox({
   // Development info
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.log("EnhancedSkybox state:", {
+      log.debug("EnhancedSkybox state:", {
         mode: useStore ? "store" : "simple",
         hasTexture: !!texture,
         isLoading,

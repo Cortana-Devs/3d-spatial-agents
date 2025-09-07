@@ -73,7 +73,7 @@ export default function SimulantManager({
   // Debug info (development only)
   React.useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.log("Simulant Manager Stats:", performanceStats);
+      console.debug("Simulant Manager Stats:", performanceStats);
     }
   }, [performanceStats]);
 
@@ -86,7 +86,7 @@ export default function SimulantManager({
           <BasicAnimationTest />
         </>
       )}
-      
+
       {/* Render active simulants with working animation system */}
       {activeSimulants.map((simulant) => (
         <SimpleAnimatedAvatar

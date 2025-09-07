@@ -376,7 +376,11 @@ export default function GridSystem({
 
   // Debug logging
   React.useEffect(() => {
-    console.log("Grid Config:", gridConfig);
+    if (process.env.NODE_ENV === "development") {
+      const gsLogDebug = (...args: any[]) =>
+        console.debug("[world:GridSystem]", ...args);
+      gsLogDebug("Grid config", gridConfig);
+    }
   }, [gridConfig]);
 
   return (
