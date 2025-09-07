@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useRef, useCallback } from 'react';
-import { useFrame } from '@react-three/fiber';
+import React, { createContext, useContext, useRef, useCallback } from "react";
+import { useFrame } from "@react-three/fiber";
 
 // Module performance isolation system
 interface ModuleConfig {
@@ -23,7 +23,10 @@ interface ModuleState {
 interface ModuleContext {
   registerModule: (config: ModuleConfig) => string;
   unregisterModule: (id: string) => void;
-  requestFrame: (moduleId: string, callback: (deltaTime: number) => void) => void;
+  requestFrame: (
+    moduleId: string,
+    callback: (deltaTime: number) => void,
+  ) => void;
   setModuleEnabled: (moduleId: string, enabled: boolean) => void;
   getModuleStats: (moduleId: string) => ModuleState | null;
   getAllStats: () => Record<string, ModuleState>;
@@ -34,15 +37,17 @@ const ModuleManagerContext = createContext<ModuleContext | null>(null);
 // Performance thresholds
 const PERFORMANCE_THRESHOLDS = {
   CRITICAL_FRAME_TIME: 16.67, // 60 FPS
-  WARNING_FRAME_TIME: 33.33,  // 30 FPS
-  MAX_MODULES_PER_FRAME: 3,   // Maximum modules to update per frame
-  FRAME_TIME_BUDGET: 14,      // Leave 2.67ms for other operations
+  WARNING_FRAME_TIME: 33.33, // 30 FPS
+  MAX_MODULES_PER_FRAME: 3, // Maximum modules to update per frame
+  FRAME_TIME_BUDGET: 14, // Leave 2.67ms for other operations
 } as const;
 
 export function ModuleManager({ children }: { children: React.ReactNode }) {
   const modulesRef = useRef<Map<string, ModuleConfig>>(new Map());
   const statesRef = useRef<Map<string, ModuleState>>(new Map());
-  const callbacksRef = useRef<Map<string, (deltaTime: number) => void>>(new Map());
+  const callbacksRef = useRef<Map<string, (deltaTime: number) => void>>(
+    new Map(),
+  );
   const frameQueueRef = useRef<string[]>([]);
   const lastFrameTimeRef = useRef<number>(0);
 
@@ -58,7 +63,8 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
       skippedFrames: 0,
     });
 
-    console.log(`[ModuleManager] Registered module: ${id}`);
+    process.env.NODE_ENV === "development" &&
+      console.log(`[ModuleManager] Registered module: ${id}`);
     return id;
   }, []);
 
@@ -68,25 +74,34 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
     callbacksRef.current.delete(id);
 
     // Remove from frame queue
-    frameQueueRef.current = frameQueueRef.current.filter(moduleId => moduleId !== id);
+    frameQueueRef.current = frameQueueRef.current.filter(
+      (moduleId) => moduleId !== id,
+    );
 
-    console.log(`[ModuleManager] Unregistered module: ${id}`);
+    process.env.NODE_ENV === "development" &&
+      console.log(`[ModuleManager] Unregistered module: ${id}`);
   }, []);
 
-  const requestFrame = useCallback((moduleId: string, callback: (deltaTime: number) => void) => {
-    callbacksRef.current.set(moduleId, callback);
+  const requestFrame = useCallback(
+    (moduleId: string, callback: (deltaTime: number) => void) => {
+      callbacksRef.current.set(moduleId, callback);
 
-    // Add to frame queue if not already present
-    if (!frameQueueRef.current.includes(moduleId)) {
-      frameQueueRef.current.push(moduleId);
-    }
-  }, []);
+      // Add to frame queue if not already present
+      if (!frameQueueRef.current.includes(moduleId)) {
+        frameQueueRef.current.push(moduleId);
+      }
+    },
+    [],
+  );
 
   const setModuleEnabled = useCallback((moduleId: string, enabled: boolean) => {
     const state = statesRef.current.get(moduleId);
     if (state) {
       state.isRunning = enabled;
-      console.log(`[ModuleManager] Module ${moduleId} ${enabled ? 'enabled' : 'disabled'}`);
+      process.env.NODE_ENV === "development" &&
+        console.log(
+          `[ModuleManager] Module ${moduleId} ${enabled ? "enabled" : "disabled"}`,
+        );
     }
   }, []);
 
@@ -110,12 +125,12 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
 
     // Sort modules by priority and update frequency needs
     const activeModules = Array.from(frameQueueRef.current)
-      .filter(id => {
+      .filter((id) => {
         const state = statesRef.current.get(id);
         const config = modulesRef.current.get(id);
         return state?.isRunning && config;
       })
-      .map(id => {
+      .map((id) => {
         const config = modulesRef.current.get(id)!;
         const state = statesRef.current.get(id)!;
         const timeSinceLastUpdate = frameStart - state.lastUpdate;
@@ -147,7 +162,10 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
 
       // Check if we have enough time budget left
       if (frameTimeUsed > PERFORMANCE_THRESHOLDS.FRAME_TIME_BUDGET) {
-        console.warn(`[ModuleManager] Frame budget exceeded, skipping remaining modules`);
+        process.env.NODE_ENV === "development" &&
+          console.warn(
+            `[ModuleManager] Frame budget exceeded, skipping remaining modules`,
+          );
         break;
       }
 
@@ -157,7 +175,11 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
       }
 
       // Skip if module doesn't need update (unless it's critical priority)
-      if (!module.needsUpdate && module.config.priority < 10 && module.config.canSkipFrames) {
+      if (
+        !module.needsUpdate &&
+        module.config.priority < 10 &&
+        module.config.canSkipFrames
+      ) {
         module.state.skippedFrames++;
         continue;
       }
@@ -182,13 +204,16 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
           // Update rolling average frame time
           const alpha = 0.1; // Smoothing factor
           module.state.averageFrameTime =
-            module.state.averageFrameTime * (1 - alpha) + moduleFrameTime * alpha;
+            module.state.averageFrameTime * (1 - alpha) +
+            moduleFrameTime * alpha;
 
           // Warn if module is taking too long
           if (moduleFrameTime > module.config.maxFrameTime) {
-            console.warn(
-              `[ModuleManager] Module ${module.id} exceeded max frame time: ${moduleFrameTime.toFixed(2)}ms > ${module.config.maxFrameTime}ms`
-            );
+            if (process.env.NODE_ENV === "development") {
+              console.warn(
+                `[ModuleManager] Module ${module.id} exceeded max frame time: ${moduleFrameTime.toFixed(2)}ms > ${module.config.maxFrameTime}ms`,
+              );
+            }
           }
         }
       } catch (error) {
@@ -202,8 +227,13 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
     lastFrameTimeRef.current = performance.now() - frameStart;
 
     // Log performance warnings in development
-    if (process.env.NODE_ENV === 'development' && lastFrameTimeRef.current > PERFORMANCE_THRESHOLDS.WARNING_FRAME_TIME) {
-      console.warn(`[ModuleManager] Frame time warning: ${lastFrameTimeRef.current.toFixed(2)}ms`);
+    if (
+      process.env.NODE_ENV === "development" &&
+      lastFrameTimeRef.current > PERFORMANCE_THRESHOLDS.WARNING_FRAME_TIME
+    ) {
+      console.warn(
+        `[ModuleManager] Frame time warning: ${lastFrameTimeRef.current.toFixed(2)}ms`,
+      );
     }
   });
 
@@ -224,10 +254,12 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
 }
 
 // Hook for modules to register themselves and get frame callbacks
-export function useModuleSystem(config: Omit<ModuleConfig, 'id'> & { id?: string }) {
+export function useModuleSystem(
+  config: Omit<ModuleConfig, "id"> & { id?: string },
+) {
   const context = useContext(ModuleManagerContext);
   if (!context) {
-    throw new Error('useModuleSystem must be used within a ModuleManager');
+    throw new Error("useModuleSystem must be used within a ModuleManager");
   }
 
   const moduleIdRef = useRef<string | null>(null);
@@ -252,20 +284,28 @@ export function useModuleSystem(config: Omit<ModuleConfig, 'id'> & { id?: string
     };
   }, [context]);
 
-  const requestFrame = useCallback((callback: (deltaTime: number) => void) => {
-    if (moduleIdRef.current) {
-      context.requestFrame(moduleIdRef.current, callback);
-    }
-  }, [context]);
+  const requestFrame = useCallback(
+    (callback: (deltaTime: number) => void) => {
+      if (moduleIdRef.current) {
+        context.requestFrame(moduleIdRef.current, callback);
+      }
+    },
+    [context],
+  );
 
-  const setEnabled = useCallback((enabled: boolean) => {
-    if (moduleIdRef.current) {
-      context.setModuleEnabled(moduleIdRef.current, enabled);
-    }
-  }, [context]);
+  const setEnabled = useCallback(
+    (enabled: boolean) => {
+      if (moduleIdRef.current) {
+        context.setModuleEnabled(moduleIdRef.current, enabled);
+      }
+    },
+    [context],
+  );
 
   const getStats = useCallback(() => {
-    return moduleIdRef.current ? context.getModuleStats(moduleIdRef.current) : null;
+    return moduleIdRef.current
+      ? context.getModuleStats(moduleIdRef.current)
+      : null;
   }, [context]);
 
   return {
@@ -291,34 +331,38 @@ export function ModulePerformanceMonitor() {
     return () => clearInterval(interval);
   }, [context]);
 
-  if (process.env.NODE_ENV !== 'development') {
+  if (process.env.NODE_ENV !== "development") {
     return null;
   }
 
   return (
     <div
       style={{
-        position: 'absolute',
+        position: "absolute",
         top: 10,
         right: 10,
-        background: 'rgba(0, 0, 0, 0.8)',
-        color: 'white',
+        background: "rgba(0, 0, 0, 0.8)",
+        color: "white",
         padding: 10,
         borderRadius: 5,
         fontSize: 12,
-        fontFamily: 'monospace',
+        fontFamily: "monospace",
         zIndex: 1000,
         maxWidth: 300,
       }}
     >
-      <div style={{ fontWeight: 'bold', marginBottom: 5 }}>Module Performance</div>
+      <div style={{ fontWeight: "bold", marginBottom: 5 }}>
+        Module Performance
+      </div>
       {Object.entries(stats).map(([id, state]) => (
         <div key={id} style={{ marginBottom: 3 }}>
-          <div style={{ fontWeight: 'bold' }}>{id}</div>
-          <div>FPS: {(1000 / Math.max(state.averageFrameTime, 1)).toFixed(1)}</div>
+          <div style={{ fontWeight: "bold" }}>{id}</div>
+          <div>
+            FPS: {(1000 / Math.max(state.averageFrameTime, 1)).toFixed(1)}
+          </div>
           <div>Avg Time: {state.averageFrameTime.toFixed(2)}ms</div>
           <div>Skipped: {state.skippedFrames}</div>
-          <div>Status: {state.isRunning ? '✅' : '❌'}</div>
+          <div>Status: {state.isRunning ? "✅" : "❌"}</div>
         </div>
       ))}
     </div>
