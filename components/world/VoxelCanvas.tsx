@@ -25,6 +25,7 @@ import {
   AdditiveBlending,
   DoubleSide,
   NormalBlending,
+  BoxGeometry,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
 import {
@@ -391,21 +392,30 @@ function VoxelBlock({
 }: VoxelBlockProps) {
   const meshRef = useRef<Mesh>(null);
   const [showParticles, setShowParticles] = useState(false);
-  const { camera } = useThree();
+  const { blockMap } = useWorldStore();
 
-  const distance = useMemo(() => {
-    return camera.position.distanceTo(new Vector3(...position));
-  }, [camera.position, position]);
+  // Get neighbor blocks for seamless rendering
+  const neighbors = useMemo(() => {
+    const [x, y, z] = position;
+    const neighbors = {
+      top: blockMap.has(`${x},${y + 1},${z}`),
+      bottom: blockMap.has(`${x},${y - 1},${z}`),
+      north: blockMap.has(`${x},${y},${z + 1}`),
+      south: blockMap.has(`${x},${y},${z - 1}`),
+      east: blockMap.has(`${x + 1},${y},${z}`),
+      west: blockMap.has(`${x - 1},${y},${z}`),
+    };
+    return neighbors;
+  }, [blockMap, position]);
 
-  // LOD-based geometry selection
-  const geometryArgs = useMemo((): [number, number, number] => {
-    if (distance > LOD_CONFIG.mediumDetail) {
-      return [0.9, 0.9, 0.9]; // Low detail
-    } else if (distance > LOD_CONFIG.highDetail) {
-      return [0.94, 0.94, 0.94]; // Medium detail
-    }
-    return [0.98, 0.98, 0.98]; // High detail
-  }, [distance]);
+  // Create geometry based on exposed faces for seamless blocks
+  const geometry = useMemo(() => {
+    const geo = new BoxGeometry(1.0, 1.0, 1.0);
+
+    // For seamless appearance, we keep full 1x1x1 geometry
+    // The seamless effect comes from precise positioning and materials
+    return geo;
+  }, []);
 
   const handleClick = useCallback(
     (event: { stopPropagation: () => void }) => {
@@ -464,10 +474,8 @@ function VoxelBlock({
         position={position}
         onClick={handleClick}
         onContextMenu={handleRightClick}
+        geometry={geometry}
       >
-        <boxGeometry
-          args={type === BlockType.NUMBER_7 ? [1.0, 1.0, 1.0] : geometryArgs}
-        />
         {type === BlockType.NUMBER_7 ? (
           <meshBasicMaterial
             color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#F0F8FF"}
@@ -499,7 +507,9 @@ function VoxelBlock({
                   ? 0.15
                   : definition.emissiveIntensity || 0
             }
-            toneMapped={false} // Prevent tone mapping artifacts
+            toneMapped={false}
+            // Seamless rendering - no polygon offset for exact adjacency
+            polygonOffset={false}
           />
         )}
       </mesh>
@@ -539,7 +549,7 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
 
   return (
     <mesh ref={meshRef} position={[position[0], position[1], position[2]]}>
-      <boxGeometry args={[0.98, 0.98, 0.98]} />
+      <boxGeometry args={[1.0, 1.0, 1.0]} />
       <meshStandardMaterial
         color={color}
         transparent
@@ -548,6 +558,7 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
         metalness={type === "stone" ? 0.1 : 0}
         emissive={color}
         emissiveIntensity={0.3}
+        polygonOffset={false}
       />
     </mesh>
   );
@@ -632,15 +643,14 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
-        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition = new Vector3(
           Math.round(intersectionPoint.x),
-          gridY, // Grid level (top face aligns here)
+          Math.round(intersectionPoint.y),
           Math.round(intersectionPoint.z),
         );
 
         // Check if we can place a block here
-        const positionKey = `${snappedPosition.x},${gridY - 0.5},${snappedPosition.z}`;
+        const positionKey = `${snappedPosition.x},${snappedPosition.y},${snappedPosition.z}`;
         const hasExistingBlock = blockMap.has(positionKey);
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
@@ -714,15 +724,14 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
-        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition: [number, number, number] = [
           Math.round(intersectionPoint.x),
-          gridY - 0.5, // Centered so top face aligns to grid Y
+          Math.round(intersectionPoint.y),
           Math.round(intersectionPoint.z),
         ];
 
         // Check if position is valid for preview
-        const positionKey = `${snappedPosition[0]},${gridY - 0.5},${snappedPosition[2]}`;
+        const positionKey = `${snappedPosition[0]},${snappedPosition[1]},${snappedPosition[2]}`;
         const hasExistingBlock = blockMap.has(positionKey);
 
         if (!hasExistingBlock) {
@@ -899,7 +908,7 @@ function SceneContent({
       // Create mixed pattern with more visible blocks for debugging
       for (let x = -halfSize; x <= halfSize; x++) {
         for (let z = -halfSize; z <= halfSize; z++) {
-          const position = new Vector3(x, -0.5, z); // Center at y=-0.5 so top is at y=0
+          const position = new Vector3(x, 0, z); // Place at y=0 for seamless positioning
 
           // Create more visible pattern with better block distribution
           const isEven = (x + z) % 2 === 0;
