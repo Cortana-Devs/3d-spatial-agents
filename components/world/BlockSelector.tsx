@@ -367,26 +367,8 @@ export default function BlockSelector({ className = "" }: BlockSelectorProps) {
   const isEmptyHandSelected = selectionMode === SelectionMode.EMPTY;
   const isAtLimit = blockCount >= worldLimits.maxBlocks;
 
-  // Debug logging for selection state (moved to effect to avoid per-render spam)
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.debug("🎯 BlockSelector: Current state", {
-        selectedBlockType,
-        selectionMode,
-        isEmptyHandSelected,
-        blockCount,
-        maxBlocks: worldLimits.maxBlocks,
-        isAtLimit,
-      });
-    }
-  }, [
-    selectedBlockType,
-    selectionMode,
-    isEmptyHandSelected,
-    blockCount,
-    worldLimits.maxBlocks,
-    isAtLimit,
-  ]);
+  // Debug logging removed to reduce console noise
+  // React.useEffect(() => {}, []);
 
   // Handle keyboard shortcuts for block selection (0-9 keys)
   React.useEffect(() => {
@@ -411,8 +393,8 @@ export default function BlockSelector({ className = "" }: BlockSelectorProps) {
 
         if (keyNumber === 0) {
           if (process.env.NODE_ENV === "development") {
-            console.debug(
-              "⌨️ BlockSelector: Key 0 pressed - setting empty hand",
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog("⌨️ BlockSelector: Key 0 pressed - setting empty hand"),
             );
           }
           setSelectionMode(SelectionMode.EMPTY);
@@ -420,22 +402,26 @@ export default function BlockSelector({ className = "" }: BlockSelectorProps) {
           const blockIndex = keyNumber - 1;
           if (blockTypes[blockIndex]) {
             if (process.env.NODE_ENV === "development") {
-              console.debug(
-                "⌨️ BlockSelector: Key",
-                keyNumber,
-                "pressed - selecting block",
-                blockTypes[blockIndex],
+              void import("@/utils/devLogger").then(({ devLog }) =>
+                devLog(
+                  "⌨️ BlockSelector: Key",
+                  keyNumber,
+                  "pressed - selecting block",
+                  blockTypes[blockIndex],
+                ),
               );
             }
             setSelectedBlockType(blockTypes[blockIndex]);
             setSelectionMode(SelectionMode.PLACE);
           } else {
             if (process.env.NODE_ENV === "development") {
-              console.debug(
-                "⌨️ BlockSelector: Key",
-                keyNumber,
-                "pressed - no block at index",
-                blockIndex,
+              void import("@/utils/devLogger").then(({ devLog }) =>
+                devLog(
+                  "⌨️ BlockSelector: Key",
+                  keyNumber,
+                  "pressed - no block at index",
+                  blockIndex,
+                ),
               );
             }
           }

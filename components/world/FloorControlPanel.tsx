@@ -3,17 +3,28 @@
 import React, { useState, useCallback } from "react";
 import { Vector3 } from "three";
 import { BlockType, BLOCK_DEFINITIONS } from "../../types/blocks";
-import { floorManager, quickFloorUtils, FloorConfiguration } from "../../utils/floorManager";
+import {
+  floorManager,
+  quickFloorUtils,
+  FloorConfiguration,
+} from "../../utils/floorManager";
 import { useWorldStore } from "../../store/worldStore";
+import { devLog } from "@/utils/devLogger";
 
 interface FloorControlPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanelProps) {
-  const [selectedPattern, setSelectedPattern] = useState<FloorConfiguration['pattern']>("solid");
-  const [selectedBlockType, setSelectedBlockType] = useState<BlockType>(BlockType.STONE);
+export default function FloorControlPanel({
+  isOpen,
+  onClose,
+}: FloorControlPanelProps) {
+  const [selectedPattern, setSelectedPattern] =
+    useState<FloorConfiguration["pattern"]>("solid");
+  const [selectedBlockType, setSelectedBlockType] = useState<BlockType>(
+    BlockType.STONE,
+  );
   const [floorSize, setFloorSize] = useState<number>(50);
   const [yLevel, setYLevel] = useState<number>(-0.5);
   const [replaceExisting, setReplaceExisting] = useState<boolean>(false);
@@ -21,75 +32,81 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
 
   const { gridConfig, blockCount, worldLimits } = useWorldStore();
 
-  const handlePlaceFloor = useCallback(async (config: Partial<FloorConfiguration>) => {
-    setIsPlacing(true);
+  const handlePlaceFloor = useCallback(
+    async (config: Partial<FloorConfiguration>) => {
+      setIsPlacing(true);
 
-    try {
-      const floorConfig: FloorConfiguration = {
-        blockType: selectedBlockType,
-        pattern: selectedPattern,
-        size: floorSize,
-        centerPosition: new Vector3(0, 0, 0),
-        yLevel: yLevel,
-        replaceExisting: replaceExisting,
-        fillHoles: true,
-        ...config
-      };
+      try {
+        const floorConfig: FloorConfiguration = {
+          blockType: selectedBlockType,
+          pattern: selectedPattern,
+          size: floorSize,
+          centerPosition: new Vector3(0, 0, 0),
+          yLevel: yLevel,
+          replaceExisting: replaceExisting,
+          fillHoles: true,
+          ...config,
+        };
 
-      const success = floorManager.placeFloor(floorConfig);
+        const success = floorManager.placeFloor(floorConfig);
 
-      if (success) {
-        console.log("Floor placed successfully");
-      } else {
-        console.warn("Failed to place floor");
+        if (success) {
+          devLog("Floor placed successfully");
+        } else {
+          console.warn("Failed to place floor");
+        }
+      } catch (error) {
+        console.error("Error placing floor:", error);
+      } finally {
+        setIsPlacing(false);
       }
-    } catch (error) {
-      console.error("Error placing floor:", error);
-    } finally {
-      setIsPlacing(false);
-    }
-  }, [selectedBlockType, selectedPattern, floorSize, yLevel, replaceExisting]);
+    },
+    [selectedBlockType, selectedPattern, floorSize, yLevel, replaceExisting],
+  );
 
-  const handleQuickFloor = useCallback(async (type: 'stone' | 'wood' | 'glass' | 'checker' | 'clear') => {
-    setIsPlacing(true);
+  const handleQuickFloor = useCallback(
+    async (type: "stone" | "wood" | "glass" | "checker" | "clear") => {
+      setIsPlacing(true);
 
-    try {
-      let success = false;
+      try {
+        let success = false;
 
-      switch (type) {
-        case 'stone':
-          success = quickFloorUtils.placeStoneFloor(floorSize);
-          break;
-        case 'wood':
-          success = quickFloorUtils.placeWoodFloor(floorSize);
-          break;
-        case 'glass':
-          success = quickFloorUtils.placeGlassFloor(floorSize);
-          break;
-        case 'checker':
-          success = quickFloorUtils.placeCheckerFloor(floorSize);
-          break;
-        case 'clear':
-          success = quickFloorUtils.clearFloorArea(floorSize);
-          break;
+        switch (type) {
+          case "stone":
+            success = quickFloorUtils.placeStoneFloor(floorSize);
+            break;
+          case "wood":
+            success = quickFloorUtils.placeWoodFloor(floorSize);
+            break;
+          case "glass":
+            success = quickFloorUtils.placeGlassFloor(floorSize);
+            break;
+          case "checker":
+            success = quickFloorUtils.placeCheckerFloor(floorSize);
+            break;
+          case "clear":
+            success = quickFloorUtils.clearFloorArea(floorSize);
+            break;
+        }
+
+        if (success) {
+          devLog(`Quick ${type} floor operation completed`);
+        }
+      } catch (error) {
+        console.error("Error with quick floor operation:", error);
+      } finally {
+        setIsPlacing(false);
       }
-
-      if (success) {
-        console.log(`Quick ${type} floor operation completed`);
-      }
-    } catch (error) {
-      console.error("Error with quick floor operation:", error);
-    } finally {
-      setIsPlacing(false);
-    }
-  }, [floorSize]);
+    },
+    [floorSize],
+  );
 
   const patternOptions = [
     { value: "solid", label: "Solid", icon: "⬛" },
     { value: "checkerboard", label: "Checkerboard", icon: "🏁" },
     { value: "border", label: "Border", icon: "🔲" },
     { value: "cross", label: "Cross", icon: "➕" },
-    { value: "diagonal", label: "Diagonal", icon: "〰️" }
+    { value: "diagonal", label: "Diagonal", icon: "〰️" },
   ];
 
   const availableBlockTypes = [
@@ -97,7 +114,7 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
     BlockType.WOOD,
     BlockType.FROSTED_GLASS,
     BlockType.FLOOR,
-    BlockType.LEAF
+    BlockType.LEAF,
   ];
 
   if (!isOpen) return null;
@@ -108,8 +125,12 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Floor Control Panel</h2>
-            <p className="text-gray-400 text-sm">Create and manage floor blocks across your world</p>
+            <h2 className="text-2xl font-bold text-white mb-1">
+              Floor Control Panel
+            </h2>
+            <p className="text-gray-400 text-sm">
+              Create and manage floor blocks across your world
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -126,16 +147,18 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <button
-              onClick={() => handleQuickFloor('stone')}
+              onClick={() => handleQuickFloor("stone")}
               disabled={isPlacing}
               className="flex flex-col items-center p-4 bg-gradient-to-br from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="w-8 h-8 bg-gray-500 rounded mb-2"></div>
-              <span className="text-white text-sm font-medium">Stone Floor</span>
+              <span className="text-white text-sm font-medium">
+                Stone Floor
+              </span>
             </button>
 
             <button
-              onClick={() => handleQuickFloor('wood')}
+              onClick={() => handleQuickFloor("wood")}
               disabled={isPlacing}
               className="flex flex-col items-center p-4 bg-gradient-to-br from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -144,30 +167,36 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
             </button>
 
             <button
-              onClick={() => handleQuickFloor('glass')}
+              onClick={() => handleQuickFloor("glass")}
               disabled={isPlacing}
               className="flex flex-col items-center p-4 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="w-8 h-8 bg-blue-400 rounded mb-2 opacity-60"></div>
-              <span className="text-white text-sm font-medium">Glass Floor</span>
+              <span className="text-white text-sm font-medium">
+                Glass Floor
+              </span>
             </button>
 
             <button
-              onClick={() => handleQuickFloor('checker')}
+              onClick={() => handleQuickFloor("checker")}
               disabled={isPlacing}
               className="flex flex-col items-center p-4 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="w-8 h-8 bg-gradient-to-br from-gray-500 to-amber-600 rounded mb-2"></div>
-              <span className="text-white text-sm font-medium">Checker Floor</span>
+              <span className="text-white text-sm font-medium">
+                Checker Floor
+              </span>
             </button>
 
             <button
-              onClick={() => handleQuickFloor('clear')}
+              onClick={() => handleQuickFloor("clear")}
               disabled={isPlacing}
               className="flex flex-col items-center p-4 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="w-8 h-8 border-2 border-red-400 rounded mb-2"></div>
-              <span className="text-white text-sm font-medium">Clear Floor</span>
+              <span className="text-white text-sm font-medium">
+                Clear Floor
+              </span>
             </button>
           </div>
         </div>
@@ -180,16 +209,22 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
 
           {/* Pattern Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">Pattern Type</label>
+            <label className="block text-sm font-medium text-gray-300 mb-3">
+              Pattern Type
+            </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {patternOptions.map((pattern) => (
                 <button
                   key={pattern.value}
-                  onClick={() => setSelectedPattern(pattern.value as FloorConfiguration['pattern'])}
+                  onClick={() =>
+                    setSelectedPattern(
+                      pattern.value as FloorConfiguration["pattern"],
+                    )
+                  }
                   className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
                     selectedPattern === pattern.value
-                      ? 'bg-blue-600/30 border-blue-400 text-blue-300'
-                      : 'bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600/50'
+                      ? "bg-blue-600/30 border-blue-400 text-blue-300"
+                      : "bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600/50"
                   }`}
                 >
                   <span className="text-lg">{pattern.icon}</span>
@@ -201,7 +236,9 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
 
           {/* Block Type Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">Block Type</label>
+            <label className="block text-sm font-medium text-gray-300 mb-3">
+              Block Type
+            </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {availableBlockTypes.map((blockType) => {
                 const definition = BLOCK_DEFINITIONS[blockType];
@@ -211,8 +248,8 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
                     onClick={() => setSelectedBlockType(blockType)}
                     className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                       selectedBlockType === blockType
-                        ? 'bg-green-600/30 border-green-400 text-green-300'
-                        : 'bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600/50'
+                        ? "bg-green-600/30 border-green-400 text-green-300"
+                        : "bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600/50"
                     }`}
                   >
                     <div
@@ -283,9 +320,13 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
           {/* Status */}
           <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700">
             <div className="text-sm text-gray-300">
-              <span>Current Grid: {gridConfig.size}×{gridConfig.size}</span>
+              <span>
+                Current Grid: {gridConfig.size}×{gridConfig.size}
+              </span>
               <span className="mx-2">•</span>
-              <span>Blocks: {blockCount}/{worldLimits.maxBlocks}</span>
+              <span>
+                Blocks: {blockCount}/{worldLimits.maxBlocks}
+              </span>
             </div>
             <div className="text-xs text-gray-500">
               Floor will place ~{Math.pow(floorSize, 2)} blocks
@@ -305,9 +346,7 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
                   Placing Floor...
                 </>
               ) : (
-                <>
-                  🏗️ Place Custom Floor
-                </>
+                <>🏗️ Place Custom Floor</>
               )}
             </button>
 
@@ -326,7 +365,8 @@ export default function FloorControlPanel({ isOpen, onClose }: FloorControlPanel
             <div className="flex items-center gap-2 text-yellow-300">
               <span>⚠️</span>
               <span className="text-sm">
-                Warning: Approaching block limit. Consider clearing some blocks first.
+                Warning: Approaching block limit. Consider clearing some blocks
+                first.
               </span>
             </div>
           </div>

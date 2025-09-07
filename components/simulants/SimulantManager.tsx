@@ -73,7 +73,9 @@ export default function SimulantManager({
   // Debug info (development only)
   React.useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.debug("Simulant Manager Stats:", performanceStats);
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog("Simulant Manager Stats:", performanceStats),
+      );
     }
   }, [performanceStats]);
 

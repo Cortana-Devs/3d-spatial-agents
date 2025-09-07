@@ -101,8 +101,8 @@ const detectDeviceCapabilities = (
 
   // Memory estimation (rough approximation)
   const getMemoryGB = (): number => {
-    // @ts-ignore - experimental API
-    const memory = (navigator as any).deviceMemory;
+    const memory =
+      "deviceMemory" in navigator ? navigator.deviceMemory : undefined;
     if (memory) return memory;
 
     // Fallback estimation based on other factors
@@ -187,8 +187,7 @@ class AdaptivePerformanceMonitor {
     const fps = 1000 / avgFrameTime;
 
     // Memory usage estimation (if available)
-    // @ts-ignore - experimental API
-    const memoryInfo = (performance as any).memory;
+    const memoryInfo = performance.memory;
     const memoryUsage = memoryInfo
       ? memoryInfo.usedJSHeapSize / 1024 / 1024
       : 0;
@@ -302,13 +301,15 @@ export default function AdaptiveGlassRenderer({
       const gl = renderer.getContext();
 
       if (process.env.NODE_ENV === "development") {
-        console.log("🔍 AdaptiveGlassRenderer: WebGL context check", {
-          hasContext: !!gl,
-          hasGetParameter: !!(gl && typeof gl.getParameter === "function"),
-          hasCanvas: !!(gl && gl.canvas),
-          contextType:
-            gl instanceof WebGL2RenderingContext ? "WebGL2" : "WebGL1",
-        });
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("🔍 AdaptiveGlassRenderer: WebGL context check", {
+            hasContext: !!gl,
+            hasGetParameter: !!(gl && typeof gl.getParameter === "function"),
+            hasCanvas: !!(gl && gl.canvas),
+            contextType:
+              gl instanceof WebGL2RenderingContext ? "WebGL2" : "WebGL1",
+          }),
+        );
       }
 
       if (gl && typeof gl.getParameter === "function" && gl.canvas) {
@@ -323,9 +324,11 @@ export default function AdaptiveGlassRenderer({
           setDeviceCapabilities(capabilities);
 
           if (process.env.NODE_ENV === "development") {
-            console.log(
-              "✅ AdaptiveGlassRenderer: Device capabilities detected",
-              capabilities,
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog(
+                "✅ AdaptiveGlassRenderer: Device capabilities detected",
+                capabilities,
+              ),
             );
           }
 
@@ -386,15 +389,16 @@ export default function AdaptiveGlassRenderer({
     });
 
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "🔮 AdaptiveGlassRenderer: Total blocks received:",
-        blocks.size,
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog("🔮 AdaptiveGlassRenderer: Total blocks received:", blocks.size),
       );
     }
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "✨ AdaptiveGlassRenderer: Glass blocks to render:",
-        filtered.size,
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog(
+          "✨ AdaptiveGlassRenderer: Glass blocks to render:",
+          filtered.size,
+        ),
       );
     }
 
@@ -403,7 +407,9 @@ export default function AdaptiveGlassRenderer({
         ...new Set(Array.from(filtered.values()).map((b) => b.type)),
       ];
       if (process.env.NODE_ENV === "development") {
-        console.log("🎨 AdaptiveGlassRenderer: Glass block types:", blockTypes);
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("🎨 AdaptiveGlassRenderer: Glass block types:", blockTypes),
+        );
       }
     }
 
@@ -448,8 +454,10 @@ export default function AdaptiveGlassRenderer({
             setActiveRenderer("ultra");
             lastSwitchTime.current = now;
             if (process.env.NODE_ENV === "development") {
-              console.log(
-                "🚀 Adaptive Glass: Switching to UltraOptimized renderer for better quality",
+              void import("@/utils/devLogger").then(({ devLog }) =>
+                devLog(
+                  "🚀 Adaptive Glass: Switching to UltraOptimized renderer for better quality",
+                ),
               );
             }
           } else if (
@@ -459,8 +467,10 @@ export default function AdaptiveGlassRenderer({
             setActiveRenderer("standard");
             lastSwitchTime.current = now;
             if (process.env.NODE_ENV === "development") {
-              console.log(
-                "⚡ Adaptive Glass: Switching to Standard renderer for better performance",
+              void import("@/utils/devLogger").then(({ devLog }) =>
+                devLog(
+                  "⚡ Adaptive Glass: Switching to Standard renderer for better performance",
+                ),
               );
             }
           }
@@ -481,8 +491,10 @@ export default function AdaptiveGlassRenderer({
     const config = getRendererConfig();
 
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        `🎯 AdaptiveGlassRenderer: Using ${activeRenderer} renderer for ${glassBlocks.size} glass blocks`,
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog(
+          `🎯 AdaptiveGlassRenderer: Using ${activeRenderer} renderer for ${glassBlocks.size} glass blocks`,
+        ),
       );
     }
 
@@ -552,9 +564,19 @@ export const useGlassPerformance = () => {
 // Performance utilities
 export const AdaptiveGlassUtils = {
   // Get current device capabilities
-  getDeviceInfo: (glRenderer: any) => {
+  getDeviceInfo: (glRenderer: unknown) => {
     // Handle both THREE.js WebGLRenderer and raw WebGL context
-    const gl = glRenderer.getContext ? glRenderer.getContext() : glRenderer;
+    const gl =
+      typeof glRenderer === "object" &&
+      glRenderer !== null &&
+      "getContext" in glRenderer &&
+      typeof (glRenderer as { getContext: unknown }).getContext === "function"
+        ? (
+            glRenderer as {
+              getContext: () => WebGLRenderingContext | WebGL2RenderingContext;
+            }
+          ).getContext()
+        : (glRenderer as WebGLRenderingContext | WebGL2RenderingContext);
     return detectDeviceCapabilities(gl);
   },
 

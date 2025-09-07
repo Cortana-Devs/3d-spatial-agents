@@ -593,8 +593,10 @@ export function MobileOptimizedRenderer({
       // WebGPU implementation would go here
       // This is preparation for future WebGPU adoption
       if (process.env.NODE_ENV === "development") {
-        console.log(
-          "WebGPU capable device detected - preparing for future implementation",
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog(
+            "WebGPU capable device detected - preparing for future implementation",
+          ),
         );
       }
     }

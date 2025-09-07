@@ -36,6 +36,7 @@ import { SimulantUtils } from "./simulants/SimulantManager";
 import type { AISimulant, CameraMode } from "../types";
 import type { AnimationState } from "../utils/animationController";
 import { useSafeCameraMode } from "../hooks/useSafeCameraMode";
+import { ifDev } from "../utils/devLogger";
 
 type TabKey = "animation" | "simulants" | "camera" | "floor";
 
@@ -148,22 +149,30 @@ export default function FloatingSidebar() {
 
   // Drag functionality
   const [isDragging, setIsDragging] = React.useState(false);
-  const [position, setPosition] = React.useState(() => {
-    // Load position from localStorage, fallback to default
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("floatingSidebarPosition");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          return { x: 16, y: 120 };
-        }
-      }
-    }
-    return { x: 16, y: 120 }; // Start below header
-  });
+  const [position, setPosition] = React.useState<{ x: number; y: number }>({
+    x: 16,
+    y: 120,
+  }); // Start below header; avoid SSR mismatch
   const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
   const dragRef = React.useRef<HTMLDivElement>(null);
+
+  // After mount, restore saved position from localStorage (client-only)
+  React.useEffect(() => {
+    try {
+      const saved =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("floatingSidebarPosition")
+          : null;
+      if (saved) {
+        const parsed = JSON.parse(saved) as { x: number; y: number };
+        if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+          setPosition(parsed);
+        }
+      }
+    } catch {
+      // ignore JSON/storage errors
+    }
+  }, []);
 
   // Keyboard shortcuts: Cmd/Ctrl + C cycles camera; G toggles grid
   React.useEffect(() => {
@@ -194,23 +203,23 @@ export default function FloatingSidebar() {
         handleDebouncedFloorAction(() => {
           // Clear blocks first if near limit
           if (blockCount > worldLimits.maxBlocks * 0.9) {
-            if (process.env.NODE_ENV === "development") {
+            ifDev(() => {
               console.warn("Clearing blocks before placing floor due to limit");
-            }
+            });
             clearAllBlocks();
           }
           // Normalize placement to y=0 via FloorManager defaults
-          if (process.env.NODE_ENV === "development") {
+          ifDev(() => {
             console.warn(
               `Placing floor with size: ${gridConfig.size} (total blocks: ${gridConfig.size * gridConfig.size})`,
             );
-          }
+          });
           quickFloorUtils.placeStoneFloor(gridConfig.size);
-          if (process.env.NODE_ENV === "development") {
+          ifDev(() => {
             console.warn(
               `Quick stone floor placed at y=0 (${gridConfig.size}×${gridConfig.size})`,
             );
-          }
+          });
         });
       }
     };

@@ -586,7 +586,9 @@ export function useMobileOptimization(
 
     if (config.enableBatteryOptimization) {
       batteryManagerRef.current = new BatteryManager((mode) => {
-        console.log(`Battery mode: ${mode}`);
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog(`Battery mode: ${mode}`),
+        );
       });
     }
 
@@ -732,7 +734,9 @@ export function useMobileOptimization(
     }
 
     // WebGPU transition logic would go here
-    console.log("WebGPU transition prepared but not implemented yet");
+    void import("@/utils/devLogger").then(({ devLog }) =>
+      devLog("WebGPU transition prepared but not implemented yet"),
+    );
     return true;
   }, [webgpuCapabilities]);
 

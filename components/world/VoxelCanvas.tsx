@@ -25,6 +25,7 @@ import {
   AdditiveBlending,
   DoubleSide,
   NormalBlending,
+  BoxGeometry,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
 import {
@@ -391,21 +392,30 @@ function VoxelBlock({
 }: VoxelBlockProps) {
   const meshRef = useRef<Mesh>(null);
   const [showParticles, setShowParticles] = useState(false);
-  const { camera } = useThree();
+  const { blockMap } = useWorldStore();
 
-  const distance = useMemo(() => {
-    return camera.position.distanceTo(new Vector3(...position));
-  }, [camera.position, position]);
+  // Get neighbor blocks for seamless rendering
+  const neighbors = useMemo(() => {
+    const [x, y, z] = position;
+    const neighbors = {
+      top: blockMap.has(`${x},${y + 1},${z}`),
+      bottom: blockMap.has(`${x},${y - 1},${z}`),
+      north: blockMap.has(`${x},${y},${z + 1}`),
+      south: blockMap.has(`${x},${y},${z - 1}`),
+      east: blockMap.has(`${x + 1},${y},${z}`),
+      west: blockMap.has(`${x - 1},${y},${z}`),
+    };
+    return neighbors;
+  }, [blockMap, position]);
 
-  // LOD-based geometry selection
-  const geometryArgs = useMemo((): [number, number, number] => {
-    if (distance > LOD_CONFIG.mediumDetail) {
-      return [0.9, 0.9, 0.9]; // Low detail
-    } else if (distance > LOD_CONFIG.highDetail) {
-      return [0.94, 0.94, 0.94]; // Medium detail
-    }
-    return [0.98, 0.98, 0.98]; // High detail
-  }, [distance]);
+  // Create geometry based on exposed faces for seamless blocks
+  const geometry = useMemo(() => {
+    const geo = new BoxGeometry(1.0, 1.0, 1.0);
+
+    // For seamless appearance, we keep full 1x1x1 geometry
+    // The seamless effect comes from precise positioning and materials
+    return geo;
+  }, []);
 
   const handleClick = useCallback(
     (event: { stopPropagation: () => void }) => {
@@ -464,44 +474,32 @@ function VoxelBlock({
         position={position}
         onClick={handleClick}
         onContextMenu={handleRightClick}
+        geometry={geometry}
       >
-        <boxGeometry
-          args={type === BlockType.NUMBER_7 ? [1.0, 1.0, 1.0] : geometryArgs}
+        <meshStandardMaterial
+          color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
+          roughness={definition.roughness}
+          metalness={definition.metalness}
+          transparent={definition.transparency !== undefined}
+          opacity={definition.transparency ? 1 - definition.transparency : 1}
+          emissive={
+            isHovered
+              ? color
+              : isSelected
+                ? "#00D4FF"
+                : definition.emissive || "#000000"
+          }
+          emissiveIntensity={
+            isHovered
+              ? 0.2
+              : isSelected
+                ? 0.15
+                : definition.emissiveIntensity || 0
+          }
+          toneMapped={false}
+          // Seamless rendering - no polygon offset for exact adjacency
+          polygonOffset={false}
         />
-        {type === BlockType.NUMBER_7 ? (
-          <meshBasicMaterial
-            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#F0F8FF"}
-            transparent={true}
-            opacity={isHovered ? 0.25 : isSelected ? 0.2 : 0.15}
-            side={DoubleSide}
-            depthWrite={true}
-            alphaTest={0.1}
-            fog={false}
-          />
-        ) : (
-          <meshStandardMaterial
-            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
-            roughness={definition.roughness}
-            metalness={definition.metalness}
-            transparent={definition.transparency !== undefined}
-            opacity={definition.transparency ? 1 - definition.transparency : 1}
-            emissive={
-              isHovered
-                ? color
-                : isSelected
-                  ? "#00D4FF"
-                  : definition.emissive || "#000000"
-            }
-            emissiveIntensity={
-              isHovered
-                ? 0.2
-                : isSelected
-                  ? 0.15
-                  : definition.emissiveIntensity || 0
-            }
-            toneMapped={false} // Prevent tone mapping artifacts
-          />
-        )}
       </mesh>
 
       {showParticles && (
@@ -539,7 +537,7 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
 
   return (
     <mesh ref={meshRef} position={[position[0], position[1], position[2]]}>
-      <boxGeometry args={[0.98, 0.98, 0.98]} />
+      <boxGeometry args={[1.0, 1.0, 1.0]} />
       <meshStandardMaterial
         color={color}
         transparent
@@ -548,6 +546,7 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
         metalness={type === "stone" ? 0.1 : 0}
         emissive={color}
         emissiveIntensity={0.3}
+        polygonOffset={false}
       />
     </mesh>
   );
@@ -632,44 +631,49 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
-        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition = new Vector3(
           Math.round(intersectionPoint.x),
-          gridY, // Grid level (top face aligns here)
+          Math.round(intersectionPoint.y),
           Math.round(intersectionPoint.z),
         );
 
         // Check if we can place a block here
-        const positionKey = `${snappedPosition.x},${gridY - 0.5},${snappedPosition.z}`;
+        const positionKey = `${snappedPosition.x},${snappedPosition.y},${snappedPosition.z}`;
         const hasExistingBlock = blockMap.has(positionKey);
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
         if (process.env.NODE_ENV === "development") {
-          console.debug("🖱️ Click: place attempt", {
-            positionKey,
-            hasExistingBlock,
-            atLimit,
-            selectedBlockType,
-            selectionMode,
-          });
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog("🖱️ Click: place attempt", {
+              positionKey,
+              hasExistingBlock,
+              atLimit,
+              selectedBlockType,
+              selectionMode,
+            }),
+          );
         }
 
         if (!hasExistingBlock && !atLimit) {
           const success = addBlock(snappedPosition, selectedBlockType, "human");
           if (process.env.NODE_ENV === "development") {
-            console.debug("🖱️ Click: place result", { success });
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog("🖱️ Click: place result", { success }),
+            );
           }
         } else {
           if (process.env.NODE_ENV === "development") {
-            console.debug("🖱️ Click: place blocked", {
-              hasExistingBlock,
-              atLimit,
-              reason: hasExistingBlock
-                ? "Position occupied"
-                : atLimit
-                  ? "At limit"
-                  : "Unknown",
-            });
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog("🖱️ Click: place blocked", {
+                hasExistingBlock,
+                atLimit,
+                reason: hasExistingBlock
+                  ? "Position occupied"
+                  : atLimit
+                    ? "At limit"
+                    : "Unknown",
+              }),
+            );
           }
         }
       }
@@ -708,15 +712,14 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
-        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition: [number, number, number] = [
           Math.round(intersectionPoint.x),
-          gridY - 0.5, // Centered so top face aligns to grid Y
+          Math.round(intersectionPoint.y),
           Math.round(intersectionPoint.z),
         ];
 
         // Check if position is valid for preview
-        const positionKey = `${snappedPosition[0]},${gridY - 0.5},${snappedPosition[2]}`;
+        const positionKey = `${snappedPosition[0]},${snappedPosition[1]},${snappedPosition[2]}`;
         const hasExistingBlock = blockMap.has(positionKey);
 
         if (!hasExistingBlock) {
@@ -881,7 +884,11 @@ function SceneContent({
 
     if (blockMap.size === 0) {
       if (process.env.NODE_ENV === "development") {
-        console.info("VoxelCanvas: creating default floor and test blocks");
+        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+          ifDev(() =>
+            devLog("VoxelCanvas: creating default floor and test blocks"),
+          ),
+        );
       }
       const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
       const halfSize = Math.floor(floorSize / 2);
@@ -889,7 +896,7 @@ function SceneContent({
       // Create mixed pattern with more visible blocks for debugging
       for (let x = -halfSize; x <= halfSize; x++) {
         for (let z = -halfSize; z <= halfSize; z++) {
-          const position = new Vector3(x, -0.5, z); // Center at y=-0.5 so top is at y=0
+          const position = new Vector3(x, 0, z); // Place at y=0 for seamless positioning
 
           // Create more visible pattern with better block distribution
           const isEven = (x + z) % 2 === 0;
@@ -929,11 +936,17 @@ function SceneContent({
       addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
 
       if (process.env.NODE_ENV === "development") {
-        console.info("VoxelCanvas: default blocks created");
+        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+          ifDev(() => devLog("VoxelCanvas: default blocks created")),
+        );
       }
     } else {
       if (process.env.NODE_ENV === "development") {
-        console.debug("VoxelCanvas: blocks already exist", blockMap.size);
+        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+          ifDev(() =>
+            devLog("VoxelCanvas: blocks already exist", blockMap.size),
+          ),
+        );
       }
     }
   }, [blockMap.size, gridConfig.size, addBlock]);

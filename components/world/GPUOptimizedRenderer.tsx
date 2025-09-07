@@ -85,7 +85,11 @@ const detectMobileDevice = () => {
   }
 
   // Memory-based adjustment
-  if ("deviceMemory" in navigator && (navigator as any).deviceMemory <= 2) {
+  if (
+    "deviceMemory" in navigator &&
+    navigator.deviceMemory !== undefined &&
+    navigator.deviceMemory <= 2
+  ) {
     performanceTier = "low";
   }
 
@@ -310,15 +314,16 @@ export default function GPUOptimizedRenderer({
     });
 
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "🚀 GPUOptimizedRenderer: Total blocks received:",
-        blocks.size,
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog("🚀 GPUOptimizedRenderer: Total blocks received:", blocks.size),
       );
     }
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "🔧 GPUOptimizedRenderer: Non-glass blocks to render:",
-        filtered.size,
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog(
+          "🔧 GPUOptimizedRenderer: Non-glass blocks to render:",
+          filtered.size,
+        ),
       );
     }
 
@@ -327,9 +332,8 @@ export default function GPUOptimizedRenderer({
         ...new Set(Array.from(filtered.values()).map((b) => b.type)),
       ];
       if (process.env.NODE_ENV === "development") {
-        console.log(
-          "🎨 GPUOptimizedRenderer: Non-glass block types:",
-          blockTypes,
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("🎨 GPUOptimizedRenderer: Non-glass block types:", blockTypes),
         );
       }
     }
@@ -464,14 +468,18 @@ export default function GPUOptimizedRenderer({
     const createGlassMaterial = () => {
       // Use the optimized transparency sorting fix for glass material
       if (process.env.NODE_ENV === "development") {
-        console.log(
-          "Creating optimized glass material with TransparencySortingFix",
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog(
+            "Creating optimized glass material with TransparencySortingFix",
+          ),
         );
       }
       const material = TransparencyFixUtils.createGlassMaterial();
 
       if (process.env.NODE_ENV === "development") {
-        console.log("Optimized glass material created successfully:", material);
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("Optimized glass material created successfully:", material),
+        );
       }
       return material;
     };
@@ -603,9 +611,11 @@ export default function GPUOptimizedRenderer({
     });
 
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "🔄 GPUOptimizedRenderer: Updating instances for",
-        nonGlassBlocks.size,
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog(
+          "🔄 GPUOptimizedRenderer: Updating instances for",
+          nonGlassBlocks.size,
+        ),
       );
     }
 
@@ -891,23 +901,25 @@ export default function GPUOptimizedRenderer({
         ).length;
 
         if (process.env.NODE_ENV === "development") {
-          console.log("🚀 GPU Renderer Metrics:", {
-            totalBlocks: metrics.totalInstances,
-            visibleBlocks: metrics.visibleInstances,
-            culledBlocks: metrics.culledInstances,
-            floorBlocks: floorVisibleCount,
-            drawCalls: metrics.drawCalls,
-            averageFrameTime: `${metrics.averageFrameTime.toFixed(2)}ms`,
-            cullingEfficiency: `${((metrics.culledInstances / Math.max(metrics.totalInstances, 1)) * 100).toFixed(1)}%`,
-            cameraPosition: `(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`,
-            gpuOptimizations: {
-              frustumCulling: GPU_CONFIG.FRUSTUM_CULLING,
-              lodEnabled: true,
-              instancedRendering: true,
-              transparencyOptimized: GPU_CONFIG.TRANSPARENCY_OPTIMIZATION,
-              advancedEffects: enableAdvancedEffects,
-            },
-          });
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog("🚀 GPU Renderer Metrics:", {
+              totalBlocks: metrics.totalInstances,
+              visibleBlocks: metrics.visibleInstances,
+              culledBlocks: metrics.culledInstances,
+              floorBlocks: floorVisibleCount,
+              drawCalls: metrics.drawCalls,
+              averageFrameTime: `${metrics.averageFrameTime.toFixed(2)}ms`,
+              cullingEfficiency: `${((metrics.culledInstances / Math.max(metrics.totalInstances, 1)) * 100).toFixed(1)}%`,
+              cameraPosition: `(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`,
+              gpuOptimizations: {
+                frustumCulling: GPU_CONFIG.FRUSTUM_CULLING,
+                lodEnabled: true,
+                instancedRendering: true,
+                transparencyOptimized: GPU_CONFIG.TRANSPARENCY_OPTIMIZATION,
+                advancedEffects: enableAdvancedEffects,
+              },
+            }),
+          );
         }
       }, 30000); // Reduced to every 30 seconds to prevent spam
 
@@ -945,7 +957,8 @@ export default function GPUOptimizedRenderer({
 // Export performance metrics for external monitoring
 export const getPerformanceMetrics = () => {
   if (typeof window !== "undefined") {
-    return (window as any).__PERFORMANCE_METRICS__;
+    return (window as unknown as { __PERFORMANCE_METRICS__?: unknown })
+      .__PERFORMANCE_METRICS__;
   }
   return null;
 };

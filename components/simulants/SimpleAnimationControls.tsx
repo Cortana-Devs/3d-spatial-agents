@@ -3,6 +3,7 @@
 import React from "react";
 import { useWorldStore } from "../../store/worldStore";
 import { Button } from "../ui/button";
+import { devLog } from "@/utils/devLogger";
 
 /**
  * Simple animation controls for testing T-pose and walking animations
@@ -14,10 +15,10 @@ export default function SimpleAnimationControls() {
   const handleStartWalking = () => {
     // Update all simulants to walking state
     simulants.forEach((simulant) => {
-      console.log(`🚶 Starting walk for simulant: ${simulant.id}`);
+      devLog(`🚶 Starting walk for simulant: ${simulant.id}`);
       updateSimulant(simulant.id, {
         lastAction: "walk forward",
-        status: "active"
+        status: "active",
       });
     });
   };
@@ -25,10 +26,10 @@ export default function SimpleAnimationControls() {
   const handleStopWalking = () => {
     // Return all simulants to idle (T-pose) state
     simulants.forEach((simulant) => {
-      console.log(`🧘 Stopping walk for simulant: ${simulant.id}`);
+      devLog(`🧘 Stopping walk for simulant: ${simulant.id}`);
       updateSimulant(simulant.id, {
         lastAction: "standing idle",
-        status: "idle"
+        status: "idle",
       });
     });
   };
@@ -42,7 +43,7 @@ export default function SimpleAnimationControls() {
       status: "idle" as const,
       lastAction: "idle",
       conversationHistory: [],
-      geminiSessionId: `session-${Date.now()}`
+      geminiSessionId: `session-${Date.now()}`,
     };
     addSimulant(newSimulant);
   };
@@ -52,36 +53,36 @@ export default function SimpleAnimationControls() {
       <h3 className="text-sm font-semibold text-axiom-neutral-800 dark:text-axiom-neutral-200">
         Animation Test Controls
       </h3>
-      
+
       <div className="space-y-2">
-        <Button 
+        <Button
           onClick={handleAddTestSimulant}
-          variant="outline" 
-          size="sm" 
+          variant="outline"
+          size="sm"
           className="w-full text-xs"
         >
           Add Test Simulant
         </Button>
-        
-        <Button 
+
+        <Button
           onClick={handleStartWalking}
-          variant="default" 
-          size="sm" 
+          variant="default"
+          size="sm"
           className="w-full text-xs"
         >
           Start Walking
         </Button>
-        
-        <Button 
+
+        <Button
           onClick={handleStopWalking}
-          variant="outline" 
-          size="sm" 
+          variant="outline"
+          size="sm"
           className="w-full text-xs"
         >
           Return to T-Pose
         </Button>
       </div>
-      
+
       <div className="text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400 pt-2 border-t">
         <p>Simulants: {simulants.size}</p>
         <p>Default: T-Pose (looping)</p>

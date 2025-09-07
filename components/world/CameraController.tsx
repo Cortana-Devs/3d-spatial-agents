@@ -370,7 +370,9 @@ export default function CameraController({
             !transition.current.isTransitioning &&
             !safeCameraMode.isTransitioning
           ) {
-            console.log("Starting cinematic mode transition");
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog("Starting cinematic mode transition"),
+            );
             startTransition(
               CAMERA_PRESETS.overview.position,
               CAMERA_PRESETS.overview.target,
