@@ -379,37 +379,21 @@ export default function GridSystem({
     console.log("Grid Config:", gridConfig);
   }, [gridConfig]);
 
-  if (!gridConfig.visibility) {
-    console.log("Grid not visible - visibility is false");
-    return null;
-  }
-
   return (
     <group>
-      {/* Debug helper - visible cube to confirm grid system is rendering */}
-      <mesh position={[0, 0.5, 0]}>
-        <boxGeometry args={[0.1, 0.1, 0.1]} />
-        <meshBasicMaterial color="red" />
-      </mesh>
-
-      {/* Main grid */}
+      {/* Invisible interaction plane for click detection */}
       <mesh
-        ref={gridRef}
-        geometry={geometry}
-        material={material}
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.001, 0]} // Slightly below y=0 to avoid z-fighting
-      />
-
-      {/* Fallback simple grid using basic material */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[50, 50]} />
-        <meshBasicMaterial
-          color="#888888"
-          transparent
-          opacity={0.2}
-          wireframe={true}
+        position={[0, 0, 0]}
+        visible={false}
+      >
+        <planeGeometry
+          args={[
+            gridConfig.size * gridConfig.cellSize,
+            gridConfig.size * gridConfig.cellSize,
+          ]}
         />
+        <meshBasicMaterial />
       </mesh>
 
       {/* Snap indicator */}

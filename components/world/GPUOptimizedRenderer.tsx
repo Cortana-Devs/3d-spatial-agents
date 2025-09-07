@@ -293,6 +293,24 @@ export default function GPUOptimizedRenderer({
   const { camera, scene, gl } = useThree();
   const groupRef = useRef<import("three").Group>(null);
 
+  // Glass block types that are handled by SeamlessGlassRenderer
+  const glassBlockTypes = [
+    BlockType.FROSTED_GLASS,
+    BlockType.NUMBER_6,
+    BlockType.NUMBER_7,
+  ];
+
+  // Filter out glass blocks to avoid double rendering
+  const nonGlassBlocks = useMemo(() => {
+    const filtered = new Map<string, Block>();
+    blocks.forEach((block, key) => {
+      if (!glassBlockTypes.includes(block.type)) {
+        filtered.set(key, block);
+      }
+    });
+    return filtered;
+  }, [blocks]);
+
   // Object pools for memory optimization
   const matrix4Pool = useRef(
     new ObjectPool(
@@ -554,8 +572,8 @@ export default function GPUOptimizedRenderer({
       renderer.visibleCount = 0;
     });
 
-    // Process each block with transparency optimization
-    blocks.forEach((block) => {
+    // Process each block with transparency optimization (excluding glass blocks)
+    nonGlassBlocks.forEach((block) => {
       totalInstances++;
 
       const renderer = blockRenderers.current.get(block.type);
@@ -573,11 +591,8 @@ export default function GPUOptimizedRenderer({
         return;
       }
 
-      // Skip transparent blocks that were culled by transparency optimizer
-      if (
-        block.type === BlockType.NUMBER_7 &&
-        !optimizedTransparentBlocks.has(block.id)
-      ) {
+      // Skip any remaining glass blocks that might have slipped through
+      if (glassBlockTypes.includes(block.type)) {
         culledInstances++;
         vector3Pool.current.release(blockPosition);
         return;
@@ -641,7 +656,7 @@ export default function GPUOptimizedRenderer({
     blockRenderers.current.forEach((renderer) => {
       renderer.needsUpdate = true;
     });
-  }, [blocks, camera, maxRenderDistance, updateFrustum, getLODLevel]);
+  }, [nonGlassBlocks, camera, maxRenderDistance, updateFrustum, getLODLevel]);
 
   // Update GPU instances
   const updateGPUInstances = useCallback(() => {
@@ -678,22 +693,12 @@ export default function GPUOptimizedRenderer({
         renderer.instancedMesh.setMatrixAt(i, instance.matrix);
         renderer.instancedMesh.setColorAt(i, instance.color);
 
-        // Special handling for NUMBER_7 blocks - proper transparency rendering
-        if (blockType === BlockType.NUMBER_7) {
-          // Apply transparency sorting fix
-          TransparencyFixUtils.quickFixGlassBlock(renderer.instancedMesh);
-
-          // Register with transparency sorting system
-          transparencySortingFix.registerTransparentObject(
-            `${blockType}_${i}`,
-            renderer.instancedMesh,
-            blockType,
-            0.75,
+        // Glass blocks are handled by SeamlessGlassRenderer, so this shouldn't execute
+        // But keeping as safety fallback
+        if (glassBlockTypes.includes(blockType as BlockType)) {
+          console.warn(
+            `Glass block ${blockType} found in GPUOptimizedRenderer - should be handled by SeamlessGlassRenderer`,
           );
-
-          // Apply stable color without per-instance variations
-          const glassColor = new Color(0.96, 0.98, 1.0); // Consistent glass color
-          renderer.instancedMesh.setColorAt(i, glassColor);
         }
       }
 
@@ -756,22 +761,8 @@ export default function GPUOptimizedRenderer({
       transparencySortingFix.updateTransparencySorting(camera);
     }
 
-    // Update glass materials
-    if (enableAdvancedEffects) {
-      const glassMaterial = materials.get(
-        BlockType.NUMBER_7,
-      ) as MeshPhysicalMaterial;
-      if (glassMaterial) {
-        // Update environment map if available
-        if (
-          state.scene.environment &&
-          glassMaterial.envMap !== state.scene.environment
-        ) {
-          glassMaterial.envMap = state.scene.environment;
-          glassMaterial.needsUpdate = true;
-        }
-      }
-    }
+    // Glass materials are now handled by SeamlessGlassRenderer
+    // No need to update them here
 
     // Update instances with throttling based on performance
     const frameTime = 1000 / state.clock.elapsedTime;

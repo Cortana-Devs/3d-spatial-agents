@@ -43,6 +43,7 @@ import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
 import { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
 import FloorBlock from "./FloorBlock";
+import SeamlessGlassRenderer from "./SeamlessGlassRenderer";
 import {
   useIsolatedRender,
   useBlockPlacementRender,
@@ -784,7 +785,8 @@ function SceneContent({
   cameraMode: CameraMode;
   followTarget?: string;
 }) {
-  const { blockMap, removeBlock, selectionMode, gridConfig } = useWorldStore();
+  const { blockMap, removeBlock, selectionMode, gridConfig, addBlock } =
+    useWorldStore();
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [hoveredBlockId] = useState<string | null>(null);
   const [useInstancedRendering, setUseInstancedRendering] = useState(true);
@@ -827,6 +829,35 @@ function SceneContent({
     setUseInstancedRendering(blocks.length > 50);
   }, [blocks.length]);
 
+  // Create default mixed glass floor if no blocks exist
+  useEffect(() => {
+    if (blockMap.size === 0) {
+      const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
+      const halfSize = Math.floor(floorSize / 2);
+
+      // Create mixed pattern of frosted glass and ultra-light glass
+      for (let x = -halfSize; x <= halfSize; x++) {
+        for (let z = -halfSize; z <= halfSize; z++) {
+          const position = new Vector3(x, -0.5, z); // Center at y=-0.5 so top is at y=0
+
+          // Create checkerboard pattern with glass types
+          const isEven = (x + z) % 2 === 0;
+          const blockType = isEven
+            ? BlockType.FROSTED_GLASS
+            : BlockType.NUMBER_7;
+
+          // Add some accent blocks with NUMBER_6 (sunset glass) at corners and center
+          const isCorner = Math.abs(x) === halfSize && Math.abs(z) === halfSize;
+          const isCenter = x === 0 && z === 0;
+          const finalBlockType =
+            isCorner || isCenter ? BlockType.NUMBER_6 : blockType;
+
+          addBlock(position, finalBlockType, "system");
+        }
+      }
+    }
+  }, [blockMap.size, gridConfig.size, addBlock]);
+
   return (
     <>
       <SceneLighting />
@@ -850,12 +881,16 @@ function SceneContent({
         performanceMode="ultra"
       />
 
-      {/* Floor Block covering the full grid area */}
-      <FloorBlock
-        size={gridConfig.size}
-        position={new Vector3(0, 0, 0)}
-        blockType={BlockType.STONE}
-        textureRepeat={gridConfig.size / 2}
+      {/* Seamless Glass Renderer for continuous glass surfaces */}
+      <SeamlessGlassRenderer
+        blocks={blockMap}
+        glassBlockTypes={[
+          BlockType.FROSTED_GLASS,
+          BlockType.NUMBER_6,
+          BlockType.NUMBER_7,
+        ]}
+        enableOptimization={true}
+        maxClusterSize={1000}
       />
 
       {/* Intelligent grid system with spatial indexing */}
