@@ -1041,8 +1041,6 @@ function SceneContent({
             BlockType.NUMBER_6,
             BlockType.NUMBER_7,
           ]}
-          maxRenderDistance={300}
-          enableAdvancedEffects={true}
         />
       )}
 
