@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import BlockSelector from "../components/world/BlockSelector";
 import WorldInfo from "../components/world/WorldInfo";
 import FloatingSidebar from "../components/FloatingSidebar";
+
+import { ArchipelagoTest } from "../components/debug/ArchipelagoTest";
 
 // Dynamically import VoxelCanvas to avoid SSR issues with Three.js
 const VoxelCanvas = dynamic(() => import("../components/world/VoxelCanvas"), {
@@ -22,8 +24,10 @@ const VoxelCanvas = dynamic(() => import("../components/world/VoxelCanvas"), {
 });
 
 export default function Home() {
+  const [showArchipelagoTest, setShowArchipelagoTest] = useState(false);
+
   // Note: Keyboard shortcuts are now handled by individual components
-  // BlockSelector handles 0-4 for block selection
+  // BlockSelector handles 0-9 for block selection (0=select tool, 1-7=blocks)
   // CameraControls handles Cmd/Ctrl+C for camera mode cycling
 
   return (
@@ -42,8 +46,13 @@ export default function Home() {
 
           <div className="floating-panel px-3 py-2 ml-4 md:ml-8 hidden sm:block">
             <div className="text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
-              <span className="hidden md:inline">Click to place blocks • Drag to orbit • Scroll to zoom</span>
+              <span className="hidden md:inline">
+                Click to place • Drag to orbit • Scroll to zoom
+              </span>
               <span className="md:hidden">Tap to place • Drag to orbit</span>
+            </div>
+            <div className="text-xs text-axiom-primary-500 font-medium mt-1">
+              Click to place blocks
             </div>
           </div>
         </div>
@@ -66,6 +75,22 @@ export default function Home() {
       <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-10">
         <BlockSelector />
       </div>
+
+      {/* Archipelago Test Toggle */}
+      <button
+        onClick={() => setShowArchipelagoTest(!showArchipelagoTest)}
+        className="fixed top-4 left-4 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg z-30 font-medium text-xs shadow-lg"
+      >
+        🏝️ {showArchipelagoTest ? "Hide" : "Show"}
+      </button>
+
+      {/* Archipelago Test Panel */}
+      {showArchipelagoTest && (
+        <ArchipelagoTest
+          visible={showArchipelagoTest}
+          onToggle={() => setShowArchipelagoTest(false)}
+        />
+      )}
     </div>
   );
 }

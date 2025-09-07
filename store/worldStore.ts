@@ -11,7 +11,6 @@ import {
   AISimulant,
   CameraMode,
   WorldState as BaseWorldState,
-  PlayerAvatarState,
 } from "../types";
 
 // Enable MapSet plugin for Immer to work with Map and Set
@@ -43,6 +42,9 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
     redoStates: WorldSnapshot[]; // Store states for redo
   };
 
+  // Internal state
+  lastBlockLimitWarning: number;
+
   // Actions
   addBlock: (position: Vector3, type: BlockType, userId: string) => boolean;
   addBlockInternal: (
@@ -51,6 +53,7 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
     userId: string,
   ) => boolean;
   removeBlock: (position: Vector3, userId: string) => boolean;
+  clearAllBlocks: () => void;
   removeBlockById: (id: string, userId: string) => boolean;
   getBlock: (position: Vector3) => Block | undefined;
   getBlockById: (id: string) => Block | undefined;
@@ -108,7 +111,12 @@ interface WorldStats {
 
 // Utility functions for spatial hash map
 const positionToKey = (position: Vector3): string => {
-  return `${Math.round(position.x)},${Math.round(position.y)},${Math.round(position.z)}`;
+  const x = Math.round(position.x);
+  const z = Math.round(position.z);
+  // Snap Y so that block centers are at n - 0.5 (top face aligns to grid level n)
+  const yCenter = Math.round(position.y) - 0.5;
+  const y = yCenter === 0 ? 0 : yCenter; // normalize -0 to 0 for stable keys
+  return `${x},${y},${z}`;
 };
 
 const keyToPosition = (key: string): Vector3 => {
@@ -116,24 +124,8 @@ const keyToPosition = (key: string): Vector3 => {
   return new Vector3(x, y, z);
 };
 
-// Block definitions with Axiom Design System colors
-const blockDefinitions: Record<
-  BlockType,
-  { color: string; description: string }
-> = {
-  stone: {
-    color: "#666666",
-    description: "Solid foundation material",
-  },
-  leaf: {
-    color: "#4CAF50",
-    description: "Organic living material",
-  },
-  wood: {
-    color: "#8D6E63",
-    description: "Natural building material",
-  },
-};
+// Use imported block definitions
+const blockDefinitions = BLOCK_DEFINITIONS;
 
 // Create the Zustand store with immer for immutable updates
 export const useWorldStore = create<WorldState>()(
@@ -142,9 +134,10 @@ export const useWorldStore = create<WorldState>()(
       // Initial state
       blockMap: new Map<string, Block>(),
       blockCount: 0,
-      worldLimits: { maxBlocks: 1000 },
+      worldLimits: { maxBlocks: 10000 },
+      lastBlockLimitWarning: 0,
       selectedBlockType: BlockType.STONE,
-      selectionMode: SelectionMode.EMPTY, // Start in empty hand mode
+      selectionMode: SelectionMode.PLACE, // Start in place mode for better UX
       activeCamera: "orbit",
       simulants: new Map<string, AISimulant>(),
       playerAvatar: null,
@@ -181,8 +174,20 @@ export const useWorldStore = create<WorldState>()(
         const state = get();
 
         // Check block limit
+
         if (state.blockCount >= state.worldLimits.maxBlocks) {
-          console.warn("Block limit reached:", state.worldLimits.maxBlocks);
+          // Only log once per second to prevent spam
+          const now = Date.now();
+          if (
+            !state.lastBlockLimitWarning ||
+            now - state.lastBlockLimitWarning > 1000
+          ) {
+            console.warn(
+              `Block limit reached: ${state.blockCount}/${state.worldLimits.maxBlocks}`,
+            );
+            set({ lastBlockLimitWarning: now });
+          }
+
           return false;
         }
 
@@ -191,6 +196,7 @@ export const useWorldStore = create<WorldState>()(
         // Collision detection - check if block already exists at position
         if (state.blockMap.has(key)) {
           console.warn("Block already exists at position:", position);
+
           return false;
         }
 
@@ -199,7 +205,8 @@ export const useWorldStore = create<WorldState>()(
           id: uuidv4(),
           position: {
             x: Math.round(position.x),
-            y: Math.round(position.y),
+            // Store center at n - 0.5 so the top face aligns with grid level n
+            y: Math.round(position.y) - 0.5,
             z: Math.round(position.z),
           },
           type,
@@ -257,13 +264,43 @@ export const useWorldStore = create<WorldState>()(
         return get().addBlock(position, type, userId);
       },
 
+      clearAllBlocks: (): void => {
+        set((state) => {
+          state.blockMap.clear();
+          state.blockCount = 0;
+          state.lastUpdate = Date.now();
+        });
+      },
+
       removeBlock: (position: Vector3, userId: string): boolean => {
         void userId;
         const state = get();
-        const key = positionToKey(position);
+
+        // Ensure position coordinates are properly rounded to match storage
+        const roundedPosition = new Vector3(
+          Math.round(position.x),
+          // Convert incoming grid level to block center at n - 0.5
+          Math.round(position.y) - 0.5,
+          Math.round(position.z),
+        );
+        const key = positionToKey(roundedPosition);
+
+        // Check cooldown to prevent rapid-fire removal attempts
+        const now = Date.now();
+        const lastRemoval = state.lastUpdate || 0;
+        if (now - lastRemoval < 50) {
+          // 50ms cooldown between removals
+          return false;
+        }
 
         if (!state.blockMap.has(key)) {
-          console.warn("No block found at position:", position);
+          console.warn(
+            `No block found at position: (${position.x}, ${position.y}, ${position.z}), rounded: (${roundedPosition.x}, ${roundedPosition.y}, ${roundedPosition.z}), key: ${key}`,
+          );
+          console.warn(
+            "Available block keys:",
+            Array.from(state.blockMap.keys()).slice(0, 10),
+          );
           return false;
         }
 
@@ -628,11 +665,17 @@ export const useWorldStore = create<WorldState>()(
         const state = get();
         const blocks = Array.from(state.blockMap.values());
 
-        // Calculate block counts by type
+        // Calculate block counts by type - initialize all block types
         const blocksByType: Record<BlockType, number> = {
-          stone: 0,
-          leaf: 0,
-          wood: 0,
+          [BlockType.STONE]: 0,
+          [BlockType.LEAF]: 0,
+          [BlockType.WOOD]: 0,
+          [BlockType.FROSTED_GLASS]: 0,
+          [BlockType.FLOOR]: 0,
+          [BlockType.NUMBER_4]: 0,
+          [BlockType.NUMBER_5]: 0,
+          [BlockType.NUMBER_6]: 0,
+          [BlockType.NUMBER_7]: 0,
         };
 
         let minX = Infinity,
@@ -682,7 +725,8 @@ export const useWorldStore = create<WorldState>()(
         set(() => ({
           blockMap: new Map<string, Block>(),
           blockCount: 0,
-          worldLimits: { maxBlocks: 1000 },
+          worldLimits: { maxBlocks: 10000 },
+          lastBlockLimitWarning: 0,
           selectedBlockType: BlockType.STONE,
           selectionMode: SelectionMode.EMPTY,
           activeCamera: "orbit",

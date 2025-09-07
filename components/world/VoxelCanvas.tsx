@@ -23,6 +23,8 @@ import {
   InstancedBufferAttribute,
   PointsMaterial,
   AdditiveBlending,
+  DoubleSide,
+  NormalBlending,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
 import {
@@ -36,7 +38,12 @@ import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
 import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
+import GPUOptimizedRenderer from "./GPUOptimizedRenderer";
+import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
+import { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
+import FloorBlock from "./FloorBlock";
+import AdaptiveGlassRenderer from "./AdaptiveGlassRenderer";
 import {
   useIsolatedRender,
   useBlockPlacementRender,
@@ -48,8 +55,11 @@ import {
   performanceManager,
   MODULE_CONFIGS,
 } from "../../utils/performance/PerformanceManager";
+import { UnifiedDebugPanel } from "../debug/UnifiedDebugPanel";
+import { createLogger } from "../../utils/logging/logger";
 
 // LOD Configuration for performance optimization
+const log = createLogger("world:VoxelCanvas");
 interface LODConfig {
   highDetail: number; // 0-30 units
   mediumDetail: number; // 30-60 units
@@ -316,23 +326,42 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
             }}
             args={[undefined, undefined, maxInstances]}
           >
-            <boxGeometry args={[0.98, 0.98, 0.98]} />
-            <meshStandardMaterial
-              color={definition.color}
-              roughness={definition.roughness}
-              metalness={definition.metalness}
-              transparent={definition.transparency !== undefined}
-              opacity={
-                definition.transparency ? 1 - definition.transparency : 1
+            <boxGeometry
+              args={
+                type === BlockType.NUMBER_7
+                  ? [1.0, 1.0, 1.0]
+                  : [0.98, 0.98, 0.98]
               }
-              emissive={definition.emissive || "#000000"}
-              emissiveIntensity={definition.emissiveIntensity || 0}
-              vertexColors={true} // Enable vertex colors for per-instance coloring
-              toneMapped={false} // Prevent tone mapping artifacts
-              polygonOffset={true} // Prevent z-fighting
-              polygonOffsetFactor={1}
-              polygonOffsetUnits={1}
             />
+            {type === BlockType.NUMBER_7 ? (
+              <meshBasicMaterial
+                color={definition.color}
+                transparent={true}
+                opacity={0.15}
+                vertexColors={true}
+                side={DoubleSide}
+                depthWrite={true}
+                alphaTest={0.1}
+                fog={false}
+              />
+            ) : (
+              <meshStandardMaterial
+                color={definition.color}
+                roughness={definition.roughness}
+                metalness={definition.metalness}
+                transparent={definition.transparency !== undefined}
+                opacity={
+                  definition.transparency ? 1 - definition.transparency : 1
+                }
+                emissive={definition.emissive || "#000000"}
+                emissiveIntensity={definition.emissiveIntensity || 0}
+                vertexColors={true} // Enable vertex colors for per-instance coloring
+                toneMapped={false} // Prevent tone mapping artifacts
+                polygonOffset={true} // Prevent z-fighting
+                polygonOffsetFactor={1}
+                polygonOffsetUnits={1}
+              />
+            )}
           </instancedMesh>
         );
       })}
@@ -397,7 +426,13 @@ function VoxelBlock({
         setShowParticles(true);
         // Delay the actual removal to show particle effect
         setTimeout(() => {
-          onRemove(new Vector3(...position));
+          // Ensure coordinates are properly rounded for consistent key matching
+          const roundedPosition = new Vector3(
+            Math.round(position[0]),
+            Math.round(position[1]),
+            Math.round(position[2]),
+          );
+          onRemove(roundedPosition);
         }, 100);
       }
     },
@@ -430,32 +465,43 @@ function VoxelBlock({
         onClick={handleClick}
         onContextMenu={handleRightClick}
       >
-        <boxGeometry args={geometryArgs} />
-        <meshStandardMaterial
-          color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
-          roughness={definition.roughness}
-          metalness={definition.metalness}
-          transparent={definition.transparency !== undefined}
-          opacity={definition.transparency ? 1 - definition.transparency : 1}
-          emissive={
-            isHovered
-              ? color
-              : isSelected
-                ? "#00D4FF"
-                : definition.emissive || "#000000"
-          }
-          emissiveIntensity={
-            isHovered
-              ? 0.2
-              : isSelected
-                ? 0.15
-                : definition.emissiveIntensity || 0
-          }
-          toneMapped={false} // Prevent tone mapping artifacts
-          polygonOffset={true} // Prevent z-fighting
-          polygonOffsetFactor={1}
-          polygonOffsetUnits={1}
+        <boxGeometry
+          args={type === BlockType.NUMBER_7 ? [1.0, 1.0, 1.0] : geometryArgs}
         />
+        {type === BlockType.NUMBER_7 ? (
+          <meshBasicMaterial
+            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#F0F8FF"}
+            transparent={true}
+            opacity={isHovered ? 0.25 : isSelected ? 0.2 : 0.15}
+            side={DoubleSide}
+            depthWrite={true}
+            alphaTest={0.1}
+            fog={false}
+          />
+        ) : (
+          <meshStandardMaterial
+            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
+            roughness={definition.roughness}
+            metalness={definition.metalness}
+            transparent={definition.transparency !== undefined}
+            opacity={definition.transparency ? 1 - definition.transparency : 1}
+            emissive={
+              isHovered
+                ? color
+                : isSelected
+                  ? "#00D4FF"
+                  : definition.emissive || "#000000"
+            }
+            emissiveIntensity={
+              isHovered
+                ? 0.2
+                : isSelected
+                  ? 0.15
+                  : definition.emissiveIntensity || 0
+            }
+            toneMapped={false} // Prevent tone mapping artifacts
+          />
+        )}
       </mesh>
 
       {showParticles && (
@@ -486,6 +532,8 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
         (position?.[1] || 0) + Math.sin(state.clock.elapsedTime * 2) * 0.05;
     }
   });
+
+  // dev: ghost render log suppressed to reduce noise
 
   if (!position) return null;
 
@@ -584,19 +632,45 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
+        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition = new Vector3(
           Math.round(intersectionPoint.x),
-          Math.max(0, Math.round(intersectionPoint.y)), // Prevent negative Y
+          gridY, // Grid level (top face aligns here)
           Math.round(intersectionPoint.z),
         );
 
         // Check if we can place a block here
-        const positionKey = `${snappedPosition.x},${snappedPosition.y},${snappedPosition.z}`;
+        const positionKey = `${snappedPosition.x},${gridY - 0.5},${snappedPosition.z}`;
         const hasExistingBlock = blockMap.has(positionKey);
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
+        if (process.env.NODE_ENV === "development") {
+          console.debug("🖱️ Click: place attempt", {
+            positionKey,
+            hasExistingBlock,
+            atLimit,
+            selectedBlockType,
+            selectionMode,
+          });
+        }
+
         if (!hasExistingBlock && !atLimit) {
-          addBlock(snappedPosition, selectedBlockType, "human");
+          const success = addBlock(snappedPosition, selectedBlockType, "human");
+          if (process.env.NODE_ENV === "development") {
+            console.debug("🖱️ Click: place result", { success });
+          }
+        } else {
+          if (process.env.NODE_ENV === "development") {
+            console.debug("🖱️ Click: place blocked", {
+              hasExistingBlock,
+              atLimit,
+              reason: hasExistingBlock
+                ? "Position occupied"
+                : atLimit
+                  ? "At limit"
+                  : "Unknown",
+            });
+          }
         }
       }
     },
@@ -634,18 +708,21 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
+        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition: [number, number, number] = [
           Math.round(intersectionPoint.x),
-          Math.max(0, Math.round(intersectionPoint.y)), // Prevent negative Y
+          gridY - 0.5, // Centered so top face aligns to grid Y
           Math.round(intersectionPoint.z),
         ];
 
         // Check if position is valid for preview
-        const positionKey = `${snappedPosition[0]},${snappedPosition[1]},${snappedPosition[2]}`;
+        const positionKey = `${snappedPosition[0]},${gridY - 0.5},${snappedPosition[2]}`;
         const hasExistingBlock = blockMap.has(positionKey);
 
         if (!hasExistingBlock) {
           setGhostPosition(snappedPosition);
+          // Debug ghost position
+          // dev: ghost preview logging suppressed
         } else {
           setGhostPosition(null);
         }
@@ -717,17 +794,16 @@ function ClickHandler() {
   }, [handleClick, handleRightClick, handleMouseMove]);
 
   // Get block definition for ghost preview
-  const blockDefinitions = {
-    stone: { color: "#666666" },
-    leaf: { color: "#4CAF50" },
-    wood: { color: "#8D6E63" },
-  };
+  const blockDefinitions = BLOCK_DEFINITIONS;
+
+  // Safely get color with a fallback
+  const blockColor = blockDefinitions[selectedBlockType]?.color || "#FF0000";
 
   return (
     <GhostBlock
       position={ghostPosition}
       type={selectedBlockType}
-      color={blockDefinitions[selectedBlockType].color}
+      color={blockColor}
     />
   );
 }
@@ -740,13 +816,14 @@ function SceneContent({
   cameraMode: CameraMode;
   followTarget?: string;
 }) {
-  const { blockMap, removeBlock, selectionMode, gridConfig } = useWorldStore();
+  const { blockMap, removeBlock, selectionMode, gridConfig, addBlock } =
+    useWorldStore();
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [hoveredBlockId] = useState<string | null>(null);
   const [useInstancedRendering, setUseInstancedRendering] = useState(true);
 
   const blocks = useMemo(() => {
-    return Array.from(blockMap.values()).map((block) => ({
+    const blockArray = Array.from(blockMap.values()).map((block) => ({
       id: block.id,
       position: new Vector3(
         block.position.x,
@@ -758,6 +835,21 @@ function SceneContent({
       isHovered: block.id === hoveredBlockId,
       isSelected: block.id === selectedBlockId,
     }));
+
+    if (process.env.NODE_ENV === "development") {
+      log.debug("🔄 VoxelCanvas: blocks updated", {
+        count: blockArray.length,
+        mapSize: blockMap.size,
+      });
+    }
+
+    if (blockArray.length > 0) {
+      // dev: suppressed detailed block type/sample logs
+    } else {
+      // dev: suppressed empty block-array warning
+    }
+
+    return blockArray;
   }, [blockMap, hoveredBlockId, selectedBlockId]);
 
   const handleBlockClick = useCallback(
@@ -783,6 +875,71 @@ function SceneContent({
     setUseInstancedRendering(blocks.length > 50);
   }, [blocks.length]);
 
+  // Create default mixed glass floor if no blocks exist
+  useEffect(() => {
+    // dev: suppressed frequent block creation check log
+
+    if (blockMap.size === 0) {
+      if (process.env.NODE_ENV === "development") {
+        console.info("VoxelCanvas: creating default floor and test blocks");
+      }
+      const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
+      const halfSize = Math.floor(floorSize / 2);
+
+      // Create mixed pattern with more visible blocks for debugging
+      for (let x = -halfSize; x <= halfSize; x++) {
+        for (let z = -halfSize; z <= halfSize; z++) {
+          const position = new Vector3(x, -0.5, z); // Center at y=-0.5 so top is at y=0
+
+          // Create more visible pattern with better block distribution
+          const isEven = (x + z) % 2 === 0;
+          const isCorner = Math.abs(x) === halfSize && Math.abs(z) === halfSize;
+          const isCenter = x === 0 && z === 0;
+          const isInnerRing = Math.abs(x) <= 2 && Math.abs(z) <= 2;
+
+          let finalBlockType: BlockType;
+
+          // Create highly visible pattern
+          if (isCorner) {
+            finalBlockType = BlockType.STONE; // Solid corners for reference
+          } else if (isCenter) {
+            finalBlockType = BlockType.NUMBER_4; // Glowing center beacon
+          } else if (isInnerRing) {
+            // Inner area - mix of solid and visible glass
+            finalBlockType = isEven ? BlockType.WOOD : BlockType.FROSTED_GLASS;
+          } else {
+            // Outer area - use more visible glass types
+            finalBlockType = isEven
+              ? BlockType.FROSTED_GLASS
+              : BlockType.NUMBER_6; // Use NUMBER_6 instead of NUMBER_7 for better visibility
+          }
+
+          addBlock(position, finalBlockType, "system");
+        }
+      }
+
+      // Add prominent test blocks above the floor for visibility testing
+      // dev: suppressed test block placement log
+      addBlock(new Vector3(0, 1, 0), BlockType.NUMBER_4, "system"); // Glowing center beacon
+      addBlock(new Vector3(3, 1, 0), BlockType.STONE, "system"); // Solid reference block
+      addBlock(new Vector3(-3, 1, 0), BlockType.WOOD, "system"); // Wood reference block
+      addBlock(new Vector3(0, 1, 3), BlockType.LEAF, "system"); // Leaf reference block
+      addBlock(new Vector3(0, 2, 0), BlockType.FROSTED_GLASS, "system"); // Glass visibility test
+      addBlock(new Vector3(1, 1, 1), BlockType.NUMBER_6, "system"); // Sunset glass test
+      addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
+
+      if (process.env.NODE_ENV === "development") {
+        console.info("VoxelCanvas: default blocks created");
+      }
+    } else {
+      if (process.env.NODE_ENV === "development") {
+        console.debug("VoxelCanvas: blocks already exist", blockMap.size);
+      }
+    }
+  }, [blockMap.size, gridConfig.size, addBlock]);
+
+  // dev: suppressed render-size log
+
   return (
     <>
       <SceneLighting />
@@ -798,23 +955,40 @@ function SceneContent({
         enableDoubleClickFocus={true}
       />
 
-      {/* Optimized block rendering */}
-      {useInstancedRendering ? (
-        <OptimizedBlockRenderer blocks={blocks} />
-      ) : (
-        // Individual block rendering for smaller counts or when precision is needed
-        blocks.map((block) => (
-          <VoxelBlock
-            key={block.id}
-            position={[block.position.x, block.position.y, block.position.z]}
-            type={block.type}
-            color={block.color}
-            isHovered={block.isHovered}
-            isSelected={block.isSelected}
-            onSelect={() => handleBlockClick(block.id)}
-            onRemove={handleBlockRemove}
-          />
-        ))
+      {/* Debug: Simple block rendering for troubleshooting */}
+      {blocks.map((block) => (
+        <VoxelBlock
+          key={block.id}
+          position={[block.position.x, block.position.y, block.position.z]}
+          type={block.type}
+          color={block.color}
+          isHovered={block.isHovered}
+          isSelected={block.isSelected}
+          onSelect={() => handleBlockClick(block.id)}
+          onRemove={handleBlockRemove}
+        />
+      ))}
+
+      {/* GPU-Optimized high-performance block rendering - DISABLED FOR DEBUG */}
+      {false && (
+        <GPUOptimizedRenderer
+          blocks={blockMap}
+          maxRenderDistance={500}
+          enableAdvancedEffects={true}
+          performanceMode="ultra"
+        />
+      )}
+
+      {/* Adaptive Glass Renderer for intelligent optimization - DISABLED FOR DEBUG */}
+      {false && (
+        <AdaptiveGlassRenderer
+          blocks={blockMap}
+          glassBlockTypes={[
+            BlockType.FROSTED_GLASS,
+            BlockType.NUMBER_6,
+            BlockType.NUMBER_7,
+          ]}
+        />
       )}
 
       {/* Intelligent grid system with spatial indexing */}
@@ -830,8 +1004,31 @@ function SceneContent({
 
       {/* Click handler and ghost preview */}
       <ClickHandler />
+
+      {/* GPU Performance Monitor (Canvas-internal) */}
+      <CanvasGPUMonitor />
+
+      {/* Camera Bridge for external components */}
+      <CameraBridge />
     </>
   );
+}
+
+// Bridge component to provide camera data to external components
+function CameraBridge() {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    // Update transparency sorting with current camera
+    if (camera) {
+      const {
+        transparencySortingFix,
+      } = require("../../utils/TransparencySortingFix");
+      transparencySortingFix.updateTransparencySorting(camera);
+    }
+  });
+
+  return null;
 }
 
 // Isolated performance monitoring hook
@@ -920,7 +1117,7 @@ export default function VoxelCanvas({
   const handlePresetApply = useCallback(
     (presetName: keyof typeof CAMERA_PRESETS) => {
       // This will be handled by the CameraController component
-      console.log("Applying preset:", presetName);
+      log.debug("Camera preset apply", presetName);
     },
     [],
   );
@@ -935,38 +1132,59 @@ export default function VoxelCanvas({
           block.position.y,
           block.position.z,
         );
-        console.log("Focusing on block at:", blockPosition);
+        log.debug("Focusing on block", { position: blockPosition });
         // The actual focusing will be handled by the CameraController
       }
     },
     [blockMap],
   );
 
-  // Dynamic performance settings based on block count
+  // Ultra-optimized performance settings with GPU monitoring
   const performanceSettings = useMemo(() => {
-    if (blockCount > 500) {
+    // Check for performance-heavy NUMBER_7 blocks
+    const number7Count = Array.from(blockMap.values()).filter(
+      (block) => block.type === BlockType.NUMBER_7,
+    ).length;
+
+    // Get GPU memory pressure
+    const memoryStats = gpuMemoryManager.getMemoryStats();
+    const memoryPressure = memoryStats.pressure;
+
+    // Advanced performance scaling
+    if (blockCount > 2000 || number7Count > 50 || memoryPressure > 0.8) {
       return {
         shadows: false,
         antialias: false,
-        dpr: [1, 1.5] as [number, number],
-        performance: { min: 0.3, max: 0.8, debounce: 300 },
+        dpr: [0.5, 1] as [number, number],
+        performance: { min: 0.2, max: 0.6, debounce: 500 },
+        powerPreference: "high-performance",
       };
-    } else if (blockCount > 200) {
+    } else if (blockCount > 1000 || number7Count > 20 || memoryPressure > 0.6) {
+      return {
+        shadows: false,
+        antialias: false,
+        dpr: [1, 1.25] as [number, number],
+        performance: { min: 0.3, max: 0.7, debounce: 300 },
+        powerPreference: "high-performance",
+      };
+    } else if (blockCount > 500 || number7Count > 10 || memoryPressure > 0.4) {
       return {
         shadows: true,
         antialias: false,
-        dpr: [1, 2] as [number, number],
-        performance: { min: 0.4, max: 0.9, debounce: 250 },
+        dpr: [1, 1.5] as [number, number],
+        performance: { min: 0.4, max: 0.8, debounce: 200 },
+        powerPreference: "high-performance",
       };
     } else {
       return {
         shadows: true,
         antialias: true,
         dpr: [1, 2] as [number, number],
-        performance: { min: 0.5, max: 1, debounce: 200 },
+        performance: { min: 0.6, max: 1.0, debounce: 100 },
+        powerPreference: "high-performance",
       };
     }
-  }, [blockCount]);
+  }, [blockCount, blockMap]);
 
   return (
     <div className={`w-full h-full relative ${className}`}>
@@ -984,10 +1202,22 @@ export default function VoxelCanvas({
           powerPreference: "high-performance",
           stencil: false,
           depth: true,
-          logarithmicDepthBuffer: blockCount > 800, // For very large worlds
+          logarithmicDepthBuffer: blockCount > 1500,
           preserveDrawingBuffer: false,
           premultipliedAlpha: false,
           failIfMajorPerformanceCaveat: false,
+          precision: "highp",
+        }}
+        onCreated={(state) => {
+          // Initialize GPU memory manager with renderer
+          gpuMemoryManager.initialize(state.gl);
+
+          // Enable GPU optimizations
+          const gl = state.gl.getContext();
+          gl.getExtension("OES_vertex_array_object");
+          gl.getExtension("WEBGL_draw_buffers");
+          gl.getExtension("OES_texture_float");
+          gl.getExtension("OES_texture_float_linear");
         }}
         dpr={performanceSettings.dpr}
         performance={performanceSettings.performance}
@@ -1006,7 +1236,15 @@ export default function VoxelCanvas({
         />
       </div>
 
-      {enablePerformanceStats && <PerformanceStats />}
+      {/* Unified Debug Panel for development */}
+      {process.env.NODE_ENV === "development" && (
+        <UnifiedDebugPanel
+          enabled={true}
+          position="top-right"
+          cameraMode={cameraMode}
+          followTarget={followTarget}
+        />
+      )}
 
       {/* Simulant Controls are now inside FloatingSidebar */}
 

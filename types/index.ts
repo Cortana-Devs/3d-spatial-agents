@@ -73,7 +73,7 @@ export interface SimulantUpdate {
 export interface WorldState {
   // World Data
   blocks: Block[];
-  worldLimits: { maxBlocks: 1000 };
+  worldLimits: { maxBlocks: 10000 };
 
   // Human User State
   selectedBlockType: BlockType;
