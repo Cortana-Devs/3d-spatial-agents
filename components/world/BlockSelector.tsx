@@ -367,6 +367,16 @@ export default function BlockSelector({ className = "" }: BlockSelectorProps) {
   const isEmptyHandSelected = selectionMode === SelectionMode.EMPTY;
   const isAtLimit = blockCount >= worldLimits.maxBlocks;
 
+  // Debug logging for selection state
+  console.log("🎯 BlockSelector: Current state", {
+    selectedBlockType,
+    selectionMode,
+    isEmptyHandSelected,
+    blockCount,
+    maxBlocks: worldLimits.maxBlocks,
+    isAtLimit,
+  });
+
   // Handle keyboard shortcuts for block selection (0-9 keys)
   React.useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -389,12 +399,26 @@ export default function BlockSelector({ className = "" }: BlockSelectorProps) {
         event.preventDefault();
 
         if (keyNumber === 0) {
+          console.log("⌨️ BlockSelector: Key 0 pressed - setting empty hand");
           setSelectionMode(SelectionMode.EMPTY);
         } else {
           const blockIndex = keyNumber - 1;
           if (blockTypes[blockIndex]) {
+            console.log(
+              "⌨️ BlockSelector: Key",
+              keyNumber,
+              "pressed - selecting block",
+              blockTypes[blockIndex],
+            );
             setSelectedBlockType(blockTypes[blockIndex]);
             setSelectionMode(SelectionMode.PLACE);
+          } else {
+            console.log(
+              "⌨️ BlockSelector: Key",
+              keyNumber,
+              "pressed - no block at index",
+              blockIndex,
+            );
           }
         }
       }

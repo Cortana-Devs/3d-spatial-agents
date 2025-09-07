@@ -531,6 +531,8 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
     }
   });
 
+  console.log("👻 GhostBlock render:", { position, type, color });
+
   if (!position) return null;
 
   return (
@@ -640,8 +642,30 @@ function ClickHandler() {
         const hasExistingBlock = blockMap.has(positionKey);
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
+        console.log("🖱️ Click Handler: Attempting block placement", {
+          intersectionPoint: intersectionPoint.toArray(),
+          snappedPosition: snappedPosition.toArray(),
+          positionKey,
+          hasExistingBlock,
+          atLimit,
+          selectedBlockType,
+          selectionMode,
+          blockMapSize: blockMap.size,
+        });
+
         if (!hasExistingBlock && !atLimit) {
-          addBlock(snappedPosition, selectedBlockType, "human");
+          const success = addBlock(snappedPosition, selectedBlockType, "human");
+          console.log("🖱️ Click Handler: Block placement result:", success);
+        } else {
+          console.log("🖱️ Click Handler: Block placement blocked:", {
+            hasExistingBlock,
+            atLimit,
+            reason: hasExistingBlock
+              ? "Position occupied"
+              : atLimit
+                ? "At limit"
+                : "Unknown",
+          });
         }
       }
     },
@@ -692,6 +716,13 @@ function ClickHandler() {
 
         if (!hasExistingBlock) {
           setGhostPosition(snappedPosition);
+          // Debug ghost position
+          console.log(
+            "👻 Ghost position set:",
+            snappedPosition,
+            "for type:",
+            selectedBlockType,
+          );
         } else {
           setGhostPosition(null);
         }
@@ -809,6 +840,12 @@ function SceneContent({
       "🔄 VoxelCanvas: Block array updated. Total blocks:",
       blockArray.length,
     );
+    console.log("🗺️ VoxelCanvas: Raw blockMap size:", blockMap.size);
+    console.log(
+      "🗺️ VoxelCanvas: BlockMap entries:",
+      Array.from(blockMap.entries()).slice(0, 3),
+    );
+
     if (blockArray.length > 0) {
       const blockTypes = [...new Set(blockArray.map((b) => b.type))];
       console.log("🎨 VoxelCanvas: Block types present:", blockTypes);
@@ -818,10 +855,17 @@ function SceneContent({
       console.log(
         "📦 VoxelCanvas: Sample blocks:",
         sampleBlocks.map((b) => ({
+          id: b.id,
           type: b.type,
           position: `(${b.position.x}, ${b.position.y}, ${b.position.z})`,
           color: b.color,
         })),
+      );
+    } else {
+      console.warn(
+        "⚠️ VoxelCanvas: No blocks in array but blockMap has:",
+        blockMap.size,
+        "entries",
       );
     }
 
@@ -936,23 +980,43 @@ function SceneContent({
         enableDoubleClickFocus={true}
       />
 
-      {/* GPU-Optimized high-performance block rendering */}
-      <GPUOptimizedRenderer
-        blocks={blockMap}
-        maxRenderDistance={500}
-        enableAdvancedEffects={true}
-        performanceMode="ultra"
-      />
+      {/* Debug: Simple block rendering for troubleshooting */}
+      {blocks.map((block) => (
+        <VoxelBlock
+          key={block.id}
+          position={[block.position.x, block.position.y, block.position.z]}
+          type={block.type}
+          color={block.color}
+          isHovered={block.isHovered}
+          isSelected={block.isSelected}
+          onSelect={() => handleBlockClick(block.id)}
+          onRemove={handleBlockRemove}
+        />
+      ))}
 
-      {/* Adaptive Glass Renderer for intelligent optimization */}
-      <AdaptiveGlassRenderer
-        blocks={blockMap}
-        glassBlockTypes={[
-          BlockType.FROSTED_GLASS,
-          BlockType.NUMBER_6,
-          BlockType.NUMBER_7,
-        ]}
-      />
+      {/* GPU-Optimized high-performance block rendering - DISABLED FOR DEBUG */}
+      {false && (
+        <GPUOptimizedRenderer
+          blocks={blockMap}
+          maxRenderDistance={500}
+          enableAdvancedEffects={true}
+          performanceMode="ultra"
+        />
+      )}
+
+      {/* Adaptive Glass Renderer for intelligent optimization - DISABLED FOR DEBUG */}
+      {false && (
+        <AdaptiveGlassRenderer
+          blocks={blockMap}
+          glassBlockTypes={[
+            BlockType.FROSTED_GLASS,
+            BlockType.NUMBER_6,
+            BlockType.NUMBER_7,
+          ]}
+          maxRenderDistance={300}
+          enableAdvancedEffects={true}
+        />
+      )}
 
       {/* Intelligent grid system with spatial indexing */}
       <GridSystem config={gridConfig} />
