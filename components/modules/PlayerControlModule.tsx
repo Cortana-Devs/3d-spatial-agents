@@ -4,6 +4,7 @@ import React, { useRef, useCallback, useMemo, useState } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { Vector3, Euler, Quaternion, MathUtils } from "three";
 import { useModuleSystem } from "./ModuleManager";
+import type { ModuleState } from "./ModuleManager";
 import { useWorldStore } from "../../store/worldStore";
 
 interface PlayerControlModuleProps {
@@ -134,7 +135,8 @@ export function PlayerControlModule({
 
     Object.entries(MOVEMENT_KEYS).forEach(([action, keys]) => {
       const isPressed = keys.some((key) => keysRef.current.has(key));
-      (newState as any)[action] = isPressed;
+      const actionKey = action as keyof MovementState;
+      newState[actionKey] = isPressed;
     });
 
     setMovementState(newState);
@@ -278,7 +280,7 @@ export function PlayerControlModule({
     // Prevent default behavior for movement keys
     const isMovementKey = Object.values(MOVEMENT_KEYS)
       .flat()
-      .includes(event.code as any);
+      .includes(event.code);
     if (isMovementKey) {
       event.preventDefault();
     }
@@ -420,7 +422,7 @@ function PlayerControlDebugOverlay({
   isControlsLocked: boolean;
   movementState: MovementState;
   cameraState: CameraState;
-  stats: any;
+  stats: ModuleState | null;
 }) {
   if (process.env.NODE_ENV !== "development") return null;
 

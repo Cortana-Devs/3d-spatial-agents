@@ -1,5 +1,10 @@
-import { Vector3 } from 'three';
-import { NavigationMesh, NavigationNode, FloorNavigationProperties } from './FloorNavigationProperties';
+import { Vector3 } from "three";
+import {
+  NavigationMesh,
+  NavigationNode,
+  FloorNavigationProperties,
+  FloorLike,
+} from "./FloorNavigationProperties";
 
 export class TransparentNavMeshGenerator {
   private mesh: NavigationMesh;
@@ -8,8 +13,9 @@ export class TransparentNavMeshGenerator {
     this.mesh = new NavigationMesh();
   }
 
-  generateNavMesh(floors: any[]): NavigationMesh {
+  generateNavMesh(floors: FloorLike[]): NavigationMesh {
     // Implementation for nav mesh generation
+    void floors;
     return this.mesh;
   }
 
@@ -18,7 +24,7 @@ export class TransparentNavMeshGenerator {
       position,
       connections: [],
       cost: properties.navigationCost,
-      type: properties.walkable ? 'walkable' : 'blocked'
+      type: properties.walkable ? "walkable" : "blocked",
     };
     this.mesh.addNode(node);
   }

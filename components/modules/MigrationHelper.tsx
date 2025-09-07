@@ -2,6 +2,9 @@
 
 import React, { useState, useCallback } from "react";
 import { useWorldStore } from "../../store/worldStore";
+import { createScopedLogger } from "@/utils/devLogger";
+import type { AISimulant } from "../../types";
+import type { Block } from "../../types/blocks";
 
 interface MigrationHelperProps {
   onSwitchToModular: () => void;
@@ -34,8 +37,8 @@ export function MigrationHelper({
   const collectPerformanceData = useCallback(() => {
     setIsCollectingData(true);
 
-    const startTime = performance.now();
-    const startMemory = (performance as any).memory?.usedJSHeapSize || 0;
+    void performance.now();
+    const startMemory = performance.memory?.usedJSHeapSize || 0;
 
     // Simulate frame measurement
     const frameTimeSamples: number[] = [];
@@ -58,8 +61,7 @@ export function MigrationHelper({
           const avgFrameTime =
             frameTimeSamples.reduce((a, b) => a + b, 0) /
             frameTimeSamples.length;
-          const endMemory =
-            (performance as any).memory?.usedJSHeapSize || startMemory;
+          const endMemory = performance.memory?.usedJSHeapSize || startMemory;
 
           const data: SystemComparisonData = {
             blockCount: blockMap.size,
@@ -497,8 +499,8 @@ export const MigrationUtils = {
 
   // Export current world state for backup
   exportWorldState: (
-    blockMap: Map<string, any>,
-    simulants: Map<string, any>,
+    blockMap: Map<string, Block>,
+    simulants: Map<string, AISimulant>,
   ) => {
     return {
       timestamp: new Date().toISOString(),
@@ -509,10 +511,15 @@ export const MigrationUtils = {
   },
 
   // Import world state from backup
-  importWorldState: (data: any) => {
+  importWorldState: (data: {
+    timestamp: string;
+    blocks: Array<[string, Block]>;
+    simulants: Array<[string, AISimulant]>;
+    version: string;
+  }) => {
     // This would integrate with world store to restore state
     if (process.env.NODE_ENV === "development") {
-      console.log("Importing world state:", data);
+      createScopedLogger("Migration").log("Importing world state:", data);
     }
     return {
       success: true,

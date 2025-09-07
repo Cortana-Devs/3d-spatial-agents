@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
+import { createScopedLogger } from "@/utils/devLogger";
 
 // Module performance isolation system
 interface ModuleConfig {
@@ -63,8 +64,7 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
       skippedFrames: 0,
     });
 
-    process.env.NODE_ENV === "development" &&
-      console.log(`[ModuleManager] Registered module: ${id}`);
+    createScopedLogger("ModuleManager").log(`Registered module: ${id}`);
     return id;
   }, []);
 
@@ -78,8 +78,7 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
       (moduleId) => moduleId !== id,
     );
 
-    process.env.NODE_ENV === "development" &&
-      console.log(`[ModuleManager] Unregistered module: ${id}`);
+    createScopedLogger("ModuleManager").log(`Unregistered module: ${id}`);
   }, []);
 
   const requestFrame = useCallback(
@@ -98,10 +97,9 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
     const state = statesRef.current.get(moduleId);
     if (state) {
       state.isRunning = enabled;
-      process.env.NODE_ENV === "development" &&
-        console.log(
-          `[ModuleManager] Module ${moduleId} ${enabled ? "enabled" : "disabled"}`,
-        );
+      createScopedLogger("ModuleManager").log(
+        `Module ${moduleId} ${enabled ? "enabled" : "disabled"}`,
+      );
     }
   }, []);
 
@@ -156,16 +154,15 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
       });
 
     // Process modules within frame budget
-    for (const module of activeModules) {
+    for (const entry of activeModules) {
       const currentTime = performance.now();
       const frameTimeUsed = currentTime - frameStart;
 
       // Check if we have enough time budget left
       if (frameTimeUsed > PERFORMANCE_THRESHOLDS.FRAME_TIME_BUDGET) {
-        process.env.NODE_ENV === "development" &&
-          console.warn(
-            `[ModuleManager] Frame budget exceeded, skipping remaining modules`,
-          );
+        createScopedLogger("ModuleManager").warn(
+          "Frame budget exceeded, skipping remaining modules",
+        );
         break;
       }
 
@@ -176,21 +173,21 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
 
       // Skip if module doesn't need update (unless it's critical priority)
       if (
-        !module.needsUpdate &&
-        module.config.priority < 10 &&
-        module.config.canSkipFrames
+        !entry.needsUpdate &&
+        entry.config.priority < 10 &&
+        entry.config.canSkipFrames
       ) {
-        module.state.skippedFrames++;
+        entry.state.skippedFrames++;
         continue;
       }
 
       try {
         const moduleStart = performance.now();
-        const callback = callbacksRef.current.get(module.id);
+        const callback = callbacksRef.current.get(entry.id);
 
         if (callback) {
           // Calculate delta time specific to this module
-          const moduleDelta = Math.min(deltaMs, module.config.maxFrameTime);
+          const moduleDelta = Math.min(deltaMs, entry.config.maxFrameTime);
           callback(moduleDelta);
           processedModules++;
 
@@ -198,28 +195,29 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
           const moduleEnd = performance.now();
           const moduleFrameTime = moduleEnd - moduleStart;
 
-          module.state.lastUpdate = moduleStart;
-          module.state.frameCount++;
+          entry.state.lastUpdate = moduleStart;
+          entry.state.frameCount++;
 
           // Update rolling average frame time
           const alpha = 0.1; // Smoothing factor
-          module.state.averageFrameTime =
-            module.state.averageFrameTime * (1 - alpha) +
+          entry.state.averageFrameTime =
+            entry.state.averageFrameTime * (1 - alpha) +
             moduleFrameTime * alpha;
 
           // Warn if module is taking too long
-          if (moduleFrameTime > module.config.maxFrameTime) {
-            if (process.env.NODE_ENV === "development") {
-              console.warn(
-                `[ModuleManager] Module ${module.id} exceeded max frame time: ${moduleFrameTime.toFixed(2)}ms > ${module.config.maxFrameTime}ms`,
-              );
-            }
+          if (moduleFrameTime > entry.config.maxFrameTime) {
+            createScopedLogger("ModuleManager").warn(
+              `Module ${entry.id} exceeded max frame time: ${moduleFrameTime.toFixed(2)}ms > ${entry.config.maxFrameTime}ms`,
+            );
           }
         }
       } catch (error) {
-        console.error(`[ModuleManager] Error in module ${module.id}:`, error);
+        createScopedLogger("ModuleManager").error(
+          `Error in module ${entry.id}:`,
+          error,
+        );
         // Temporarily disable problematic module
-        module.state.isRunning = false;
+        entry.state.isRunning = false;
       }
     }
 
@@ -231,8 +229,8 @@ export function ModuleManager({ children }: { children: React.ReactNode }) {
       process.env.NODE_ENV === "development" &&
       lastFrameTimeRef.current > PERFORMANCE_THRESHOLDS.WARNING_FRAME_TIME
     ) {
-      console.warn(
-        `[ModuleManager] Frame time warning: ${lastFrameTimeRef.current.toFixed(2)}ms`,
+      createScopedLogger("ModuleManager").warn(
+        `Frame time warning: ${lastFrameTimeRef.current.toFixed(2)}ms`,
       );
     }
   });

@@ -218,7 +218,7 @@ function detectMobileCapabilities(): MobileCapabilities {
   const canvas = document.createElement("canvas");
   const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
 
-  let capabilities: MobileCapabilities = {
+  const capabilities: MobileCapabilities = {
     isMobile,
     isLowEndDevice: false,
     supportsWebGPU: "gpu" in navigator,
@@ -264,7 +264,7 @@ function detectMobileCapabilities(): MobileCapabilities {
 
   // Memory info (Chrome only)
   if ("memory" in performance) {
-    const memory = (performance as any).memory;
+    const memory = performance.memory!;
     capabilities.memoryInfo = {
       totalJSHeapSize: memory.totalJSHeapSize,
       usedJSHeapSize: memory.usedJSHeapSize,

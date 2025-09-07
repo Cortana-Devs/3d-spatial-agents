@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import React, { useRef, useEffect, useMemo, useCallback } from 'react'
-import { useThree } from '@react-three/fiber'
+import React, { useRef, useEffect, useMemo, useCallback } from "react";
+import { useThree } from "@react-three/fiber";
 import {
   ShaderMaterial,
   UniformsUtils,
@@ -11,17 +11,18 @@ import {
   WebGLRenderer,
   ShaderLib,
   UniformsLib,
-} from 'three'
+} from "three";
 
 // Mobile shader variants with different complexity levels
 export const MOBILE_SHADER_VARIANTS = {
-  ULTRA_LOW: 'ultra_low',
-  LOW: 'low',
-  MEDIUM: 'medium',
-  HIGH: 'high'
-} as const
+  ULTRA_LOW: "ultra_low",
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+} as const;
 
-type ShaderVariant = typeof MOBILE_SHADER_VARIANTS[keyof typeof MOBILE_SHADER_VARIANTS]
+type ShaderVariant =
+  (typeof MOBILE_SHADER_VARIANTS)[keyof typeof MOBILE_SHADER_VARIANTS];
 
 // WebGL2 optimized vertex shader with mobile variants
 const mobileVertexShaders = {
@@ -185,8 +186,8 @@ const mobileVertexShaders = {
       vRoughness = instanceRoughness;
       vFogDepth = -mvPosition.z;
     }
-  `
-}
+  `,
+};
 
 // Mobile fragment shaders with adaptive complexity
 const mobileFragmentShaders = {
@@ -413,8 +414,8 @@ const mobileFragmentShaders = {
 
       fragColor = vec4(litColor, alpha);
     }
-  `
-}
+  `,
+};
 
 // Mobile-optimized glass shaders for transparent blocks
 const mobileGlassShaders = {
@@ -497,32 +498,32 @@ const mobileGlassShaders = {
 
       fragColor = vec4(color, alpha);
     }
-  `
-}
+  `,
+};
 
 interface MobileShaderConfig {
-  variant: ShaderVariant
-  enableTextures: boolean
-  enableLighting: boolean
-  enableReflections: boolean
-  enableFog: boolean
-  maxDistance: number
-  lodLevel: number
+  variant: ShaderVariant;
+  enableTextures: boolean;
+  enableLighting: boolean;
+  enableReflections: boolean;
+  enableFog: boolean;
+  maxDistance: number;
+  lodLevel: number;
 }
 
 interface MobileShaderManagerProps {
-  onShaderChange?: (variant: ShaderVariant) => void
-  performanceTarget?: 'battery' | 'balanced' | 'performance'
+  onShaderChange?: (variant: ShaderVariant) => void;
+  performanceTarget?: "battery" | "balanced" | "performance";
 }
 
 export class MobileShaderManager {
-  private gl: WebGLRenderer
-  private currentVariant: ShaderVariant = MOBILE_SHADER_VARIANTS.MEDIUM
-  private shaderCache = new Map<string, ShaderMaterial>()
-  private config: MobileShaderConfig
+  private gl: WebGLRenderer;
+  private currentVariant: ShaderVariant = MOBILE_SHADER_VARIANTS.MEDIUM;
+  private shaderCache = new Map<string, ShaderMaterial>();
+  private config: MobileShaderConfig;
 
   constructor(gl: WebGLRenderer, initialConfig?: Partial<MobileShaderConfig>) {
-    this.gl = gl
+    this.gl = gl;
     this.config = {
       variant: MOBILE_SHADER_VARIANTS.MEDIUM,
       enableTextures: true,
@@ -531,73 +532,94 @@ export class MobileShaderManager {
       enableFog: true,
       maxDistance: 150,
       lodLevel: 1,
-      ...initialConfig
-    }
+      ...initialConfig,
+    };
   }
 
   // Detect optimal shader variant based on device capabilities
   detectOptimalVariant(): ShaderVariant {
-    const canvas = document.createElement('canvas')
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
 
-    if (!gl) return MOBILE_SHADER_VARIANTS.ULTRA_LOW
+    if (!gl) return MOBILE_SHADER_VARIANTS.ULTRA_LOW;
 
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE)
-    const maxVertexTextures = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS)
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent,
+      );
+    const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    const maxVertexTextures = gl.getParameter(
+      gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS,
+    );
 
     // Memory-based detection
-    let memoryTier = 'high'
-    if ('memory' in performance) {
-      const memory = (performance as any).memory
-      if (memory.jsHeapSizeLimit < 1073741824) { // < 1GB
-        memoryTier = 'low'
-      } else if (memory.jsHeapSizeLimit < 2147483648) { // < 2GB
-        memoryTier = 'medium'
+    let memoryTier = "high";
+    if ("memory" in performance) {
+      const memory = performance.memory!;
+      if (memory.jsHeapSizeLimit < 1073741824) {
+        // < 1GB
+        memoryTier = "low";
+      } else if (memory.jsHeapSizeLimit < 2147483648) {
+        // < 2GB
+        memoryTier = "medium";
       }
     }
 
     // GPU detection
-    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info')
-    let gpuTier = 'medium'
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    let gpuTier = "medium";
     if (debugInfo) {
-      const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase()
-      if (renderer.includes('adreno 4') || renderer.includes('mali-t') || renderer.includes('powervr')) {
-        gpuTier = 'low'
-      } else if (renderer.includes('adreno 6') || renderer.includes('mali-g7') || renderer.includes('apple')) {
-        gpuTier = 'high'
+      const renderer = gl
+        .getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+        .toLowerCase();
+      if (
+        renderer.includes("adreno 4") ||
+        renderer.includes("mali-t") ||
+        renderer.includes("powervr")
+      ) {
+        gpuTier = "low";
+      } else if (
+        renderer.includes("adreno 6") ||
+        renderer.includes("mali-g7") ||
+        renderer.includes("apple")
+      ) {
+        gpuTier = "high";
       }
     }
 
     // Determine variant based on capabilities
-    if (!isMobile && maxTextureSize >= 4096 && gpuTier === 'high') {
-      return MOBILE_SHADER_VARIANTS.HIGH
-    } else if (maxTextureSize >= 2048 && gpuTier !== 'low' && memoryTier !== 'low') {
-      return MOBILE_SHADER_VARIANTS.MEDIUM
+    if (!isMobile && maxTextureSize >= 4096 && gpuTier === "high") {
+      return MOBILE_SHADER_VARIANTS.HIGH;
+    } else if (
+      maxTextureSize >= 2048 &&
+      gpuTier !== "low" &&
+      memoryTier !== "low"
+    ) {
+      return MOBILE_SHADER_VARIANTS.MEDIUM;
     } else if (maxTextureSize >= 1024) {
-      return MOBILE_SHADER_VARIANTS.LOW
+      return MOBILE_SHADER_VARIANTS.LOW;
     } else {
-      return MOBILE_SHADER_VARIANTS.ULTRA_LOW
+      return MOBILE_SHADER_VARIANTS.ULTRA_LOW;
     }
   }
 
   // Create optimized shader material
-  createMaterial(type: 'standard' | 'glass' = 'standard'): ShaderMaterial {
-    const cacheKey = `${type}_${this.config.variant}_${JSON.stringify(this.config)}`
+  createMaterial(type: "standard" | "glass" = "standard"): ShaderMaterial {
+    const cacheKey = `${type}_${this.config.variant}_${JSON.stringify(this.config)}`;
 
     if (this.shaderCache.has(cacheKey)) {
-      return this.shaderCache.get(cacheKey)!.clone()
+      return this.shaderCache.get(cacheKey)!.clone();
     }
 
-    let vertexShader: string
-    let fragmentShader: string
+    let vertexShader: string;
+    let fragmentShader: string;
 
-    if (type === 'glass') {
-      vertexShader = mobileGlassShaders.vertex
-      fragmentShader = mobileGlassShaders.fragment
+    if (type === "glass") {
+      vertexShader = mobileGlassShaders.vertex;
+      fragmentShader = mobileGlassShaders.fragment;
     } else {
-      vertexShader = mobileVertexShaders[this.config.variant]
-      fragmentShader = mobileFragmentShaders[this.config.variant]
+      vertexShader = mobileVertexShaders[this.config.variant];
+      fragmentShader = mobileFragmentShaders[this.config.variant];
     }
 
     const uniforms = {
@@ -631,76 +653,78 @@ export class MobileShaderManager {
       // Texture uniforms (will be set externally)
       diffuseTexture: { value: null },
       normalTexture: { value: null },
-      environmentMap: { value: null }
-    }
+      environmentMap: { value: null },
+    };
 
     const material = new ShaderMaterial({
       vertexShader,
       fragmentShader,
       uniforms,
-      transparent: type === 'glass',
-      alphaTest: type === 'standard' ? 0.01 : 0,
+      transparent: type === "glass",
+      alphaTest: type === "standard" ? 0.01 : 0,
       side: 2, // DoubleSide for better mobile compatibility
-    })
+    });
 
-    this.shaderCache.set(cacheKey, material)
-    return material.clone()
+    this.shaderCache.set(cacheKey, material);
+    return material.clone();
   }
 
   // Update shader configuration
   updateConfig(newConfig: Partial<MobileShaderConfig>) {
-    this.config = { ...this.config, ...newConfig }
+    this.config = { ...this.config, ...newConfig };
 
     // Clear cache if variant changes
     if (newConfig.variant && newConfig.variant !== this.currentVariant) {
-      this.shaderCache.clear()
-      this.currentVariant = newConfig.variant
+      this.shaderCache.clear();
+      this.currentVariant = newConfig.variant;
     }
   }
 
   // Get current configuration
   getConfig(): MobileShaderConfig {
-    return { ...this.config }
+    return { ...this.config };
   }
 
   // Adaptive quality adjustment based on performance
-  adjustQualityForPerformance(avgFrameTime: number, targetFrameTime: number = 16.67) {
+  adjustQualityForPerformance(
+    avgFrameTime: number,
+    targetFrameTime: number = 16.67,
+  ) {
     if (avgFrameTime > targetFrameTime * 1.5) {
       // Performance is poor, reduce quality
       if (this.config.variant === MOBILE_SHADER_VARIANTS.HIGH) {
-        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.MEDIUM })
+        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.MEDIUM });
       } else if (this.config.variant === MOBILE_SHADER_VARIANTS.MEDIUM) {
-        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.LOW })
+        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.LOW });
       } else if (this.config.variant === MOBILE_SHADER_VARIANTS.LOW) {
-        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.ULTRA_LOW })
+        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.ULTRA_LOW });
       }
 
       // Disable expensive features
       this.updateConfig({
         enableReflections: false,
         enableTextures: avgFrameTime < targetFrameTime * 2,
-      })
-
+      });
     } else if (avgFrameTime < targetFrameTime * 0.8) {
       // Performance is good, can increase quality
       if (this.config.variant === MOBILE_SHADER_VARIANTS.ULTRA_LOW) {
-        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.LOW })
+        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.LOW });
       } else if (this.config.variant === MOBILE_SHADER_VARIANTS.LOW) {
-        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.MEDIUM })
+        this.updateConfig({ variant: MOBILE_SHADER_VARIANTS.MEDIUM });
       }
 
       // Re-enable features gradually
       this.updateConfig({
         enableTextures: true,
         enableReflections: avgFrameTime < targetFrameTime * 0.6,
-      })
+      });
     }
   }
 
   // Clean up resources
   dispose() {
-    this.shaderCache.forEach(material => material.dispose())
-    this.shaderCache.clear()
+    this.shaderCache.forEach((material) => material.dispose());
+    this.shaderCache.clear();
   }
 }
 
@@ -708,80 +732,101 @@ export class MobileShaderManager {
 export function MobileShaderProvider({
   children,
   onShaderChange,
-  performanceTarget = 'balanced'
+  performanceTarget = "balanced",
 }: MobileShaderManagerProps & { children: React.ReactNode }) {
-  const { gl } = useThree()
-  const shaderManagerRef = useRef<MobileShaderManager>()
-  const frameTimesRef = useRef<number[]>([])
-  const lastAdjustmentRef = useRef<number>(0)
+  const { gl } = useThree();
+  const shaderManagerRef = useRef<MobileShaderManager>();
+  const frameTimesRef = useRef<number[]>([]);
+  const lastAdjustmentRef = useRef<number>(0);
 
   // Initialize shader manager
   useEffect(() => {
-    if (!gl) return
+    if (!gl) return;
 
-    const initialVariant = new MobileShaderManager(gl).detectOptimalVariant()
+    const initialVariant = new MobileShaderManager(gl).detectOptimalVariant();
     const config: Partial<MobileShaderConfig> = {
       variant: initialVariant,
-      enableReflections: performanceTarget === 'performance',
-      enableTextures: performanceTarget !== 'battery',
-      maxDistance: performanceTarget === 'battery' ? 100 : 150
-    }
+      enableReflections: performanceTarget === "performance",
+      enableTextures: performanceTarget !== "battery",
+      maxDistance: performanceTarget === "battery" ? 100 : 150,
+    };
 
-    shaderManagerRef.current = new MobileShaderManager(gl, config)
-    onShaderChange?.(initialVariant)
+    shaderManagerRef.current = new MobileShaderManager(gl, config);
+    onShaderChange?.(initialVariant);
 
     return () => {
-      shaderManagerRef.current?.dispose()
-    }
-  }, [gl, performanceTarget, onShaderChange])
+      shaderManagerRef.current?.dispose();
+    };
+  }, [gl, performanceTarget, onShaderChange]);
 
   // Performance monitoring and adaptive quality
-  const handlePerformanceUpdate = useCallback((frameTime: number) => {
-    if (!shaderManagerRef.current) return
+  const handlePerformanceUpdate = useCallback(
+    (frameTime: number) => {
+      if (!shaderManagerRef.current) return;
 
-    frameTimesRef.current.push(frameTime)
-    if (frameTimesRef.current.length > 60) {
-      frameTimesRef.current.shift()
-    }
+      frameTimesRef.current.push(frameTime);
+      if (frameTimesRef.current.length > 60) {
+        frameTimesRef.current.shift();
+      }
 
-    const now = performance.now()
-    if (now - lastAdjustmentRef.current > 2000 && frameTimesRef.current.length >= 30) {
-      const avgFrameTime = frameTimesRef.current.reduce((a, b) => a + b, 0) / frameTimesRef.current.length
+      const now = performance.now();
+      if (
+        now - lastAdjustmentRef.current > 2000 &&
+        frameTimesRef.current.length >= 30
+      ) {
+        const avgFrameTime =
+          frameTimesRef.current.reduce((a, b) => a + b, 0) /
+          frameTimesRef.current.length;
 
-      const targetFPS = performanceTarget === 'battery' ? 30 : performanceTarget === 'balanced' ? 45 : 60
-      const targetFrameTime = 1000 / targetFPS
+        const targetFPS =
+          performanceTarget === "battery"
+            ? 30
+            : performanceTarget === "balanced"
+              ? 45
+              : 60;
+        const targetFrameTime = 1000 / targetFPS;
 
-      shaderManagerRef.current.adjustQualityForPerformance(avgFrameTime, targetFrameTime)
-      lastAdjustmentRef.current = now
-    }
-  }, [performanceTarget])
+        shaderManagerRef.current.adjustQualityForPerformance(
+          avgFrameTime,
+          targetFrameTime,
+        );
+        lastAdjustmentRef.current = now;
+      }
+    },
+    [performanceTarget],
+  );
 
   // Provide performance update function to children
-  const contextValue = useMemo(() => ({
-    shaderManager: shaderManagerRef.current,
-    handlePerformanceUpdate
-  }), [handlePerformanceUpdate])
+  const contextValue = useMemo(
+    () => ({
+      shaderManager: shaderManagerRef.current,
+      handlePerformanceUpdate,
+    }),
+    [handlePerformanceUpdate],
+  );
 
   return (
     <MobileShaderContext.Provider value={contextValue}>
       {children}
     </MobileShaderContext.Provider>
-  )
+  );
 }
 
 // Context for accessing shader manager
 const MobileShaderContext = React.createContext<{
-  shaderManager?: MobileShaderManager
-  handlePerformanceUpdate: (frameTime: number) => void
-} | null>(null)
+  shaderManager?: MobileShaderManager;
+  handlePerformanceUpdate: (frameTime: number) => void;
+} | null>(null);
 
 // Hook for using mobile shader manager
 export function useMobileShaders() {
-  const context = React.useContext(MobileShaderContext)
+  const context = React.useContext(MobileShaderContext);
   if (!context) {
-    throw new Error('useMobileShaders must be used within MobileShaderProvider')
+    throw new Error(
+      "useMobileShaders must be used within MobileShaderProvider",
+    );
   }
-  return context
+  return context;
 }
 
-export default MobileShaderManager
+export default MobileShaderManager;

@@ -264,7 +264,7 @@ function detectDeviceCapabilities(): DeviceCapabilities {
 
   // Memory detection (Chrome only)
   if ("deviceMemory" in navigator) {
-    capabilities.deviceMemory = (navigator as any).deviceMemory;
+    capabilities.deviceMemory = navigator.deviceMemory;
     if (capabilities.deviceMemory && capabilities.deviceMemory <= 2) {
       capabilities.isLowEnd = true;
     }
@@ -272,7 +272,7 @@ function detectDeviceCapabilities(): DeviceCapabilities {
 
   // Connection info
   if ("connection" in navigator) {
-    const conn = (navigator as any).connection;
+    const conn = navigator.connection!;
     capabilities.connection = {
       effectiveType: conn.effectiveType,
       downlink: conn.downlink,
@@ -480,7 +480,7 @@ export function MobilePerformanceMonitor({
       // Get memory info
       let memoryUsage = 0;
       if ("memory" in performance) {
-        const memory = (performance as any).memory;
+        const memory = performance.memory!;
         memoryUsage = memory.usedJSHeapSize || 0;
       }
 

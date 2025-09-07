@@ -4,6 +4,7 @@ import React, { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { SimpleSkybox } from "../../components/skybox/EnhancedSkybox";
+import { devLog } from "@/utils/devLogger";
 
 export default function SkyboxTestPage() {
   return (
@@ -11,7 +12,7 @@ export default function SkyboxTestPage() {
       <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
         <Suspense fallback={null}>
           <SimpleSkybox
-            onLoad={() => console.log("🌅 Skybox loaded - no flashing!")}
+            onLoad={() => devLog("🌅 Skybox loaded - no flashing!")}
             onError={(error) => console.error("❌ Skybox error:", error)}
           />
 

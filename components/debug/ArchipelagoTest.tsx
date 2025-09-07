@@ -206,9 +206,13 @@ export const ArchipelagoTest: React.FC<ArchipelagoTestProps> = ({
 
         // Get blocks with smart filtering based on available space
         addLog("🏗️ Applying smart block filtering...");
-        const massiveBlocks = (massiveResult as any).getAllBlocks
-          ? (massiveResult as any).getAllBlocks(availableBlocks)
-          : [];
+        const maybeGetAllBlocks = (
+          massiveResult as { getAllBlocks?: (limit: number) => unknown[] }
+        ).getAllBlocks;
+        const massiveBlocks =
+          typeof maybeGetAllBlocks === "function"
+            ? maybeGetAllBlocks(availableBlocks)
+            : [];
 
         addLog(`🎯 Filtered to ${massiveBlocks.length} priority blocks`);
 

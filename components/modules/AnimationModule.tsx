@@ -4,6 +4,7 @@ import React, { useRef, useCallback, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useModuleSystem } from "./ModuleManager";
+import type { ModuleState } from "./ModuleManager";
 import { useWorldStore } from "../../store/worldStore";
 import SimpleAnimatedAvatar from "../simulants/SimpleAnimatedAvatar";
 import { AISimulant } from "../../types";
@@ -47,6 +48,13 @@ const LOD_CONFIGS: Record<string, AnimationLODConfig> = {
     animationQuality: 0,
     enableBoneAnimations: false,
   },
+};
+
+type SimulantAnimationState = {
+  lastUpdate: number;
+  lodLevel: keyof typeof LOD_CONFIGS;
+  isPlaying: boolean;
+  animationIndex: number;
 };
 
 export function AnimationModule({
@@ -137,7 +145,7 @@ export function AnimationModule({
   }, [activeSimulants, enableLOD, animationQuality]);
 
   // Update camera position for LOD calculations (runs in module's isolated frame)
-  const updateCameraPosition = useCallback((camera: any) => {
+  const updateCameraPosition = useCallback((camera: THREE.Camera) => {
     if (camera) {
       cameraPositionRef.current = {
         x: camera.position.x,
@@ -294,7 +302,7 @@ function AnimatedSimulantRenderer({
   simulant: AISimulant;
   lodLevel: keyof typeof LOD_CONFIGS;
   config: AnimationLODConfig;
-  animationState?: any;
+  animationState?: SimulantAnimationState;
   distance: number;
 }) {
   const meshRef = useRef<THREE.Group>(null);
@@ -349,7 +357,7 @@ function AnimationDebugOverlay({
 }: {
   simulantsCount: number;
   animationQueue: string[];
-  stats: any;
+  stats: ModuleState | null;
 }) {
   if (process.env.NODE_ENV !== "development") return null;
 

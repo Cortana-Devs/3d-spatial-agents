@@ -4,6 +4,7 @@ import React, { useRef, useCallback, useMemo, useState } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { Vector3, Vector2, Raycaster, Plane } from "three";
 import { useModuleSystem } from "./ModuleManager";
+import type { ModuleState } from "./ModuleManager";
 import { useWorldStore } from "../../store/worldStore";
 import { SelectionMode, BlockType, BLOCK_DEFINITIONS } from "../../types";
 
@@ -389,7 +390,7 @@ function BlockPlacementDebugOverlay({
   isActive: boolean;
   ghostPosition: Vector3 | null;
   pendingOperations: number;
-  stats: any;
+  stats: ModuleState | null;
 }) {
   if (process.env.NODE_ENV !== "development") return null;
 

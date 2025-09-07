@@ -123,7 +123,7 @@ vi.mock("@react-three/fiber", () => ({
   Canvas: ({ children }: { children: React.ReactNode }) => children,
   useFrame: vi.fn(),
   useThree: vi.fn(() => ({
-    camera: { position: { set: vi.fn() } },
+    camera: { position: { set: vi.fn() }, lookAt: vi.fn() },
     scene: { add: vi.fn(), remove: vi.fn() },
   })),
 }));

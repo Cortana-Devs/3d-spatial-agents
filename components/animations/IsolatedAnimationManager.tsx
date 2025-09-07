@@ -8,13 +8,20 @@ import React, {
   useMemo,
 } from "react";
 import { useThree } from "@react-three/fiber";
-import { AnimationMixer, AnimationAction, Clock, Object3D } from "three";
+import {
+  AnimationMixer,
+  AnimationAction,
+  Clock,
+  Object3D,
+  AnimationClip,
+} from "three";
 import {
   useAnimationRender,
   useBatchedUpdates,
 } from "../../hooks/performance/useIsolatedRender";
 import { useWorldStore } from "../../store/worldStore";
 import type { AISimulant } from "../../types";
+import { createScopedLogger } from "@/utils/devLogger";
 
 interface AnimationState {
   mixer: AnimationMixer | null;
@@ -168,7 +175,7 @@ export function IsolatedAnimationManager() {
     (
       simulantId: string,
       object: Object3D,
-      animationClips: any[],
+      animationClips: AnimationClip[],
       priority: number = 5,
     ) => {
       if (animations.has(simulantId)) {
@@ -214,7 +221,9 @@ export function IsolatedAnimationManager() {
       });
 
       if (process.env.NODE_ENV === "development") {
-        console.log(`🎭 Animation registered for simulant: ${simulantId}`);
+        createScopedLogger("Animation").log(
+          `🎭 Animation registered for simulant: ${simulantId}`,
+        );
       }
     },
     [animations, queueUpdate],
@@ -284,7 +293,9 @@ export function IsolatedAnimationManager() {
       }
 
       if (process.env.NODE_ENV === "development") {
-        console.log(`🎬 Playing animation: ${animationName} for ${simulantId}`);
+        createScopedLogger("Animation").log(
+          `🎬 Playing animation: ${animationName} for ${simulantId}`,
+        );
       }
     },
     [animations, queueUpdate],
@@ -306,7 +317,9 @@ export function IsolatedAnimationManager() {
       }, fadeTime * 1000);
 
       if (process.env.NODE_ENV === "development") {
-        console.log(`⏹️ Stopping animation for ${simulantId}`);
+        createScopedLogger("Animation").log(
+          `⏹️ Stopping animation for ${simulantId}`,
+        );
       }
     },
     [animations],
@@ -338,7 +351,9 @@ export function IsolatedAnimationManager() {
       });
 
       if (process.env.NODE_ENV === "development") {
-        console.log(`🗑️ Animation unregistered for simulant: ${simulantId}`);
+        createScopedLogger("Animation").log(
+          `🗑️ Animation unregistered for simulant: ${simulantId}`,
+        );
       }
     },
     [animations, queueUpdate],
@@ -369,7 +384,7 @@ export function IsolatedAnimationManager() {
       } else if (averageFrameTime < 2.0 && maxAnimationsPerFrame.current < 10) {
         maxAnimationsPerFrame.current += 1;
         if (process.env.NODE_ENV === "development") {
-          console.log(
+          createScopedLogger("Animation").log(
             `⚡ Increasing animation budget to ${maxAnimationsPerFrame.current} per frame`,
           );
         }
@@ -387,7 +402,7 @@ export function IsolatedAnimationManager() {
       // For now, just demonstrate the concept
       if (!animations.has(simulant.id)) {
         if (process.env.NODE_ENV === "development") {
-          console.log(
+          createScopedLogger("Animation").log(
             `Would register animation for simulant: ${simulant.name}`,
           );
         }
@@ -455,7 +470,7 @@ export function IsolatedAnimationManager() {
   useEffect(() => {
     // Store API reference globally or in context for other components to use
     if (typeof window !== "undefined") {
-      (window as any).__animationAPI = animationAPI;
+      window.__animationAPI = animationAPI;
     }
   }, [animationAPI]);
 

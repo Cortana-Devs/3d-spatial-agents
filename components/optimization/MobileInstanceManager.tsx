@@ -89,8 +89,11 @@ class MobileObjectPool<T> {
   clear(): void {
     // Properly dispose of pooled objects if they have a dispose method
     this.pool.forEach((item) => {
-      if (item && typeof (item as any).dispose === "function") {
-        (item as any).dispose();
+      if (
+        item &&
+        typeof (item as { dispose?: () => void }).dispose === "function"
+      ) {
+        (item as { dispose: () => void }).dispose();
       }
     });
     this.pool = [];
@@ -692,7 +695,7 @@ interface MobileInstanceManagerProps {
   geometry: BufferGeometry;
   material: Material;
   config?: Partial<MobileInstanceConfig>;
-  onStatsUpdate?: (stats: any) => void;
+  onStatsUpdate?: (stats: unknown) => void;
   children?: React.ReactNode;
 }
 
