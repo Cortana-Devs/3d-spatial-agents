@@ -11,7 +11,6 @@ import {
   AISimulant,
   CameraMode,
   WorldState as BaseWorldState,
-  BLOCK_DEFINITIONS,
 } from "../types";
 
 // Enable MapSet plugin for Immer to work with Map and Set
@@ -31,6 +30,9 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
 
   // AI Simulant State (keeping Map as specified in design)
   simulants: Map<string, AISimulant>;
+
+  // Player Avatar State
+  playerAvatar: PlayerAvatarState | null;
 
   // Undo/Redo system with circular buffer
   history: {
@@ -63,6 +65,13 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
   removeSimulant: (id: string) => void;
   updateSimulant: (id: string, updates: Partial<AISimulant>) => void;
 
+  // Player Avatar management
+  setPlayerAvatar: (avatar: PlayerAvatarState) => void;
+  updateAvatarPosition: (position: Vector3) => void;
+  updateAvatarAnimation: (animation: string) => void;
+  updateAvatarState: (updates: Partial<PlayerAvatarState>) => void;
+  clearPlayerAvatar: () => void;
+
   // Undo/Redo operations
   undo: () => boolean;
   redo: () => boolean;
@@ -86,7 +95,8 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
 // Snapshot for undo/redo system
 interface WorldSnapshot {
   blockMap: Map<string, Block>;
-  blockCount: number;
+  simulants: Map<string, AISimulant>;
+  playerAvatar: PlayerAvatarState | null;
   timestamp: number;
 }
 
@@ -130,6 +140,7 @@ export const useWorldStore = create<WorldState>()(
       selectionMode: SelectionMode.PLACE, // Start in place mode for better UX
       activeCamera: "orbit",
       simulants: new Map<string, AISimulant>(),
+      playerAvatar: null,
       lastUpdate: Date.now(),
       syncStatus: "disconnected",
 
@@ -440,6 +451,51 @@ export const useWorldStore = create<WorldState>()(
         });
       },
 
+      // Player Avatar management
+      setPlayerAvatar: (avatar: PlayerAvatarState): void => {
+        set((draft) => {
+          draft.playerAvatar = avatar;
+          draft.lastUpdate = Date.now();
+        });
+      },
+
+      updateAvatarPosition: (position: Vector3): void => {
+        set((draft) => {
+          if (draft.playerAvatar) {
+            draft.playerAvatar.position = position.clone();
+            draft.playerAvatar.lastUpdateTime = performance.now();
+            draft.lastUpdate = Date.now();
+          }
+        });
+      },
+
+      updateAvatarAnimation: (animation: string): void => {
+        set((draft) => {
+          if (draft.playerAvatar) {
+            draft.playerAvatar.currentAnimation = animation;
+            draft.playerAvatar.lastUpdateTime = performance.now();
+            draft.lastUpdate = Date.now();
+          }
+        });
+      },
+
+      updateAvatarState: (updates: Partial<PlayerAvatarState>): void => {
+        set((draft) => {
+          if (draft.playerAvatar) {
+            Object.assign(draft.playerAvatar, updates);
+            draft.playerAvatar.lastUpdateTime = performance.now();
+            draft.lastUpdate = Date.now();
+          }
+        });
+      },
+
+      clearPlayerAvatar: (): void => {
+        set((draft) => {
+          draft.playerAvatar = null;
+          draft.lastUpdate = Date.now();
+        });
+      },
+
       // Undo/Redo system with circular buffer for O(1) operations
       saveSnapshot: (): void => {
         // This method is now handled inline in addBlock/removeBlock methods
@@ -566,7 +622,8 @@ export const useWorldStore = create<WorldState>()(
         // Save snapshot before clearing
         const snapshot: WorldSnapshot = {
           blockMap: new Map(state.blockMap),
-          blockCount: state.blockCount,
+          simulants: new Map(state.simulants),
+          playerAvatar: state.playerAvatar ? { ...state.playerAvatar } : null,
           timestamp: Date.now(),
         };
 
@@ -599,6 +656,7 @@ export const useWorldStore = create<WorldState>()(
           draft.blockMap.clear();
           draft.blockCount = 0;
           draft.simulants.clear();
+          draft.playerAvatar = null;
           draft.lastUpdate = Date.now();
         });
       },

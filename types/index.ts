@@ -10,6 +10,9 @@ export * as animationTypes from "./animations";
 // Re-export skybox types
 export * from "./skybox";
 
+// Re-export player avatar types
+export * from "./playerAvatar";
+
 // AI Simulant Types
 export interface AISimulant {
   id: string;
