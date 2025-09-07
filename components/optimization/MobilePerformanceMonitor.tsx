@@ -152,7 +152,7 @@ class BatteryOptimizer {
   private async initBatteryAPI() {
     try {
       if ("getBattery" in navigator) {
-        const battery = await (navigator as any).getBattery();
+        const battery = await navigator.getBattery!();
 
         this.batteryInfo = {
           level: battery.level,
@@ -227,7 +227,7 @@ function detectDeviceCapabilities(): DeviceCapabilities {
   const canvas = document.createElement("canvas");
   const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
 
-  let capabilities: DeviceCapabilities = {
+  const capabilities: DeviceCapabilities = {
     isMobile,
     isLowEnd: false,
     supportsWebGL2: !!canvas.getContext("webgl2"),
@@ -329,7 +329,9 @@ export function MobilePerformanceMonitor({
     if (enableThermalManagement) {
       thermalManagerRef.current = new ThermalManager((state) => {
         if (process.env.NODE_ENV === "development") {
-          console.log(`Thermal state changed to: ${state}`);
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog(`Thermal state changed to: ${state}`),
+          );
         }
       });
     }
@@ -337,7 +339,9 @@ export function MobilePerformanceMonitor({
     if (enableBatteryOptimization && deviceCapabilities.isMobile) {
       batteryOptimizerRef.current = new BatteryOptimizer((mode) => {
         if (process.env.NODE_ENV === "development") {
-          console.log(`Battery mode changed to: ${mode}`);
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog(`Battery mode changed to: ${mode}`),
+          );
         }
       });
     }

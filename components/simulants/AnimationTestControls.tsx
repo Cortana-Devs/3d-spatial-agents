@@ -147,7 +147,9 @@ export default function AnimationTestControls({
     enableLogging: process.env.NODE_ENV === "development",
     onQualityChange: (quality) => {
       if (process.env.NODE_ENV === "development") {
-        console.log("🎯 Global quality changed:", quality.name);
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("🎯 Global quality changed:", quality.name),
+        );
       }
     },
     onPerformanceWarning: (warning) => {
@@ -288,8 +290,10 @@ export default function AnimationTestControls({
         // Call callback
         onAnimationChange?.(selectedSimulant, animationKey);
 
-        console.log(
-          `🎬 Animation changed: ${animationKey} for simulant ${selectedSimulant}`,
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog(
+            `🎬 Animation changed: ${animationKey} for simulant ${selectedSimulant}`,
+          ),
         );
       } catch (error) {
         const errorMessage =

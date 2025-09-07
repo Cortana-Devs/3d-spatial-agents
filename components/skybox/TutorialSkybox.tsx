@@ -24,7 +24,7 @@ interface TutorialSkyboxProps {
   /**
    * Callback when skybox fails to load
    */
-  onError?: (error: any) => void;
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -72,7 +72,9 @@ export function TutorialSkybox({
         setTexture(loadedTexture);
         isLoadedRef.current = true;
         if (process.env.NODE_ENV === "development") {
-          console.log("✅ Skybox loaded successfully");
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog("✅ Skybox loaded successfully"),
+          );
         }
         onLoad?.();
       },
@@ -82,10 +84,14 @@ export function TutorialSkybox({
       (error) => {
         console.warn("❌ Skybox failed to load:", error);
         if (process.env.NODE_ENV === "development") {
-          console.log(`📁 Make sure you have 6 images in: ${path}`);
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog(`📁 Make sure you have 6 images in: ${path}`),
+          );
         }
         if (process.env.NODE_ENV === "development") {
-          console.log(`Expected files:`, urls);
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog(`Expected files:`, urls),
+          );
         }
         onError?.(error);
       },

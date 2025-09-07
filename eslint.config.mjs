@@ -18,6 +18,9 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "debug/**",
+      "src/debug/**",
+      "examples/**",
     ],
   },
   {
@@ -47,6 +50,7 @@ const eslintConfig = [
         "warn",
         { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
       ],
+      "@typescript-eslint/no-require-imports": "off",
       "react/no-unescaped-entities": "off",
       "no-console": "off",
     },

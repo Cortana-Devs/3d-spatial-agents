@@ -33,7 +33,7 @@ interface EnhancedSkyboxProps {
   /**
    * Callback when skybox fails to load
    */
-  onError?: (error: any) => void;
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -101,10 +101,14 @@ export function EnhancedSkybox({
         setIsLoading(false);
         console.warn("❌ Skybox failed to load:", error);
         if (process.env.NODE_ENV === "development") {
-          console.log(`📁 Make sure you have 6 images in: ${path}`);
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog(`📁 Make sure you have 6 images in: ${path}`),
+          );
         }
         if (process.env.NODE_ENV === "development") {
-          console.log("Expected files:", urls);
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog("Expected files:", urls),
+          );
         }
         onError?.(error);
       },
@@ -124,7 +128,9 @@ export function EnhancedSkybox({
     // Add default preset if not exists
     if (!presets[DEFAULT_SKYBOX_PRESET.id]) {
       if (process.env.NODE_ENV === "development") {
-        console.log("Adding default skybox preset...");
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("Adding default skybox preset..."),
+        );
       }
       addPreset({
         ...DEFAULT_SKYBOX_PRESET,
@@ -148,7 +154,9 @@ export function EnhancedSkybox({
       if (storeTexture && storeTexture !== texture) {
         setTexture(storeTexture);
         if (process.env.NODE_ENV === "development") {
-          console.log("✅ Skybox loaded from store");
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog("✅ Skybox loaded from store"),
+          );
         }
         onLoad?.();
       }

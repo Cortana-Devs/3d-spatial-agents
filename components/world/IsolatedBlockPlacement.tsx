@@ -218,7 +218,9 @@ export function IsolatedBlockPlacement() {
               lastPlacementTime: endTime,
             }));
 
-            console.log(`🧱 Block placed in ${placementDuration.toFixed(2)}ms`);
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog(`🧱 Block placed in ${placementDuration.toFixed(2)}ms`),
+            );
           };
 
           // Use deferred execution for heavy operations
@@ -309,7 +311,9 @@ export function IsolatedBlockPlacement() {
                   Math.round(block.position.z),
                 );
                 removeBlock(blockPosition, "human");
-                console.log("🗑️ Block removed");
+                void import("@/utils/devLogger").then(({ devLog }) =>
+                  devLog("🗑️ Block removed"),
+                );
               }
             }
           });
@@ -363,7 +367,9 @@ export function IsolatedBlockPlacement() {
   // Development console logging
   useEffect(() => {
     if (process.env.NODE_ENV === "development" && debugInfo) {
-      console.log("🧱 Block Placement Metrics:", debugInfo);
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog("🧱 Block Placement Metrics:", debugInfo),
+      );
     }
   }, [debugInfo]);
 

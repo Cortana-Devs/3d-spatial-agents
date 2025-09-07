@@ -84,6 +84,41 @@ declare global {
     saveData: boolean;
   }
 
+  /**
+   * Battery Status API (optional, deprecated in some browsers)
+   * Minimal surface used by the app to avoid any casts.
+   */
+  interface BatteryManager {
+    charging: boolean;
+    level: number;
+    chargingTime?: number;
+    dischargingTime?: number;
+    addEventListener(
+      type:
+        | "levelchange"
+        | "chargingchange"
+        | "chargingtimechange"
+        | "dischargingtimechange",
+      listener: (this: BatteryManager, ev: Event) => void,
+      options?: boolean | AddEventListenerOptions,
+    ): void;
+    removeEventListener(
+      type:
+        | "levelchange"
+        | "chargingchange"
+        | "chargingtimechange"
+        | "dischargingtimechange",
+      listener: (this: BatteryManager, ev: Event) => void,
+      options?: boolean | EventListenerOptions,
+    ): void;
+    onlevelchange?: ((this: BatteryManager, ev: Event) => void) | null;
+    onchargingchange?: ((this: BatteryManager, ev: Event) => void) | null;
+    onchargingtimechange?: ((this: BatteryManager, ev: Event) => void) | null;
+    ondischargingtimechange?:
+      | ((this: BatteryManager, ev: Event) => void)
+      | null;
+  }
+
   interface Navigator {
     /**
      * Approximate amount of device memory in gigabytes.
@@ -96,6 +131,11 @@ declare global {
      * Present in some browsers (e.g., Chrome).
      */
     connection?: NetworkInformation;
+
+    /**
+     * Battery information accessor. Present in some browsers (e.g., Chrome).
+     */
+    getBattery?: () => Promise<BatteryManager>;
   }
 }
 

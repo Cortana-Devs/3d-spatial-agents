@@ -196,7 +196,9 @@ export default function CameraControls({
         </div>
       )}
 
-      <div className={`fixed top-16 md:top-20 left-4 md:left-6 z-50 ${className}`}>
+      <div
+        className={`fixed top-16 md:top-20 left-4 md:left-6 z-50 ${className}`}
+      >
         <Card className="bg-black/20 backdrop-blur-md border-white/10 text-white">
           {/* Main camera mode toggle */}
           <div className="p-3">
@@ -278,7 +280,10 @@ export default function CameraControls({
                           size="sm"
                           onClick={() => {
                             // This would trigger following the specific simulant
-                            console.log("Following simulant:", simulant.name);
+                            void import("@/utils/devLogger").then(
+                              ({ devLog }) =>
+                                devLog("Following simulant:", simulant.name),
+                            );
                           }}
                           className="w-full justify-start text-white hover:bg-white/10"
                         >

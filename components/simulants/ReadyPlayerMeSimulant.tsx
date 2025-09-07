@@ -20,7 +20,7 @@ interface ReadyPlayerMeSimulantProps {
   animationPaths?: string[];
   scale?: number;
   enableGridSnap?: boolean;
-  performanceMode?: 'quality' | 'balanced' | 'performance';
+  performanceMode?: "quality" | "balanced" | "performance";
   onAnimationChange?: (animation: string) => void;
   onLoadComplete?: () => void;
   onLoadError?: (error: Error) => void;
@@ -59,8 +59,8 @@ const RPM_CONFIG = {
       animationUpdateRate: 15,
       crossFadeDuration: 0.1,
       enableBlending: false,
-    }
-  }
+    },
+  },
 } as const;
 
 export default function ReadyPlayerMeSimulant({
@@ -69,7 +69,7 @@ export default function ReadyPlayerMeSimulant({
   animationPaths,
   scale = RPM_CONFIG.defaultScale,
   enableGridSnap = true,
-  performanceMode = 'balanced',
+  performanceMode = "balanced",
   onAnimationChange,
   onLoadComplete,
   onLoadError,
@@ -94,22 +94,30 @@ export default function ReadyPlayerMeSimulant({
   const avatarRoot = useMemo(() => {
     return SkeletonUtils.clone(avatarGLTF.scene) as Group;
   }, [avatarGLTF.scene]);
-  
+
   // Debug: Log animation paths being used (only once)
   useEffect(() => {
-    console.log(`🗂️ Animation paths for ${simulant.id}:`, memoizedAnimationPaths);
+    void import("@/utils/devLogger").then(({ devLog }) =>
+      devLog(`🗂️ Animation paths for ${simulant.id}:`, memoizedAnimationPaths),
+    );
   }, [simulant.id]); // Only log when simulant changes, not paths
 
   // Memoize animation loading options to prevent unnecessary re-renders
-  const animationOptions = useMemo(() => ({
-    enableCaching: true,
-    enableConcurrentLoading: true,
-    enableLogging: true, // Enable to debug animation loading
-    enableRetry: true,
-  }), []);
+  const animationOptions = useMemo(
+    () => ({
+      enableCaching: true,
+      enableConcurrentLoading: true,
+      enableLogging: true, // Enable to debug animation loading
+      enableRetry: true,
+    }),
+    [],
+  );
 
   // Load external animation clips
-  const externalAnimations = useExternalAnimations(memoizedAnimationPaths, animationOptions);
+  const externalAnimations = useExternalAnimations(
+    memoizedAnimationPaths,
+    animationOptions,
+  );
 
   // Memoize external clips to prevent unnecessary re-renders
   const memoizedExternalClips = useMemo(() => {
@@ -119,44 +127,57 @@ export default function ReadyPlayerMeSimulant({
   // Enhanced animation management with external clips
   // Pass a GLTF-like object with the cloned scene so each simulant animates its own instance
   const animationManager = useRPMAnimations(
-    { scene: avatarRoot, animations: avatarGLTF.animations } as any,
+    {
+      scene: avatarRoot,
+      animations: avatarGLTF.animations,
+    } as unknown as import("three/examples/jsm/loaders/GLTFLoader.js").GLTF,
     memoizedExternalClips,
     {
-      autoPlay: 'tpose_male',
-      crossFadeDuration: RPM_CONFIG.performanceSettings[performanceMode].crossFadeDuration,
+      autoPlay: "tpose_male",
+      crossFadeDuration:
+        RPM_CONFIG.performanceSettings[performanceMode].crossFadeDuration,
       enableLOD: true,
       performanceMode,
       enableLogging: true, // Enable to debug animation management
       onAnimationStart: (name) => {
-        console.log(`🎬 Animation started: ${name} for simulant ${simulant.id}`);
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog(`🎬 Animation started: ${name} for simulant ${simulant.id}`),
+        );
         if (onAnimationChange) {
           onAnimationChange(name);
         }
       },
-    }
+    },
   );
 
   // Debug: Log animation loading state
   useEffect(() => {
-    console.log(`🔍 External animations state for ${simulant.id}:`, {
-      loading: externalAnimations.loading,
-      clipsSize: externalAnimations.clips.size,
-      loadedCount: externalAnimations.loadedCount,
-      totalCount: externalAnimations.totalCount,
-      error: externalAnimations.error,
-      clipsKeys: Array.from(externalAnimations.clips.keys())
+    void import("@/utils/devLogger").then(({ devLog }) => {
+      devLog(`🔍 External animations state for ${simulant.id}:`, {
+        loading: externalAnimations.loading,
+        clipsSize: externalAnimations.clips.size,
+        loadedCount: externalAnimations.loadedCount,
+        totalCount: externalAnimations.totalCount,
+        error: externalAnimations.error,
+        clipsKeys: Array.from(externalAnimations.clips.keys()),
+      });
     });
-    
+
     if (!externalAnimations.loading && externalAnimations.clips.size > 0) {
-      console.log(`🎭 Animation loading completed for ${simulant.id}:`, {
-        clipsLoaded: Array.from(externalAnimations.clips.keys()),
-        availableAnimations: animationManager.availableAnimations,
-        totalLoaded: externalAnimations.loadedCount
+      void import("@/utils/devLogger").then(({ devLog }) => {
+        devLog(`🎭 Animation loading completed for ${simulant.id}:`, {
+          clipsLoaded: Array.from(externalAnimations.clips.keys()),
+          availableAnimations: animationManager.availableAnimations,
+          totalLoaded: externalAnimations.loadedCount,
+        });
       });
     }
-    
+
     if (externalAnimations.error) {
-      console.error(`❌ Animation loading error for ${simulant.id}:`, externalAnimations.error);
+      console.error(
+        `❌ Animation loading error for ${simulant.id}:`,
+        externalAnimations.error,
+      );
     }
   }, [
     externalAnimations.loading,
@@ -165,7 +186,7 @@ export default function ReadyPlayerMeSimulant({
     externalAnimations.totalCount,
     externalAnimations.error,
     animationManager.availableAnimations.length,
-    simulant.id
+    simulant.id,
   ]);
 
   // Animation state controller
@@ -176,10 +197,11 @@ export default function ReadyPlayerMeSimulant({
       enableLogging: true, // Enable to debug animation controller
       autoTransition: true,
       transitionDelay: 100,
-      enableBlending: RPM_CONFIG.performanceSettings[performanceMode].enableBlending,
+      enableBlending:
+        RPM_CONFIG.performanceSettings[performanceMode].enableBlending,
       enableIdleCycling: true, // Enable idle animation cycling
       idleCycleInterval: 8000, // Cycle every 8 seconds
-    }
+    },
   );
 
   // Calculate position with optional grid snapping
@@ -187,25 +209,32 @@ export default function ReadyPlayerMeSimulant({
     const basePosition = new Vector3(
       simulant.position.x,
       simulant.position.y + RPM_CONFIG.groundOffset,
-      simulant.position.z
+      simulant.position.z,
     );
 
     if (enableGridSnap && gridConfig.snapToGrid) {
       return new Vector3(
         Math.round(basePosition.x / gridConfig.cellSize) * gridConfig.cellSize,
         basePosition.y,
-        Math.round(basePosition.z / gridConfig.cellSize) * gridConfig.cellSize
+        Math.round(basePosition.z / gridConfig.cellSize) * gridConfig.cellSize,
       );
     }
 
     return basePosition;
-  }, [simulant.position.x, simulant.position.y, simulant.position.z, enableGridSnap, gridConfig.snapToGrid, gridConfig.cellSize]);
+  }, [
+    simulant.position.x,
+    simulant.position.y,
+    simulant.position.z,
+    enableGridSnap,
+    gridConfig.snapToGrid,
+    gridConfig.cellSize,
+  ]);
 
   // Basic visibility management
   const isVisible = true; // Always visible for now
 
   // Determine current LOD level based on distance
-  const currentLODLevel = 'high';
+  const currentLODLevel = "high";
 
   // Compute activity color based on simulant status
   const performanceSettings = RPM_CONFIG.performanceSettings[performanceMode];
@@ -226,7 +255,7 @@ export default function ReadyPlayerMeSimulant({
   useFrame((state) => {
     const now = Date.now();
     const updateInterval = 1000 / performanceSettings.animationUpdateRate;
-    
+
     // Throttle updates based on performance settings
     if (now - lastUpdateTimeRef.current < updateInterval) {
       return;
@@ -254,14 +283,18 @@ export default function ReadyPlayerMeSimulant({
     // Update position
     groupRef.current.position.x = position.x;
     groupRef.current.position.z = position.z;
-    
+
     // Update scale
     groupRef.current.scale.setScalar(scale);
   });
 
   // Handle simulant name tag positioning
   const nameTagPosition = useMemo(() => {
-    return [position.x, position.y + 2.2, position.z] as [number, number, number];
+    return [position.x, position.y + 2.2, position.z] as [
+      number,
+      number,
+      number,
+    ];
   }, [position]);
 
   // Simple render check (performance optimization disabled)
@@ -277,8 +310,8 @@ export default function ReadyPlayerMeSimulant({
   return (
     <group ref={groupRef} position={[position.x, position.y, position.z]}>
       {/* Ready Player Me Character Model */}
-      <primitive 
-        object={avatarRoot} 
+      <primitive
+        object={avatarRoot}
         scale={[lodScale, lodScale, lodScale]}
         castShadow={showDetails}
         receiveShadow={showDetails}
@@ -301,24 +334,16 @@ export default function ReadyPlayerMeSimulant({
       {animationController.state.currentState === "building" && showDetails && (
         <mesh position={[0, 1.5, 0]}>
           <sphereGeometry args={[0.05]} />
-          <meshBasicMaterial
-            color="#FFD700"
-            transparent
-            opacity={0.8}
-          />
+          <meshBasicMaterial color="#FFD700" transparent opacity={0.8} />
         </mesh>
       )}
 
       {/* Name Tag - only show at high LOD */}
-      {currentLODLevel === 'high' && (
+      {currentLODLevel === "high" && (
         <group position={nameTagPosition}>
           <mesh>
             <planeGeometry args={[1.5, 0.3]} />
-            <meshBasicMaterial
-              color="#000000"
-              transparent
-              opacity={0.7}
-            />
+            <meshBasicMaterial color="#000000" transparent opacity={0.7} />
           </mesh>
           {/* Text would be added here with troika-three-text or similar */}
         </group>
@@ -337,26 +362,18 @@ export default function ReadyPlayerMeSimulant({
       )}
 
       {/* Loading indicator while animations are loading */}
-      {externalAnimations.loading && currentLODLevel === 'high' && (
+      {externalAnimations.loading && currentLODLevel === "high" && (
         <mesh position={[0, 2.5, 0]}>
           <sphereGeometry args={[0.1]} />
-          <meshBasicMaterial
-            color="#00D4FF"
-            transparent
-            opacity={0.6}
-          />
+          <meshBasicMaterial color="#00D4FF" transparent opacity={0.6} />
         </mesh>
       )}
 
       {/* Error indicator if animations failed to load */}
-      {externalAnimations.error && currentLODLevel === 'high' && (
+      {externalAnimations.error && currentLODLevel === "high" && (
         <mesh position={[0, 2.5, 0]}>
           <sphereGeometry args={[0.1]} />
-          <meshBasicMaterial
-            color="#FF4444"
-            transparent
-            opacity={0.8}
-          />
+          <meshBasicMaterial color="#FF4444" transparent opacity={0.8} />
         </mesh>
       )}
     </group>

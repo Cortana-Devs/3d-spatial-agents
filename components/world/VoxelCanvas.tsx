@@ -645,31 +645,37 @@ function ClickHandler() {
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
         if (process.env.NODE_ENV === "development") {
-          console.debug("🖱️ Click: place attempt", {
-            positionKey,
-            hasExistingBlock,
-            atLimit,
-            selectedBlockType,
-            selectionMode,
-          });
+          void import("@/utils/devLogger").then(({ devLog }) =>
+            devLog("🖱️ Click: place attempt", {
+              positionKey,
+              hasExistingBlock,
+              atLimit,
+              selectedBlockType,
+              selectionMode,
+            }),
+          );
         }
 
         if (!hasExistingBlock && !atLimit) {
           const success = addBlock(snappedPosition, selectedBlockType, "human");
           if (process.env.NODE_ENV === "development") {
-            console.debug("🖱️ Click: place result", { success });
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog("🖱️ Click: place result", { success }),
+            );
           }
         } else {
           if (process.env.NODE_ENV === "development") {
-            console.debug("🖱️ Click: place blocked", {
-              hasExistingBlock,
-              atLimit,
-              reason: hasExistingBlock
-                ? "Position occupied"
-                : atLimit
-                  ? "At limit"
-                  : "Unknown",
-            });
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog("🖱️ Click: place blocked", {
+                hasExistingBlock,
+                atLimit,
+                reason: hasExistingBlock
+                  ? "Position occupied"
+                  : atLimit
+                    ? "At limit"
+                    : "Unknown",
+              }),
+            );
           }
         }
       }
@@ -881,7 +887,9 @@ function SceneContent({
 
     if (blockMap.size === 0) {
       if (process.env.NODE_ENV === "development") {
-        console.info("VoxelCanvas: creating default floor and test blocks");
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("VoxelCanvas: creating default floor and test blocks"),
+        );
       }
       const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
       const halfSize = Math.floor(floorSize / 2);
@@ -929,11 +937,15 @@ function SceneContent({
       addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
 
       if (process.env.NODE_ENV === "development") {
-        console.info("VoxelCanvas: default blocks created");
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("VoxelCanvas: default blocks created"),
+        );
       }
     } else {
       if (process.env.NODE_ENV === "development") {
-        console.debug("VoxelCanvas: blocks already exist", blockMap.size);
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("VoxelCanvas: blocks already exist", blockMap.size),
+        );
       }
     }
   }, [blockMap.size, gridConfig.size, addBlock]);
