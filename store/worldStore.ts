@@ -12,6 +12,7 @@ import {
   CameraMode,
   WorldState as BaseWorldState,
 } from "../types";
+import { BLOCK_DEFINITIONS, BlockType as ImportedBlockType } from '../types/blocks';
 
 // Enable MapSet plugin for Immer to work with Map and Set
 enableMapSet();
