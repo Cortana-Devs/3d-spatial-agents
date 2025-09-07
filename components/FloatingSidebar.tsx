@@ -118,6 +118,22 @@ export default function FloatingSidebar() {
   const [activeTab, setActiveTab] = React.useState<TabKey>("animation");
   const [selectedPreset, setSelectedPreset] = React.useState(0);
   const [isFloorPanelOpen, setIsFloorPanelOpen] = React.useState(false);
+  // Debounce for quick floor actions to avoid duplicate operations
+  const floorActionLockRef = React.useRef(false);
+  const handleDebouncedFloorAction = React.useCallback(
+    (action: () => void, cooldownMs: number = 300) => {
+      if (floorActionLockRef.current) return;
+      floorActionLockRef.current = true;
+      try {
+        action();
+      } finally {
+        setTimeout(() => {
+          floorActionLockRef.current = false;
+        }, cooldownMs);
+      }
+    },
+    [],
+  );
 
   // Animation state management
   const [currentAnimation, setCurrentAnimation] =
@@ -172,10 +188,13 @@ export default function FloatingSidebar() {
       // Handle 'F' key for quick floor placement
       if (event.key === "f" || event.key === "F") {
         event.preventDefault();
-        quickFloorUtils.placeStoneFloor(gridConfig.size);
-        console.log(
-          `Quick stone floor placed (${gridConfig.size}×${gridConfig.size})`,
-        );
+        handleDebouncedFloorAction(() => {
+          // Normalize placement to y=0 via FloorManager defaults
+          quickFloorUtils.placeStoneFloor(gridConfig.size);
+          console.log(
+            `Quick stone floor placed at y=0 (${gridConfig.size}×${gridConfig.size})`,
+          );
+        });
       }
     };
     window.addEventListener("keydown", handler);
@@ -832,7 +851,7 @@ export default function FloatingSidebar() {
         )}
 
         {activeTab === "floor" && (
-          <div className="p-3 space-y-3">
+          <div className="p-2 space-y-2">
             <div className="text-xs text-white/60">Quick Floor Actions</div>
 
             {/* Quick floor buttons */}
@@ -840,7 +859,11 @@ export default function FloatingSidebar() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => quickFloorUtils.placeStoneFloor(gridConfig.size)}
+                onClick={() =>
+                  handleDebouncedFloorAction(() =>
+                    quickFloorUtils.placeStoneFloor(gridConfig.size),
+                  )
+                }
                 className="text-white hover:bg-white/10 flex items-center gap-2"
               >
                 <div className="w-3 h-3 bg-gray-500 rounded"></div>
@@ -849,7 +872,11 @@ export default function FloatingSidebar() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => quickFloorUtils.placeWoodFloor(gridConfig.size)}
+                onClick={() =>
+                  handleDebouncedFloorAction(() =>
+                    quickFloorUtils.placeWoodFloor(gridConfig.size),
+                  )
+                }
                 className="text-white hover:bg-white/10 flex items-center gap-2"
               >
                 <div className="w-3 h-3 bg-amber-600 rounded"></div>
@@ -858,7 +885,11 @@ export default function FloatingSidebar() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => quickFloorUtils.placeGlassFloor(gridConfig.size)}
+                onClick={() =>
+                  handleDebouncedFloorAction(() =>
+                    quickFloorUtils.placeGlassFloor(gridConfig.size),
+                  )
+                }
                 className="text-white hover:bg-white/10 flex items-center gap-2"
               >
                 <div className="w-3 h-3 bg-blue-400 rounded opacity-60"></div>
@@ -868,7 +899,9 @@ export default function FloatingSidebar() {
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  quickFloorUtils.placeCheckerFloor(gridConfig.size)
+                  handleDebouncedFloorAction(() =>
+                    quickFloorUtils.placeCheckerFloor(gridConfig.size),
+                  )
                 }
                 className="text-white hover:bg-white/10 flex items-center gap-2"
               >
@@ -884,11 +917,12 @@ export default function FloatingSidebar() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsFloorPanelOpen(true)}
-                className="w-full text-white hover:bg-white/10 justify-start"
+                disabled
+                onClick={() => setIsFloorPanelOpen(false)}
+                className="w-full text-white/60 hover:bg-white/10 justify-start"
               >
                 <Settings size={14} className="mr-2" />
-                Advanced Floor Controls
+                Advanced Controls (disabled)
               </Button>
 
               <Button
@@ -910,11 +944,8 @@ export default function FloatingSidebar() {
         )}
       </Card>
 
-      {/* Floor Control Panel Modal */}
-      <FloorControlPanel
-        isOpen={isFloorPanelOpen}
-        onClose={() => setIsFloorPanelOpen(false)}
-      />
+      {/* Advanced floor panel disabled for compact UI */}
+      <FloorControlPanel isOpen={false} onClose={() => {}} />
     </div>
   );
 }

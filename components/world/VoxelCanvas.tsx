@@ -627,14 +627,15 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
+        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition = new Vector3(
           Math.round(intersectionPoint.x),
-          Math.max(0, Math.round(intersectionPoint.y)), // Prevent negative Y
+          gridY, // Grid level (top face aligns here)
           Math.round(intersectionPoint.z),
         );
 
         // Check if we can place a block here
-        const positionKey = `${snappedPosition.x},${snappedPosition.y},${snappedPosition.z}`;
+        const positionKey = `${snappedPosition.x},${gridY - 0.5},${snappedPosition.z}`;
         const hasExistingBlock = blockMap.has(positionKey);
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
@@ -677,14 +678,15 @@ function ClickHandler() {
 
       if (intersectionPoint) {
         // Snap to grid
+        const gridY = Math.round(intersectionPoint.y);
         const snappedPosition: [number, number, number] = [
           Math.round(intersectionPoint.x),
-          Math.max(0, Math.round(intersectionPoint.y)), // Prevent negative Y
+          gridY - 0.5, // Centered so top face aligns to grid Y
           Math.round(intersectionPoint.z),
         ];
 
         // Check if position is valid for preview
-        const positionKey = `${snappedPosition[0]},${snappedPosition[1]},${snappedPosition[2]}`;
+        const positionKey = `${snappedPosition[0]},${gridY - 0.5},${snappedPosition[2]}`;
         const hasExistingBlock = blockMap.has(positionKey);
 
         if (!hasExistingBlock) {
@@ -851,7 +853,7 @@ function SceneContent({
       {/* Floor Block covering the full grid area */}
       <FloorBlock
         size={gridConfig.size}
-        position={new Vector3(0, -0.5, 0)}
+        position={new Vector3(0, 0, 0)}
         blockType={BlockType.STONE}
         textureRepeat={gridConfig.size / 2}
       />

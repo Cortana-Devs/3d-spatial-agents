@@ -131,6 +131,7 @@ interface SnapIndicatorProps {
   visible: boolean;
 }
 
+// SnapIndicator uses position.y as the top-of-block grid level (not block center)
 function SnapIndicator({ position, visible }: SnapIndicatorProps) {
   const meshRef = useRef<Mesh>(null);
 
@@ -149,7 +150,7 @@ function SnapIndicator({ position, visible }: SnapIndicatorProps) {
   if (!visible || !position) return null;
 
   return (
-    <mesh ref={meshRef} position={[position.x, position.y, position.z]}>
+    <mesh ref={meshRef} position={[position.x, position.y + 0.01, position.z]}>
       <ringGeometry args={[0.4, 0.5, 16]} />
       <meshBasicMaterial
         color="#00D4FF"
@@ -383,8 +384,6 @@ export default function GridSystem({
     return null;
   }
 
-
-
   return (
     <group>
       {/* Debug helper - visible cube to confirm grid system is rendering */}
@@ -403,15 +402,12 @@ export default function GridSystem({
       />
 
       {/* Fallback simple grid using basic material */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, 0]}
-      >
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[50, 50]} />
-        <meshBasicMaterial 
-          color="#888888" 
-          transparent 
-          opacity={0.2} 
+        <meshBasicMaterial
+          color="#888888"
+          transparent
+          opacity={0.2}
           wireframe={true}
         />
       </mesh>

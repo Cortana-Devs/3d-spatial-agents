@@ -97,7 +97,12 @@ interface WorldStats {
 
 // Utility functions for spatial hash map
 const positionToKey = (position: Vector3): string => {
-  return `${Math.round(position.x)},${Math.round(position.y)},${Math.round(position.z)}`;
+  const x = Math.round(position.x);
+  const z = Math.round(position.z);
+  // Snap Y so that block centers are at n - 0.5 (top face aligns to grid level n)
+  const yCenter = Math.round(position.y) - 0.5;
+  const y = yCenter === 0 ? 0 : yCenter; // normalize -0 to 0 for stable keys
+  return `${x},${y},${z}`;
 };
 
 const keyToPosition = (key: string): Vector3 => {
@@ -173,7 +178,8 @@ export const useWorldStore = create<WorldState>()(
           id: uuidv4(),
           position: {
             x: Math.round(position.x),
-            y: Math.round(position.y),
+            // Store center at n - 0.5 so the top face aligns with grid level n
+            y: Math.round(position.y) - 0.5,
             z: Math.round(position.z),
           },
           type,
@@ -238,7 +244,8 @@ export const useWorldStore = create<WorldState>()(
         // Ensure position coordinates are properly rounded to match storage
         const roundedPosition = new Vector3(
           Math.round(position.x),
-          Math.round(position.y),
+          // Convert incoming grid level to block center at n - 0.5
+          Math.round(position.y) - 0.5,
           Math.round(position.z),
         );
         const key = positionToKey(roundedPosition);
@@ -582,6 +589,7 @@ export const useWorldStore = create<WorldState>()(
           [BlockType.LEAF]: 0,
           [BlockType.WOOD]: 0,
           [BlockType.FROSTED_GLASS]: 0,
+          [BlockType.FLOOR]: 0,
           [BlockType.NUMBER_4]: 0,
           [BlockType.NUMBER_5]: 0,
           [BlockType.NUMBER_6]: 0,

@@ -24,7 +24,7 @@ interface FloorBlockProps {
 
 export default function FloorBlock({
   size = 50,
-  position = new Vector3(0, -0.5, 0),
+  position = new Vector3(0, 0, 0),
   blockType = BlockType.FLOOR,
   textureRepeat = size / 2,
   onInteract,
@@ -47,8 +47,10 @@ export default function FloorBlock({
       color: blockDef.color,
       roughness: blockDef.roughness,
       metalness: blockDef.metalness,
-      transparent: blockDef.transparency !== undefined && blockDef.transparency > 0,
-      opacity: blockDef.transparency !== undefined ? 1 - blockDef.transparency : 1,
+      transparent:
+        blockDef.transparency !== undefined && blockDef.transparency > 0,
+      opacity:
+        blockDef.transparency !== undefined ? 1 - blockDef.transparency : 1,
       side: DoubleSide,
     });
 
@@ -66,8 +68,11 @@ export default function FloorBlock({
         },
         undefined,
         (error) => {
-          console.warn(`Failed to load texture for floor block: ${blockDef.textureUrl}`, error);
-        }
+          console.warn(
+            `Failed to load texture for floor block: ${blockDef.textureUrl}`,
+            error,
+          );
+        },
       );
     }
 
@@ -97,7 +102,8 @@ export default function FloorBlock({
       if (material.emissiveIntensity !== undefined) {
         // Gentle pulsing glow
         const baseIntensity = blockDef.emissiveIntensity || 0.1;
-        material.emissiveIntensity = baseIntensity + Math.sin(state.clock.elapsedTime * 2) * 0.02;
+        material.emissiveIntensity =
+          baseIntensity + Math.sin(state.clock.elapsedTime * 2) * 0.02;
       }
     }
   });
@@ -113,7 +119,7 @@ export default function FloorBlock({
       userData={{
         blockType: blockType,
         isFloor: true,
-        id: `floor_${blockType}_${position.x}_${position.z}`
+        id: `floor_${blockType}_${position.x}_${position.z}`,
       }}
       receiveShadow
     />
@@ -148,7 +154,7 @@ export function FloorPattern({
       const position = new Vector3(
         centerPosition.x + x * gridConfig.cellSize,
         centerPosition.y,
-        centerPosition.z + z * gridConfig.cellSize
+        centerPosition.z + z * gridConfig.cellSize,
       );
 
       blocks.push({
@@ -196,10 +202,22 @@ export const FLOOR_PRESETS = {
   },
   MIXED_PATTERN: {
     pattern: [
-      BlockType.STONE, BlockType.WOOD, BlockType.STONE, BlockType.WOOD,
-      BlockType.WOOD, BlockType.STONE, BlockType.WOOD, BlockType.STONE,
-      BlockType.STONE, BlockType.WOOD, BlockType.STONE, BlockType.WOOD,
-      BlockType.WOOD, BlockType.STONE, BlockType.WOOD, BlockType.STONE,
+      BlockType.STONE,
+      BlockType.WOOD,
+      BlockType.STONE,
+      BlockType.WOOD,
+      BlockType.WOOD,
+      BlockType.STONE,
+      BlockType.WOOD,
+      BlockType.STONE,
+      BlockType.STONE,
+      BlockType.WOOD,
+      BlockType.STONE,
+      BlockType.WOOD,
+      BlockType.WOOD,
+      BlockType.STONE,
+      BlockType.WOOD,
+      BlockType.STONE,
     ],
     gridSize: 4,
   },
