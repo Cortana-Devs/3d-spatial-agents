@@ -163,13 +163,6 @@ export const useWorldStore = create<WorldState>()(
         const state = get();
 
         // Check block limit
-        console.log("🔍 WorldStore: addBlock called", {
-          position: { x: position.x, y: position.y, z: position.z },
-          type,
-          userId,
-          currentBlockCount: state.blockCount,
-          maxBlocks: state.worldLimits.maxBlocks,
-        });
 
         if (state.blockCount >= state.worldLimits.maxBlocks) {
           // Only log once per second to prevent spam
@@ -183,7 +176,7 @@ export const useWorldStore = create<WorldState>()(
             );
             set({ lastBlockLimitWarning: now });
           }
-          console.log("❌ WorldStore: Block placement failed - at limit");
+
           return false;
         }
 
@@ -192,13 +185,7 @@ export const useWorldStore = create<WorldState>()(
         // Collision detection - check if block already exists at position
         if (state.blockMap.has(key)) {
           console.warn("Block already exists at position:", position);
-          console.log(
-            "❌ WorldStore: Block placement failed - position occupied",
-            {
-              key,
-              existingBlock: state.blockMap.get(key),
-            },
-          );
+
           return false;
         }
 
@@ -220,12 +207,6 @@ export const useWorldStore = create<WorldState>()(
           },
         };
 
-        console.log("✅ WorldStore: Adding block to store", {
-          block,
-          key,
-          beforeCount: state.blockCount,
-        });
-
         set((draft) => {
           // Save current state to history before making changes
           const snapshot: WorldSnapshot = {
@@ -238,12 +219,6 @@ export const useWorldStore = create<WorldState>()(
           draft.blockMap.set(key, block);
           draft.blockCount++;
           draft.lastUpdate = Date.now();
-
-          console.log("✅ WorldStore: Block added successfully", {
-            newBlockCount: draft.blockCount,
-            blockMapSize: draft.blockMap.size,
-            addedBlockId: block.id,
-          });
 
           // Then manage history
           const { states, currentIndex, maxStates } = draft.history;
@@ -267,10 +242,6 @@ export const useWorldStore = create<WorldState>()(
           }
         });
 
-        console.log("✅ WorldStore: addBlock completed successfully", {
-          finalBlockCount: get().blockCount,
-          finalMapSize: get().blockMap.size,
-        });
         return true;
       },
 
@@ -284,9 +255,6 @@ export const useWorldStore = create<WorldState>()(
 
       clearAllBlocks: (): void => {
         set((state) => {
-          console.log(
-            `Clearing all blocks: ${state.blockCount} blocks removed`,
-          );
           state.blockMap.clear();
           state.blockCount = 0;
           state.lastUpdate = Date.now();
