@@ -476,42 +476,30 @@ function VoxelBlock({
         onContextMenu={handleRightClick}
         geometry={geometry}
       >
-        {type === BlockType.NUMBER_7 ? (
-          <meshBasicMaterial
-            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : "#F0F8FF"}
-            transparent={true}
-            opacity={isHovered ? 0.25 : isSelected ? 0.2 : 0.15}
-            side={DoubleSide}
-            depthWrite={true}
-            alphaTest={0.1}
-            fog={false}
-          />
-        ) : (
-          <meshStandardMaterial
-            color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
-            roughness={definition.roughness}
-            metalness={definition.metalness}
-            transparent={definition.transparency !== undefined}
-            opacity={definition.transparency ? 1 - definition.transparency : 1}
-            emissive={
-              isHovered
-                ? color
-                : isSelected
-                  ? "#00D4FF"
-                  : definition.emissive || "#000000"
-            }
-            emissiveIntensity={
-              isHovered
-                ? 0.2
-                : isSelected
-                  ? 0.15
-                  : definition.emissiveIntensity || 0
-            }
-            toneMapped={false}
-            // Seamless rendering - no polygon offset for exact adjacency
-            polygonOffset={false}
-          />
-        )}
+        <meshStandardMaterial
+          color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
+          roughness={definition.roughness}
+          metalness={definition.metalness}
+          transparent={definition.transparency !== undefined}
+          opacity={definition.transparency ? 1 - definition.transparency : 1}
+          emissive={
+            isHovered
+              ? color
+              : isSelected
+                ? "#00D4FF"
+                : definition.emissive || "#000000"
+          }
+          emissiveIntensity={
+            isHovered
+              ? 0.2
+              : isSelected
+                ? 0.15
+                : definition.emissiveIntensity || 0
+          }
+          toneMapped={false}
+          // Seamless rendering - no polygon offset for exact adjacency
+          polygonOffset={false}
+        />
       </mesh>
 
       {showParticles && (
