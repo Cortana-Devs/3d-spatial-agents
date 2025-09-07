@@ -367,28 +367,8 @@ export default function BlockSelector({ className = "" }: BlockSelectorProps) {
   const isEmptyHandSelected = selectionMode === SelectionMode.EMPTY;
   const isAtLimit = blockCount >= worldLimits.maxBlocks;
 
-  // Debug logging for selection state (moved to effect to avoid per-render spam)
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      void import("@/utils/devLogger").then(({ devLog }) =>
-        devLog("🎯 BlockSelector: Current state", {
-          selectedBlockType,
-          selectionMode,
-          isEmptyHandSelected,
-          blockCount,
-          maxBlocks: worldLimits.maxBlocks,
-          isAtLimit,
-        }),
-      );
-    }
-  }, [
-    selectedBlockType,
-    selectionMode,
-    isEmptyHandSelected,
-    blockCount,
-    worldLimits.maxBlocks,
-    isAtLimit,
-  ]);
+  // Debug logging removed to reduce console noise
+  // React.useEffect(() => {}, []);
 
   // Handle keyboard shortcuts for block selection (0-9 keys)
   React.useEffect(() => {

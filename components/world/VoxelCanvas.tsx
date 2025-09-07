@@ -887,8 +887,10 @@ function SceneContent({
 
     if (blockMap.size === 0) {
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog }) =>
-          devLog("VoxelCanvas: creating default floor and test blocks"),
+        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+          ifDev(() =>
+            devLog("VoxelCanvas: creating default floor and test blocks"),
+          ),
         );
       }
       const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
@@ -937,14 +939,16 @@ function SceneContent({
       addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
 
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog }) =>
-          devLog("VoxelCanvas: default blocks created"),
+        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+          ifDev(() => devLog("VoxelCanvas: default blocks created")),
         );
       }
     } else {
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog }) =>
-          devLog("VoxelCanvas: blocks already exist", blockMap.size),
+        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+          ifDev(() =>
+            devLog("VoxelCanvas: blocks already exist", blockMap.size),
+          ),
         );
       }
     }

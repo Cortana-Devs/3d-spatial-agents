@@ -1,4 +1,3 @@
-/Users/chamaththiwanka/Desktop/Projects/Descendants/Descendants/utils/devLogger.ts
 /**
  * Dev Logger
  * Centralizes development-only logging to avoid no-console violations.
@@ -15,7 +14,7 @@
  *
  *  const result = measure("heavyOp", () => heavyOp());
  *
- *  ifDev(() => { /* dev-only side effects */ });
+ *  ifDev(() => { // dev-only side effects });
  *
  * Notes:
  * - This utility only uses console.warn and console.error (allowed by lint).
@@ -25,12 +24,65 @@
 type LogArgs = unknown[];
 
 const isDevEnv =
-  typeof process !== "undefined"
-    ? process.env.NODE_ENV !== "production"
-    : true;
+  typeof process !== "undefined" ? process.env.NODE_ENV !== "production" : true;
 
 // Allow opt-in toggling for tests or special cases
-let enabled = isDevEnv;
+// Toggle sources
+const DEV_LOG_LS_KEY = "__DEV_LOG_ENABLED__";
+const DEV_LOG_QUERY_KEY = "devlog";
+const DEV_LOG_ENV =
+  typeof process !== "undefined"
+    ? (process.env.NEXT_PUBLIC_DEV_LOG ??
+      process.env.NEXT_PUBLIC_DEBUG_LOG ??
+      process.env.NEXT_PUBLIC_LOGS)
+    : undefined;
+
+function parseBoolish(v: unknown): boolean | undefined {
+  if (v == null) return undefined;
+  const s = String(v).toLowerCase().trim();
+  if (s === "1" || s === "true" || s === "on" || s === "yes" || s === "y")
+    return true;
+  if (s === "0" || s === "false" || s === "off" || s === "no" || s === "n")
+    return false;
+  return undefined;
+}
+
+function resolveInitialEnabled(): boolean {
+  // default to NODE_ENV
+  let base = isDevEnv;
+
+  // Env (works in both server and client when NEXT_PUBLIC_*)
+  const envParsed = parseBoolish(DEV_LOG_ENV);
+  if (typeof envParsed === "boolean") base = envParsed;
+
+  // Browser-only: query param and localStorage
+  if (typeof window !== "undefined") {
+    try {
+      const search = typeof location !== "undefined" ? location.search : "";
+      if (search) {
+        const qs = new URLSearchParams(search);
+        if (qs.has(DEV_LOG_QUERY_KEY)) {
+          const qv = qs.get(DEV_LOG_QUERY_KEY);
+          const qParsed = parseBoolish(qv ?? "");
+          if (typeof qParsed === "boolean") {
+            window.localStorage?.setItem(DEV_LOG_LS_KEY, qParsed ? "1" : "0");
+            return qParsed;
+          }
+        }
+      }
+      const ls = window.localStorage?.getItem(DEV_LOG_LS_KEY);
+      const lsParsed = parseBoolish(ls ?? undefined);
+      if (typeof lsParsed === "boolean") return lsParsed;
+    } catch {
+      // ignore storage errors (Safari private mode, etc.)
+    }
+  }
+
+  return base;
+}
+
+const initialEnabled = resolveInitialEnabled();
+let enabled = initialEnabled;
 
 // Persist "once" keys across HMR in dev
 const ONCE_KEY = "__DEV_LOG_ONCE_SET__";
@@ -48,6 +100,11 @@ function tag(scope?: string): string {
 
 export function setDevLoggingEnabled(value: boolean): void {
   enabled = value;
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage?.setItem(DEV_LOG_LS_KEY, value ? "1" : "0");
+    }
+  } catch {}
 }
 
 export function devLog(message?: unknown, ...args: LogArgs): void {
@@ -69,7 +126,11 @@ export function devError(message?: unknown, ...args: LogArgs): void {
 /**
  * Log a message only once per unique key (per HMR session in dev).
  */
-export function devOnce(key: string, message?: unknown, ...args: LogArgs): void {
+export function devOnce(
+  key: string,
+  message?: unknown,
+  ...args: LogArgs
+): void {
   if (!shouldLog()) return;
   if (globalOnceSet.has(key)) return;
   globalOnceSet.add(key);
@@ -109,11 +170,13 @@ export function createScopedLogger(scope: string) {
  * Returns the function's result.
  */
 export function measure<T>(label: string, fn: () => T): T {
-  const start = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const start =
+    typeof performance !== "undefined" ? performance.now() : Date.now();
   try {
     return fn();
   } finally {
-    const end = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const end =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
     if (shouldLog()) {
       const duration = (end - start).toFixed(2);
       console.warn(tag("TIMING"), `${label}: ${duration}ms`);
@@ -127,6 +190,45 @@ export function measure<T>(label: string, fn: () => T): T {
 export function ifDev(cb: () => void): void {
   if (shouldLog()) cb();
 }
+
+// Expose helpers on window for quick toggling and inspection
+declare global {
+  interface Window {
+    __DEV_LOGS__?: {
+      enable: () => void;
+      disable: () => void;
+      set: (value: boolean) => void;
+      status: () => boolean;
+      clearOnceKeys: () => void;
+    };
+  }
+}
+
+(function setupDevLogsGlobal() {
+  if (typeof window === "undefined") return;
+
+  const set = (value: boolean) => {
+    setDevLoggingEnabled(value);
+    try {
+      window.localStorage?.setItem(DEV_LOG_LS_KEY, value ? "1" : "0");
+    } catch {}
+    console.warn(
+      tag("TOGGLE"),
+      `Dev logging ${value ? "ENABLED" : "DISABLED"}`,
+    );
+  };
+
+  window.__DEV_LOGS__ = {
+    enable: () => set(true),
+    disable: () => set(false),
+    set,
+    status: () => shouldLog(),
+    clearOnceKeys: () => {
+      globalOnceSet.clear();
+      console.warn(tag("ONCE"), "Cleared dev-once keys");
+    },
+  };
+})();
 
 const devLogger = {
   setEnabled: setDevLoggingEnabled,
