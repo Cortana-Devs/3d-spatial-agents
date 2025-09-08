@@ -8,6 +8,9 @@ import * as THREE from "three";
 import { useWorldStore } from "../../store/worldStore";
 import { CameraMode, CameraState } from "../../types";
 import { useSafeCameraMode } from "../../hooks/useSafeCameraMode";
+import { debugSimulantYPositioning } from "../../utils/debugLogger";
+import { devWarn } from "@/utils/devLogger";
+
 
 // Camera configuration constants
 const CAMERA_CONFIG = {
@@ -275,6 +278,27 @@ export default function CameraController({
       duration: number = CAMERA_CONFIG.cinematic.transitionDuration,
       easing: keyof typeof easingFunctions = "easeInOutCubic",
     ) => {
+      // Debug log camera transition start
+      debugSimulantYPositioning.logDefaultPositioning(
+        "main-camera",
+        {
+          x: camera.position.x,
+          y: camera.position.y,
+          z: camera.position.z,
+        },
+        `Camera transition starting from current position`,
+      );
+
+      debugSimulantYPositioning.logDefaultPositioning(
+        "main-camera",
+        {
+          x: endPosition.x,
+          y: endPosition.y,
+          z: endPosition.z,
+        },
+        `Camera transition targeting end position`,
+      );
+
       transition.current = {
         isTransitioning: true,
         startTime: Date.now(),
@@ -328,7 +352,7 @@ export default function CameraController({
       previousMode.current !== mode &&
       now - lastModeChange.current < modeChangeDelay
     ) {
-      console.warn(
+      devWarn(
         `Camera mode change blocked: too soon after last change (${now - lastModeChange.current}ms)`,
       );
       return;
@@ -373,6 +397,17 @@ export default function CameraController({
             void import("@/utils/devLogger").then(({ devLog }) =>
               devLog("Starting cinematic mode transition"),
             );
+            // Debug log camera preset positioning
+            debugSimulantYPositioning.logDefaultPositioning(
+              "main-camera",
+              {
+                x: CAMERA_PRESETS.overview.position.x,
+                y: CAMERA_PRESETS.overview.position.y,
+                z: CAMERA_PRESETS.overview.position.z,
+              },
+              "Camera switching to cinematic mode (overview preset)",
+            );
+
             startTransition(
               CAMERA_PRESETS.overview.position,
               CAMERA_PRESETS.overview.target,
@@ -452,6 +487,18 @@ export default function CameraController({
       const movement = controls.velocity
         .clone()
         .multiplyScalar(Math.min(delta, 1 / 30) * config.moveSpeed); // Cap delta to prevent large jumps
+
+      // Debug log Y movement in fly mode
+      if (Math.abs(movement.y) > 0.01) {
+        const oldY = camera.position.y;
+        debugSimulantYPositioning.logYAdjustment(
+          "main-camera",
+          oldY,
+          oldY + movement.y,
+          `Fly mode Y movement (velocity: ${controls.velocity.y.toFixed(3)})`,
+        );
+      }
+
       camera.position.add(movement);
     },
     [camera],
@@ -475,8 +522,30 @@ export default function CameraController({
     const offset = new Vector3(0, config.followHeight, -config.followDistance);
     const desiredPosition = simulantPos.clone().add(offset);
 
+    // Debug log simulant following Y positioning
+    debugSimulantYPositioning.logDefaultPositioning(
+      "main-camera",
+      {
+        x: desiredPosition.x,
+        y: desiredPosition.y,
+        z: desiredPosition.z,
+      },
+      `Following simulant ${target} (height: ${config.followHeight}, distance: ${config.followDistance})`,
+    );
+
     // Smooth camera movement
+    const oldY = camera.position.y;
     camera.position.lerp(desiredPosition, config.smoothness);
+
+    // Debug log Y adjustment during simulant following
+    if (Math.abs(camera.position.y - oldY) > 0.01) {
+      debugSimulantYPositioning.logYAdjustment(
+        "main-camera",
+        oldY,
+        camera.position.y,
+        "Camera following simulant Y adjustment",
+      );
+    }
 
     // Look at simulant with slight look-ahead
     const lookTarget = simulantPos.clone();
@@ -545,11 +614,22 @@ export default function CameraController({
         easingFunctions[transition.current.easing](progress);
 
       // Interpolate position
+      const oldY = camera.position.y;
       camera.position.lerpVectors(
         transition.current.startPosition,
         transition.current.endPosition,
         easedProgress,
       );
+
+      // Debug log Y position changes during camera transitions
+      if (Math.abs(camera.position.y - oldY) > 0.1) {
+        debugSimulantYPositioning.logYAdjustment(
+          "main-camera",
+          oldY,
+          camera.position.y,
+          `Camera transition interpolation (progress: ${(progress * 100).toFixed(1)}%)`,
+        );
+      }
 
       // Interpolate target (for orbit controls)
       if (orbitControlsRef.current) {

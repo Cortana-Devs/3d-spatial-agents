@@ -48,6 +48,14 @@ function parseBoolish(v: unknown): boolean | undefined {
 }
 
 function resolveInitialEnabled(): boolean {
+  // Check for performance mode first
+  const perfMode = parseBoolish(
+    typeof process !== "undefined"
+      ? (process.env.NEXT_PUBLIC_PERF_MODE ?? process.env.PERF_MODE)
+      : undefined,
+  );
+  if (perfMode === true) return false; // Disable all logs in perf mode
+
   // default to NODE_ENV
   let base = isDevEnv;
 
@@ -91,6 +99,14 @@ const globalOnceSet: Set<string> =
   ((globalThis as any)[ONCE_KEY] = new Set<string>());
 
 function shouldLog(): boolean {
+  // Check performance mode at runtime too
+  const perfMode = parseBoolish(
+    typeof process !== "undefined"
+      ? (process.env.NEXT_PUBLIC_PERF_MODE ?? process.env.PERF_MODE)
+      : undefined,
+  );
+  if (perfMode === true) return false;
+
   return enabled && isDevEnv;
 }
 

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CubeTexture } from 'three'
 import {
+import { devWarn } from "@/utils/devLogger";
+
   useSkyboxStore,
   useSkyboxCurrentPreset,
   useSkyboxIsTransitioning,
@@ -147,7 +149,7 @@ export function useSkybox(options: UseSkyboxOptions = {}): UseSkyboxReturn {
 
     // Try fallback if available
     if (fallbackPreset && fallbackPreset !== currentPreset) {
-      console.warn('Attempting fallback to preset:', fallbackPreset)
+      devWarn('Attempting fallback to preset:', fallbackPreset)
       changePreset(fallbackPreset).catch(fallbackErr => {
         console.error('Fallback also failed:', fallbackErr)
       })
@@ -225,7 +227,7 @@ export function useSkybox(options: UseSkyboxOptions = {}): UseSkyboxReturn {
         try {
           await storePreloadPreset(presetId)
         } catch (err) {
-          console.warn(`Failed to preload adjacent preset ${presetId}:`, err)
+          devWarn(`Failed to preload adjacent preset ${presetId}:`, err)
         }
       }
     }
@@ -315,7 +317,7 @@ export function useSkybox(options: UseSkyboxOptions = {}): UseSkyboxReturn {
       const firstPresetId = Object.keys(presets)[0]
       if (firstPresetId && !currentPreset) {
         changePreset(firstPresetId).catch(err => {
-          console.warn('Auto-load failed:', err)
+          devWarn('Auto-load failed:', err)
         })
       }
       isInitializedRef.current = true

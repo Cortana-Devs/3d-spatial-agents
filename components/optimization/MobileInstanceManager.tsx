@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useCallback, useMemo } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
+import { devWarn } from "@/utils/devLogger";
 import {
   InstancedMesh,
   Matrix4,
@@ -349,7 +350,7 @@ class MobileInstancedRenderer {
     color?: Color,
   ): void {
     if (this.instances.size >= this.config.maxInstances) {
-      console.warn("Maximum instances reached, cannot add more");
+      devWarn("Maximum instances reached, cannot add more");
       return;
     }
 

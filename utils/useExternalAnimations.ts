@@ -1,3 +1,5 @@
+import { devLog, devWarn } from "@/utils/devLogger";
+
 /**
  * React hook for loading external animation GLB files
  * Provides concurrent loading, caching, and error handling for RPM animations
@@ -113,13 +115,13 @@ export function useExternalAnimations(
     const clipName = extractClipName(path)
     
     if (config.enableLogging) {
-      console.log(`🔄 Loading animation: ${path} -> ${clipName} (attempt ${attempt + 1})`)
+      devLog(`🔄 Loading animation: ${path} -> ${clipName} (attempt ${attempt + 1})`)
     }
     
     // Check cache first if caching is enabled
     if (config.enableCaching && globalAnimationCache.has(clipName)) {
       if (config.enableLogging) {
-        console.log(`📦 Using cached animation: ${clipName}`)
+        devLog(`📦 Using cached animation: ${clipName}`)
       }
       return globalAnimationCache.get(clipName)!
     }
@@ -153,7 +155,7 @@ export function useExternalAnimations(
         // Extract animation clip
         if (!gltf.animations || gltf.animations.length === 0) {
           if (config.enableLogging) {
-            console.warn(`⚠️ No animations found in ${path}`)
+            devWarn(`⚠️ No animations found in ${path}`)
           }
           resolve(null)
           return
@@ -167,19 +169,19 @@ export function useExternalAnimations(
         }
 
         if (config.enableLogging) {
-          console.log(`✅ Loaded animation: ${clipName} (${clip.duration.toFixed(2)}s)`)
+          devLog(`✅ Loaded animation: ${clipName} (${clip.duration.toFixed(2)}s)`)
         }
 
         resolve(clip)
       } catch (error) {
         if (config.enableLogging) {
-          console.warn(`❌ Failed to load animation from ${path}:`, error)
+          devWarn(`❌ Failed to load animation from ${path}:`, error)
         }
 
         // Retry logic
         if (config.enableRetry && attempt < config.retryAttempts) {
           if (config.enableLogging) {
-            console.log(`🔄 Retrying load for ${path} (attempt ${attempt + 1}/${config.retryAttempts})`)
+            devLog(`🔄 Retrying load for ${path} (attempt ${attempt + 1}/${config.retryAttempts})`)
           }
           
           setTimeout(() => {
@@ -208,7 +210,7 @@ export function useExternalAnimations(
   const loadAnimations = useCallback(async () => {
     if (!isMountedRef.current || animationPaths.length === 0) {
       if (config.enableLogging) {
-        console.log(`🚫 Animation loading skipped: mounted=${isMountedRef.current}, paths=${animationPaths.length}`)
+        devLog(`🚫 Animation loading skipped: mounted=${isMountedRef.current}, paths=${animationPaths.length}`)
       }
       return
     }
@@ -221,7 +223,7 @@ export function useExternalAnimations(
 
     if (allPathsLoaded) {
       if (config.enableLogging) {
-        console.log(`✅ All animations already loaded from cache`)
+        devLog(`✅ All animations already loaded from cache`)
       }
       // Load from cache
       const clipMap = new Map<string, AnimationClip>()
@@ -246,7 +248,7 @@ export function useExternalAnimations(
     }
 
     if (config.enableLogging) {
-      console.log(`🚀 Starting animation loading: ${animationPaths.length} paths`)
+      devLog(`🚀 Starting animation loading: ${animationPaths.length} paths`)
     }
 
     // Create abort controller for this load operation
@@ -292,7 +294,7 @@ export function useExternalAnimations(
               // Note: We'll update state only at the end, not here
             } catch (error) {
               if (config.enableLogging) {
-                console.warn(`Failed to load ${path}:`, error)
+                devWarn(`Failed to load ${path}:`, error)
               }
               loadedCount++
             }
@@ -316,7 +318,7 @@ export function useExternalAnimations(
             }
           } catch (error) {
             if (config.enableLogging) {
-              console.warn(`Failed to load ${path}:`, error)
+              devWarn(`Failed to load ${path}:`, error)
             }
           }
           
@@ -328,7 +330,7 @@ export function useExternalAnimations(
 
       if (isMountedRef.current) {
         if (config.enableLogging) {
-          console.log(`🎬 Animation loading complete: ${clipMap.size}/${animationPaths.length} clips loaded`)
+          devLog(`🎬 Animation loading complete: ${clipMap.size}/${animationPaths.length} clips loaded`)
           console.log(`📋 Loaded clips:`, Array.from(clipMap.keys()))
         }
 

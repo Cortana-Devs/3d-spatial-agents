@@ -7,6 +7,7 @@ import { Separator } from "../ui/separator";
 import { Slider } from "../ui/slider";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import { devError } from "@/utils/devLogger";
 import {
   Square,
   Settings,
@@ -317,7 +318,7 @@ export default function AnimationTestControls({
         });
 
         onError?.(errorMessage);
-        console.error("Animation change failed:", error);
+        devError("Animation change failed:", error);
       }
     },
     [selectedSimulant, updateSimulant, onAnimationChange, onError],

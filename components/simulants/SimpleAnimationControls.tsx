@@ -4,6 +4,7 @@ import React from "react";
 import { useWorldStore } from "../../store/worldStore";
 import { Button } from "../ui/button";
 import { devLog } from "@/utils/devLogger";
+import { Y_LEVEL_CONSTANTS } from "../../config/yLevelConstants";
 
 /**
  * Simple animation controls for testing T-pose and walking animations
@@ -39,7 +40,7 @@ export default function SimpleAnimationControls() {
     const newSimulant = {
       id: `simulant-${Date.now()}`,
       name: `Test Simulant`,
-      position: { x: 0, y: 0, z: 0 },
+      position: { x: 0, y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL, z: 0 },
       status: "idle" as const,
       lastAction: "idle",
       conversationHistory: [],

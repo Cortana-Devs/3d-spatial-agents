@@ -3,6 +3,8 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { performanceManager, MODULE_CONFIGS } from '../../utils/performance/PerformanceManager'
+import { devError } from "@/utils/devLogger";
+
 
 interface UseIsolatedRenderOptions {
   moduleName: string
@@ -121,7 +123,7 @@ export function useIsolatedRender(
       }
 
     } catch (error) {
-      console.error(`Error in isolated render for ${moduleName}:`, error)
+      devError(`Error in isolated render for ${moduleName}:`, error)
     }
   }, [callback, enabled, moduleName])
 

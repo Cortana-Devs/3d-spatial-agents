@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { devError } from "@/utils/devLogger";
 
 interface Props {
   children: ReactNode;
@@ -13,18 +14,18 @@ interface State {
 export class BenchmarkErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null
+    error: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
     return {
       hasError: true,
-      error
+      error,
     };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Benchmark error:', error, errorInfo);
+    devError("Benchmark error:", error, errorInfo);
     this.props.onError?.(error, errorInfo);
   }
 

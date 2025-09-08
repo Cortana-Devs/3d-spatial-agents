@@ -2,6 +2,8 @@
 
 import { Vector3, Camera, Frustum, Matrix4 } from "three";
 import { Block, BlockType } from "../../types";
+import { devLog, devWarn } from "@/utils/devLogger";
+
 
 // Performance-oriented transparency optimization system
 export interface TransparencyConfig {
@@ -90,7 +92,7 @@ export class TransparencyOptimizer {
     if (!this.camera) {
       // Only warn once per session to avoid spam
       if (!this.hasWarnedAboutCamera) {
-        console.warn(
+        devWarn(
           "TransparencyOptimizer: Camera not initialized - transparency optimization disabled",
         );
         this.hasWarnedAboutCamera = true;
@@ -354,7 +356,7 @@ export class TransparencyOptimizer {
       }
 
       this.updatePerformanceSettings();
-      console.log(
+      devLog(
         `🔧 Transparency optimizer: Reduced to ${this.config.performanceMode} mode`,
       );
     } else if (currentFPS > targetFPS * 1.1) {
@@ -368,7 +370,7 @@ export class TransparencyOptimizer {
       }
 
       this.updatePerformanceSettings();
-      console.log(
+      devLog(
         `🚀 Transparency optimizer: Increased to ${this.config.performanceMode} mode`,
       );
     }

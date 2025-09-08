@@ -1,5 +1,6 @@
 import { Vector3 } from "three";
 import { v4 as uuidv4 } from "uuid";
+import { devError } from "@/utils/devLogger";
 import {
   Block,
   BlockType,
@@ -442,7 +443,7 @@ export class BlockFactory {
       const validation = BlockValidator.validateBlock(sanitizedBlock);
       return validation.isValid ? sanitizedBlock : null;
     } catch (error) {
-      console.error("Error sanitizing block data:", error);
+      devError("Error sanitizing block data:", error);
       return null;
     }
   }

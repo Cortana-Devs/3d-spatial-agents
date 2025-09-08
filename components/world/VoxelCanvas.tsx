@@ -28,6 +28,7 @@ import {
   BoxGeometry,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
+import { debugBlockYPositioning } from "../../utils/debugLogger";
 import {
   Block,
   BlockType,
@@ -884,11 +885,11 @@ function SceneContent({
 
     if (blockMap.size === 0) {
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
-          ifDev(() =>
-            devLog("VoxelCanvas: creating default floor and test blocks"),
-          ),
-        );
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() =>
+        //     devLog("VoxelCanvas: creating default floor and test blocks"),
+        //   ),
+        // );
       }
       const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
       const halfSize = Math.floor(floorSize / 2);
@@ -897,6 +898,13 @@ function SceneContent({
       for (let x = -halfSize; x <= halfSize; x++) {
         for (let z = -halfSize; z <= halfSize; z++) {
           const position = new Vector3(x, 0, z); // Place at y=0 for seamless positioning
+
+          // Debug log the default floor Y positioning
+          // debugBlockYPositioning.logInitialPositioning(
+          //   `default-floor-${x}-${z}`,
+          //   { x, y: 0, z },
+          //   "default floor block",
+          // );
 
           // Create more visible pattern with better block distribution
           const isEven = (x + z) % 2 === 0;
@@ -926,27 +934,66 @@ function SceneContent({
       }
 
       // Add prominent test blocks above the floor for visibility testing
-      // dev: suppressed test block placement log
-      addBlock(new Vector3(0, 1, 0), BlockType.NUMBER_4, "system"); // Glowing center beacon
-      addBlock(new Vector3(3, 1, 0), BlockType.STONE, "system"); // Solid reference block
-      addBlock(new Vector3(-3, 1, 0), BlockType.WOOD, "system"); // Wood reference block
-      addBlock(new Vector3(0, 1, 3), BlockType.LEAF, "system"); // Leaf reference block
-      addBlock(new Vector3(0, 2, 0), BlockType.FROSTED_GLASS, "system"); // Glass visibility test
-      addBlock(new Vector3(1, 1, 1), BlockType.NUMBER_6, "system"); // Sunset glass test
-      addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
+      // Debug log test block Y positioning
+      const testBlocks = [
+        {
+          pos: new Vector3(0, 1, 0),
+          type: BlockType.NUMBER_4,
+          name: "Glowing center beacon",
+        },
+        {
+          pos: new Vector3(3, 1, 0),
+          type: BlockType.STONE,
+          name: "Solid reference block",
+        },
+        {
+          pos: new Vector3(-3, 1, 0),
+          type: BlockType.WOOD,
+          name: "Wood reference block",
+        },
+        {
+          pos: new Vector3(0, 1, 3),
+          type: BlockType.LEAF,
+          name: "Leaf reference block",
+        },
+        {
+          pos: new Vector3(0, 2, 0),
+          type: BlockType.FROSTED_GLASS,
+          name: "Glass visibility test",
+        },
+        {
+          pos: new Vector3(1, 1, 1),
+          type: BlockType.NUMBER_6,
+          name: "Sunset glass test",
+        },
+        {
+          pos: new Vector3(-1, 1, -1),
+          type: BlockType.NUMBER_7,
+          name: "Ultra-light glass test",
+        },
+      ];
+
+      testBlocks.forEach(({ pos, type, name }) => {
+        // debugBlockYPositioning.logInitialPositioning(
+        //   `test-block-${pos.x}-${pos.y}-${pos.z}`,
+        //   { x: pos.x, y: pos.y, z: pos.z },
+        //   `${name} (${type})`,
+        // );
+        addBlock(pos, type, "system");
+      });
 
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
-          ifDev(() => devLog("VoxelCanvas: default blocks created")),
-        );
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() => devLog("VoxelCanvas: default blocks created")),
+        // );
       }
     } else {
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
-          ifDev(() =>
-            devLog("VoxelCanvas: blocks already exist", blockMap.size),
-          ),
-        );
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() =>
+        //     devLog("VoxelCanvas: blocks already exist", blockMap.size),
+        //   ),
+        // );
       }
     }
   }, [blockMap.size, gridConfig.size, addBlock]);
@@ -1222,6 +1269,64 @@ export default function VoxelCanvas({
           precision: "highp",
         }}
         onCreated={(state) => {
+          // Debug log initial camera Y positioning
+          // debugBlockYPositioning.logInitialPositioning(
+          //   "main-camera-canvas",
+          //   {
+          //     x: state.camera.position.x,
+          //     y: state.camera.position.y,
+          //     z: state.camera.position.z,
+          //   },
+          //   "Canvas camera initialization",
+          // );
+
+          // Log debug system status on startup
+          if (process.env.NODE_ENV === "development") {
+            Promise.all([
+              import("../../utils/debugLogger"),
+              import("@/utils/devLogger"),
+            ]).then(([debug, { devLog }]) => {
+              // console.group("🔧 Y-Level Debug System Status");
+              // console.log("Environment:", process.env.NODE_ENV);
+              // devLog(
+              //   "Simulant Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_SIMULANT_Y_POSITIONING ||
+              //     "disabled",
+              // );
+              // devLog(
+              //   "Block Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_BLOCK_Y_POSITIONING || "disabled",
+              // );
+              // devLog(
+              //   "Validation Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_Y_LEVEL_VALIDATION || "disabled",
+              // );
+              // devLog(
+              //   "General Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_POSITIONING_GENERAL || "disabled",
+              // );
+              // console.groupEnd();
+              // Log current debug configuration
+              // debug.logDebugStatus();
+              // Test immediate debug functionality
+              // devLog("\n🧪 Testing debug functionality...");
+              // debug.debugSimulantYPositioning.logDefaultPositioning(
+              //   "test-canvas-init",
+              //   { x: 10, y: 10, z: 10 },
+              //   "Canvas initialization test",
+              // );
+              // debug.debugBlockYPositioning.logInitialPositioning(
+              //   "test-canvas-block",
+              //   { x: 0, y: 0, z: 0 },
+              //   "test block",
+              // );
+              // console.log(
+              //   "✅ Debug test complete - check for colored logs above",
+              // );
+              // console.groupEnd();
+            });
+          }
+
           // Initialize GPU memory manager with renderer
           gpuMemoryManager.initialize(state.gl);
 
@@ -1248,6 +1353,13 @@ export default function VoxelCanvas({
           onFocusOnBlock={handleFocusOnBlock}
         />
       </div>
+
+      {/* Debug Status Indicator */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="fixed bottom-4 left-4 bg-green-500/20 text-green-300 px-3 py-2 rounded-lg border border-green-500/30 text-xs">
+          🔧 Debug Mode Active - Check Console
+        </div>
+      )}
 
       {/* Unified Debug Panel for development */}
       {process.env.NODE_ENV === "development" && (

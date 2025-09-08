@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { transparencySortingFix } from "../../utils/TransparencySortingFix";
+import { transparencySortingFix } from "../../systems/TransparencySortingFix";
+import { devWarn, devLog } from "@/utils/devLogger";
 import { BlockType } from "../../types";
 
 interface TransparencyDebugProps {
@@ -65,7 +66,7 @@ export function TransparencyDebug({
         // Generate recommendations
         generateRecommendations(enhancedStats);
       } catch (error) {
-        console.warn("TransparencyDebug: Error updating stats:", error);
+        devWarn("TransparencyDebug: Error updating stats:", error);
       }
     }, 100); // Update every 100ms
 
@@ -116,21 +117,21 @@ export function TransparencyDebug({
   const handleForceSort = useCallback(() => {
     // Force sort will be handled by the CameraBridge component
     if (process.env.NODE_ENV === "development") {
-      console.log("Forced transparency sorting update requested");
+      devLog("Forced transparency sorting update requested");
     }
   }, []);
 
   const handleClearObjects = useCallback(() => {
     transparencySortingFix.clear();
     if (process.env.NODE_ENV === "development") {
-      console.log("Cleared all transparent objects from sorting system");
+      devLog("Cleared all transparent objects from sorting system");
     }
   }, []);
 
   const handleToggleDebugLogging = useCallback(() => {
     transparencySortingFix.enableDebugLogging();
     if (process.env.NODE_ENV === "development") {
-      console.log("Enabled debug logging for transparency sorting");
+      devLog("Enabled debug logging for transparency sorting");
     }
   }, []);
 

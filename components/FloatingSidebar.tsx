@@ -36,7 +36,8 @@ import { SimulantUtils } from "./simulants/SimulantManager";
 import type { AISimulant, CameraMode } from "../types";
 import type { AnimationState } from "../utils/animationController";
 import { useSafeCameraMode } from "../hooks/useSafeCameraMode";
-import { ifDev } from "../utils/devLogger";
+import { ifDev, devWarn } from "../utils/devLogger";
+import { Y_LEVEL_CONSTANTS } from "../config/yLevelConstants";
 
 type TabKey = "animation" | "simulants" | "camera" | "floor";
 
@@ -204,19 +205,19 @@ export default function FloatingSidebar() {
           // Clear blocks first if near limit
           if (blockCount > worldLimits.maxBlocks * 0.9) {
             ifDev(() => {
-              console.warn("Clearing blocks before placing floor due to limit");
+              devWarn("Clearing blocks before placing floor due to limit");
             });
             clearAllBlocks();
           }
           // Normalize placement to y=0 via FloorManager defaults
           ifDev(() => {
-            console.warn(
+            devWarn(
               `Placing floor with size: ${gridConfig.size} (total blocks: ${gridConfig.size * gridConfig.size})`,
             );
           });
           quickFloorUtils.placeStoneFloor(gridConfig.size);
           ifDev(() => {
-            console.warn(
+            devWarn(
               `Quick stone floor placed at y=0 (${gridConfig.size}×${gridConfig.size})`,
             );
           });
@@ -404,7 +405,11 @@ export default function FloatingSidebar() {
       3 + simulants.size * 0.5,
     );
     const spawnPosition = spawnPositions[simulants.size] ||
-      spawnPositions[0] || { x: 0, y: 0, z: 0 };
+      spawnPositions[0] || {
+        x: 0,
+        y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+        z: 0,
+      };
 
     const newSimulant: AISimulant = {
       id: simulantId,
@@ -451,7 +456,11 @@ export default function FloatingSidebar() {
       3 + simulants.size * 0.5,
     );
     const spawnPosition = spawnPositions[simulants.size] ||
-      spawnPositions[0] || { x: 0, y: 0, z: 0 };
+      spawnPositions[0] || {
+        x: 0,
+        y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+        z: 0,
+      };
 
     const newSimulant: AISimulant = {
       id: simulantId,
@@ -916,7 +925,7 @@ export default function FloatingSidebar() {
                 onClick={() =>
                   handleDebouncedFloorAction(() => {
                     if (process.env.NODE_ENV === "development") {
-                      console.warn(
+                      devWarn(
                         `Floor button: Placing floor with size: ${gridConfig.size}`,
                       );
                     }

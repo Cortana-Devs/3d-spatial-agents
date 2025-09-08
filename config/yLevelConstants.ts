@@ -8,6 +8,8 @@
  * to appear floating above floor blocks.
  */
 
+import { debugYLevelValidation } from "../utils/debugLogger";
+
 export const Y_LEVEL_CONSTANTS = {
   // Base reference levels
   WORLD_GROUND_PLANE: 0.0, // Absolute world ground reference
@@ -91,9 +93,17 @@ export const Y_LEVEL_VALIDATION = {
    */
   validateFloorAlignment: (floorY: number): boolean => {
     const floorSurface = Y_LEVEL_ALIGNMENT.getFloorSurface(floorY);
-    return (
-      Math.abs(floorSurface - Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL) < 0.01
+    const isAligned =
+      Math.abs(floorSurface - Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL) < 0.01;
+
+    Y_LEVEL_DEBUG.logValidationResult(
+      "Floor Alignment",
+      floorY,
+      "validateFloorAlignment",
+      isAligned,
     );
+
+    return isAligned;
   },
 
   /**
@@ -101,7 +111,17 @@ export const Y_LEVEL_VALIDATION = {
    */
   validateBlockWalkable: (blockY: number): boolean => {
     const blockTop = Y_LEVEL_ALIGNMENT.getBlockTopFace(blockY);
-    return Math.abs(blockTop - Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL) < 0.01;
+    const isWalkable =
+      Math.abs(blockTop - Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL) < 0.01;
+
+    Y_LEVEL_DEBUG.logValidationResult(
+      "Block Walkable",
+      blockY,
+      "validateBlockWalkable",
+      isWalkable,
+    );
+
+    return isWalkable;
   },
 
   /**
@@ -109,7 +129,17 @@ export const Y_LEVEL_VALIDATION = {
    */
   snapToValidY: (y: number): number => {
     const snap = Y_LEVEL_CONSTANTS.FLOOR_PLACEMENT_SNAP;
-    return Math.round(y / snap) * snap;
+    const snappedY = Math.round(y / snap) * snap;
+
+    if (Math.abs(snappedY - y) > 0.001) {
+      debugYLevelValidation.logMigration(
+        y,
+        snappedY,
+        "Y-coordinate snapping to grid",
+      );
+    }
+
+    return snappedY;
   },
 
   /**
@@ -123,7 +153,18 @@ export const Y_LEVEL_VALIDATION = {
    * Adjusts floor depth and returns new placement Y
    */
   adjustFloorDepth: (newDepthBelowPlayer: number): number => {
-    return Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL - newDepthBelowPlayer;
+    const oldY = Y_LEVEL_CONSTANTS.DEFAULT_FLOOR_Y;
+    const newY = Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL - newDepthBelowPlayer;
+
+    if (Math.abs(newY - oldY) > 0.001) {
+      debugYLevelValidation.logMigration(
+        oldY,
+        newY,
+        `Floor depth adjustment to ${newDepthBelowPlayer} units below player`,
+      );
+    }
+
+    return newY;
   },
 
   /**
@@ -143,20 +184,43 @@ export const Y_LEVEL_MIGRATION = {
    * Converts old floor Y (0) to new aligned Y (0.5)
    */
   migrateOldFloorY: (oldY: number): number => {
+    const newY = Y_LEVEL_CONSTANTS.DEFAULT_FLOOR_Y;
+
     // If old system used Y=0 for floors, that's now correct
     if (oldY === 0) {
-      return Y_LEVEL_CONSTANTS.DEFAULT_FLOOR_Y; // Still 0, no change needed
+      return newY; // Still 0, no change needed
     }
+
+    // Log migration for non-standard values
+    let migrationReason = "";
+
     // If old system used Y=-0.5 (from docs), convert to Y=0
     if (oldY === -0.5) {
-      return Y_LEVEL_CONSTANTS.DEFAULT_FLOOR_Y;
+      migrationReason = "Legacy Y=-0.5 floor positioning to current standard";
     }
     // If old system used Y=0.5 (incorrect high placement), convert to Y=0
-    if (oldY === 0.5) {
-      return Y_LEVEL_CONSTANTS.DEFAULT_FLOOR_Y;
+    else if (oldY === 0.5) {
+      migrationReason = "Incorrect Y=0.5 high floor placement to ground level";
     }
     // For other values, snap to valid grid
-    return Y_LEVEL_VALIDATION.snapToValidY(oldY);
+    else {
+      migrationReason = `Non-standard Y=${oldY} floor positioning to aligned Y=${newY}`;
+      const snappedY = Y_LEVEL_VALIDATION.snapToValidY(oldY);
+      if (Math.abs(snappedY - newY) > 0.001) {
+        debugYLevelValidation.logMigration(
+          oldY,
+          snappedY,
+          `${migrationReason} (grid-snapped)`,
+        );
+        return snappedY;
+      }
+    }
+
+    if (Math.abs(oldY - newY) > 0.001) {
+      debugYLevelValidation.logMigration(oldY, newY, migrationReason);
+    }
+
+    return newY;
   },
 
   /**
@@ -168,28 +232,33 @@ export const Y_LEVEL_MIGRATION = {
 } as const;
 
 /**
- * Debug helpers for development
+ * Debug helpers for development with environment-controlled logging
  */
 export const Y_LEVEL_DEBUG = {
   /**
-   * Logs current Y-level alignment status
+   * Logs current Y-level alignment status using debug logger
    */
   logAlignmentStatus: (
     context: string,
     values: Record<string, number>,
   ): void => {
-    if (process.env.NODE_ENV === "development") {
-      console.group(`🔍 Y-Level Debug: ${context}`);
+    Object.entries(values).forEach(([key, value]) => {
+      const isAligned =
+        Math.abs(value - Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL) < 0.01;
 
-      Object.entries(values).forEach(([key, value]) => {
-        const isAligned =
-          Math.abs(value - Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL) < 0.01;
-        console.log(`${key}: ${value} ${isAligned ? "✅" : "❌"}`);
-      });
+      debugYLevelValidation.logAlignmentCheck(
+        `${context}: ${key}`,
+        value,
+        Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+        isAligned,
+      );
+    });
 
-      console.log(`Target alignment: ${Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL}`);
-      console.groupEnd();
-    }
+    debugYLevelValidation.logConstantUsage(
+      "PLAYER_GROUND_LEVEL",
+      Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+      `${context} alignment check`,
+    );
   },
 
   /**
@@ -203,6 +272,38 @@ export const Y_LEVEL_DEBUG = {
       Y_LEVEL_CONSTANTS.DEFAULT_FLOOR_Y,
     ),
   }),
+
+  /**
+   * Log when Y-level constants are accessed for debugging
+   */
+  logConstantAccess: (
+    constantName: keyof typeof Y_LEVEL_CONSTANTS,
+    usage: string,
+  ): void => {
+    const value = Y_LEVEL_CONSTANTS[constantName];
+    debugYLevelValidation.logConstantUsage(
+      constantName,
+      value as number,
+      usage,
+    );
+  },
+
+  /**
+   * Log Y-level validation results
+   */
+  logValidationResult: (
+    context: string,
+    yValue: number,
+    validationType: string,
+    isValid: boolean,
+  ): void => {
+    debugYLevelValidation.logAlignmentCheck(
+      `${context} (${validationType})`,
+      yValue,
+      Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+      isValid,
+    );
+  },
 } as const;
 
 /**

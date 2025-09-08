@@ -3,6 +3,8 @@
 import { WebGLRenderer } from "three";
 import { gpuMemoryManager } from "./GPUMemoryManager";
 import { ShaderUtils, ShaderProfiler } from "../GPUOptimizedShaders";
+import { devLog, devError } from "@/utils/devLogger";
+
 
 // Performance Test Configuration
 const PERFORMANCE_TEST_CONFIG = {
@@ -37,7 +39,7 @@ export class GPUPerformanceValidator {
   private isTestingInProgress = false;
 
   constructor() {
-    console.log("🚀 GPU Performance Validator initialized");
+    devLog("🚀 GPU Performance Validator initialized");
   }
 
   // Initialize with WebGL renderer
@@ -45,7 +47,7 @@ export class GPUPerformanceValidator {
     this.gl = renderer;
     gpuMemoryManager.initialize(renderer);
 
-    console.log("🔧 Performance validator connected to WebGL renderer");
+    devLog("🔧 Performance validator connected to WebGL renderer");
     this.logSystemCapabilities();
   }
 
@@ -76,7 +78,7 @@ export class GPUPerformanceValidator {
       }
     };
 
-    console.log("📊 GPU Capabilities:", capabilities);
+    devLog("📊 GPU Capabilities:", capabilities);
   }
 
   // Run comprehensive performance test suite
@@ -88,7 +90,7 @@ export class GPUPerformanceValidator {
     this.isTestingInProgress = true;
     this.testResults = [];
 
-    console.log("🧪 Starting GPU Performance Test Suite...");
+    devLog("🧪 Starting GPU Performance Test Suite...");
 
     try {
       // Test 1: Baseline Performance
@@ -115,13 +117,13 @@ export class GPUPerformanceValidator {
       // Calculate overall score
       const overallScore = this.calculateOverallScore();
 
-      console.log("✅ Performance Test Suite Complete!");
-      console.log(`📈 Overall Performance Score: ${overallScore}/100`);
+      devLog("✅ Performance Test Suite Complete!");
+      devLog(`📈 Overall Performance Score: ${overallScore}/100`);
 
       return this.testResults;
 
     } catch (error) {
-      console.error("❌ Performance test failed:", error);
+      devError("❌ Performance test failed:", error);
       throw error;
     } finally {
       this.isTestingInProgress = false;
@@ -131,7 +133,7 @@ export class GPUPerformanceValidator {
   // Test 1: Baseline Performance
   private async testBaslinePerformance(): Promise<void> {
     const testName = "Baseline Performance";
-    console.log(`🔄 Testing: ${testName}...`);
+    devLog(`🔄 Testing: ${testName}...`);
 
     const metrics = await this.measurePerformance(() => {
       // Simulate basic rendering without optimizations
@@ -158,7 +160,7 @@ export class GPUPerformanceValidator {
   // Test 2: Memory Management Efficiency
   private async testMemoryManagement(): Promise<void> {
     const testName = "Memory Management";
-    console.log(`🔄 Testing: ${testName}...`);
+    devLog(`🔄 Testing: ${testName}...`);
 
     // Force memory allocation and cleanup
     const geometries: any[] = [];
@@ -196,7 +198,7 @@ export class GPUPerformanceValidator {
   // Test 3: Culling Efficiency
   private async testCullingEfficiency(): Promise<void> {
     const testName = "Frustum Culling Efficiency";
-    console.log(`🔄 Testing: ${testName}...`);
+    devLog(`🔄 Testing: ${testName}...`);
 
     const metrics = await this.measurePerformance(() => {
       // Simulate rendering with many off-screen objects
@@ -228,7 +230,7 @@ export class GPUPerformanceValidator {
   // Test 4: Draw Call Optimization
   private async testDrawCallOptimization(): Promise<void> {
     const testName = "Draw Call Optimization";
-    console.log(`🔄 Testing: ${testName}...`);
+    devLog(`🔄 Testing: ${testName}...`);
 
     const info = this.gl?.info;
     if (!info) return;
@@ -263,7 +265,7 @@ export class GPUPerformanceValidator {
   // Test 5: Shader Performance
   private async testShaderPerformance(): Promise<void> {
     const testName = "Shader Performance";
-    console.log(`🔄 Testing: ${testName}...`);
+    devLog(`🔄 Testing: ${testName}...`);
 
     let gpuTime = 0;
 
@@ -303,7 +305,7 @@ export class GPUPerformanceValidator {
   // Test 6: Instanced Rendering Performance
   private async testInstancedRendering(): Promise<void> {
     const testName = "Instanced Rendering";
-    console.log(`🔄 Testing: ${testName}...`);
+    devLog(`🔄 Testing: ${testName}...`);
 
     const metrics = await this.measurePerformance(() => {
       // Simulate instanced rendering performance
@@ -332,7 +334,7 @@ export class GPUPerformanceValidator {
   // Test 7: NUMBER_7 Glass Block Performance
   private async testGlassBlockPerformance(): Promise<void> {
     const testName = "NUMBER_7 Glass Performance";
-    console.log(`🔄 Testing: ${testName}...`);
+    devLog(`🔄 Testing: ${testName}...`);
 
     const metrics = await this.measurePerformance(() => {
       // Simulate multiple glass blocks with advanced shaders
@@ -466,13 +468,13 @@ export class GPUPerformanceValidator {
     const report = this.getPerformanceReport();
 
     console.group("🚀 GPU Performance Test Results");
-    console.log(`📊 Overall Score: ${report.overallScore}/100`);
-    console.log(`✅ Passed Tests: ${report.summary.passedTests}`);
-    console.log(`❌ Failed Tests: ${report.summary.failedTests}`);
+    devLog(`📊 Overall Score: ${report.overallScore}/100`);
+    devLog(`✅ Passed Tests: ${report.summary.passedTests}`);
+    devLog(`❌ Failed Tests: ${report.summary.failedTests}`);
 
     if (report.summary.recommendations.length > 0) {
       console.group("🔧 Recommendations:");
-      report.summary.recommendations.forEach(rec => console.log(`• ${rec}`));
+      report.summary.recommendations.forEach(rec => devLog(`• ${rec}`));
       console.groupEnd();
     }
 
@@ -502,7 +504,7 @@ export const validateGPUPerformance = {
       const report = gpuPerformanceValidator.getPerformanceReport();
       return report.overallScore >= 70; // Pass threshold
     } catch (error) {
-      console.error("Quick performance test failed:", error);
+      devError("Quick performance test failed:", error);
       return false;
     }
   },

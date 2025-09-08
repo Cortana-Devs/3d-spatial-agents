@@ -1,26 +1,27 @@
-import { CubeTexture } from 'three'
+import { CubeTexture } from "three";
+import { devLog } from "@/utils/devLogger";
 import {
   TransitionConfig,
   SkyboxError,
   SkyboxErrorType,
-  DEFAULT_TRANSITION_CONFIG
-} from '../../types/skybox'
+  DEFAULT_TRANSITION_CONFIG,
+} from "../../types/skybox";
 
 export class SkyboxTransitionManager {
-  private isTransitioning = false
-  private transitionProgress = 0
+  private isTransitioning = false;
+  private transitionProgress = 0;
   private currentTransition: {
-    from: CubeTexture | null
-    to: CubeTexture
-    config: TransitionConfig
-    startTime: number
-    onProgress?: (progress: number) => void
-    onComplete?: () => void
-    onError?: (error: Error) => void
-    animationId?: number
-  } | null = null
+    from: CubeTexture | null;
+    to: CubeTexture;
+    config: TransitionConfig;
+    startTime: number;
+    onProgress?: (progress: number) => void;
+    onComplete?: () => void;
+    onError?: (error: Error) => void;
+    animationId?: number;
+  } | null = null;
 
-  private abortController: AbortController | null = null
+  private abortController: AbortController | null = null;
 
   /**
    * Transition from current skybox to new skybox with smooth animation
@@ -30,23 +31,28 @@ export class SkyboxTransitionManager {
     toTexture: CubeTexture,
     config: Partial<TransitionConfig> = {},
     callbacks: {
-      onProgress?: (progress: number, fromTexture: CubeTexture | null, toTexture: CubeTexture, blendFactor: number) => void
-      onComplete?: () => void
-      onError?: (error: Error) => void
-    } = {}
+      onProgress?: (
+        progress: number,
+        fromTexture: CubeTexture | null,
+        toTexture: CubeTexture,
+        blendFactor: number,
+      ) => void;
+      onComplete?: () => void;
+      onError?: (error: Error) => void;
+    } = {},
   ): Promise<void> {
     if (this.isTransitioning) {
-      this.cancelTransition()
+      this.cancelTransition();
     }
 
     const fullConfig: TransitionConfig = {
       ...DEFAULT_TRANSITION_CONFIG,
-      ...config
-    }
+      ...config,
+    };
 
-    this.abortController = new AbortController()
-    this.isTransitioning = true
-    this.transitionProgress = 0
+    this.abortController = new AbortController();
+    this.isTransitioning = true;
+    this.transitionProgress = 0;
 
     this.currentTransition = {
       from: fromTexture,
@@ -55,30 +61,38 @@ export class SkyboxTransitionManager {
       startTime: performance.now(),
       onProgress: callbacks.onProgress,
       onComplete: callbacks.onComplete,
-      onError: callbacks.onError
-    }
+      onError: callbacks.onError,
+    };
 
     return new Promise((resolve, reject) => {
       const animate = (currentTime: number) => {
         if (!this.currentTransition || this.abortController?.signal.aborted) {
-          reject(new SkyboxError(
-            SkyboxErrorType.TRANSITION_FAILED,
-            'Transition was cancelled'
-          ))
-          return
+          reject(
+            new SkyboxError(
+              SkyboxErrorType.TRANSITION_FAILED,
+              "Transition was cancelled",
+            ),
+          );
+          return;
         }
 
-        const elapsed = currentTime - this.currentTransition.startTime
-        const rawProgress = Math.min(elapsed / this.currentTransition.config.duration, 1)
+        const elapsed = currentTime - this.currentTransition.startTime;
+        const rawProgress = Math.min(
+          elapsed / this.currentTransition.config.duration,
+          1,
+        );
 
         // Apply easing function
-        this.transitionProgress = this.applyEasing(rawProgress, this.currentTransition.config.easing)
+        this.transitionProgress = this.applyEasing(
+          rawProgress,
+          this.currentTransition.config.easing,
+        );
 
         // Calculate blend factor based on transition type
         const blendFactor = this.calculateBlendFactor(
           this.transitionProgress,
-          this.currentTransition.config.type
-        )
+          this.currentTransition.config.type,
+        );
 
         try {
           // Call progress callback with blend information
@@ -86,87 +100,93 @@ export class SkyboxTransitionManager {
             this.transitionProgress,
             this.currentTransition.from,
             this.currentTransition.to,
-            blendFactor
-          )
+            blendFactor,
+          );
 
           callbacks.onProgress?.(
             this.transitionProgress,
             this.currentTransition.from,
             this.currentTransition.to,
-            blendFactor
-          )
+            blendFactor,
+          );
 
           if (this.transitionProgress >= 1) {
             // Transition complete
-            this.completeTransition()
-            callbacks.onComplete?.()
-            resolve()
+            this.completeTransition();
+            callbacks.onComplete?.();
+            resolve();
           } else {
             // Continue animation
-            this.currentTransition.animationId = requestAnimationFrame(animate)
+            this.currentTransition.animationId = requestAnimationFrame(animate);
           }
         } catch (error) {
           const transitionError = new SkyboxError(
             SkyboxErrorType.TRANSITION_FAILED,
-            `Transition animation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            `Transition animation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
             undefined,
-            error instanceof Error ? error : undefined
-          )
+            error instanceof Error ? error : undefined,
+          );
 
-          this.currentTransition.onError?.(transitionError)
-          callbacks.onError?.(transitionError)
-          reject(transitionError)
+          this.currentTransition.onError?.(transitionError);
+          callbacks.onError?.(transitionError);
+          reject(transitionError);
         }
-      }
+      };
 
       // Start the animation
-      this.currentTransition.animationId = requestAnimationFrame(animate)
-    })
+      this.currentTransition.animationId = requestAnimationFrame(animate);
+    });
   }
 
   /**
    * Apply easing function to raw progress value
    */
-  private applyEasing(progress: number, easing: TransitionConfig['easing']): number {
+  private applyEasing(
+    progress: number,
+    easing: TransitionConfig["easing"],
+  ): number {
     switch (easing) {
-      case 'linear':
-        return progress
+      case "linear":
+        return progress;
 
-      case 'ease-in':
-        return progress * progress
+      case "ease-in":
+        return progress * progress;
 
-      case 'ease-out':
-        return 1 - Math.pow(1 - progress, 2)
+      case "ease-out":
+        return 1 - Math.pow(1 - progress, 2);
 
-      case 'ease-in-out':
+      case "ease-in-out":
         return progress < 0.5
           ? 2 * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
       default:
-        return progress
+        return progress;
     }
   }
 
   /**
    * Calculate blend factor based on transition type
    */
-  private calculateBlendFactor(progress: number, type: TransitionConfig['type']): number {
+  private calculateBlendFactor(
+    progress: number,
+    type: TransitionConfig["type"],
+  ): number {
     switch (type) {
-      case 'fade':
-        return progress
+      case "fade":
+        return progress;
 
-      case 'cross-fade':
+      case "cross-fade":
         // Smooth cross-fade where both textures are visible during transition
-        return 0.5 + (progress - 0.5) * 0.8 // Gentle S-curve
+        return 0.5 + (progress - 0.5) * 0.8; // Gentle S-curve
 
-      case 'slide':
+      case "slide":
         // For slide transitions, might need different handling
         // For now, treat as fade
-        return progress
+        return progress;
 
       default:
-        return progress
+        return progress;
     }
   }
 
@@ -175,17 +195,17 @@ export class SkyboxTransitionManager {
    */
   cancelTransition(): void {
     if (this.currentTransition?.animationId) {
-      cancelAnimationFrame(this.currentTransition.animationId)
+      cancelAnimationFrame(this.currentTransition.animationId);
     }
 
     if (this.abortController) {
-      this.abortController.abort()
-      this.abortController = null
+      this.abortController.abort();
+      this.abortController = null;
     }
 
-    this.isTransitioning = false
-    this.transitionProgress = 0
-    this.currentTransition = null
+    this.isTransitioning = false;
+    this.transitionProgress = 0;
+    this.currentTransition = null;
   }
 
   /**
@@ -193,20 +213,20 @@ export class SkyboxTransitionManager {
    */
   private completeTransition(): void {
     if (this.currentTransition?.animationId) {
-      cancelAnimationFrame(this.currentTransition.animationId)
+      cancelAnimationFrame(this.currentTransition.animationId);
     }
 
-    this.isTransitioning = false
-    this.transitionProgress = 1
+    this.isTransitioning = false;
+    this.transitionProgress = 1;
 
     // Clean up
-    const wasTransitioning = this.currentTransition !== null
-    this.currentTransition = null
-    this.abortController = null
+    const wasTransitioning = this.currentTransition !== null;
+    this.currentTransition = null;
+    this.abortController = null;
 
     if (wasTransitioning) {
       // Transition completed successfully
-      console.debug('Skybox transition completed successfully')
+      devLog("Skybox transition completed successfully");
     }
   }
 
@@ -214,60 +234,60 @@ export class SkyboxTransitionManager {
    * Get current transition progress (0-1)
    */
   get progress(): number {
-    return this.transitionProgress
+    return this.transitionProgress;
   }
 
   /**
    * Check if currently transitioning
    */
   get isActive(): boolean {
-    return this.isTransitioning
+    return this.isTransitioning;
   }
 
   /**
    * Get current transition information
    */
   getCurrentTransition(): {
-    from: CubeTexture | null
-    to: CubeTexture
-    config: TransitionConfig
-    progress: number
-    elapsed: number
+    from: CubeTexture | null;
+    to: CubeTexture;
+    config: TransitionConfig;
+    progress: number;
+    elapsed: number;
   } | null {
-    if (!this.currentTransition) return null
+    if (!this.currentTransition) return null;
 
     return {
       from: this.currentTransition.from,
       to: this.currentTransition.to,
       config: this.currentTransition.config,
       progress: this.transitionProgress,
-      elapsed: performance.now() - this.currentTransition.startTime
-    }
+      elapsed: performance.now() - this.currentTransition.startTime,
+    };
   }
 
   /**
    * Set transition progress manually (for external control)
    */
   setProgress(progress: number): void {
-    if (!this.isTransitioning || !this.currentTransition) return
+    if (!this.isTransitioning || !this.currentTransition) return;
 
-    this.transitionProgress = Math.max(0, Math.min(1, progress))
+    this.transitionProgress = Math.max(0, Math.min(1, progress));
 
     const blendFactor = this.calculateBlendFactor(
       this.transitionProgress,
-      this.currentTransition.config.type
-    )
+      this.currentTransition.config.type,
+    );
 
     this.currentTransition.onProgress?.(
       this.transitionProgress,
       this.currentTransition.from,
       this.currentTransition.to,
-      blendFactor
-    )
+      blendFactor,
+    );
 
     if (this.transitionProgress >= 1) {
-      this.completeTransition()
-      this.currentTransition?.onComplete?.()
+      this.completeTransition();
+      this.currentTransition?.onComplete?.();
     }
   }
 
@@ -277,31 +297,31 @@ export class SkyboxTransitionManager {
   async immediateTransition(
     fromTexture: CubeTexture | null,
     toTexture: CubeTexture,
-    onComplete?: () => void
+    onComplete?: () => void,
   ): Promise<void> {
-    this.cancelTransition()
+    this.cancelTransition();
 
     // Set up immediate transition
-    this.isTransitioning = true
-    this.transitionProgress = 1
+    this.isTransitioning = true;
+    this.transitionProgress = 1;
 
     try {
       // Immediately call with full blend
-      onComplete?.()
+      onComplete?.();
 
       // Clean up
-      this.isTransitioning = false
-      this.transitionProgress = 0
+      this.isTransitioning = false;
+      this.transitionProgress = 0;
     } catch (error) {
-      this.isTransitioning = false
-      this.transitionProgress = 0
+      this.isTransitioning = false;
+      this.transitionProgress = 0;
 
       throw new SkyboxError(
         SkyboxErrorType.TRANSITION_FAILED,
-        `Immediate transition failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Immediate transition failed: ${error instanceof Error ? error.message : "Unknown error"}`,
         undefined,
-        error instanceof Error ? error : undefined
-      )
+        error instanceof Error ? error : undefined,
+      );
     }
   }
 
@@ -310,75 +330,71 @@ export class SkyboxTransitionManager {
    */
   async createTransitionSequence(
     transitions: Array<{
-      texture: CubeTexture
-      duration?: number
-      delay?: number
-      config?: Partial<TransitionConfig>
+      texture: CubeTexture;
+      duration?: number;
+      delay?: number;
+      config?: Partial<TransitionConfig>;
     }>,
     onStepComplete?: (index: number, texture: CubeTexture) => void,
-    onSequenceComplete?: () => void
+    onSequenceComplete?: () => void,
   ): Promise<void> {
-    let currentTexture: CubeTexture | null = null
+    let currentTexture: CubeTexture | null = null;
 
     for (let i = 0; i < transitions.length; i++) {
-      const transition = transitions[i]
+      const transition = transitions[i];
 
       // Wait for delay if specified
       if (transition.delay && transition.delay > 0) {
-        await this.delay(transition.delay)
+        await this.delay(transition.delay);
       }
 
       // Perform transition
-      await this.transitionTo(
-        currentTexture,
-        transition.texture,
-        {
-          duration: transition.duration || DEFAULT_TRANSITION_CONFIG.duration,
-          ...transition.config
-        }
-      )
+      await this.transitionTo(currentTexture, transition.texture, {
+        duration: transition.duration || DEFAULT_TRANSITION_CONFIG.duration,
+        ...transition.config,
+      });
 
-      currentTexture = transition.texture
-      onStepComplete?.(i, transition.texture)
+      currentTexture = transition.texture;
+      onStepComplete?.(i, transition.texture);
     }
 
-    onSequenceComplete?.()
+    onSequenceComplete?.();
   }
 
   /**
    * Utility method for delays
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Get transition performance metrics
    */
   getPerformanceMetrics(): {
-    averageTransitionTime: number
-    totalTransitions: number
-    failureRate: number
+    averageTransitionTime: number;
+    totalTransitions: number;
+    failureRate: number;
   } {
     // This would be implemented with actual performance tracking
     // For now, return placeholder values
     return {
       averageTransitionTime: 0,
       totalTransitions: 0,
-      failureRate: 0
-    }
+      failureRate: 0,
+    };
   }
 
   /**
    * Cleanup method for component unmount
    */
   destroy(): void {
-    this.cancelTransition()
+    this.cancelTransition();
   }
 }
 
 // Export singleton instance
-export const skyboxTransitionManager = new SkyboxTransitionManager()
+export const skyboxTransitionManager = new SkyboxTransitionManager();
 
 // Export class for custom instances
-export { SkyboxTransitionManager as SkyboxTransitionManagerClass }
+export { SkyboxTransitionManager as SkyboxTransitionManagerClass };

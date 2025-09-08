@@ -1,6 +1,7 @@
 import { Vector3 } from "three";
 import { BlockType } from "../types/blocks";
 import { useWorldStore } from "../store/worldStore";
+import { devLog, devWarn } from "@/utils/devLogger";
 import {
   Y_LEVEL_CONSTANTS,
   Y_LEVEL_VALIDATION,
@@ -108,7 +109,7 @@ export class FloorManager {
       }
     }
 
-    console.log(`FloorManager: Placed ${placedCount} floor blocks`);
+    devLog(`FloorManager: Placed ${placedCount} floor blocks`);
     return placedCount > 0;
   }
 
@@ -148,9 +149,7 @@ export class FloorManager {
       }
     }
 
-    console.log(
-      `FloorManager: Placed ${placedCount} checkerboard floor blocks`,
-    );
+    devLog(`FloorManager: Placed ${placedCount} checkerboard floor blocks`);
     return placedCount > 0;
   }
 
@@ -190,7 +189,7 @@ export class FloorManager {
       }
     }
 
-    console.log(`FloorManager: Placed ${placedCount} border floor blocks`);
+    devLog(`FloorManager: Placed ${placedCount} border floor blocks`);
     return placedCount > 0;
   }
 
@@ -230,7 +229,7 @@ export class FloorManager {
       }
     }
 
-    console.log(`FloorManager: Placed ${placedCount} cross floor blocks`);
+    devLog(`FloorManager: Placed ${placedCount} cross floor blocks`);
     return placedCount > 0;
   }
 
@@ -270,7 +269,7 @@ export class FloorManager {
       }
     }
 
-    console.log(`FloorManager: Placed ${placedCount} diagonal floor blocks`);
+    devLog(`FloorManager: Placed ${placedCount} diagonal floor blocks`);
     return placedCount > 0;
   }
 
@@ -281,7 +280,7 @@ export class FloorManager {
     config: FloorConfiguration & { customPattern: BlockType[] },
   ): boolean {
     if (!config.customPattern || config.customPattern.length === 0) {
-      console.warn("FloorManager: Custom pattern is empty");
+      devWarn("FloorManager: Custom pattern is empty");
       return false;
     }
 
@@ -290,7 +289,7 @@ export class FloorManager {
 
     const patternSize = Math.sqrt(config.customPattern.length);
     if (patternSize !== Math.floor(patternSize)) {
-      console.warn("FloorManager: Custom pattern must be a perfect square");
+      devWarn("FloorManager: Custom pattern must be a perfect square");
       return false;
     }
 
@@ -321,9 +320,7 @@ export class FloorManager {
       }
     }
 
-    console.log(
-      `FloorManager: Placed ${placedCount} custom pattern floor blocks`,
-    );
+    devLog(`FloorManager: Placed ${placedCount} custom pattern floor blocks`);
     return placedCount > 0;
   }
 
@@ -346,7 +343,7 @@ export class FloorManager {
       }
     }
 
-    console.log(`FloorManager: Removed ${removedCount} floor blocks`);
+    devLog(`FloorManager: Removed ${removedCount} floor blocks`);
     return removedCount > 0;
   }
 
@@ -372,7 +369,7 @@ export class FloorManager {
       }
     }
 
-    console.log(`FloorManager: Filled ${filledCount} holes in floor`);
+    devLog(`FloorManager: Filled ${filledCount} holes in floor`);
     return filledCount > 0;
   }
 
@@ -381,9 +378,7 @@ export class FloorManager {
    */
   public placeFloor(config: FloorConfiguration): boolean {
     if (!FloorManager.beginOperation()) {
-      console.warn(
-        "FloorManager: Operation already in progress or rate-limited",
-      );
+      devWarn("FloorManager: Operation already in progress or rate-limited");
       return false;
     }
     try {
@@ -425,7 +420,7 @@ export class FloorManager {
               config as FloorConfiguration & { customPattern: BlockType[] },
             );
           }
-          console.warn(
+          devWarn(
             "FloorManager: Custom pattern specified but customPattern array not provided",
           );
           return false;

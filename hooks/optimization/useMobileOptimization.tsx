@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import {
+import { devWarn } from "@/utils/devLogger";
+
   WebGLRenderer,
   WebGLRenderTarget,
   HalfFloatType,
@@ -247,7 +249,7 @@ async function detectWebGPUCapabilities(): Promise<WebGPUCapabilities> {
       textureFormats: ["rgba8unorm", "bgra8unorm"], // Basic formats
     };
   } catch (error) {
-    console.warn("WebGPU detection failed:", error);
+    devWarn("WebGPU detection failed:", error);
     return {
       supported: false,
       features: [],
@@ -436,7 +438,7 @@ class BatteryManager {
 
       this.updatePerformanceMode();
     } catch (error) {
-      console.warn("Battery API not supported:", error);
+      devWarn("Battery API not supported:", error);
     }
   }
 
@@ -729,7 +731,7 @@ export function useMobileOptimization(
   // WebGPU transition function (for future use)
   const transitionToWebGPU = useCallback(async () => {
     if (!webgpuCapabilities?.supported) {
-      console.warn("WebGPU not supported, staying with WebGL");
+      devWarn("WebGPU not supported, staying with WebGL");
       return false;
     }
 

@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { devWarn } from "@/utils/devLogger";
 import { useThree, useFrame } from "@react-three/fiber";
 
 // Mobile performance metrics interface
@@ -172,7 +173,7 @@ class BatteryOptimizer {
         this.updatePerformanceMode();
       }
     } catch (error) {
-      console.warn("Battery API not supported:", error);
+      devWarn("Battery API not supported:", error);
     }
   }
 
@@ -357,7 +358,7 @@ export function MobilePerformanceMonitor({
           entryTypes: ["measure", "navigation", "paint"],
         });
       } catch (e) {
-        console.warn("PerformanceObserver not fully supported");
+        devWarn("PerformanceObserver not fully supported");
       }
     }
 

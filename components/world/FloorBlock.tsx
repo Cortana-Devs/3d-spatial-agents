@@ -3,6 +3,8 @@
 import React, { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
+import { devWarn } from "@/utils/devLogger";
+
   Mesh,
   PlaneGeometry,
   MeshStandardMaterial,
@@ -70,7 +72,7 @@ export default function FloorBlock({
         },
         undefined,
         (error) => {
-          console.warn(
+          devWarn(
             `Failed to load texture for floor block: ${blockDef.textureUrl}`,
             error,
           );

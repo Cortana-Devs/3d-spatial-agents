@@ -5,6 +5,7 @@ import { useGLTF, useAnimations } from "@react-three/drei";
 import { Group } from "three";
 import { AISimulant } from "../../types";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
+import { debugSimulantYPositioning } from "../../utils/debugLogger";
 
 interface SimpleAnimatedAvatarProps {
   simulant: AISimulant;
@@ -262,6 +263,28 @@ export default function SimpleAnimatedAvatar({
     enableBoneAnimations,
     animationQuality,
   ]);
+
+  // Debug log Y positioning when simulant position changes
+  React.useEffect(() => {
+    debugSimulantYPositioning.logDefaultPositioning(
+      simulant.id,
+      simulant.position,
+      "SimpleAnimatedAvatar position update",
+    );
+
+    // Validate Y positioning
+    const isProperlyGrounded = Math.abs(simulant.position.y - 0.5) < 0.1;
+    debugSimulantYPositioning.logValidation(
+      simulant.id,
+      simulant.position,
+      isProperlyGrounded,
+      isProperlyGrounded
+        ? []
+        : [
+            `Y position ${simulant.position.y} is not at ground level (expected ~0.5)`,
+          ],
+    );
+  }, [simulant.position, simulant.id]);
 
   return (
     <group
