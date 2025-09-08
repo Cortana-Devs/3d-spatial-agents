@@ -1,3 +1,4 @@
+import { devWarn, devLog } from "@/utils/devLogger";
 import {
   PERFORMANCE_TARGETS,
   SkyboxPerformanceMetrics,
@@ -60,7 +61,7 @@ export class SkyboxPerformanceMonitor {
 
     // Check if we're in browser environment
     if (typeof window === "undefined") {
-      console.warn("Performance monitoring not available in SSR environment");
+      devWarn("Performance monitoring not available in SSR environment");
       return;
     }
 
@@ -69,7 +70,7 @@ export class SkyboxPerformanceMonitor {
       this.collectMetrics();
     }, intervalMs);
 
-    console.debug("Skybox performance monitoring started");
+    // devLog("Skybox performance monitoring started");
   }
 
   /**
@@ -84,7 +85,7 @@ export class SkyboxPerformanceMonitor {
       this.monitoringInterval = null;
     }
 
-    console.debug("Skybox performance monitoring stopped");
+    devLog("Skybox performance monitoring stopped");
   }
 
   /**
@@ -214,7 +215,7 @@ export class SkyboxPerformanceMonitor {
     }
 
     if (warnings.length > 0) {
-      console.warn("Skybox performance warnings:", warnings);
+      devWarn("Skybox performance warnings:", warnings);
       this.recordWarnings(warnings);
     }
   }
@@ -263,7 +264,7 @@ export class SkyboxPerformanceMonitor {
       });
     }
 
-    console.debug(`Skybox load recorded: ${presetId} in ${loadTime}ms`);
+    devLog(`Skybox load recorded: ${presetId} in ${loadTime}ms`);
   }
 
   /**
@@ -290,7 +291,7 @@ export class SkyboxPerformanceMonitor {
       });
     }
 
-    console.debug(
+    devLog(
       `Skybox transition recorded: ${fromPreset || "none"} -> ${toPreset} in ${transitionTime}ms`,
     );
   }
@@ -422,7 +423,7 @@ export class SkyboxPerformanceMonitor {
       cacheHitRate: 0,
     };
 
-    console.debug("Skybox performance monitor reset");
+    devLog("Skybox performance monitor reset");
   }
 
   /**
@@ -430,7 +431,7 @@ export class SkyboxPerformanceMonitor {
    */
   updateThresholds(newThresholds: Partial<PerformanceThresholds>): void {
     this.thresholds = { ...this.thresholds, ...newThresholds };
-    console.debug("Skybox performance thresholds updated", this.thresholds);
+    devLog("Skybox performance thresholds updated", this.thresholds);
   }
 
   /**

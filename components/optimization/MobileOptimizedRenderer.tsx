@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { devWarn } from "@/utils/devLogger";
 import { useThree, useFrame } from "@react-three/fiber";
 import {
   WebGLRenderer,
@@ -522,7 +523,7 @@ export function MobileOptimizedRenderer({
         try {
           gl.getExtension(ext);
         } catch (e) {
-          console.warn(`Failed to enable extension ${ext}:`, e);
+          devWarn(`Failed to enable extension ${ext}:`, e);
         }
       });
     }

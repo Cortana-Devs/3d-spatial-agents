@@ -6,6 +6,8 @@ import { CubeTextureLoader, CubeTexture } from "three";
 import { useSkyboxStore } from "../../store/skyboxStore";
 import { DEFAULT_SKYBOX_PRESET } from "../../utils/skybox/defaultPreset";
 import { createLogger } from "../../utils/logging/logger";
+import { devWarn } from "@/utils/devLogger";
+
 
 const log = createLogger("skybox:EnhancedSkybox");
 
@@ -140,7 +142,7 @@ export function EnhancedSkybox({
       // Set as current with delay to allow store update
       setTimeout(() => {
         setCurrentPreset(DEFAULT_SKYBOX_PRESET.id).catch((error) => {
-          console.warn("Failed to load default skybox:", error.message);
+          devWarn("Failed to load default skybox:", error.message);
           onError?.(error);
         });
       }, 100);

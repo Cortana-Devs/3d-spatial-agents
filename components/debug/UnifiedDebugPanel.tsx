@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import { devWarn } from "@/utils/devLogger";
 import { transparencySortingFix } from "../../utils/TransparencySortingFix";
 import { useWorldStore } from "../../store/worldStore";
 import { BlockType, CameraMode } from "../../types";
@@ -176,7 +177,7 @@ export function UnifiedDebugPanel({
 
         setStats(newStats);
       } catch (error) {
-        console.warn("UnifiedDebugPanel: Error updating stats:", error);
+        devWarn("UnifiedDebugPanel: Error updating stats:", error);
       }
     }, 100);
 

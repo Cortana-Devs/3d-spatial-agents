@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useRef, useCallback, useMemo, useState } from "react";
-import { useThree, useFrame } from "@react-three/fiber";
+import React, { useRef, useCallback, useMemo } from "react";
 import { Vector3, Vector2, Raycaster, Plane } from "three";
+import { useFrame, useThree } from "@react-three/fiber";
+import { devWarn, devError } from "@/utils/devLogger";
 import { useModuleSystem } from "./ModuleManager";
 import type { ModuleState } from "./ModuleManager";
 import { useWorldStore } from "../../store/worldStore";
@@ -107,7 +108,7 @@ export function BlockPlacementModule({
 
         return result;
       } catch (error) {
-        console.warn("[BlockPlacement] Raycast error:", error);
+        devWarn("[BlockPlacement] Raycast error:", error);
         return null;
       }
     },
@@ -166,7 +167,7 @@ export function BlockPlacementModule({
           removeBlock(op.position, "human");
         }
       } catch (error) {
-        console.error("[BlockPlacement] Operation error:", error);
+        devError("[BlockPlacement] Operation error:", error);
       }
     });
   }, [enableBatching, addBlock, removeBlock]);
@@ -322,7 +323,7 @@ export function BlockPlacementModule({
   React.useEffect(() => {
     if (process.env.NODE_ENV === "development" && stats) {
       if (stats.averageFrameTime > 8) {
-        console.warn(
+        devWarn(
           "[BlockPlacement] Performance warning - consider increasing debounce or reducing raycast frequency",
         );
       }

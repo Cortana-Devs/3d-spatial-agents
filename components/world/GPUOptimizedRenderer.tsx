@@ -2,6 +2,7 @@
 
 import React, { useRef, useMemo, useEffect, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { devWarn } from "@/utils/devLogger";
 import {
   InstancedMesh,
   Matrix4,
@@ -785,7 +786,7 @@ export default function GPUOptimizedRenderer({
         // Glass blocks are handled by SeamlessGlassRenderer, so this shouldn't execute
         // But keeping as safety fallback
         if (glassBlockTypes.includes(blockType as BlockType)) {
-          console.warn(
+          devWarn(
             `Glass block ${blockType} found in GPUOptimizedRenderer - should be handled by SeamlessGlassRenderer`,
           );
         }

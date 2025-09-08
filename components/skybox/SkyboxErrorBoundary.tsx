@@ -2,6 +2,8 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { SkyboxError, SkyboxErrorType } from "../../types/skybox";
+import { devError } from "@/utils/devLogger";
+
 
 interface SkyboxErrorBoundaryProps {
   children: ReactNode;
@@ -126,7 +128,7 @@ export class SkyboxErrorBoundary extends Component<
       url: typeof window !== "undefined" ? window.location.href : "unknown",
     };
 
-    console.error("Skybox Error Boundary caught an error:", errorDetails);
+    devError("Skybox Error Boundary caught an error:", errorDetails);
 
     // In production, you might want to send this to an error reporting service
     if (process.env.NODE_ENV === "production") {
@@ -332,7 +334,7 @@ export class SkyboxErrorBoundary extends Component<
  */
 export function useSkyboxErrorHandler() {
   const handleError = React.useCallback((error: Error, errorInfo?: any) => {
-    console.error("Skybox error caught by hook:", error);
+    devError("Skybox error caught by hook:", error);
 
     // You could integrate this with an error reporting service
     if (process.env.NODE_ENV === "production") {

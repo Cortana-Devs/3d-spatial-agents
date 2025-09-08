@@ -4,6 +4,8 @@ import * as THREE from 'three'
 import { Block as BlockType, BLOCK_DEFINITIONS } from '../../types/blocks'
 import { FrostedGlassFloor as FloorType } from '../../types/floorTypes'
 import { MATERIAL_PRESETS } from '../../presets/MaterialPresets'
+import { devWarn } from "@/utils/devLogger";
+
 
 interface FrostedGlassBlockProps {
   block?: BlockType
@@ -67,7 +69,7 @@ export const FrostedGlassBlock: React.FC<FrostedGlassBlockProps> = ({
   const material = useMemo(() => {
     const preset = MATERIAL_PRESETS[materialPreset]
     if (!preset) {
-      console.warn(`Material preset '${materialPreset}' not found, using default`)
+      devWarn(`Material preset '${materialPreset}' not found, using default`)
     }
 
     const props = preset?.properties || MATERIAL_PRESETS.showroom_glass.properties

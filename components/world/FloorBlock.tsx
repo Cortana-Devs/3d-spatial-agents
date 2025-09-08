@@ -3,6 +3,8 @@
 import React, { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
+import { devWarn } from "@/utils/devLogger";
+
   Mesh,
   PlaneGeometry,
   MeshStandardMaterial,
@@ -13,6 +15,8 @@ import {
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
 import { BlockType, BLOCK_DEFINITIONS } from "../../types/blocks";
+import { Y_LEVEL_CONSTANTS } from "../../config/yLevelConstants";
+import { floorDepthManager } from "../../config/floorDepthConfig";
 
 interface FloorBlockProps {
   size?: number; // Size of the floor in grid units
@@ -24,7 +28,7 @@ interface FloorBlockProps {
 
 export default function FloorBlock({
   size = 50,
-  position = new Vector3(0, 0, 0),
+  position = new Vector3(0, floorDepthManager.getFloorPlacementY(), 0),
   blockType = BlockType.FLOOR,
   textureRepeat = size / 2,
   onInteract,
@@ -68,7 +72,7 @@ export default function FloorBlock({
         },
         undefined,
         (error) => {
-          console.warn(
+          devWarn(
             `Failed to load texture for floor block: ${blockDef.textureUrl}`,
             error,
           );
@@ -137,7 +141,7 @@ interface FloorPatternProps {
 export function FloorPattern({
   gridSize,
   pattern,
-  centerPosition = new Vector3(0, -0.5, 0),
+  centerPosition = new Vector3(0, floorDepthManager.getFloorPlacementY(), 0),
   onInteract,
 }: FloorPatternProps) {
   const { gridConfig } = useWorldStore();

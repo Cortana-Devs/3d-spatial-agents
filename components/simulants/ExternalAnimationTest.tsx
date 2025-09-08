@@ -47,7 +47,7 @@ export default function ExternalAnimationTest() {
     }
 
     if (externalAnimations.error) {
-      console.error(
+      devError(
         "🧪 External Animation Test - Error:",
         externalAnimations.error,
       );

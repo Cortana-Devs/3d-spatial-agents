@@ -1,6 +1,8 @@
 "use client";
 
 import { BlockType, BLOCK_DEFINITIONS } from "../types/blocks";
+import { devLog } from "@/utils/devLogger";
+
 
 // Transparency Test Utility for NUMBER_7 Block
 export class TransparencyValidator {
@@ -147,18 +149,18 @@ export class TransparencyValidator {
     const report = this.getTransparencyReport();
     const performance = this.assessPerformanceImpact();
 
-    console.log("✅ Validation Results:", {
+    devLog("✅ Validation Results:", {
       isValid: validation.isValid,
       issues: validation.issues,
       recommendations: validation.recommendations
     });
 
-    console.log("📊 Transparency Report:", report);
+    devLog("📊 Transparency Report:", report);
 
-    console.log("⚡ Performance Assessment:", performance);
+    devLog("⚡ Performance Assessment:", performance);
 
     if (validation.isValid) {
-      console.log("🎉 NUMBER_7 block transparency is correctly configured!");
+      devLog("🎉 NUMBER_7 block transparency is correctly configured!");
     } else {
       console.warn("⚠️ NUMBER_7 block transparency needs adjustment");
     }

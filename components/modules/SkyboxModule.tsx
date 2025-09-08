@@ -5,6 +5,8 @@ import { useThree, useFrame } from "@react-three/fiber";
 import { CubeTextureLoader, Scene, CubeTexture, Texture } from "three";
 import { useModuleSystem } from "./ModuleManager";
 import type { ModuleState } from "./ModuleManager";
+import { devWarn, devError } from "@/utils/devLogger";
+
 
 interface SkyboxModuleProps {
   skyboxPath?: string;
@@ -109,7 +111,7 @@ export function SkyboxModule({
           },
           // onError
           (error) => {
-            console.error("[SkyboxModule] Failed to load skybox:", error);
+            devError("[SkyboxModule] Failed to load skybox:", error);
             setSkyboxState((prev) => ({
               ...prev,
               isLoading: false,
@@ -152,7 +154,7 @@ export function SkyboxModule({
           }, transitionDuration);
         }
       } catch (error) {
-        console.error("[SkyboxModule] Error applying skybox to scene:", error);
+        devError("[SkyboxModule] Error applying skybox to scene:", error);
         setSkyboxState((prev) => ({
           ...prev,
           error: `Error applying skybox: ${error}`,
@@ -173,7 +175,7 @@ export function SkyboxModule({
           applySkyboxToScene(texture);
         }
       } catch (error) {
-        console.error("[SkyboxModule] Skybox initialization failed:", error);
+        devError("[SkyboxModule] Skybox initialization failed:", error);
       }
     };
 
@@ -211,7 +213,7 @@ export function SkyboxModule({
       loadSkyboxTexture(timeBasedSkybox)
         .then(applySkyboxToScene)
         .catch((error) =>
-          console.error(
+          devError(
             "[SkyboxModule] Time of day skybox switch failed:",
             error,
           ),
@@ -291,7 +293,7 @@ export function SkyboxModule({
     () => ({
       switchSkybox: async (newPath: string) => {
         if (skyboxState.isLoading) {
-          console.warn(
+          devWarn(
             "[SkyboxModule] Skybox switch ignored - already loading",
           );
           return false;
@@ -302,7 +304,7 @@ export function SkyboxModule({
           applySkyboxToScene(texture);
           return true;
         } catch (error) {
-          console.error("[SkyboxModule] Manual skybox switch failed:", error);
+          devError("[SkyboxModule] Manual skybox switch failed:", error);
           return false;
         }
       },

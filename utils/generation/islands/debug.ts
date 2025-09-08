@@ -1,3 +1,5 @@
+import { devLog, devError } from "@/utils/devLogger";
+
 /**
  * Island Generation Debug and Testing Utilities
  *
@@ -37,7 +39,7 @@ export function testIslandGeneration(
   seed: string = "debug-test-seed",
   size: { width: number; height: number } = { width: 32, height: 32 },
 ): IslandDebugResult {
-  console.log("🏝️ Starting island generation debug test...");
+  devLog("🏝️ Starting island generation debug test...");
 
   const startTime = performance.now();
   const errors: string[] = [];
@@ -51,13 +53,13 @@ export function testIslandGeneration(
   try {
     // Get world store
     const worldStore = useWorldStore.getState();
-    console.log("📊 Initial world state:", {
+    devLog("📊 Initial world state:", {
       blockCount: worldStore.blockCount,
       worldLimits: worldStore.worldLimits,
     });
 
     // Clear existing blocks in test area
-    console.log("🧹 Clearing test area...");
+    devLog("🧹 Clearing test area...");
     const clearStart = { x: -size.width / 2, z: -size.height / 2 };
     for (let x = 0; x < size.width; x++) {
       for (let z = 0; z < size.height; z++) {
@@ -86,7 +88,7 @@ export function testIslandGeneration(
       },
     };
 
-    console.log("⚙️ Island configuration:", {
+    devLog("⚙️ Island configuration:", {
       seed: config.seed,
       gridSize: config.grid.size,
       origin: config.grid.origin,
@@ -94,15 +96,15 @@ export function testIslandGeneration(
     });
 
     // Generate island
-    console.log("🎲 Generating island...");
+    devLog("🎲 Generating island...");
     const result = generateIsland(config);
-    console.log("📈 Generation result:", {
+    devLog("📈 Generation result:", {
       placementsCount: result.placements.length,
       regionsCount: result.regions.length,
     });
 
     // Place blocks in world
-    console.log("🏗️ Placing blocks in world...");
+    devLog("🏗️ Placing blocks in world...");
     for (const placement of result.placements) {
       try {
         const position = new Vector3(placement.x, placement.y, placement.z);
@@ -155,7 +157,7 @@ export function testIslandGeneration(
     const samplePlacements = result.placements.slice(0, 10);
 
     // Final world state
-    console.log("📊 Final world state:", {
+    devLog("📊 Final world state:", {
       blockCount: worldStore.blockCount,
       placedInTest: placedBlocks,
       failed: failedPlacements,
@@ -177,7 +179,7 @@ export function testIslandGeneration(
     };
 
     // Log results
-    console.log("✅ Island generation debug complete:", debugResult);
+    devLog("✅ Island generation debug complete:", debugResult);
 
     return debugResult;
   } catch (error) {
@@ -188,7 +190,7 @@ export function testIslandGeneration(
       error instanceof Error ? error.message : "Unknown error";
     errors.push(errorMessage);
 
-    console.error("❌ Island generation debug failed:", error);
+    devError("❌ Island generation debug failed:", error);
 
     return {
       success: false,
@@ -249,7 +251,7 @@ export function clearTestArea(
     }
   }
 
-  console.log(`🧹 Cleared ${clearedCount} blocks from test area`);
+  devLog(`🧹 Cleared ${clearedCount} blocks from test area`);
   return clearedCount;
 }
 
@@ -277,12 +279,12 @@ export function getWorldStats() {
  * Console command to run island generation test
  */
 export function runIslandDebugTest() {
-  console.log("🚀 Running island generation debug test...");
+  devLog("🚀 Running island generation debug test...");
   const result = testIslandGeneration();
 
   if (result.success) {
-    console.log("✅ Test successful! Check the world for generated blocks.");
-    console.log("📍 Blocks should appear around coordinates (0, 0, 0)");
+    devLog("✅ Test successful! Check the world for generated blocks.");
+    devLog("📍 Blocks should appear around coordinates (0, 0, 0)");
   } else {
     console.log("❌ Test failed. Check errors:", result.errors);
   }
@@ -305,8 +307,8 @@ if (typeof window !== "undefined") {
     process.env.NODE_ENV === "development" &&
     (window as any).__ENABLE_ISLAND_DEBUG_LOGS__ === true
   ) {
-    console.log("🔧 Island debug tools available at window.islandDebug");
-    console.log("   - islandDebug.test() - Run full test");
+    devLog("🔧 Island debug tools available at window.islandDebug");
+    devLog("   - islandDebug.test() - Run full test");
     console.log("   - islandDebug.generate() - Generate small test island");
     console.log("   - islandDebug.clear() - Clear test area");
     console.log("   - islandDebug.stats() - Get world statistics");

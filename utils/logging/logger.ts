@@ -1,8 +1,10 @@
+import { devLog } from "@/utils/devLogger";
+
 /**
  * Centralized logger utility with leveled logging, namespace filtering, and environment gating.
  *
  * Goals:
- * - Replace scattered console.log(...) calls with a consistent, configurable logger
+ * - Replace scattered devLog(...) calls with a consistent, configurable logger
  * - Gate verbose logs in production by default (env gating), while allowing overrides
  * - Support log levels (trace, debug, info, warn, error, silent)
  * - Namespace-based enabling similar to "debug" packages (e.g., "world:*,-world:noise")

@@ -1,5 +1,6 @@
 "use client";
 
+import { devLog, devWarn } from "@/utils/devLogger";
 import {
   Object3D,
   Vector3,
@@ -71,7 +72,7 @@ export class TransparencySortingFix {
    */
   public configure(config: Partial<TransparencySortingConfig>): void {
     this.config = { ...this.config, ...config };
-    console.log("TransparencySortingFix configured:", this.config);
+    devLog("TransparencySortingFix configured:", this.config);
   }
 
   /**
@@ -131,7 +132,7 @@ export class TransparencySortingFix {
     opacity: number = 1.0,
   ): void {
     if (this.transparentObjects.size >= this.config.maxTransparentObjects) {
-      console.warn(
+      devWarn(
         `Maximum transparent objects reached (${this.config.maxTransparentObjects})`,
       );
       return;
@@ -397,7 +398,7 @@ export class TransparencySortingFix {
 
     this.updateTransparencySorting = (camera: Camera) => {
       const stats = this.getStats();
-      console.log("Transparency Sorting Stats:", stats);
+      devLog("Transparency Sorting Stats:", stats);
       originalUpdateMethod(camera);
     };
   }

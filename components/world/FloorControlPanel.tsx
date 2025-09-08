@@ -56,7 +56,7 @@ export default function FloorControlPanel({
           console.warn("Failed to place floor");
         }
       } catch (error) {
-        console.error("Error placing floor:", error);
+        devError("Error placing floor:", error);
       } finally {
         setIsPlacing(false);
       }
