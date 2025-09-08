@@ -244,6 +244,18 @@ declare global {
       console.warn(tag("ONCE"), "Cleared dev-once keys");
     },
   };
+
+  // Show console instructions on first load
+  if (shouldLog()) {
+    console.warn(
+      tag("INFO"),
+      "🔧 Dev Logs Controls:\n" +
+        "  • __DEV_LOGS__.disable() - Turn off all dev logs\n" +
+        "  • __DEV_LOGS__.enable() - Turn on dev logs\n" +
+        "  • __DEV_LOGS__.status() - Check current status\n" +
+        "  • Add ?devlog=false to URL to disable via query param",
+    );
+  }
 })();
 
 const devLogger = {

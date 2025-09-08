@@ -643,39 +643,9 @@ function ClickHandler() {
         const hasExistingBlock = blockMap.has(positionKey);
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
-        if (process.env.NODE_ENV === "development") {
-          void import("@/utils/devLogger").then(({ devLog }) =>
-            devLog("🖱️ Click: place attempt", {
-              positionKey,
-              hasExistingBlock,
-              atLimit,
-              selectedBlockType,
-              selectionMode,
-            }),
-          );
-        }
-
         if (!hasExistingBlock && !atLimit) {
           const success = addBlock(snappedPosition, selectedBlockType, "human");
-          if (process.env.NODE_ENV === "development") {
-            void import("@/utils/devLogger").then(({ devLog }) =>
-              devLog("🖱️ Click: place result", { success }),
-            );
-          }
         } else {
-          if (process.env.NODE_ENV === "development") {
-            void import("@/utils/devLogger").then(({ devLog }) =>
-              devLog("🖱️ Click: place blocked", {
-                hasExistingBlock,
-                atLimit,
-                reason: hasExistingBlock
-                  ? "Position occupied"
-                  : atLimit
-                    ? "At limit"
-                    : "Unknown",
-              }),
-            );
-          }
         }
       }
     },

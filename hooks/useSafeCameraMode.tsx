@@ -5,7 +5,6 @@ import { useWorldStore } from "../store/worldStore";
 import { CameraMode } from "../types";
 import { devWarn } from "@/utils/devLogger";
 
-
 interface SafeCameraModeConfig {
   minModeChangeDelay: number; // Minimum time between mode changes (ms)
   enableDoubleClickFocus: boolean; // Allow double-click to focus
@@ -152,9 +151,7 @@ export function useSafeCameraMode(config: Partial<SafeCameraModeConfig> = {}) {
 
       // Don't switch modes on double-click, just focus
       // The actual focusing should be handled by the camera controller
-      void import("@/utils/devLogger").then(({ devLog }) =>
-        devLog("Double-click focus triggered (no mode change)"),
-      );
+
       return true;
     },
     [finalConfig.enableDoubleClickFocus, activeCamera, isTransitioning],

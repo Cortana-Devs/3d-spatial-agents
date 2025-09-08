@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import BlockSelector from "../components/world/BlockSelector";
 import WorldInfo from "../components/world/WorldInfo";
 import FloatingSidebar from "../components/FloatingSidebar";
+import { FloatingHelp } from "../components/ui/FloatingPanel";
 
 import { ArchipelagoTest } from "../components/debug/ArchipelagoTest";
 
@@ -44,17 +45,14 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="floating-panel px-3 py-2 ml-4 md:ml-8 hidden sm:block">
-            <div className="text-xs text-axiom-neutral-600 dark:text-axiom-neutral-400">
-              <span className="hidden md:inline">
-                Click to place • Drag to orbit • Scroll to zoom
-              </span>
-              <span className="md:hidden">Tap to place • Drag to orbit</span>
-            </div>
-            <div className="text-xs text-axiom-primary-500 font-medium mt-1">
-              Click to place blocks
-            </div>
-          </div>
+          <FloatingHelp
+            instructions={[
+              "Tap to place • Drag to orbit",
+              "Click to place • Drag to orbit • Scroll to zoom",
+            ]}
+            action="Click to place blocks"
+            className="ml-4 md:ml-8 hidden sm:block"
+          />
         </div>
       </header>
 
