@@ -98,7 +98,7 @@ export class SkyboxTextureLoader {
         return;
       }
 
-      let loadedCount = 0;
+      const loadedCount = 0;
       const totalCount = urls.length;
 
       this.cubeLoader.load(
@@ -199,7 +199,7 @@ export class SkyboxTextureLoader {
       for (const face of SKYBOX_ASSETS.naming) {
         // Try different formats in order of preference
         const formats = [".webp", ".jpg", ".png", ".avif"];
-        let url = `${assetPath}${face}${formats[0]}`; // Default to WebP
+        const url = `${assetPath}${face}${formats[0]}`; // Default to WebP
 
         // For now, assume WebP. In production, you might want to detect format support
         urls.push(url);

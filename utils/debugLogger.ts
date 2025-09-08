@@ -75,7 +75,7 @@ function isDebugEnabled(category: DebugCategory): boolean {
   const serverEnvVar = DEBUG_ENV_VARS[category];
 
   let clientEnvValue = process.env[clientEnvVar];
-  let serverEnvValue = process.env[serverEnvVar];
+  const serverEnvValue = process.env[serverEnvVar];
 
   // Method 2: Try accessing via globalThis (browser global)
   if (typeof window !== "undefined" && !clientEnvValue) {

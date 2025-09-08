@@ -504,7 +504,7 @@ export function getRecommendedMassivePreset(systemSpecs: {
   const { ramGB, performanceLevel } = systemSpecs;
 
   // Filter by memory constraints
-  let candidates = getMassivePresetsByMemoryLimit(ramGB);
+  const candidates = getMassivePresetsByMemoryLimit(ramGB);
 
   if (candidates.length === 0) {
     // Fallback to performance preset if memory is very limited

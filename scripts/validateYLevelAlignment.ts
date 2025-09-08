@@ -92,7 +92,7 @@ function runValidation(): void {
   console.log(`  Block Center to Top: ${Y_LEVEL_CONSTANTS.BLOCK_CENTER_TO_TOP}\n`);
 
   let passedTests = 0;
-  let totalTests = testScenarios.length;
+  const totalTests = testScenarios.length;
 
   console.log(`${colors.blue}Running Test Scenarios:${colors.reset}\n`);
 

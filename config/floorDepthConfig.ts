@@ -73,7 +73,7 @@ export const FLOOR_DEPTH_PRESETS: Record<string, FloorDepthConfig> = {
 };
 
 // Current active floor depth configuration
-let currentFloorDepthConfig: FloorDepthConfig = FLOOR_DEPTH_PRESETS.DEFAULT;
+const currentFloorDepthConfig: FloorDepthConfig = FLOOR_DEPTH_PRESETS.DEFAULT;
 
 /**
  * Floor Depth Manager - Controls floor positioning relative to player level
