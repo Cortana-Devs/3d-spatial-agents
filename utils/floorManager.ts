@@ -1,6 +1,11 @@
 import { Vector3 } from "three";
 import { BlockType } from "../types/blocks";
 import { useWorldStore } from "../store/worldStore";
+import {
+  Y_LEVEL_CONSTANTS,
+  Y_LEVEL_VALIDATION,
+} from "../config/yLevelConstants";
+import { floorDepthManager } from "../config/floorDepthConfig";
 
 export interface FloorConfiguration {
   blockType: BlockType;
@@ -54,10 +59,11 @@ export class FloorManager {
     FloorManager.operationLock = false;
   }
 
-  // Normalize Y to grid level (default 0) and snap to integer to avoid stacking
+  // Normalize Y to grid level (using configurable floor depth) and snap to valid increments
   private normalizeY(y?: number): number {
-    if (typeof y !== "number" || Number.isNaN(y)) return 0;
-    return Math.round(y);
+    if (typeof y !== "number" || Number.isNaN(y))
+      return floorDepthManager.getFloorPlacementY();
+    return Y_LEVEL_VALIDATION.snapToValidY(y);
   }
 
   // Normalize center to integer grid coordinates (X/Z), keep Y out (handled via yLevel)
@@ -441,7 +447,7 @@ export class FloorManager {
       pattern: "solid",
       size: size,
       centerPosition: new Vector3(0, 0, 0),
-      yLevel: 0, // Normalize to grid level to avoid stacking
+      yLevel: floorDepthManager.getFloorPlacementY(), // Use configurable floor depth
       replaceExisting: false,
       fillHoles: true,
     });
@@ -456,7 +462,7 @@ export class FloorManager {
       blockType: BlockType.STONE,
       size: size,
       centerPosition: new Vector3(0, 0, 0),
-      yLevel: 0,
+      yLevel: floorDepthManager.getFloorPlacementY(),
       replaceExisting: false,
     });
 
@@ -467,7 +473,7 @@ export class FloorManager {
       {
         size: Math.floor(size * 0.8), // Slightly smaller decorative area
         centerPosition: new Vector3(0, 0, 0),
-        yLevel: 0,
+        yLevel: floorDepthManager.getFloorPlacementY(),
         replaceExisting: false,
       },
     );
@@ -488,7 +494,7 @@ export const quickFloorUtils = {
       blockType: BlockType.FROSTED_GLASS,
       pattern: "solid",
       size: size,
-      yLevel: 0,
+      yLevel: floorDepthManager.getFloorPlacementY(),
       replaceExisting: false,
     }),
 
@@ -497,7 +503,7 @@ export const quickFloorUtils = {
       blockType: BlockType.WOOD,
       pattern: "solid",
       size: size,
-      yLevel: 0,
+      yLevel: floorDepthManager.getFloorPlacementY(),
       replaceExisting: false,
     }),
 
@@ -506,7 +512,7 @@ export const quickFloorUtils = {
       blockType: BlockType.STONE,
       pattern: "checkerboard",
       size,
-      yLevel: 0,
+      yLevel: floorDepthManager.getFloorPlacementY(),
       replaceExisting: false,
     }),
 
@@ -516,6 +522,6 @@ export const quickFloorUtils = {
       maxX: Math.floor(size / 2),
       minZ: -Math.floor(size / 2),
       maxZ: Math.floor(size / 2),
-      yLevel: 0,
+      yLevel: floorDepthManager.getFloorPlacementY(),
     }),
 };

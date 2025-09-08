@@ -13,6 +13,8 @@
     "test": "vitest --environment=jsdom",
     "test:run": "vitest run --environment=jsdom",
     "test:ui": "vitest --ui --environment=jsdom",
+    "validate:y-levels": "node scripts/validateYLevelAlignment.js",
+    "adjust:floor-depth": "node scripts/adjustFloorDepth.js",
     "supabase:types": "supabase gen types typescript --project-id YOUR_PROJECT_ID > types/supabase.ts"
   },
   "dependencies": {
