@@ -309,10 +309,23 @@ export default function FloatingSidebar() {
         devWarn(`Playing animation: ${animationState} for all simulants`),
       );
       setCurrentAnimation(animationState);
+
+      // Map animation states to action keywords that match SimpleAnimatedAvatar logic
+      const actionKeywords: Record<AnimationState, string> = {
+        idle: "Standing idle",
+        walking: "Walking forward",
+        running: "Running fast",
+        jumping: "Jumping over obstacle",
+        building: "Building structure",
+        thinking: "Thinking deeply",
+        communicating: "Talking to friend", // This will match the "talk" keyword
+        celebrating: "Dancing celebration",
+      };
+
       // Apply animation to all simulants
       simulants.forEach((simulant) => {
         updateSimulant(simulant.id, {
-          lastAction: `Playing ${animationState}`,
+          lastAction: actionKeywords[animationState],
         });
       });
     },
