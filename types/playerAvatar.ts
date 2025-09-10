@@ -10,7 +10,7 @@ export interface PlayerAvatarState {
 
   // Visual State
   isVisible: boolean;
-  renderLOD: 'high' | 'medium' | 'low';
+  renderLOD: "high" | "medium" | "low";
   currentAnimation: string;
   animationBlendWeight: number;
 
@@ -35,17 +35,17 @@ export interface AnimationTransition {
   to: string;
   duration: number;
   startTime: number;
-  easing: 'linear' | 'easeInOut' | 'bounce';
+  easing: "linear" | "easeIn" | "easeOut" | "easeInOut" | "bounce";
 }
 
 // Movement Animation States
 export type MovementAnimationState =
-  | 'idle'
-  | 'walking'
-  | 'running'
-  | 'jumping'
-  | 'falling'
-  | 'landing';
+  | "idle"
+  | "walking"
+  | "running"
+  | "jumping"
+  | "falling"
+  | "landing";
 
 export interface MovementState {
   velocity: Vector3;
@@ -65,7 +65,12 @@ export interface AnimationBlend {
   isActive: boolean;
 }
 
-export type EasingFunction = 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' | 'bounce';
+export type EasingFunction =
+  | "linear"
+  | "easeInOut"
+  | "easeIn"
+  | "easeOut"
+  | "bounce";
 
 export interface MovementAnimationController {
   // Animation Actions
@@ -109,14 +114,17 @@ export interface AvatarPerformanceMetrics {
 
 // LOD System
 export interface AvatarLODController {
-  updateLOD(cameraDistance: number, performanceMetrics: AvatarPerformanceMetrics): void;
-  getCurrentLOD(): 'high' | 'medium' | 'low';
+  updateLOD(
+    cameraDistance: number,
+    performanceMetrics: AvatarPerformanceMetrics,
+  ): void;
+  getCurrentLOD(): "high" | "medium" | "low";
 
   // LOD Configuration
   lodDistances: {
-    high: number;    // 0-10 units
-    medium: number;  // 10-25 units
-    low: number;     // 25+ units
+    high: number; // 0-10 units
+    medium: number; // 10-25 units
+    low: number; // 25+ units
   };
 
   // Performance Thresholds
@@ -155,7 +163,7 @@ export interface PlayerAvatarManager {
 
   // Visibility Management
   setVisible(visible: boolean): void;
-  setLOD(level: 'high' | 'medium' | 'low'): void;
+  setLOD(level: "high" | "medium" | "low"): void;
 
   // State Management
   getAvatarState(): PlayerAvatarState;
@@ -206,7 +214,7 @@ export interface PlayerAvatarConfig {
 
   // LOD settings
   lodEnabled: boolean;
-  lodDistances: AvatarLODController['lodDistances'];
+  lodDistances: AvatarLODController["lodDistances"];
 
   // Visibility settings
   hideInFirstPerson: boolean;
@@ -216,7 +224,7 @@ export interface PlayerAvatarConfig {
 
 // Events
 export interface AvatarEvent {
-  type: 'loaded' | 'unloaded' | 'animation-changed' | 'lod-changed' | 'error';
+  type: "loaded" | "unloaded" | "animation-changed" | "lod-changed" | "error";
   timestamp: number;
   data?: any;
 }
@@ -224,22 +232,3 @@ export interface AvatarEvent {
 export type AvatarEventHandler = (event: AvatarEvent) => void;
 
 // Export all types
-export type {
-  PlayerAvatarState,
-  AnimationTransition,
-  MovementAnimationState,
-  MovementState,
-  AnimationBlend,
-  EasingFunction,
-  MovementAnimationController,
-  AvatarPerformanceMetrics,
-  AvatarLODController,
-  MemoryReport,
-  AvatarMemoryManager,
-  PlayerAvatarManager,
-  PlayerAvatarLoader,
-  AvatarControllerIntegration,
-  PlayerAvatarConfig,
-  AvatarEvent,
-  AvatarEventHandler
-};

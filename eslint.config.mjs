@@ -26,6 +26,7 @@ const eslintConfig = [
   {
     rules: {
       "no-console": ["error", { allow: ["warn", "error"] }],
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
   {
@@ -51,6 +52,7 @@ const eslintConfig = [
         { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-require-imports": "off",
+      "@next/next/no-assign-module-variable": "off",
       "react/no-unescaped-entities": "off",
       "no-console": "off",
     },
@@ -66,6 +68,59 @@ const eslintConfig = [
         beforeAll: "readonly",
         afterAll: "readonly",
       },
+    },
+  },
+  {
+    files: [
+      "scripts/**/*.{js,ts}",
+    ],
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
+    files: [
+      "effects/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-namespace": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+  {
+    files: [
+      "components/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+  {
+    files: [
+      "types/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    files: [
+      "utils/**/*.{ts,tsx}",
+      "systems/**/*.{ts,tsx}",
+      "store/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+  {
+    files: [
+      "utils/debugLogger.ts",
+    ],
+    rules: {
+      "no-console": "off",
     },
   },
 ];

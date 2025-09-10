@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
-import {
 import { devWarn } from "@/utils/devLogger";
-
+import {
   WebGLRenderer,
   WebGLRenderTarget,
   HalfFloatType,
@@ -606,7 +605,7 @@ export function useMobileOptimization(
     // Basic mobile optimizations
     gl.setPixelRatio(config.pixelRatio);
     gl.shadowMap.enabled = config.enableShadows;
-    gl.shadowMap.setSize(config.shadowMapSize);
+    // Shadow map size is configured per-light via light.shadow.mapSize; the renderer's shadowMap does not support setSize().
 
     // Mobile-specific settings
     if (deviceProfile.deviceType === "mobile") {

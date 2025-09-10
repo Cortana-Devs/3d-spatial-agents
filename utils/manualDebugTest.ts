@@ -19,7 +19,7 @@ import debug, {
  * Manual test function that can be called from browser console
  */
 export function testDebug() {
-  console.group('🧪 Manual Debug Test');
+  devLog('🧪 Manual Debug Test');
 
   // Test environment
   devLog('🌍 Environment Info:');
@@ -101,7 +101,7 @@ export function testDebug() {
   devLog('If you see colorful debug logs above, the system is working.');
   devLog('If not, check the environment variables and restart your dev server.');
 
-  console.groupEnd();
+  // end group
 
   return {
     isAnyEnabled: isAnyDebugEnabled(),
@@ -117,8 +117,8 @@ export function testDebug() {
 export function quickDebugStatus() {
   devLog('🚀 Quick Debug Status:');
   devLog('Any enabled:', isAnyDebugEnabled());
-  console.log('Categories:', getEnabledDebugCategories());
-  console.log('Environment:', process.env.NODE_ENV);
+  devLog('Categories:', getEnabledDebugCategories());
+  devLog('Environment:', process.env.NODE_ENV);
 
   // Test one log
   debugSimulantYPositioning.logDefaultPositioning(
@@ -133,7 +133,7 @@ export function quickDebugStatus() {
  */
 export function forceEnableDebug(category: string) {
   if (typeof window === 'undefined') {
-    console.log('❌ Force enable only works in browser');
+    devLog('❌ Force enable only works in browser');
     return;
   }
 
@@ -141,8 +141,8 @@ export function forceEnableDebug(category: string) {
   const envVar = `NEXT_PUBLIC_DEBUG_${category.toUpperCase().replace('-', '_')}`;
   (process.env as any)[envVar] = 'true';
 
-  console.log(`✅ Temporarily enabled ${envVar} = true`);
-  console.log('Try calling testDebug() again to see if it works');
+  devLog(`✅ Temporarily enabled ${envVar} = true`);
+  devLog('Try calling testDebug() again to see if it works');
 
   return envVar;
 }
@@ -153,14 +153,16 @@ if (typeof window !== 'undefined') {
   (window as any).quickDebugStatus = quickDebugStatus;
   (window as any).forceEnableDebug = forceEnableDebug;
 
-  console.log('🔧 Debug test functions available in console:');
-  console.log('  testDebug() - Full debug test');
-  console.log('  quickDebugStatus() - Quick status check');
-  console.log('  forceEnableDebug("simulant-y-positioning") - Force enable category');
+  devLog('🔧 Debug test functions available in console:');
+  devLog('  testDebug() - Full debug test');
+  devLog('  quickDebugStatus() - Quick status check');
+  devLog('  forceEnableDebug("simulant-y-positioning") - Force enable category');
 }
 
-export default {
+const debugAPI = {
   testDebug,
   quickDebugStatus,
   forceEnableDebug
 };
+
+export default debugAPI;

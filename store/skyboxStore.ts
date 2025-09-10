@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { subscribeWithSelector } from "zustand/middleware";
-import { CubeTexture, Color } from "three";
+import { CubeTexture, Color, Vector3 } from "three";
 import {
   SkyboxState,
   SkyboxActions,
@@ -119,12 +119,20 @@ export const useSkyboxStore = create<SkyboxState & SkyboxActions>()(
                           performance.now(),
                         loadEndTime: performance.now(),
                       };
-                      draft.textureCache.set(id, loadedTexture);
-                      draft.cacheMetadata.set(id, {
+                      // Avoid mutating Map drafts directly under immer to prevent TS draft type conflicts
+                      const newTextureCache: any = new Map<any, any>(
+                        draft.textureCache as any,
+                      );
+                      (newTextureCache as any).set(id, loadedTexture as any);
+                      draft.textureCache = newTextureCache as any;
+
+                      const newCacheMetadata = new Map(draft.cacheMetadata);
+                      newCacheMetadata.set(id, {
                         lastAccessed: Date.now(),
                         accessCount: 1,
                         memorySize: preset.performance.memoryUsage,
                       });
+                      draft.cacheMetadata = newCacheMetadata;
                     });
                   },
                   onLoadError: (id, error) => {
@@ -458,7 +466,7 @@ export const useSkyboxStore = create<SkyboxState & SkyboxActions>()(
                         presetData.atmosphericSettings.fogColor.g,
                         presetData.atmosphericSettings.fogColor.b,
                       ),
-                      windDirection: new (require("three").Vector3)(
+                      windDirection: new Vector3(
                         presetData.atmosphericSettings.windDirection.x,
                         presetData.atmosphericSettings.windDirection.y,
                         presetData.atmosphericSettings.windDirection.z,
@@ -491,76 +499,6 @@ export const useSkyboxStore = create<SkyboxState & SkyboxActions>()(
           config: state.config,
           fallbackPreset: state.fallbackPreset,
         }),
-        // Custom serialization for Three.js objects
-        serialize: (state) => {
-          const serializable = {
-            ...state,
-            presets: Object.fromEntries(
-              Object.entries(state.presets).map(([id, preset]) => [
-                id,
-                {
-                  ...preset,
-                  tint: {
-                    r: preset.tint.r,
-                    g: preset.tint.g,
-                    b: preset.tint.b,
-                  },
-                  atmosphericSettings: {
-                    ...preset.atmosphericSettings,
-                    fogColor: {
-                      r: preset.atmosphericSettings.fogColor.r,
-                      g: preset.atmosphericSettings.fogColor.g,
-                      b: preset.atmosphericSettings.fogColor.b,
-                    },
-                    windDirection: {
-                      x: preset.atmosphericSettings.windDirection.x,
-                      y: preset.atmosphericSettings.windDirection.y,
-                      z: preset.atmosphericSettings.windDirection.z,
-                    },
-                  },
-                },
-              ]),
-            ),
-          };
-          return JSON.stringify(serializable);
-        },
-        deserialize: (str) => {
-          const parsed = JSON.parse(str);
-
-          // Reconstruct Three.js objects
-          if (parsed.presets) {
-            parsed.presets = Object.fromEntries(
-              Object.entries(parsed.presets).map(
-                ([id, preset]: [string, any]) => [
-                  id,
-                  {
-                    ...preset,
-                    tint: new Color(
-                      preset.tint.r,
-                      preset.tint.g,
-                      preset.tint.b,
-                    ),
-                    atmosphericSettings: {
-                      ...preset.atmosphericSettings,
-                      fogColor: new Color(
-                        preset.atmosphericSettings.fogColor.r,
-                        preset.atmosphericSettings.fogColor.g,
-                        preset.atmosphericSettings.fogColor.b,
-                      ),
-                      windDirection: new (require("three").Vector3)(
-                        preset.atmosphericSettings.windDirection.x,
-                        preset.atmosphericSettings.windDirection.y,
-                        preset.atmosphericSettings.windDirection.z,
-                      ),
-                    },
-                  },
-                ],
-              ),
-            );
-          }
-
-          return parsed;
-        },
       },
     ),
     {

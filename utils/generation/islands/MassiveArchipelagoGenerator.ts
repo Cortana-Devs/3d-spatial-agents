@@ -265,8 +265,6 @@ export class MassiveArchipelagoGenerator {
     const generationTimeMs = endTime - startTime;
 
     devLog("✅ Massive archipelago generation complete!");
-
-    const self = this;
     return {
       islands: this.islands,
       totalChunks: this.getTotalChunkCount(),
@@ -275,14 +273,7 @@ export class MassiveArchipelagoGenerator {
       generationTimeMs,
       memoryUsageMB: this.calculateMemoryUsage(),
       stats,
-      getAllBlocks(blockLimit?: number): Array<{
-        position: Vector3;
-        blockType: BlockType;
-        biome: IslandBiome;
-        priority: number;
-      }> {
-        return self.getAllBlocks(blockLimit);
-      },
+      getAllBlocks: (blockLimit?: number) => this.getAllBlocks(blockLimit),
     };
   }
 

@@ -331,7 +331,7 @@ export function useExternalAnimations(
       if (isMountedRef.current) {
         if (config.enableLogging) {
           devLog(`🎬 Animation loading complete: ${clipMap.size}/${animationPaths.length} clips loaded`)
-          console.log(`📋 Loaded clips:`, Array.from(clipMap.keys()))
+          devLog(`📋 Loaded clips:`, Array.from(clipMap.keys()))
         }
 
         setState(prev => ({

@@ -385,7 +385,7 @@ export class PerformanceMonitor {
     this.onQualityChange = undefined
 
     if (this.enableLogging) {
-      console.log('🗑️ PerformanceMonitor disposed')
+      devLog('🗑️ PerformanceMonitor disposed')
     }
   }
 }

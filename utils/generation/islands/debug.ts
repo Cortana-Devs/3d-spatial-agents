@@ -286,7 +286,7 @@ export function runIslandDebugTest() {
     devLog("✅ Test successful! Check the world for generated blocks.");
     devLog("📍 Blocks should appear around coordinates (0, 0, 0)");
   } else {
-    console.log("❌ Test failed. Check errors:", result.errors);
+    devLog("❌ Test failed. Check errors:", result.errors);
   }
 
   return result;
@@ -309,8 +309,8 @@ if (typeof window !== "undefined") {
   ) {
     devLog("🔧 Island debug tools available at window.islandDebug");
     devLog("   - islandDebug.test() - Run full test");
-    console.log("   - islandDebug.generate() - Generate small test island");
-    console.log("   - islandDebug.clear() - Clear test area");
-    console.log("   - islandDebug.stats() - Get world statistics");
+    devLog("   - islandDebug.generate() - Generate small test island");
+    devLog("   - islandDebug.clear() - Clear test area");
+    devLog("   - islandDebug.stats() - Get world statistics");
   }
 }

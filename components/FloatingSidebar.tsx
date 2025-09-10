@@ -34,7 +34,7 @@ import {
   Shuffle,
   Home,
 } from "lucide-react";
-import FloorControlPanel from "./world/FloorControlPanel";
+// FloorControlPanel import removed as it's not being used effectively
 import { quickFloorUtils } from "../utils/floorManager";
 import { useWorldStore } from "../store/worldStore";
 import { CAMERA_PRESETS } from "./world/CameraController";
@@ -127,7 +127,7 @@ export default function FloatingSidebar() {
 
   const [activeTab, setActiveTab] = React.useState<TabKey>("animation");
   const [selectedPreset, setSelectedPreset] = React.useState(0);
-  const [isFloorPanelOpen, setIsFloorPanelOpen] = React.useState(false);
+  // Removed unused state for floor panel
   // Debounce for quick floor actions to avoid duplicate operations
   const floorActionLockRef = React.useRef(false);
   const handleDebouncedFloorAction = React.useCallback(
@@ -309,10 +309,23 @@ export default function FloatingSidebar() {
         devWarn(`Playing animation: ${animationState} for all simulants`),
       );
       setCurrentAnimation(animationState);
+
+      // Map animation states to action keywords that match SimpleAnimatedAvatar logic
+      const actionKeywords: Record<AnimationState, string> = {
+        idle: "Standing idle",
+        walking: "Walking forward",
+        running: "Running fast",
+        jumping: "Jumping over obstacle",
+        building: "Building structure",
+        thinking: "Thinking deeply",
+        communicating: "Talking to friend", // This will match the "talk" keyword
+        celebrating: "Dancing celebration",
+      };
+
       // Apply animation to all simulants
       simulants.forEach((simulant) => {
         updateSimulant(simulant.id, {
-          lastAction: `Playing ${animationState}`,
+          lastAction: actionKeywords[animationState],
         });
       });
     },
@@ -902,16 +915,7 @@ export default function FloatingSidebar() {
 
             {/* Advanced controls */}
             <div className="space-y-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled
-                onClick={() => setIsFloorPanelOpen(false)}
-                className="w-full justify-start text-axiom-neutral-500"
-              >
-                <Settings size={14} className="mr-2" />
-                Advanced Controls (disabled)
-              </Button>
+              {/* Removed disabled Advanced Controls button as it's not functional */}
 
               <Button
                 variant="ghost"
@@ -932,8 +936,7 @@ export default function FloatingSidebar() {
         )}
       </FloatingPanel>
 
-      {/* Advanced floor panel disabled for compact UI */}
-      <FloorControlPanel isOpen={false} onClose={() => {}} />
+      {/* Advanced floor panel removed as it's not being used */}
     </div>
   );
 }

@@ -140,7 +140,7 @@ class MemoryManager {
   }
 
   getMemoryPressure(): number {
-    // @ts-ignore - experimental API
+    // @ts-expect-error - experimental API
     const memInfo = (performance as any).memory;
     if (memInfo) {
       const usage = memInfo.usedJSHeapSize / memInfo.totalJSHeapSize;

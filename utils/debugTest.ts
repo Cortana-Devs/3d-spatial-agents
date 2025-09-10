@@ -8,7 +8,7 @@ import { devLog } from "@/utils/devLogger";
  */
 
 export function testDebugEnvironment() {
-  console.group('🔍 Real-time Debug Environment Test');
+  devLog('🔍 Real-time Debug Environment Test');
 
   // Test current environment
   devLog('NODE_ENV:', process.env.NODE_ENV);
@@ -63,22 +63,20 @@ export function testDebugEnvironment() {
     const isEnabled = finalValue === "true" || finalValue === "1";
 
     devLog(`${category}:`);
-    console.log(`  Server (${serverVar}): ${serverValue || 'undefined'}`);
-    console.log(`  Client (${clientVar}): ${clientValue || 'undefined'}`);
-    console.log(`  Final value: ${finalValue || 'undefined'}`);
-    console.log(`  Is enabled: ${isEnabled}`);
-    console.log('');
+    devLog(`  Server (${serverVar}): ${serverValue || 'undefined'}`);
+    devLog(`  Client (${clientVar}): ${clientValue || 'undefined'}`);
+    devLog(`  Final value: ${finalValue || 'undefined'}`);
+    devLog(`  Is enabled: ${isEnabled}`);
+    devLog('');
   });
 
   // Test what happens if we call this again in a timeout
-  console.log('⏰ Testing delayed access...');
+  devLog('⏰ Testing delayed access...');
   setTimeout(() => {
-    console.log('🔄 After 1 second timeout:');
-    console.log('NEXT_PUBLIC_DEBUG_SIMULANT_Y_POSITIONING:', process.env.NEXT_PUBLIC_DEBUG_SIMULANT_Y_POSITIONING);
-    console.log('NEXT_PUBLIC_DEBUG_BLOCK_Y_POSITIONING:', process.env.NEXT_PUBLIC_DEBUG_BLOCK_Y_POSITIONING);
+    devLog('🔄 After 1 second timeout:');
+    devLog('NEXT_PUBLIC_DEBUG_SIMULANT_Y_POSITIONING:', process.env.NEXT_PUBLIC_DEBUG_SIMULANT_Y_POSITIONING);
+    devLog('NEXT_PUBLIC_DEBUG_BLOCK_Y_POSITIONING:', process.env.NEXT_PUBLIC_DEBUG_BLOCK_Y_POSITIONING);
   }, 1000);
-
-  console.groupEnd();
 }
 
 // Auto-run when imported in development

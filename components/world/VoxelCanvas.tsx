@@ -24,11 +24,9 @@ import {
   PointsMaterial,
   AdditiveBlending,
   DoubleSide,
-  NormalBlending,
   BoxGeometry,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
-import { debugBlockYPositioning } from "../../utils/debugLogger";
 import {
   Block,
   BlockType,
@@ -38,27 +36,17 @@ import {
 } from "../../types";
 import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
-import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
-import GPUOptimizedRenderer from "./GPUOptimizedRenderer";
 import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
 import { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
-import FloorBlock from "./FloorBlock";
-import AdaptiveGlassRenderer from "./AdaptiveGlassRenderer";
-import {
-  useIsolatedRender,
-  useBlockPlacementRender,
-  useAnimationRender,
-  useBatchedUpdates,
-  usePerformanceMonitor,
-} from "../../hooks/performance/useIsolatedRender";
-import {
-  performanceManager,
-  MODULE_CONFIGS,
-} from "../../utils/performance/PerformanceManager";
+// Removed unused renderer imports
+import { useIsolatedRender } from "../../hooks/performance/useIsolatedRender";
+// Removed unused performanceManager and MODULE_CONFIGS imports
 import { UnifiedDebugPanel } from "../debug/UnifiedDebugPanel";
 import { createLogger } from "../../utils/logging/logger";
+import { transparencySortingFix } from "../../utils/TransparencySortingFix";
+import { usePerformanceMonitor } from "../../hooks/performance/useIsolatedRender";
 
 // LOD Configuration for performance optimization
 const log = createLogger("world:VoxelCanvas");
@@ -244,7 +232,7 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
       // Ensure we have the right count
       instancedMesh.count = typeBlocks.length;
 
-      typeBlocks.forEach((block, index) => {
+      typeBlocks.forEach((block, index: number) => {
         const distance = camera.position.distanceTo(block.position);
 
         // LOD-based scaling - use consistent scaling
@@ -310,7 +298,7 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
         return (
           <instancedMesh
             key={type}
-            ref={(ref) => {
+            ref={(ref: InstancedMesh | null) => {
               if (ref) {
                 instancedMeshRefs.current[type as BlockType] = ref;
                 // Initialize instance colors if not already done
@@ -999,27 +987,7 @@ function SceneContent({
         />
       ))}
 
-      {/* GPU-Optimized high-performance block rendering - DISABLED FOR DEBUG */}
-      {false && (
-        <GPUOptimizedRenderer
-          blocks={blockMap}
-          maxRenderDistance={500}
-          enableAdvancedEffects={true}
-          performanceMode="ultra"
-        />
-      )}
-
-      {/* Adaptive Glass Renderer for intelligent optimization - DISABLED FOR DEBUG */}
-      {false && (
-        <AdaptiveGlassRenderer
-          blocks={blockMap}
-          glassBlockTypes={[
-            BlockType.FROSTED_GLASS,
-            BlockType.NUMBER_6,
-            BlockType.NUMBER_7,
-          ]}
-        />
-      )}
+      {/* Removed disabled renderers that were never used */}
 
       {/* Intelligent grid system with spatial indexing */}
       <GridSystem config={gridConfig} />
@@ -1051,9 +1019,6 @@ function CameraBridge() {
   useFrame(() => {
     // Update transparency sorting with current camera
     if (camera) {
-      const {
-        transparencySortingFix,
-      } = require("../../utils/TransparencySortingFix");
       transparencySortingFix.updateTransparencySorting(camera);
     }
   });
@@ -1276,24 +1241,7 @@ export default function VoxelCanvas({
               //   process.env.NEXT_PUBLIC_DEBUG_POSITIONING_GENERAL || "disabled",
               // );
               // console.groupEnd();
-              // Log current debug configuration
-              // debug.logDebugStatus();
-              // Test immediate debug functionality
-              // devLog("\n🧪 Testing debug functionality...");
-              // debug.debugSimulantYPositioning.logDefaultPositioning(
-              //   "test-canvas-init",
-              //   { x: 10, y: 10, z: 10 },
-              //   "Canvas initialization test",
-              // );
-              // debug.debugBlockYPositioning.logInitialPositioning(
-              //   "test-canvas-block",
-              //   { x: 0, y: 0, z: 0 },
-              //   "test block",
-              // );
-              // console.log(
-              //   "✅ Debug test complete - check for colored logs above",
-              // );
-              // console.groupEnd();
+              // Removed unused debug code
             });
           }
 
@@ -1314,15 +1262,7 @@ export default function VoxelCanvas({
         <SceneContent cameraMode={cameraMode} followTarget={followTarget} />
       </Canvas>
 
-      {/* Camera controls UI - hidden since moved into FloatingSidebar; keep for large screens if desired */}
-      <div className="hidden">
-        <CameraControls
-          currentMode={cameraMode}
-          onModeChange={handleCameraModeChange}
-          onPresetApply={handlePresetApply}
-          onFocusOnBlock={handleFocusOnBlock}
-        />
-      </div>
+      {/* Removed hidden camera controls that were moved to FloatingSidebar */}
 
       {/* Debug Status Indicator */}
       {process.env.NODE_ENV === "development" && (

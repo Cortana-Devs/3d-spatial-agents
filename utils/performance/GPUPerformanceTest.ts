@@ -467,28 +467,25 @@ export class GPUPerformanceValidator {
   exportResults(): void {
     const report = this.getPerformanceReport();
 
-    console.group("🚀 GPU Performance Test Results");
+    devLog("🚀 GPU Performance Test Results");
     devLog(`📊 Overall Score: ${report.overallScore}/100`);
     devLog(`✅ Passed Tests: ${report.summary.passedTests}`);
     devLog(`❌ Failed Tests: ${report.summary.failedTests}`);
 
     if (report.summary.recommendations.length > 0) {
-      console.group("🔧 Recommendations:");
+      devLog("🔧 Recommendations:");
       report.summary.recommendations.forEach(rec => devLog(`• ${rec}`));
-      console.groupEnd();
     }
 
-    console.group("📝 Detailed Results:");
+    devLog("📝 Detailed Results:");
     report.results.forEach(result => {
       const status = result.passed ? "✅" : "❌";
-      console.log(`${status} ${result.testName}: ${result.score}/100`);
-      console.log(`   FPS: ${result.metrics.averageFPS.toFixed(1)}`);
-      console.log(`   Frame Time: ${result.metrics.averageFrameTime.toFixed(2)}ms`);
-      console.log(`   Memory Pressure: ${(result.metrics.memoryPressure * 100).toFixed(1)}%`);
+      devLog(`${status} ${result.testName}: ${result.score}/100`);
+      devLog(`   FPS: ${result.metrics.averageFPS.toFixed(1)}`);
+      devLog(`   Frame Time: ${result.metrics.averageFrameTime.toFixed(2)}ms`);
+      devLog(`   Memory Pressure: ${(result.metrics.memoryPressure * 100).toFixed(1)}%`);
     });
-    console.groupEnd();
-
-    console.groupEnd();
+    
   }
 }
 

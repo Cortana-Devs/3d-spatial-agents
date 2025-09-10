@@ -383,7 +383,7 @@ export class SimulantCullingSystem {
         this.clear()
 
         if (this.enableLogging) {
-            console.log('🗑️ SimulantCullingSystem disposed')
+            devLog('🗑️ SimulantCullingSystem disposed')
         }
     }
 }

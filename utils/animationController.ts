@@ -473,7 +473,7 @@ export class AnimationController {
     const action = this.actions[animationName]
     if (!action) {
       if (this.enableLogging) {
-        console.warn(`⚠️ Animation action not found: ${animationName}`)
+        devWarn(`⚠️ Animation action not found: ${animationName}`)
         console.warn(`🔍 Available actions:`, Object.keys(this.actions))
       }
       return false
@@ -648,7 +648,7 @@ export class AnimationController {
       this.idleCycleTimer = null
       
       if (this.enableLogging) {
-        console.log('⏹️ Stopped idle animation cycling')
+        devLog('⏹️ Stopped idle animation cycling')
       }
     }
   }
@@ -669,7 +669,7 @@ export class AnimationController {
     const nextIdleAnimation = availableIdleAnimations[this.currentIdleIndex]
     
     if (this.enableLogging) {
-      console.log(`🔄 Cycling to idle animation: ${nextIdleAnimation}`)
+      devLog(`🔄 Cycling to idle animation: ${nextIdleAnimation}`)
     }
     
     // Transition to the same state but with different animation

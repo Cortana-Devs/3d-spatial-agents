@@ -143,7 +143,7 @@ export class TransparencyValidator {
 
   // Runtime transparency test
   static runTransparencyTest(): void {
-    console.group("🔬 NUMBER_7 Block Transparency Analysis");
+    devLog("🔬 NUMBER_7 Block Transparency Analysis");
 
     const validation = this.validateNUMBER7Transparency();
     const report = this.getTransparencyReport();
@@ -162,10 +162,8 @@ export class TransparencyValidator {
     if (validation.isValid) {
       devLog("🎉 NUMBER_7 block transparency is correctly configured!");
     } else {
-      console.warn("⚠️ NUMBER_7 block transparency needs adjustment");
+      devLog("⚠️ NUMBER_7 block transparency needs adjustment");
     }
-
-    console.groupEnd();
   }
 
   // Compare with other glass blocks

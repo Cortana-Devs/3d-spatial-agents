@@ -1,4 +1,3 @@
-import { devLog } from "@/utils/devLogger";
 
 /**
  * Centralized logger utility with leveled logging, namespace filtering, and environment gating.
@@ -322,25 +321,29 @@ export function createLogger(namespace: string, initialLevel?: LogLevel): Logger
     const tag = `%c[${namespace}]`;
     const style = nsStyle(namespace);
     const lab = label ? ` ${label}` : "";
-    (c.groupCollapsed || c.group).apply(c, [`${tag}${lab}`, style]);
+    if (c.groupCollapsed) {
+      c.groupCollapsed(`${tag}${lab}`, style);
+    } else if (c.group) {
+      c.group(`${tag}${lab}`, style);
+    }
   };
 
   const groupEndImpl = () => {
     if (!isNamespaceEnabled(namespace)) return;
     if (!isLevelEnabled("debug", level)) return;
-    c.groupEnd && c.groupEnd();
+    if (c.groupEnd) c.groupEnd();
   };
 
   const timeImpl = (label = "default") => {
     if (!isNamespaceEnabled(namespace)) return;
     if (!isLevelEnabled("debug", level)) return;
-    c.time && c.time(`[${namespace}] ${label}`);
+    if (c.time) c.time(`[${namespace}] ${label}`);
   };
 
   const timeEndImpl = (label = "default") => {
     if (!isNamespaceEnabled(namespace)) return;
     if (!isLevelEnabled("debug", level)) return;
-    c.timeEnd && c.timeEnd(`[${namespace}] ${label}`);
+    if (c.timeEnd) c.timeEnd(`[${namespace}] ${label}`);
   };
 
   const setLevel = (next: LogLevel) => {
