@@ -1,4 +1,6 @@
 import { Object3D, WebGLRenderer, Camera, Scene, BufferGeometry, Material } from 'three';
+import { devLog, devWarn } from "@/utils/devLogger";
+
 
 // Performance budgets and thresholds
 interface PerformanceBudgets {
@@ -121,7 +123,7 @@ class MemoryManager {
       try {
         obj.dispose();
       } catch (e) {
-        console.warn('Error disposing object:', e);
+        devWarn('Error disposing object:', e);
       }
     });
     this.disposableObjects.clear();
@@ -138,7 +140,7 @@ class MemoryManager {
   }
 
   getMemoryPressure(): number {
-    // @ts-ignore - experimental API
+    // @ts-expect-error - experimental API
     const memInfo = (performance as any).memory;
     if (memInfo) {
       const usage = memInfo.usedJSHeapSize / memInfo.totalJSHeapSize;
@@ -498,7 +500,7 @@ export class PerformanceOptimizer {
       this.state.activeTechniques.add('adaptive_quality');
     }
 
-    console.log(`🔧 Performance: Increased optimization (quality: ${(this.state.qualityLevel * 100).toFixed(0)}%)`);
+    devLog(`🔧 Performance: Increased optimization (quality: ${(this.state.qualityLevel * 100).toFixed(0)}%)`);
   }
 
   private decreaseOptimization(): void {
@@ -513,11 +515,11 @@ export class PerformanceOptimizer {
       this.state.activeTechniques.delete('adaptive_quality');
     }
 
-    console.log(`✨ Performance: Decreased optimization (quality: ${(this.state.qualityLevel * 100).toFixed(0)}%)`);
+    devLog(`✨ Performance: Decreased optimization (quality: ${(this.state.qualityLevel * 100).toFixed(0)}%)`);
   }
 
   private emergencyOptimization(): void {
-    console.warn('🚨 Emergency optimization triggered!');
+    devWarn('🚨 Emergency optimization triggered!');
 
     // Aggressive quality reduction
     this.state.qualityLevel = Math.max(0.1, this.state.qualityLevel * 0.5);

@@ -10,7 +10,7 @@ import React, {
 import { useThree } from "@react-three/fiber";
 import { Vector2, Vector3, Plane, Raycaster } from "three";
 import { useWorldStore } from "../../store/worldStore";
-import { SelectionMode, BlockType } from "../../types";
+import { SelectionMode } from "../../types";
 import {
   useBlockPlacementRender,
   useBatchedUpdates,
@@ -396,6 +396,7 @@ export function IsolatedBlockPlacement() {
       </mesh>
     );
   });
+  GhostPreview.displayName = "GhostPreview";
 
   return (
     <>

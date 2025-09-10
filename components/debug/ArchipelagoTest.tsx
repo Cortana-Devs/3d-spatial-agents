@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { Vector3 } from "three";
 import { useWorldStore } from "../../store/worldStore";
+import { devError } from "@/utils/devLogger";
 import {
   generateArchipelago,
   createDefaultArchipelagoConfig,
@@ -379,7 +380,7 @@ export const ArchipelagoTest: React.FC<ArchipelagoTestProps> = ({
       addLog(
         `❌ Failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
-      console.error("Archipelago generation failed:", error);
+      devError("Archipelago generation failed:", error);
     } finally {
       setIsGenerating(false);
     }

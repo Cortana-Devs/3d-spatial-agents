@@ -214,7 +214,7 @@ export class FrostedGlassMaterial {
   }
 
   private static noise(x: number, y: number, random: () => number): number {
-    let n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453
+    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453
     return (n - Math.floor(n)) * 2 - 1
   }
 

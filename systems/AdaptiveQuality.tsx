@@ -1,6 +1,8 @@
 import React from 'react'
 import { PerformanceMonitor, PerformanceMetrics } from './PerformanceMonitor'
 import { FloorLODManager, LODLevel, LOD_LEVELS } from './FloorLODManager'
+import { devLog } from "@/utils/devLogger";
+
 
 export interface QualityPreset {
   name: string
@@ -132,8 +134,8 @@ export class AdaptiveQualityManager {
       this.setQualityPreset(newPreset)
       this.lastAdaptation = Date.now()
       
-      console.log(`Adaptive Quality: Changed from ${this.currentPreset.name} to ${newPreset.name}`)
-      console.log(`Performance metrics - FPS: ${metrics.fps.toFixed(1)}, Memory: ${metrics.memoryUsed.toFixed(1)}MB`)
+      devLog(`Adaptive Quality: Changed from ${this.currentPreset.name} to ${newPreset.name}`)
+      devLog(`Performance metrics - FPS: ${metrics.fps.toFixed(1)}, Memory: ${metrics.memoryUsed.toFixed(1)}MB`)
     }
   }
 
@@ -223,7 +225,7 @@ export class AdaptiveQualityManager {
 
   benchmarkSystem(): Promise<QualityPreset> {
     return new Promise((resolve) => {
-      console.log('Starting automatic quality benchmark...')
+      devLog('Starting automatic quality benchmark...')
       
       // Start with medium preset
       const mediumPreset = QUALITY_PRESETS[2]
@@ -244,7 +246,7 @@ export class AdaptiveQualityManager {
           this.setQualityPreset(recommendedPreset)
           resolve(recommendedPreset)
           
-          console.log(`Benchmark complete. Average FPS: ${avgFPS.toFixed(1)}, Recommended: ${recommendedPreset.name}`)
+          devLog(`Benchmark complete. Average FPS: ${avgFPS.toFixed(1)}, Recommended: ${recommendedPreset.name}`)
         }
       }, 100)
     })

@@ -1,3 +1,5 @@
+import { devLog } from "@/utils/devLogger";
+
 /**
  * Simulant Culling System
  * Handles frustum culling and distance-based culling for off-screen simulants
@@ -82,8 +84,8 @@ export class SimulantCullingSystem {
         this.enableLogging = options.enableLogging || false
 
         if (this.enableLogging) {
-            console.log('👁️ SimulantCullingSystem initialized')
-            console.log('⚙️ Config:', this.config)
+            devLog('👁️ SimulantCullingSystem initialized')
+            devLog('⚙️ Config:', this.config)
         }
     }
 
@@ -314,7 +316,7 @@ export class SimulantCullingSystem {
 
         if (this.enableLogging) {
             const stats = this.getCullingStats()
-            console.log('🔄 Forced culling update:', {
+            devLog('🔄 Forced culling update:', {
                 visible: stats.visibleSimulants,
                 culled: stats.culledSimulants,
                 efficiency: `${(stats.cullingEfficiency * 100).toFixed(1)}%`
@@ -329,7 +331,7 @@ export class SimulantCullingSystem {
         this.config = { ...this.config, ...newConfig }
 
         if (this.enableLogging) {
-            console.log('⚙️ Culling config updated:', newConfig)
+            devLog('⚙️ Culling config updated:', newConfig)
         }
     }
 
@@ -370,7 +372,7 @@ export class SimulantCullingSystem {
         this.simulantIds = []
 
         if (this.enableLogging) {
-            console.log('🗑️ Culling results cleared')
+            devLog('🗑️ Culling results cleared')
         }
     }
 
@@ -381,7 +383,7 @@ export class SimulantCullingSystem {
         this.clear()
 
         if (this.enableLogging) {
-            console.log('🗑️ SimulantCullingSystem disposed')
+            devLog('🗑️ SimulantCullingSystem disposed')
         }
     }
 }

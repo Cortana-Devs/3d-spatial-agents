@@ -12,7 +12,16 @@ import {
   CameraMode,
   WorldState as BaseWorldState,
 } from "../types";
-import { BLOCK_DEFINITIONS, BlockType as ImportedBlockType } from '../types/blocks';
+import { PlayerAvatarState } from "../types/playerAvatar";
+import { devWarn } from "@/utils/devLogger";
+import {
+  BLOCK_DEFINITIONS,
+  BlockType as ImportedBlockType,
+} from "../types/blocks";
+import {
+  debugBlockYPositioning,
+  debugSimulantYPositioning,
+} from "../utils/debugLogger";
 
 // Enable MapSet plugin for Immer to work with Map and Set
 enableMapSet();
@@ -99,6 +108,7 @@ interface WorldSnapshot {
   simulants: Map<string, AISimulant>;
   playerAvatar: PlayerAvatarState | null;
   timestamp: number;
+  blockCount: number;
 }
 
 // (Removed unused WorldAction interface)
@@ -182,7 +192,7 @@ export const useWorldStore = create<WorldState>()(
             !state.lastBlockLimitWarning ||
             now - state.lastBlockLimitWarning > 1000
           ) {
-            console.warn(
+            devWarn(
               `Block limit reached: ${state.blockCount}/${state.worldLimits.maxBlocks}`,
             );
             set({ lastBlockLimitWarning: now });
@@ -195,19 +205,39 @@ export const useWorldStore = create<WorldState>()(
 
         // Collision detection - check if block already exists at position
         if (state.blockMap.has(key)) {
-          console.warn("Block already exists at position:", position);
+          devWarn("Block already exists at position:", position);
 
           return false;
         }
 
+        // Round position for consistent placement
+        const roundedPosition = {
+          x: Math.round(position.x),
+          y: Math.round(position.y),
+          z: Math.round(position.z),
+        };
+
+        // Debug log the initial Y positioning for the block
+        const blockId = uuidv4();
+        // debugBlockYPositioning.logInitialPositioning(
+        //   blockId,
+        //   roundedPosition,
+        //   type,
+        // );
+
+        // Log Y calculation if there was any adjustment
+        // if (Math.abs(roundedPosition.y - position.y) > 0.001) {
+        //   debugBlockYPositioning.logPlacementCalculation(
+        //     position,
+        //     roundedPosition.y,
+        //     "Y-coordinate rounding to integer grid",
+        //   );
+        // }
+
         // Create the block
         const block: Block = {
-          id: uuidv4(),
-          position: {
-            x: Math.round(position.x),
-            y: Math.round(position.y),
-            z: Math.round(position.z),
-          },
+          id: blockId,
+          position: roundedPosition,
           type,
           color: blockDefinitions[type].color,
           metadata: {
@@ -217,10 +247,19 @@ export const useWorldStore = create<WorldState>()(
           },
         };
 
+        // Log placement validation
+        // debugBlockYPositioning.logPlacementValidation(
+        //   roundedPosition,
+        //   true, // Block creation is successful at this point
+        //   [],
+        // );
+
         set((draft) => {
           // Save current state to history before making changes
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
+            simulants: new Map(draft.simulants),
+            playerAvatar: draft.playerAvatar ? { ...draft.playerAvatar } : null,
             blockCount: draft.blockCount,
             timestamp: Date.now(),
           };
@@ -281,6 +320,15 @@ export const useWorldStore = create<WorldState>()(
           Math.round(position.y),
           Math.round(position.z),
         );
+
+        // Debug log Y-level snapping for block removal
+        if (Math.abs(roundedPosition.y - position.y) > 0.001) {
+          debugBlockYPositioning.logYSnapping(
+            position.y,
+            roundedPosition.y,
+            1.0, // Integer grid snapping
+          );
+        }
         const key = positionToKey(roundedPosition);
 
         // Check cooldown to prevent rapid-fire removal attempts
@@ -292,10 +340,10 @@ export const useWorldStore = create<WorldState>()(
         }
 
         if (!state.blockMap.has(key)) {
-          console.warn(
+          devWarn(
             `No block found at position: (${position.x}, ${position.y}, ${position.z}), rounded: (${roundedPosition.x}, ${roundedPosition.y}, ${roundedPosition.z}), key: ${key}`,
           );
-          console.warn(
+          devWarn(
             "Available block keys:",
             Array.from(state.blockMap.keys()).slice(0, 10),
           );
@@ -306,6 +354,8 @@ export const useWorldStore = create<WorldState>()(
           // Save current state to history before making changes
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
+            simulants: new Map(draft.simulants),
+            playerAvatar: draft.playerAvatar ? { ...draft.playerAvatar } : null,
             blockCount: draft.blockCount,
             timestamp: Date.now(),
           };
@@ -354,13 +404,15 @@ export const useWorldStore = create<WorldState>()(
         }
 
         if (!blockKey) {
-          console.warn("No block found with ID:", id);
+          devWarn("No block found with ID:", id);
           return false;
         }
 
         // Save snapshot before making changes
         const snapshot: WorldSnapshot = {
           blockMap: new Map(state.blockMap),
+          simulants: new Map(state.simulants),
+          playerAvatar: state.playerAvatar ? { ...state.playerAvatar } : null,
           blockCount: state.blockCount,
           timestamp: Date.now(),
         };
@@ -426,9 +478,15 @@ export const useWorldStore = create<WorldState>()(
 
       // Simulant management
       addSimulant: (simulant: AISimulant): void => {
+        // Debug log simulant Y positioning when added to world
+        debugSimulantYPositioning.logSpawnPositioning(
+          simulant.id,
+          simulant.position,
+          "Added to world store",
+        );
+
         set((draft) => {
           draft.simulants.set(simulant.id, simulant);
-          draft.lastUpdate = Date.now();
         });
       },
 
@@ -443,8 +501,20 @@ export const useWorldStore = create<WorldState>()(
         set((draft) => {
           const simulant = draft.simulants.get(id);
           if (simulant) {
+            // Debug log Y position changes
+            if (
+              updates.position &&
+              updates.position.y !== simulant.position.y
+            ) {
+              debugSimulantYPositioning.logYAdjustment(
+                id,
+                simulant.position.y,
+                updates.position.y,
+                "Simulant position update",
+              );
+            }
+
             Object.assign(simulant, updates);
-            draft.lastUpdate = Date.now();
           }
         });
       },
@@ -513,6 +583,10 @@ export const useWorldStore = create<WorldState>()(
             // Save current state to redo stack before undoing
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
+              simulants: new Map(draft.simulants),
+              playerAvatar: draft.playerAvatar
+                ? { ...draft.playerAvatar }
+                : null,
               blockCount: draft.blockCount,
               timestamp: Date.now(),
             };
@@ -543,6 +617,10 @@ export const useWorldStore = create<WorldState>()(
             // Save current state back to undo history
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
+              simulants: new Map(draft.simulants),
+              playerAvatar: draft.playerAvatar
+                ? { ...draft.playerAvatar }
+                : null,
               blockCount: draft.blockCount,
               timestamp: Date.now(),
             };
@@ -622,6 +700,7 @@ export const useWorldStore = create<WorldState>()(
           blockMap: new Map(state.blockMap),
           simulants: new Map(state.simulants),
           playerAvatar: state.playerAvatar ? { ...state.playerAvatar } : null,
+          blockCount: state.blockCount,
           timestamp: Date.now(),
         };
 

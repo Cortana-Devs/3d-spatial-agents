@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useWorldStore } from "../store/worldStore";
 import { CameraMode } from "../types";
+import { devWarn } from "@/utils/devLogger";
 
 interface SafeCameraModeConfig {
   minModeChangeDelay: number; // Minimum time between mode changes (ms)
@@ -57,7 +58,7 @@ export function useSafeCameraMode(config: Partial<SafeCameraModeConfig> = {}) {
 
       // Check minimum delay between changes (unless forced)
       if (!force && timeSinceLastChange < finalConfig.minModeChangeDelay) {
-        console.warn(
+        devWarn(
           `Camera mode change rejected: too soon after last change (${timeSinceLastChange}ms < ${finalConfig.minModeChangeDelay}ms)`,
         );
         return false;
@@ -71,7 +72,7 @@ export function useSafeCameraMode(config: Partial<SafeCameraModeConfig> = {}) {
           reason !== "user" &&
           reason !== "keyboard"
         ) {
-          console.warn(
+          devWarn(
             "Cinematic mode change blocked: not triggered by explicit user action",
           );
           return false;
@@ -79,7 +80,7 @@ export function useSafeCameraMode(config: Partial<SafeCameraModeConfig> = {}) {
 
         // Block rapid mode cycling
         if (timeSinceLastChange < 1000 && reason === "doubleclick") {
-          console.warn("Double-click camera mode change blocked: too rapid");
+          devWarn("Double-click camera mode change blocked: too rapid");
           return false;
         }
       }
@@ -150,9 +151,7 @@ export function useSafeCameraMode(config: Partial<SafeCameraModeConfig> = {}) {
 
       // Don't switch modes on double-click, just focus
       // The actual focusing should be handled by the camera controller
-      void import("@/utils/devLogger").then(({ devLog }) =>
-        devLog("Double-click focus triggered (no mode change)"),
-      );
+
       return true;
     },
     [finalConfig.enableDoubleClickFocus, activeCamera, isTransitioning],

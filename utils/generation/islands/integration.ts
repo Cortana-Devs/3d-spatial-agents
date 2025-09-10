@@ -1,3 +1,5 @@
+import { devLog, devError } from "@/utils/devLogger";
+
 /**
  * Island Generation Integration Module
  *
@@ -346,7 +348,7 @@ export class IslandDevControls {
    * Generate island at position
    */
   private async generateIsland(playerPosition: { x: number; z: number }): Promise<void> {
-    console.log('🏝️ Generating island at player position:', playerPosition);
+    devLog('🏝️ Generating island at player position:', playerPosition);
 
     try {
       this.currentResult = await generateIslandAtPlayer(
@@ -354,17 +356,17 @@ export class IslandDevControls {
         playerPosition,
         'dev-seed-' + Date.now(),
         (progress, stage, details) => {
-          console.log(`🏝️ ${stage}: ${Math.round(progress * 100)}% ${details || ''}`);
+          devLog(`🏝️ ${stage}: ${Math.round(progress * 100)}% ${details || ''}`);
         }
       );
 
       if (this.currentResult.success) {
-        console.log(`✅ Island generated successfully! Placed ${this.currentResult.placedBlocks} blocks in ${this.currentResult.generationTimeMs.toFixed(1)}ms`);
+        devLog(`✅ Island generated successfully! Placed ${this.currentResult.placedBlocks} blocks in ${this.currentResult.generationTimeMs.toFixed(1)}ms`);
       } else {
         console.error('❌ Island generation failed:', this.currentResult.error);
       }
     } catch (error) {
-      console.error('❌ Island generation error:', error);
+      devError('❌ Island generation error:', error);
     }
   }
 
@@ -372,7 +374,7 @@ export class IslandDevControls {
    * Clear island at position
    */
   private async clearIsland(playerPosition: { x: number; z: number }): Promise<void> {
-    console.log('🧹 Clearing island area at:', playerPosition);
+    devLog('🧹 Clearing island area at:', playerPosition);
 
     try {
       const clearedBlocks = await clearIslandRegion(
@@ -381,12 +383,12 @@ export class IslandDevControls {
         this.worldStore,
         (progress) => {
           if (progress === 1.0) {
-            console.log(`🧹 Clearing complete: ${clearedBlocks} blocks removed`);
+            devLog(`🧹 Clearing complete: ${clearedBlocks} blocks removed`);
           }
         }
       );
     } catch (error) {
-      console.error('❌ Island clearing error:', error);
+      devError('❌ Island clearing error:', error);
     }
   }
 

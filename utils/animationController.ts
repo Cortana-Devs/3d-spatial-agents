@@ -1,3 +1,5 @@
+import { devLog, devWarn } from "@/utils/devLogger";
+
 /**
  * Animation State Controller and Mapping System
  * Manages animation state transitions, priority-based animation selection,
@@ -291,8 +293,8 @@ export class AnimationController {
     })
 
     if (this.enableLogging) {
-      console.log('🎮 AnimationController initialized with', this.availableAnimations.size, 'animations')
-      console.log('🎮 Available animation names:', Array.from(this.availableAnimations))
+      devLog('🎮 AnimationController initialized with', this.availableAnimations.size, 'animations')
+      devLog('🎮 Available animation names:', Array.from(this.availableAnimations))
     }
   }
 
@@ -360,9 +362,9 @@ export class AnimationController {
     const mapping = ENHANCED_ANIMATION_MAPPING[state]
     
     if (this.enableLogging) {
-      console.log(`🔍 Getting animation for state: ${state}`)
-      console.log(`🔍 Mapping:`, mapping)
-      console.log(`🔍 Available animations:`, Array.from(this.availableAnimations))
+      devLog(`🔍 Getting animation for state: ${state}`)
+      devLog(`🔍 Mapping:`, mapping)
+      devLog(`🔍 Available animations:`, Array.from(this.availableAnimations))
     }
     
     // Special handling for idle state to support cycling
@@ -375,7 +377,7 @@ export class AnimationController {
         // Use current idle index for cycling
         const selectedAnimation = availableIdleAnimations[this.currentIdleIndex % availableIdleAnimations.length]
         if (this.enableLogging) {
-          console.log(`🎭 Selected idle animation: ${selectedAnimation} (index: ${this.currentIdleIndex})`)
+          devLog(`🎭 Selected idle animation: ${selectedAnimation} (index: ${this.currentIdleIndex})`)
         }
         return selectedAnimation
       }
@@ -384,7 +386,7 @@ export class AnimationController {
       for (const animName of mapping.primary) {
         if (this.availableAnimations.has(animName)) {
           if (this.enableLogging) {
-            console.log(`✅ Found primary animation: ${animName} for state: ${state}`)
+            devLog(`✅ Found primary animation: ${animName} for state: ${state}`)
           }
           return animName
         }
@@ -395,16 +397,16 @@ export class AnimationController {
     for (const animName of mapping.fallback) {
       if (this.availableAnimations.has(animName)) {
         if (this.enableLogging) {
-          console.log(`✅ Found fallback animation: ${animName} for state: ${state}`)
+          devLog(`✅ Found fallback animation: ${animName} for state: ${state}`)
         }
         return animName
       }
     }
     
     if (this.enableLogging) {
-      console.warn(`⚠️ No animation found for state: ${state}`)
-      console.warn(`🔍 Looking for animations:`, mapping.primary, 'or fallbacks:', mapping.fallback)
-      console.warn(`🔍 Available animations:`, Array.from(this.availableAnimations))
+      devWarn(`⚠️ No animation found for state: ${state}`)
+      devWarn(`🔍 Looking for animations:`, mapping.primary, 'or fallbacks:', mapping.fallback)
+      devWarn(`🔍 Available animations:`, Array.from(this.availableAnimations))
     }
     
     return null
@@ -450,12 +452,12 @@ export class AnimationController {
     customEasing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'
   } = {}): boolean {
     if (this.enableLogging) {
-      console.log(`🎬 Attempting transition: ${this.currentState} -> ${newState}`)
+      devLog(`🎬 Attempting transition: ${this.currentState} -> ${newState}`)
     }
     
     if (!options.force && !this.canTransitionTo(newState)) {
       if (this.enableLogging) {
-        console.log(`🚫 Transition blocked: ${this.currentState} -> ${newState}`)
+        devLog(`🚫 Transition blocked: ${this.currentState} -> ${newState}`)
       }
       return false
     }
@@ -463,7 +465,7 @@ export class AnimationController {
     const animationName = this.getAnimationForState(newState)
     if (!animationName) {
       if (this.enableLogging) {
-        console.warn(`⚠️ No animation available for state: ${newState}`)
+        devWarn(`⚠️ No animation available for state: ${newState}`)
       }
       return false
     }
@@ -471,7 +473,7 @@ export class AnimationController {
     const action = this.actions[animationName]
     if (!action) {
       if (this.enableLogging) {
-        console.warn(`⚠️ Animation action not found: ${animationName}`)
+        devWarn(`⚠️ Animation action not found: ${animationName}`)
         console.warn(`🔍 Available actions:`, Object.keys(this.actions))
       }
       return false
@@ -508,14 +510,14 @@ export class AnimationController {
     this.isTransitioning = true
 
     if (this.enableLogging) {
-      console.log(`🎬 Transitioning: ${this.previousState} -> ${this.currentState} (${animationName})`)
+      devLog(`🎬 Transitioning: ${this.previousState} -> ${this.currentState} (${animationName})`)
     }
 
     // Set up transition completion
     setTimeout(() => {
       this.isTransitioning = false
       if (this.enableLogging) {
-        console.log(`✅ Transition complete: ${this.currentState}`)
+        devLog(`✅ Transition complete: ${this.currentState}`)
       }
     }, this.transitionDuration)
 
@@ -633,7 +635,7 @@ export class AnimationController {
     }, cycleInterval)
     
     if (this.enableLogging) {
-      console.log(`🔄 Started idle animation cycling (${cycleInterval}ms interval)`)
+      devLog(`🔄 Started idle animation cycling (${cycleInterval}ms interval)`)
     }
   }
 
@@ -646,7 +648,7 @@ export class AnimationController {
       this.idleCycleTimer = null
       
       if (this.enableLogging) {
-        console.log('⏹️ Stopped idle animation cycling')
+        devLog('⏹️ Stopped idle animation cycling')
       }
     }
   }
@@ -667,7 +669,7 @@ export class AnimationController {
     const nextIdleAnimation = availableIdleAnimations[this.currentIdleIndex]
     
     if (this.enableLogging) {
-      console.log(`🔄 Cycling to idle animation: ${nextIdleAnimation}`)
+      devLog(`🔄 Cycling to idle animation: ${nextIdleAnimation}`)
     }
     
     // Transition to the same state but with different animation

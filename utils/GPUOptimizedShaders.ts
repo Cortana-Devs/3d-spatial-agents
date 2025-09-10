@@ -1,4 +1,6 @@
 "use client";
+import { devWarn, devError } from "@/utils/devLogger";
+
 
 // Advanced GPU-Optimized Shaders for Maximum Performance
 // Engineered for WebGL2 with fallback to WebGL1
@@ -541,7 +543,7 @@ export class ShaderUtils {
     gl.compileShader(shader);
 
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.error("Shader compilation error:", gl.getShaderInfoLog(shader));
+      devError("Shader compilation error:", gl.getShaderInfoLog(shader));
       gl.deleteShader(shader);
       return null;
     }
@@ -562,7 +564,7 @@ export class ShaderUtils {
     gl.linkProgram(program);
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error("Program linking error:", gl.getProgramInfoLog(program));
+      devError("Program linking error:", gl.getProgramInfoLog(program));
       gl.deleteProgram(program);
       return null;
     }
@@ -646,7 +648,7 @@ export class ShaderProfiler {
     this.isTimerSupported = this.timerExtension !== null;
 
     if (!this.isTimerSupported) {
-      console.warn(
+      devWarn(
         "WebGL timer queries not supported - using fallback performance measurement",
       );
     }
@@ -673,7 +675,7 @@ export class ShaderProfiler {
       // Use the correct constant from the extension
       gl.beginQuery(this.timerExtension.TIME_ELAPSED_EXT, query);
     } catch (error) {
-      console.warn(
+      devWarn(
         "WebGL timer query failed, falling back to performance.now():",
         error,
       );
@@ -730,7 +732,7 @@ export class ShaderProfiler {
               setTimeout(checkResult, 1);
             }
           } catch (error) {
-            console.warn("WebGL query result failed:", error);
+            devWarn("WebGL query result failed:", error);
             gl.deleteQuery(query);
             this.queries.delete(name);
             resolve(0);
@@ -739,7 +741,7 @@ export class ShaderProfiler {
 
         checkResult();
       } catch (error) {
-        console.warn("WebGL endQuery failed:", error);
+        devWarn("WebGL endQuery failed:", error);
         gl.deleteQuery(query);
         this.queries.delete(name);
         resolve(0);

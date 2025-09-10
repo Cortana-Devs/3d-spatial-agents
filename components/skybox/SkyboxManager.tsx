@@ -143,7 +143,7 @@ export function SkyboxManager({
               ? transitionError
               : new Error("Transition failed");
 
-          console.error("Skybox transition failed:", error);
+          devError("Skybox transition failed:", error);
           setError(error.message);
           onLoadError?.(error);
 
@@ -166,7 +166,7 @@ export function SkyboxManager({
                 error instanceof Error ? error : undefined,
               );
 
-        console.error("SkyboxManager error:", skyboxError);
+        devError("SkyboxManager error:", skyboxError);
         setError(skyboxError.message);
         onLoadError?.(skyboxError);
       }
@@ -227,7 +227,7 @@ export function SkyboxManager({
   // Error boundary fallback
   const handleRenderError = useCallback(
     (error: Error) => {
-      console.error("SkyboxRenderer error:", error);
+      devError("SkyboxRenderer error:", error);
       setError(`Render error: ${error.message}`);
       onLoadError?.(error);
 

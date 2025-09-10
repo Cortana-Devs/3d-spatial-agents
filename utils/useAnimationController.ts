@@ -1,3 +1,5 @@
+import { devLog, devWarn } from "@/utils/devLogger";
+
 /**
  * Animation Controller Hook
  * Integrates AnimationController with React Three Fiber and simulant state management
@@ -102,7 +104,7 @@ export function useAnimationController(
       )
 
       if (config.enableLogging) {
-        console.log('🎮 Animation controller initialized for simulant:', simulant.id)
+        devLog('🎮 Animation controller initialized for simulant:', simulant.id)
       }
 
       return () => {
@@ -134,7 +136,7 @@ export function useAnimationController(
         const newState = controllerRef.current.mapActionToAnimationState(currentAction)
         
         if (config.enableLogging) {
-          console.log(`🎯 Action "${currentAction}" mapped to state: ${newState}`)
+          devLog(`🎯 Action "${currentAction}" mapped to state: ${newState}`)
         }
         
         controllerRef.current.transitionTo(newState)
@@ -185,7 +187,7 @@ export function useAnimationController(
   ): boolean => {
     if (!controllerRef.current) {
       if (config.enableLogging) {
-        console.warn('⚠️ Animation controller not initialized')
+        devWarn('⚠️ Animation controller not initialized')
       }
       return false
     }

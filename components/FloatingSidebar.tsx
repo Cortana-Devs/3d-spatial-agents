@@ -2,8 +2,14 @@
 
 import React from "react";
 import { Button } from "./ui/button";
-import { Card } from "./ui/card";
 import { Separator } from "./ui/separator";
+import {
+  FloatingPanel,
+  FloatingPanelHeader,
+  FloatingPanelItem,
+  FloatingPanelSection,
+  FloatingPanelDivider,
+} from "./ui/FloatingPanel";
 import { Slider } from "./ui/slider";
 import { Label } from "./ui/label";
 import {
@@ -28,7 +34,7 @@ import {
   Shuffle,
   Home,
 } from "lucide-react";
-import FloorControlPanel from "./world/FloorControlPanel";
+// FloorControlPanel import removed as it's not being used effectively
 import { quickFloorUtils } from "../utils/floorManager";
 import { useWorldStore } from "../store/worldStore";
 import { CAMERA_PRESETS } from "./world/CameraController";
@@ -36,7 +42,8 @@ import { SimulantUtils } from "./simulants/SimulantManager";
 import type { AISimulant, CameraMode } from "../types";
 import type { AnimationState } from "../utils/animationController";
 import { useSafeCameraMode } from "../hooks/useSafeCameraMode";
-import { ifDev } from "../utils/devLogger";
+import { ifDev, devWarn } from "../utils/devLogger";
+import { Y_LEVEL_CONSTANTS } from "../config/yLevelConstants";
 
 type TabKey = "animation" | "simulants" | "camera" | "floor";
 
@@ -47,55 +54,54 @@ const CAMERA_MODE_CONFIG = {
   "follow-simulant": { icon: Eye, label: "Follow" },
 } as const;
 
-// Animation configuration for the sidebar
 const ANIMATION_CONFIG = {
   idle: {
-    icon: User,
     label: "Idle",
-    color: "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30",
+    icon: User,
     description: "Standing idle variations",
+    color: "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30",
   },
   walking: {
-    icon: Activity,
     label: "Walk",
-    color: "bg-green-500/20 text-green-300 hover:bg-green-500/30",
+    icon: Activity,
     description: "Walking forward",
+    color: "bg-green-500/20 text-green-300 hover:bg-green-500/30",
   },
   running: {
-    icon: Zap,
     label: "Run",
-    color: "bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30",
+    icon: Zap,
     description: "Running fast",
+    color: "bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30",
   },
   jumping: {
-    icon: Square,
     label: "Jump",
-    color: "bg-purple-500/20 text-purple-300 hover:bg-purple-500/30",
+    icon: Square,
     description: "Jumping action",
+    color: "bg-purple-500/20 text-purple-300 hover:bg-purple-500/30",
   },
   building: {
-    icon: Settings,
     label: "Build",
-    color: "bg-orange-500/20 text-orange-300 hover:bg-orange-500/30",
+    icon: Settings,
     description: "Building/constructing",
+    color: "bg-orange-500/20 text-orange-300 hover:bg-orange-500/30",
   },
   communicating: {
-    icon: Users,
     label: "Talk",
-    color: "bg-pink-500/20 text-pink-300 hover:bg-pink-500/30",
+    icon: Users,
     description: "Talking/communicating",
+    color: "bg-pink-500/20 text-pink-300 hover:bg-pink-500/30",
   },
   thinking: {
-    icon: Clock,
     label: "Think",
-    color: "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30",
+    icon: Clock,
     description: "Thinking/analyzing",
+    color: "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30",
   },
   celebrating: {
-    icon: Repeat,
     label: "Celebrate",
-    color: "bg-red-500/20 text-red-300 hover:bg-red-500/30",
+    icon: Repeat,
     description: "Celebrating/dancing",
+    color: "bg-red-500/20 text-red-300 hover:bg-red-500/30",
   },
 } as const;
 
@@ -121,7 +127,7 @@ export default function FloatingSidebar() {
 
   const [activeTab, setActiveTab] = React.useState<TabKey>("animation");
   const [selectedPreset, setSelectedPreset] = React.useState(0);
-  const [isFloorPanelOpen, setIsFloorPanelOpen] = React.useState(false);
+  // Removed unused state for floor panel
   // Debounce for quick floor actions to avoid duplicate operations
   const floorActionLockRef = React.useRef(false);
   const handleDebouncedFloorAction = React.useCallback(
@@ -196,278 +202,205 @@ export default function FloatingSidebar() {
         event.preventDefault();
         updateGridConfig({ visibility: !gridConfig.visibility });
       }
-
-      // Handle 'F' key for quick floor placement
-      if (event.key === "f" || event.key === "F") {
-        event.preventDefault();
-        handleDebouncedFloorAction(() => {
-          // Clear blocks first if near limit
-          if (blockCount > worldLimits.maxBlocks * 0.9) {
-            ifDev(() => {
-              console.warn("Clearing blocks before placing floor due to limit");
-            });
-            clearAllBlocks();
-          }
-          // Normalize placement to y=0 via FloorManager defaults
-          ifDev(() => {
-            console.warn(
-              `Placing floor with size: ${gridConfig.size} (total blocks: ${gridConfig.size * gridConfig.size})`,
-            );
-          });
-          quickFloorUtils.placeStoneFloor(gridConfig.size);
-          ifDev(() => {
-            console.warn(
-              `Quick stone floor placed at y=0 (${gridConfig.size}×${gridConfig.size})`,
-            );
-          });
-        });
-      }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [
-    safeCameraMode,
-    gridConfig.visibility,
-    updateGridConfig,
-    gridConfig.size,
-  ]);
 
-  // Drag event handlers
-  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    if (dragRef.current) {
-      setIsDragging(true);
-      const rect = dragRef.current.getBoundingClientRect();
-      setDragStart({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-    }
-  }, []);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [safeCameraMode, gridConfig.visibility, updateGridConfig]);
 
-  const handleTouchStart = React.useCallback((e: React.TouchEvent) => {
-    if (dragRef.current && e.touches.length === 1) {
-      setIsDragging(true);
-      const rect = dragRef.current.getBoundingClientRect();
-      const touch = e.touches[0];
-      setDragStart({
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-      });
-    }
-  }, []);
-
-  const handleMouseMove = React.useCallback(
-    (e: MouseEvent) => {
-      if (isDragging) {
-        const newX = e.clientX - dragStart.x;
-        const newY = e.clientY - dragStart.y;
-
-        // Constrain to viewport bounds
-        const maxX = window.innerWidth - 320; // sidebar width
-        const maxY = window.innerHeight - 400; // approximate sidebar height
-
-        const newPosition = {
-          x: Math.max(0, Math.min(newX, maxX)),
-          y: Math.max(80, Math.min(newY, maxY)), // Keep below header (80px min)
-        };
-        setPosition(newPosition);
-
-        // Save position to localStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem(
-            "floatingSidebarPosition",
-            JSON.stringify(newPosition),
-          );
-        }
-      }
-    },
-    [isDragging, dragStart],
-  );
-
-  const handleTouchMove = React.useCallback(
-    (e: TouchEvent) => {
-      if (isDragging && e.touches.length === 1) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const newX = touch.clientX - dragStart.x;
-        const newY = touch.clientY - dragStart.y;
-
-        // Constrain to viewport bounds
-        const maxX = window.innerWidth - 320; // sidebar width
-        const maxY = window.innerHeight - 400; // approximate sidebar height
-
-        const newPosition = {
-          x: Math.max(0, Math.min(newX, maxX)),
-          y: Math.max(80, Math.min(newY, maxY)), // Keep below header (80px min)
-        };
-        setPosition(newPosition);
-
-        // Save position to localStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem(
-            "floatingSidebarPosition",
-            JSON.stringify(newPosition),
-          );
-        }
-      }
-    },
-    [isDragging, dragStart],
-  );
-
-  const handleMouseUp = React.useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // Add global mouse and touch event listeners for dragging
+  // Save position on change (client-only)
   React.useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          "floatingSidebarPosition",
+          JSON.stringify(position),
+        );
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [position]);
+
+  const handleMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsDragging(true);
+      setDragStart({
+        x: event.clientX - position.x,
+        y: event.clientY - position.y,
+      });
+    },
+    [position],
+  );
+
+  const handleTouchStart = React.useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const touch = event.touches[0];
+      setIsDragging(true);
+      setDragStart({
+        x: touch.clientX - position.x,
+        y: touch.clientY - position.y,
+      });
+    },
+    [position],
+  );
+
+  React.useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isDragging) return;
+      setPosition({
+        x: event.clientX - dragStart.x,
+        y: event.clientY - dragStart.y,
+      });
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!isDragging) return;
+      event.preventDefault();
+      const touch = event.touches[0];
+      setPosition({
+        x: touch.clientX - dragStart.x,
+        y: touch.clientY - dragStart.y,
+      });
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
+    const handleTouchEnd = () => setIsDragging(false);
+
     if (isDragging) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
       document.addEventListener("touchmove", handleTouchMove, {
         passive: false,
       });
-      document.addEventListener("touchend", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-        document.removeEventListener("touchmove", handleTouchMove);
-        document.removeEventListener("touchend", handleMouseUp);
-      };
+      document.addEventListener("touchend", handleTouchEnd);
     }
-  }, [isDragging, handleMouseMove, handleTouchMove, handleMouseUp]);
 
-  // Animation control functions
-  const handlePlayAnimation = (animationState: AnimationState) => {
-    setCurrentAnimation(animationState);
-
-    // Map animation states to actions
-    const actionMap: Record<AnimationState, string> = {
-      idle: "standing idle",
-      walking: "walk forward",
-      running: "run forward",
-      jumping: "jump up",
-      building: "building a structure",
-      communicating: "talking to someone",
-      thinking: "thinking deeply",
-      celebrating: "celebrating victory",
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
     };
+  }, [isDragging, dragStart]);
 
-    const action = actionMap[animationState];
-    simulants.forEach((simulant) => {
-      updateSimulant(simulant.id, {
-        lastAction: action,
-        status: animationState === "idle" ? "idle" : "active",
-      });
-    });
-  };
-
-  const handleStopAllAnimations = () => {
-    setCurrentAnimation(null);
-    simulants.forEach((simulant) => {
-      updateSimulant(simulant.id, {
-        lastAction: "standing idle",
-        status: "idle",
-      });
-    });
-  };
-
-  const handleRandomAnimation = () => {
-    const animations: AnimationState[] = [
-      "idle",
-      "walking",
-      "running",
-      "jumping",
-      "building",
-      "communicating",
-      "thinking",
-      "celebrating",
-    ];
-    const randomAnimation =
-      animations[Math.floor(Math.random() * animations.length)];
-    handlePlayAnimation(randomAnimation);
-  };
-
-  const handleToggleIdleCycling = () => {
-    setEnableIdleCycling(!enableIdleCycling);
-    // Note: The actual cycling is handled by the animation controller
-    // This is just for UI state management
-  };
-
-  // Animation tab actions
-  const handleAddTestSimulant = () => {
-    const simulantId = `simulant-${Date.now()}`;
-    const spawnPositions = SimulantUtils.calculateSpawnPositions(
-      simulants.size + 1,
-      0,
-      0,
-      3 + simulants.size * 0.5,
-    );
-    const spawnPosition = spawnPositions[simulants.size] ||
-      spawnPositions[0] || { x: 0, y: 0, z: 0 };
-
-    const newSimulant: AISimulant = {
-      id: simulantId,
-      name: `Test Simulant`,
-      position: spawnPosition,
-      status: "idle",
-      lastAction: "standing idle",
-      conversationHistory: [],
-      geminiSessionId: `session-${simulantId}`,
-    };
-    addSimulant(newSimulant);
-  };
-
-  // Simulants tab actions (compact copy of existing controls)
+  // Simulant stats for display
   const simulantStats = React.useMemo(() => {
-    const stats = { total: 0, active: 0, idle: 0, disconnected: 0 } as Record<
-      string,
-      number
-    >;
+    const stats = {
+      total: simulants.size,
+      active: 0,
+      idle: 0,
+      disconnected: 0,
+    };
     simulants.forEach((s) => {
-      stats.total++;
-      stats[s.status] = (stats[s.status] || 0) + 1;
+      if (s.status === "active") stats.active++;
+      else if (s.status === "idle") stats.idle++;
+      else stats.disconnected++;
     });
     return stats;
   }, [simulants]);
 
-  const handleAddPresetSimulant = React.useCallback(() => {
-    const presets = [
-      {
-        name: "Builder",
-        defaultAction: "Looking for the perfect spot to build",
-      },
-      { name: "Explorer", defaultAction: "Exploring the voxel landscape" },
-      { name: "Thinker", defaultAction: "Analyzing the world structure" },
-      { name: "Social", defaultAction: "Looking for someone to chat with" },
-    ];
-    const preset = presets[selectedPreset];
+  // Animation handlers
+  const handlePlayAnimation = React.useCallback(
+    (animationState: AnimationState) => {
+      ifDev(() =>
+        devWarn(`Playing animation: ${animationState} for all simulants`),
+      );
+      setCurrentAnimation(animationState);
 
-    const simulantId = `simulant-${Date.now()}`;
-    const spawnPositions = SimulantUtils.calculateSpawnPositions(
-      simulants.size + 1,
-      0,
-      0,
-      3 + simulants.size * 0.5,
-    );
-    const spawnPosition = spawnPositions[simulants.size] ||
-      spawnPositions[0] || { x: 0, y: 0, z: 0 };
+      // Map animation states to action keywords that match SimpleAnimatedAvatar logic
+      const actionKeywords: Record<AnimationState, string> = {
+        idle: "Standing idle",
+        walking: "Walking forward",
+        running: "Running fast",
+        jumping: "Jumping over obstacle",
+        building: "Building structure",
+        thinking: "Thinking deeply",
+        communicating: "Talking to friend", // This will match the "talk" keyword
+        celebrating: "Dancing celebration",
+      };
 
+      // Apply animation to all simulants
+      simulants.forEach((simulant) => {
+        updateSimulant(simulant.id, {
+          lastAction: actionKeywords[animationState],
+        });
+      });
+    },
+    [simulants, updateSimulant],
+  );
+
+  const handleStopAllAnimations = React.useCallback(() => {
+    setCurrentAnimation(null);
+    simulants.forEach((simulant) => {
+      updateSimulant(simulant.id, { lastAction: "Standing idle" });
+    });
+  }, [simulants, updateSimulant]);
+
+  const handleRandomAnimation = React.useCallback(() => {
+    const animations = Object.keys(ANIMATION_CONFIG) as AnimationState[];
+    const randomAnimation =
+      animations[Math.floor(Math.random() * animations.length)];
+    handlePlayAnimation(randomAnimation);
+  }, [handlePlayAnimation]);
+
+  const handleToggleIdleCycling = React.useCallback(() => {
+    setEnableIdleCycling(!enableIdleCycling);
+  }, [enableIdleCycling]);
+
+  // Simulant management handlers
+  const handleAddTestSimulant = React.useCallback(() => {
+    const position = {
+      x: Math.random() * 10,
+      y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+      z: Math.random() * 10,
+    };
+
+    const simulantId = `test-simulant-${Date.now()}`;
     const newSimulant: AISimulant = {
       id: simulantId,
-      name: `${preset.name}-${simulants.size + 1}`,
-      position: spawnPosition,
-      status: "active",
-      lastAction: preset.defaultAction,
+      name: `Test Simulant ${simulants.size + 1}`,
+      position,
+      status: "idle",
+      lastAction: "Standing idle",
       conversationHistory: [],
       geminiSessionId: `session-${simulantId}`,
     };
     addSimulant(newSimulant);
-    setSelectedPreset((p) => (p + 1) % presets.length);
-  }, [simulants.size, selectedPreset, addSimulant]);
+  }, []);
+
+  const handleAddPresetSimulant = React.useCallback(() => {
+    const presets = [
+      { name: "Builder", action: "Looking for the perfect spot to build" },
+      { name: "Explorer", action: "Exploring the voxel landscape" },
+      { name: "Thinker", action: "Analyzing the world structure" },
+      { name: "Social", action: "Looking for someone to chat with" },
+    ];
+
+    const preset = presets[selectedPreset % presets.length];
+    const position = {
+      x: Math.random() * 10,
+      y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+      z: Math.random() * 10,
+    };
+
+    const simulantId = `preset-simulant-${Date.now()}`;
+    const newSimulant: AISimulant = {
+      id: simulantId,
+      name: `${preset.name} ${simulants.size + 1}`,
+      position,
+      status: "active",
+      lastAction: preset.action,
+      conversationHistory: [],
+      geminiSessionId: `session-${simulantId}`,
+    };
+    addSimulant(newSimulant);
+    setSelectedPreset((prev) => (prev + 1) % presets.length);
+  }, [selectedPreset]);
 
   const handleRemoveLastSimulant = React.useCallback(() => {
-    if (simulants.size === 0) return;
     const arr = Array.from(simulants.values());
     const last = arr[arr.length - 1];
     if (last) removeSimulant(last.id);
@@ -517,17 +450,17 @@ export default function FloatingSidebar() {
         cursor: isDragging ? "grabbing" : "default",
       }}
     >
-      <Card className="bg-black/20 backdrop-blur-md border-white/10 text-white w-[320px] shadow-xl">
+      <FloatingPanel className="w-[320px]">
         {/* Drag handle */}
         <div
-          className="flex items-center justify-center py-1 px-2 cursor-grab active:cursor-grabbing border-b border-white/10 touch-none"
+          className="flex items-center justify-center py-1 px-2 cursor-grab active:cursor-grabbing border-b border-axiom-neutral-200 dark:border-axiom-neutral-700 touch-none"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           title="Drag to move sidebar"
         >
           <GripVertical
             size={16}
-            className="text-white/40 hover:text-white/60"
+            className="text-axiom-neutral-400 dark:text-axiom-neutral-500 hover:text-axiom-neutral-600 dark:hover:text-axiom-neutral-300"
           />
         </div>
 
@@ -536,8 +469,8 @@ export default function FloatingSidebar() {
           <button
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               activeTab === "animation"
-                ? "bg-white/20 text-white"
-                : "text-white/70 hover:text-white hover:bg-white/10"
+                ? "bg-axiom-primary-500/20 text-axiom-primary-700 dark:text-axiom-primary-300"
+                : "text-axiom-neutral-600 dark:text-axiom-neutral-400 hover:text-axiom-neutral-800 dark:hover:text-axiom-neutral-200 hover:bg-axiom-neutral-100 dark:hover:bg-axiom-neutral-800"
             }`}
             onClick={() => setActiveTab("animation")}
             title="Animation Test Controls"
@@ -547,8 +480,8 @@ export default function FloatingSidebar() {
           <button
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               activeTab === "simulants"
-                ? "bg-white/20 text-white"
-                : "text-white/70 hover:text-white hover:bg-white/10"
+                ? "bg-axiom-primary-500/20 text-axiom-primary-700 dark:text-axiom-primary-300"
+                : "text-axiom-neutral-600 dark:text-axiom-neutral-400 hover:text-axiom-neutral-800 dark:hover:text-axiom-neutral-200 hover:bg-axiom-neutral-100 dark:hover:bg-axiom-neutral-800"
             }`}
             onClick={() => setActiveTab("simulants")}
             title="Simulants"
@@ -558,8 +491,8 @@ export default function FloatingSidebar() {
           <button
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               activeTab === "camera"
-                ? "bg-white/20 text-white"
-                : "text-white/70 hover:text-white hover:bg-white/10"
+                ? "bg-axiom-primary-500/20 text-axiom-primary-700 dark:text-axiom-primary-300"
+                : "text-axiom-neutral-600 dark:text-axiom-neutral-400 hover:text-axiom-neutral-800 dark:hover:text-axiom-neutral-200 hover:bg-axiom-neutral-100 dark:hover:bg-axiom-neutral-800"
             }`}
             onClick={() => setActiveTab("camera")}
             title="Camera"
@@ -569,8 +502,8 @@ export default function FloatingSidebar() {
           <button
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               activeTab === "floor"
-                ? "bg-white/20 text-white"
-                : "text-white/70 hover:text-white hover:bg-white/10"
+                ? "bg-axiom-primary-500/20 text-axiom-primary-700 dark:text-axiom-primary-300"
+                : "text-axiom-neutral-600 dark:text-axiom-neutral-400 hover:text-axiom-neutral-800 dark:hover:text-axiom-neutral-200 hover:bg-axiom-neutral-100 dark:hover:bg-axiom-neutral-800"
             }`}
             onClick={() => setActiveTab("floor")}
             title="Floor Controls"
@@ -579,36 +512,33 @@ export default function FloatingSidebar() {
           </button>
         </div>
 
-        <Separator className="bg-white/10" />
+        <FloatingPanelDivider />
 
         {/* Tab content */}
         {activeTab === "animation" && (
-          <div className="p-3 space-y-3 max-h-[500px] overflow-y-auto">
+          <div className="space-y-3 max-h-[500px] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="text-xs text-white/60">Animation Controls</div>
-              <div className="text-[10px] text-white/50">
-                Simulants: {simulants.size}
-              </div>
-            </div>
+            <FloatingPanelItem
+              label="Animation Controls"
+              value={`Simulants: ${simulants.size}`}
+            />
 
             {/* Add Simulant */}
             <div className="flex gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex-1 text-white/80 hover:bg-white/10"
+                className="flex-1"
                 onClick={handleAddTestSimulant}
               >
                 <Plus size={12} className="mr-1" /> Add Simulant
               </Button>
             </div>
 
-            <Separator className="bg-white/10" />
+            <FloatingPanelDivider />
 
             {/* Animation Grid */}
-            <div className="space-y-2">
-              <div className="text-xs text-white/60">Play Animations</div>
+            <FloatingPanelSection title="Play Animations">
               <div className="grid grid-cols-2 gap-2">
                 {(Object.keys(ANIMATION_CONFIG) as AnimationState[]).map(
                   (animationState) => {
@@ -638,18 +568,17 @@ export default function FloatingSidebar() {
                   },
                 )}
               </div>
-            </div>
+            </FloatingPanelSection>
 
-            <Separator className="bg-white/10" />
+            <FloatingPanelDivider />
 
             {/* Control Buttons */}
-            <div className="space-y-2">
-              <div className="text-xs text-white/60">Controls</div>
+            <FloatingPanelSection title="Controls">
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex-1 text-white/80 hover:bg-white/10"
+                  className="flex-1"
                   onClick={handleStopAllAnimations}
                   disabled={simulants.size === 0}
                 >
@@ -658,24 +587,22 @@ export default function FloatingSidebar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex-1 text-white/80 hover:bg-white/10"
+                  className="flex-1"
                   onClick={handleRandomAnimation}
                   disabled={simulants.size === 0}
                 >
                   <Shuffle size={12} className="mr-1" /> Random
                 </Button>
               </div>
-            </div>
+            </FloatingPanelSection>
 
-            <Separator className="bg-white/10" />
+            <FloatingPanelDivider />
 
             {/* Animation Settings */}
-            <div className="space-y-3">
-              <div className="text-xs text-white/60">Settings</div>
-
+            <FloatingPanelSection title="Settings">
               {/* Cross-fade Duration */}
               <div className="space-y-1">
-                <Label className="text-[10px] text-white/70">
+                <Label className="text-sm text-axiom-neutral-600 dark:text-axiom-neutral-400">
                   Cross-fade Duration: {crossFadeDuration}s
                 </Label>
                 <Slider
@@ -690,7 +617,7 @@ export default function FloatingSidebar() {
 
               {/* Animation Speed */}
               <div className="space-y-1">
-                <Label className="text-[10px] text-white/70">
+                <Label className="text-sm text-axiom-neutral-600 dark:text-axiom-neutral-400">
                   Animation Speed: {animationSpeed}x
                 </Label>
                 <Slider
@@ -704,23 +631,22 @@ export default function FloatingSidebar() {
               </div>
 
               {/* Idle Cycling */}
-              <div className="flex items-center justify-between">
-                <Label className="text-[10px] text-white/70">
-                  Idle Cycling
-                </Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleToggleIdleCycling}
-                  className={`text-xs ${enableIdleCycling ? "text-green-300" : "text-white/50"}`}
-                >
-                  {enableIdleCycling ? "ON" : "OFF"}
-                </Button>
-              </div>
+              <FloatingPanelItem
+                label="Idle Cycling"
+                value={enableIdleCycling ? "ON" : "OFF"}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleIdleCycling}
+                className={`text-xs w-full ${enableIdleCycling ? "text-axiom-success-600 dark:text-axiom-success-400" : "text-axiom-neutral-500 dark:text-axiom-neutral-500"}`}
+              >
+                {enableIdleCycling ? "Turn OFF" : "Turn ON"} Idle Cycling
+              </Button>
 
               {enableIdleCycling && (
                 <div className="space-y-1">
-                  <Label className="text-[10px] text-white/70">
+                  <Label className="text-sm text-axiom-neutral-600 dark:text-axiom-neutral-400">
                     Cycle Interval: {idleCycleInterval}s
                   </Label>
                   <Slider
@@ -733,11 +659,11 @@ export default function FloatingSidebar() {
                   />
                 </div>
               )}
-            </div>
+            </FloatingPanelSection>
 
             {/* Current Animation Status */}
             {currentAnimation && (
-              <div className="text-[10px] text-white/50 pt-2 border-t border-white/10">
+              <div className="pt-2 border-t border-axiom-neutral-200 dark:border-axiom-neutral-700 text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
                 Playing: {ANIMATION_CONFIG[currentAnimation].label}
                 {enableIdleCycling &&
                   currentAnimation === "idle" &&
@@ -748,150 +674,167 @@ export default function FloatingSidebar() {
         )}
 
         {activeTab === "simulants" && (
-          <div className="p-3 space-y-2">
-            <div className="text-xs text-white/60">Manage Simulants</div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleAddPresetSimulant}
-                disabled={false}
-                className="w-full text-green-300 hover:bg-green-500/20"
-              >
-                <Plus size={12} className="mr-1" /> Add
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRemoveLastSimulant}
-                disabled={simulants.size === 0}
-                className="w-full text-red-300 hover:bg-red-500/20"
-              >
-                <Minus size={12} className="mr-1" /> Remove
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggleAllSimulants}
-                disabled={simulants.size === 0}
-                className="w-full text-blue-300 hover:bg-blue-500/20 col-span-2"
-              >
-                {simulantStats.active > 0 ? (
-                  <>
-                    <Pause size={12} className="mr-1" /> Pause All
-                  </>
-                ) : (
-                  <>
-                    <Play size={12} className="mr-1" /> Activate All
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRandomActions}
-                disabled={simulants.size === 0}
-                className="w-full text-yellow-300 hover:bg-yellow-500/20 col-span-2"
-              >
-                <RotateCcw size={12} className="mr-1" /> Random Actions
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearSimulants}
-                disabled={simulants.size === 0}
-                className="w-full text-red-300 hover:bg-red-500/20 col-span-2"
-              >
-                Clear All
-              </Button>
-            </div>
-            <Separator className="bg-white/10" />
-            <div className="grid grid-cols-4 gap-2 text-[10px] text-white/60">
-              <div>Total: {simulantStats.total}</div>
-              <div>Active: {simulantStats.active}</div>
-              <div>Idle: {simulantStats.idle}</div>
-              <div>Off: {simulantStats.disconnected || 0}</div>
-            </div>
+          <div className="space-y-2">
+            <FloatingPanelSection title="Manage Simulants">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddPresetSimulant}
+                  disabled={false}
+                  className="w-full text-axiom-success-600 dark:text-axiom-success-400 hover:bg-axiom-success-500/20"
+                >
+                  <Plus size={12} className="mr-1" /> Add
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveLastSimulant}
+                  disabled={simulants.size === 0}
+                  className="w-full text-axiom-error-600 dark:text-axiom-error-400 hover:bg-axiom-error-500/20"
+                >
+                  <Minus size={12} className="mr-1" /> Remove
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToggleAllSimulants}
+                  disabled={simulants.size === 0}
+                  className="w-full text-axiom-primary-600 dark:text-axiom-primary-400 hover:bg-axiom-primary-500/20 col-span-2"
+                >
+                  {simulantStats.active > 0 ? (
+                    <>
+                      <Pause size={12} className="mr-1" /> Pause All
+                    </>
+                  ) : (
+                    <>
+                      <Play size={12} className="mr-1" /> Activate All
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRandomActions}
+                  disabled={simulants.size === 0}
+                  className="w-full text-axiom-warning-600 dark:text-axiom-warning-400 hover:bg-axiom-warning-500/20 col-span-2"
+                >
+                  <RotateCcw size={12} className="mr-1" /> Random Actions
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearSimulants}
+                  disabled={simulants.size === 0}
+                  className="w-full text-axiom-error-600 dark:text-axiom-error-400 hover:bg-axiom-error-500/20 col-span-2"
+                >
+                  Clear All
+                </Button>
+              </div>
+            </FloatingPanelSection>
+
+            <FloatingPanelDivider />
+
+            <FloatingPanelItem
+              label="Total Simulants"
+              value={simulantStats.total}
+            />
+            <FloatingPanelItem label="Active" value={simulantStats.active} />
+            <FloatingPanelItem label="Idle" value={simulantStats.idle} />
+            <FloatingPanelItem
+              label="Offline"
+              value={simulantStats.disconnected || 0}
+            />
           </div>
         )}
 
         {activeTab === "camera" && (
-          <div className="p-3 space-y-2">
-            <div className="text-xs text-white/60">Camera Modes</div>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                Object.keys(CAMERA_MODE_CONFIG) as Array<
-                  keyof typeof CAMERA_MODE_CONFIG
-                >
-              ).map((mode) => {
-                const Icon = CAMERA_MODE_CONFIG[mode].icon;
-                const isActive = activeCamera === mode;
-                return (
-                  <Button
-                    key={mode}
-                    variant={isActive ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => handleChangeCameraMode(mode as CameraMode)}
-                    className={`${
-                      isActive
-                        ? "bg-blue-500/20 text-blue-300 border-blue-400/30"
-                        : "text-white hover:bg-white/10"
-                    } w-full justify-start`}
+          <div className="space-y-2">
+            <FloatingPanelSection title="Camera Modes">
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  Object.keys(CAMERA_MODE_CONFIG) as Array<
+                    keyof typeof CAMERA_MODE_CONFIG
                   >
-                    <Icon size={14} className="mr-2" />{" "}
-                    {CAMERA_MODE_CONFIG[mode].label}
-                  </Button>
-                );
-              })}
-            </div>
-            <Separator className="bg-white/10" />
-            <div className="text-xs text-white/60">Grid</div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  updateGridConfig({ visibility: !gridConfig.visibility })
-                }
-                className={`flex-1 ${gridConfig.visibility ? "bg-green-500/20 text-green-300" : "text-white hover:bg-white/10"}`}
-              >
-                <Grid3X3 size={14} className="mr-2" />{" "}
-                {gridConfig.visibility ? "Visible" : "Hidden"}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  updateGridConfig({ snapToGrid: !gridConfig.snapToGrid })
-                }
-                className={`flex-1 ${gridConfig.snapToGrid ? "bg-blue-500/20 text-blue-300" : "text-white hover:bg-white/10"}`}
-              >
-                <Settings size={14} className="mr-2" /> Snap{" "}
-                {gridConfig.snapToGrid ? "On" : "Off"}
-              </Button>
-            </div>
-            <div className="text-[10px] text-white/50">
+                ).map((mode) => {
+                  const Icon = CAMERA_MODE_CONFIG[mode].icon;
+                  const isActive = activeCamera === mode;
+                  return (
+                    <Button
+                      key={mode}
+                      variant={isActive ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => handleChangeCameraMode(mode as CameraMode)}
+                      className={`${
+                        isActive
+                          ? "bg-axiom-primary-500/20 text-axiom-primary-700 dark:text-axiom-primary-300 border-axiom-primary-400/30"
+                          : ""
+                      } w-full justify-start`}
+                    >
+                      <Icon size={14} className="mr-2" />{" "}
+                      {CAMERA_MODE_CONFIG[mode].label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </FloatingPanelSection>
+
+            <FloatingPanelDivider />
+
+            <FloatingPanelSection title="Grid Settings">
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    updateGridConfig({ visibility: !gridConfig.visibility })
+                  }
+                  className={`flex-1 ${gridConfig.visibility ? "bg-axiom-success-500/20 text-axiom-success-700 dark:text-axiom-success-300" : ""}`}
+                >
+                  <Grid3X3 size={14} className="mr-2" />{" "}
+                  {gridConfig.visibility ? "Visible" : "Hidden"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    updateGridConfig({ snapToGrid: !gridConfig.snapToGrid })
+                  }
+                  className={`flex-1 ${gridConfig.snapToGrid ? "bg-axiom-primary-500/20 text-axiom-primary-700 dark:text-axiom-primary-300" : ""}`}
+                >
+                  <Settings size={14} className="mr-2" /> Snap{" "}
+                  {gridConfig.snapToGrid ? "On" : "Off"}
+                </Button>
+              </div>
+            </FloatingPanelSection>
+
+            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
               Shortcuts: ⌘/Ctrl+C cycle • G toggle grid
             </div>
           </div>
         )}
 
         {activeTab === "floor" && (
-          <div className="p-2 space-y-2">
-            {/* Debug Info */}
-            <div className="bg-white/5 rounded p-2 text-xs">
-              <div className="text-white/60 mb-1">World Status</div>
-              <div className="text-white">
-                Blocks: {blockCount} / {worldLimits.maxBlocks}
-              </div>
-              <div className="text-white/70">
-                Usage: {((blockCount / worldLimits.maxBlocks) * 100).toFixed(1)}
-                %
-              </div>
-            </div>
+          <div className="space-y-2">
+            <FloatingPanelSection title="World Status">
+              <FloatingPanelItem
+                label="Blocks"
+                value={`${blockCount} / ${worldLimits.maxBlocks}`}
+                mono
+              />
+              <FloatingPanelItem
+                label="Usage"
+                value={`${((blockCount / worldLimits.maxBlocks) * 100).toFixed(1)}%`}
+                mono
+              />
+            </FloatingPanelSection>
+
+            <FloatingPanelDivider />
 
             {/* Clear Blocks Button */}
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 if (
                   confirm(
@@ -901,110 +844,99 @@ export default function FloatingSidebar() {
                   clearAllBlocks();
                 }
               }}
-              className="w-full px-3 py-2 bg-red-600/80 hover:bg-red-600 text-white text-xs rounded transition-colors"
+              className="w-full text-axiom-error-600 dark:text-axiom-error-400 hover:bg-axiom-error-500/20"
             >
               Clear All Blocks ({blockCount})
-            </button>
+            </Button>
 
-            <div className="text-xs text-white/60">Quick Floor Actions</div>
+            <FloatingPanelSection title="Quick Floor Actions">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    handleDebouncedFloorAction(() => {
+                      if (process.env.NODE_ENV === "development") {
+                        devWarn(
+                          `Floor button: Placing floor with size: ${gridConfig.size}`,
+                        );
+                      }
+                      quickFloorUtils.placeStoneFloor(gridConfig.size);
+                    })
+                  }
+                  className="flex items-center gap-2"
+                >
+                  <div className="w-3 h-3 bg-gray-500 rounded"></div>
+                  Stone Floor
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    handleDebouncedFloorAction(() =>
+                      quickFloorUtils.placeWoodFloor(gridConfig.size),
+                    )
+                  }
+                  className="flex items-center gap-2"
+                >
+                  <div className="w-3 h-3 bg-amber-600 rounded"></div>
+                  Wood Floor
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    handleDebouncedFloorAction(() =>
+                      quickFloorUtils.placeGlassFloor(gridConfig.size),
+                    )
+                  }
+                  className="flex items-center gap-2"
+                >
+                  <div className="w-3 h-3 bg-blue-400 rounded opacity-60"></div>
+                  Glass Floor
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    handleDebouncedFloorAction(() =>
+                      quickFloorUtils.placeCheckerFloor(gridConfig.size),
+                    )
+                  }
+                  className="flex items-center gap-2"
+                >
+                  <div className="w-3 h-3 bg-gradient-to-br from-gray-500 to-amber-600 rounded"></div>
+                  Checker
+                </Button>
+              </div>
+            </FloatingPanelSection>
 
-            {/* Quick floor buttons */}
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  handleDebouncedFloorAction(() => {
-                    if (process.env.NODE_ENV === "development") {
-                      console.warn(
-                        `Floor button: Placing floor with size: ${gridConfig.size}`,
-                      );
-                    }
-                    quickFloorUtils.placeStoneFloor(gridConfig.size);
-                  })
-                }
-                className="text-white hover:bg-white/10 flex items-center gap-2"
-              >
-                <div className="w-3 h-3 bg-gray-500 rounded"></div>
-                Stone Floor
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  handleDebouncedFloorAction(() =>
-                    quickFloorUtils.placeWoodFloor(gridConfig.size),
-                  )
-                }
-                className="text-white hover:bg-white/10 flex items-center gap-2"
-              >
-                <div className="w-3 h-3 bg-amber-600 rounded"></div>
-                Wood Floor
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  handleDebouncedFloorAction(() =>
-                    quickFloorUtils.placeGlassFloor(gridConfig.size),
-                  )
-                }
-                className="text-white hover:bg-white/10 flex items-center gap-2"
-              >
-                <div className="w-3 h-3 bg-blue-400 rounded opacity-60"></div>
-                Glass Floor
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  handleDebouncedFloorAction(() =>
-                    quickFloorUtils.placeCheckerFloor(gridConfig.size),
-                  )
-                }
-                className="text-white hover:bg-white/10 flex items-center gap-2"
-              >
-                <div className="w-3 h-3 bg-gradient-to-br from-gray-500 to-amber-600 rounded"></div>
-                Checker
-              </Button>
-            </div>
-
-            <Separator className="bg-white/10" />
+            <FloatingPanelDivider />
 
             {/* Advanced controls */}
             <div className="space-y-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled
-                onClick={() => setIsFloorPanelOpen(false)}
-                className="w-full text-white/60 hover:bg-white/10 justify-start"
-              >
-                <Settings size={14} className="mr-2" />
-                Advanced Controls (disabled)
-              </Button>
+              {/* Removed disabled Advanced Controls button as it's not functional */}
 
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => quickFloorUtils.clearFloorArea(gridConfig.size)}
-                className="w-full text-red-300 hover:bg-red-500/20 justify-start"
+                className="w-full text-axiom-error-600 dark:text-axiom-error-400 hover:bg-axiom-error-500/20 justify-start"
               >
                 <Minus size={14} className="mr-2" />
                 Clear Floor Area
               </Button>
             </div>
 
-            <div className="text-[10px] text-white/50">
+            <div className="text-xs text-axiom-neutral-500 dark:text-axiom-neutral-500">
               Floor covers {gridConfig.size}×{gridConfig.size} grid area • Press
               F for quick stone floor
             </div>
           </div>
         )}
-      </Card>
+      </FloatingPanel>
 
-      {/* Advanced floor panel disabled for compact UI */}
-      <FloorControlPanel isOpen={false} onClose={() => {}} />
+      {/* Advanced floor panel removed as it's not being used */}
     </div>
   );
 }

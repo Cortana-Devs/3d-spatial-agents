@@ -13,7 +13,7 @@ export default function SkyboxTestPage() {
         <Suspense fallback={null}>
           <SimpleSkybox
             onLoad={() => devLog("🌅 Skybox loaded - no flashing!")}
-            onError={(error) => console.error("❌ Skybox error:", error)}
+            onError={(error) => devError("❌ Skybox error:", error)}
           />
 
           {/* Test sphere to see reflections */}

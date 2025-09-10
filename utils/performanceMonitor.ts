@@ -1,3 +1,5 @@
+import { devLog } from "@/utils/devLogger";
+
 /**
  * Performance monitoring and automatic quality adjustment system
  * Tracks FPS, memory usage, and animation load to optimize performance
@@ -139,7 +141,7 @@ export class PerformanceMonitor {
     }
 
     if (this.enableLogging) {
-      console.log('📊 PerformanceMonitor initialized with quality:', initialQuality)
+      devLog('📊 PerformanceMonitor initialized with quality:', initialQuality)
     }
   }
 
@@ -220,7 +222,7 @@ export class PerformanceMonitor {
       }
 
       if (this.enableLogging) {
-        console.log(`🎯 Quality changed to: ${quality}`)
+        devLog(`🎯 Quality changed to: ${quality}`)
       }
     }
   }
@@ -312,8 +314,8 @@ export class PerformanceMonitor {
     this.metrics.droppedFrames = 0
 
     if (this.enableLogging) {
-      console.log(`📈 Auto-adapted quality ${direction}: ${currentName} -> ${newQuality}`)
-      console.log('📊 Metrics:', {
+      devLog(`📈 Auto-adapted quality ${direction}: ${currentName} -> ${newQuality}`)
+      devLog('📊 Metrics:', {
         fps: this.metrics.averageFrameRate.toFixed(1),
         memory: `${(this.metrics.memoryUsage / 1024 / 1024).toFixed(1)}MB`,
         animLoad: `${(this.metrics.animationLoad * 100).toFixed(1)}%`
@@ -331,7 +333,7 @@ export class PerformanceMonitor {
     this.adaptationTimer = Date.now()
 
     if (this.enableLogging) {
-      console.log('🔄 Performance metrics reset')
+      devLog('🔄 Performance metrics reset')
     }
   }
 
@@ -383,7 +385,7 @@ export class PerformanceMonitor {
     this.onQualityChange = undefined
 
     if (this.enableLogging) {
-      console.log('🗑️ PerformanceMonitor disposed')
+      devLog('🗑️ PerformanceMonitor disposed')
     }
   }
 }

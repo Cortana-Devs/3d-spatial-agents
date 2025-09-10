@@ -11,6 +11,8 @@ import { useReflectionSystem } from "../LightReflectionSystem";
 import { useCausticSystem } from "../../effects/CausticSystem";
 import { FrostedGlassMaterial } from "../../materials/FrostedGlassMaterial";
 import * as THREE from "three";
+import { devWarn } from "@/utils/devLogger";
+
 
 export interface FloorSystemConfig {
   maxFloors: number;
@@ -107,7 +109,7 @@ export class FloorSystemManager {
 
   addFloor(floor: any): void {
     if (this.state.floors.size >= this.config.maxFloors) {
-      console.warn(
+      devWarn(
         `Floor system: Maximum floors (${this.config.maxFloors}) reached`,
       );
       return;

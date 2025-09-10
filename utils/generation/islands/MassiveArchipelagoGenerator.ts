@@ -1,3 +1,5 @@
+import { devLog, devWarn } from "@/utils/devLogger";
+
 /**
  * Massive Archipelago Generator - Minecraft-Style Optimization
  *
@@ -224,7 +226,7 @@ export class MassiveArchipelagoGenerator {
     this.isGenerating = true;
     this.generationProgress = 0;
 
-    console.log(
+    devLog(
       "🌍 Generating massive archipelago with seed:",
       this.config.seed,
     );
@@ -232,27 +234,27 @@ export class MassiveArchipelagoGenerator {
     // Step 1: Generate massive island specifications (10%)
     this.islands = await this.generateMassiveIslandSpecs();
     this.generationProgress = 0.1;
-    console.log("🏝️ Generated", this.islands.length, "massive island specs");
+    devLog("🏝️ Generated", this.islands.length, "massive island specs");
 
     // Step 2: Build spatial partitioning (15%)
     this.buildQuadTree();
     this.generationProgress = 0.15;
-    console.log("🗺️ Built spatial partitioning");
+    devLog("🗺️ Built spatial partitioning");
 
     // Step 3: Generate initial chunk set (30%)
     const initialChunks = await this.generateInitialChunks();
     this.generationProgress = 0.3;
-    console.log("📦 Generated", initialChunks, "initial chunks");
+    devLog("📦 Generated", initialChunks, "initial chunks");
 
     // Step 4: Stream remaining chunks with LOD (70%)
     await this.streamRemainingChunks();
     this.generationProgress = 0.7;
-    console.log("🌊 Streamed remaining chunks");
+    devLog("🌊 Streamed remaining chunks");
 
     // Step 5: Post-processing and optimization (90%)
     await this.postProcessTerrain();
     this.generationProgress = 0.9;
-    console.log("⚡ Applied post-processing");
+    devLog("⚡ Applied post-processing");
 
     // Step 6: Calculate final statistics (100%)
     const stats = this.calculateMassiveStats();
@@ -262,9 +264,7 @@ export class MassiveArchipelagoGenerator {
     const endTime = performance.now();
     const generationTimeMs = endTime - startTime;
 
-    console.log("✅ Massive archipelago generation complete!");
-
-    const self = this;
+    devLog("✅ Massive archipelago generation complete!");
     return {
       islands: this.islands,
       totalChunks: this.getTotalChunkCount(),
@@ -273,14 +273,7 @@ export class MassiveArchipelagoGenerator {
       generationTimeMs,
       memoryUsageMB: this.calculateMemoryUsage(),
       stats,
-      getAllBlocks(blockLimit?: number): Array<{
-        position: Vector3;
-        blockType: BlockType;
-        biome: IslandBiome;
-        priority: number;
-      }> {
-        return self.getAllBlocks(blockLimit);
-      },
+      getAllBlocks: (blockLimit?: number) => this.getAllBlocks(blockLimit),
     };
   }
 
@@ -1096,7 +1089,7 @@ export class MassiveArchipelagoGenerator {
   private async streamRemainingChunks(): Promise<void> {
     // Implementation would stream chunks based on distance from islands
     // and apply appropriate LOD levels for performance
-    console.log("🌊 Streaming remaining chunks...");
+    devLog("🌊 Streaming remaining chunks...");
   }
 
   /**
@@ -1104,7 +1097,7 @@ export class MassiveArchipelagoGenerator {
    */
   private async postProcessTerrain(): Promise<void> {
     // Apply smoothing, erosion simulation, and other post-processing
-    console.log("⚡ Applying post-processing...");
+    devLog("⚡ Applying post-processing...");
   }
 
   /**
@@ -1276,7 +1269,7 @@ export class MassiveArchipelagoGenerator {
 
     // Ensure reasonable island sizes
     if (config.islandRadius.max < 200) {
-      console.warn(
+      devWarn(
         "Maximum island radius should be at least 200 for massive islands",
       );
     }

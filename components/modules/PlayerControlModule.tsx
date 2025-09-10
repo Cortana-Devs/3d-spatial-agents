@@ -6,6 +6,7 @@ import { Vector3, Euler, Quaternion, MathUtils } from "three";
 import { useModuleSystem } from "./ModuleManager";
 import type { ModuleState } from "./ModuleManager";
 import { useWorldStore } from "../../store/worldStore";
+import { debugSimulantYPositioning } from "../../utils/debugLogger";
 
 interface PlayerControlModuleProps {
   enableKeyboardControls?: boolean;
@@ -79,6 +80,15 @@ export function PlayerControlModule({
     grounded: false,
   });
 
+  // Debug log initial player position
+  React.useEffect(() => {
+    debugSimulantYPositioning.logDefaultPositioning(
+      "player-character",
+      { x: 10, y: 10, z: 10 },
+      "PlayerControlModule initial position",
+    );
+  }, []);
+
   const mouseMovementRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const lastUpdateTimeRef = useRef<number>(performance.now());
   const keysRef = useRef<Set<string>>(new Set());
@@ -111,9 +121,18 @@ export function PlayerControlModule({
       // Prevent going below ground level
       const groundLevel = 0.5;
       if (newPosition.y < groundLevel) {
+        const oldY = newPosition.y;
         newPosition.y = groundLevel;
         cameraStateRef.current.grounded = true;
         cameraStateRef.current.velocity.y = 0;
+
+        // Debug log Y-level adjustment when hitting ground
+        debugSimulantYPositioning.logYAdjustment(
+          "player-character",
+          oldY,
+          groundLevel,
+          "Ground collision - clamped to ground level",
+        );
       } else {
         cameraStateRef.current.grounded = false;
       }
@@ -122,7 +141,19 @@ export function PlayerControlModule({
       const bounds = 100;
       newPosition.x = MathUtils.clamp(newPosition.x, -bounds, bounds);
       newPosition.z = MathUtils.clamp(newPosition.z, -bounds, bounds);
+
+      const originalY = newPosition.y;
       newPosition.y = Math.max(newPosition.y, groundLevel);
+
+      // Debug log Y clamping if it occurred
+      if (Math.abs(originalY - newPosition.y) > 0.001) {
+        debugSimulantYPositioning.logYAdjustment(
+          "player-character",
+          originalY,
+          newPosition.y,
+          "World bounds Y clamping to ground level",
+        );
+      }
 
       return newPosition;
     },
@@ -363,7 +394,19 @@ export function PlayerControlModule({
 
   // Initialize camera state
   React.useEffect(() => {
+    const oldPos = cameraStateRef.current.position.clone();
     cameraStateRef.current.position.copy(camera.position);
+
+    // Debug log camera position initialization
+    debugSimulantYPositioning.logDefaultPositioning(
+      "player-character",
+      {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z,
+      },
+      "Camera position initialization",
+    );
     lastUpdateTimeRef.current = performance.now();
   }, [camera]);
 

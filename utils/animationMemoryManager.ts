@@ -1,3 +1,5 @@
+import { devLog } from "@/utils/devLogger";
+
 /**
  * Animation Memory Management System
  * Handles caching, cleanup, and memory optimization for animation assets
@@ -79,8 +81,8 @@ export class AnimationMemoryManager {
     this.startCleanupTimer()
 
     if (this.enableLogging) {
-      console.log('🗄️ AnimationMemoryManager initialized')
-      console.log('📊 Cache config:', this.config)
+      devLog('🗄️ AnimationMemoryManager initialized')
+      devLog('📊 Cache config:', this.config)
     }
   }
 
@@ -104,7 +106,7 @@ export class AnimationMemoryManager {
     this.metadata.set(path, metadata)
 
     if (this.enableLogging) {
-      console.log(`💾 Cached avatar: ${path} (${(size / 1024 / 1024).toFixed(2)}MB)`)
+      devLog(`💾 Cached avatar: ${path} (${(size / 1024 / 1024).toFixed(2)}MB)`)
     }
 
     this.enforceMemoryLimits()
@@ -130,7 +132,7 @@ export class AnimationMemoryManager {
     this.metadata.set(name, metadata)
 
     if (this.enableLogging) {
-      console.log(`💾 Cached clip: ${name} (${(size / 1024).toFixed(2)}KB)`)
+      devLog(`💾 Cached clip: ${name} (${(size / 1024).toFixed(2)}KB)`)
     }
 
     this.enforceMemoryLimits()
@@ -319,7 +321,7 @@ export class AnimationMemoryManager {
       this.performCleanup(true) // Force cleanup
       
       if (this.enableLogging) {
-        console.log('🧹 Enforced memory limits - cleanup performed')
+        devLog('🧹 Enforced memory limits - cleanup performed')
       }
     }
   }
@@ -378,7 +380,7 @@ export class AnimationMemoryManager {
     }
 
     if (this.enableLogging && removedCount > 0) {
-      console.log(`🧹 Cleanup removed ${removedCount} assets (${(removedSize / 1024 / 1024).toFixed(2)}MB)`)
+      devLog(`🧹 Cleanup removed ${removedCount} assets (${(removedSize / 1024 / 1024).toFixed(2)}MB)`)
     }
   }
 
@@ -461,7 +463,7 @@ export class AnimationMemoryManager {
     this.cacheMisses = 0
 
     if (this.enableLogging) {
-      console.log('🗑️ Cache cleared')
+      devLog('🗑️ Cache cleared')
     }
   }
 
@@ -520,7 +522,7 @@ export class AnimationMemoryManager {
     this.clearCache()
 
     if (this.enableLogging) {
-      console.log('🗑️ AnimationMemoryManager disposed')
+      devLog('🗑️ AnimationMemoryManager disposed')
     }
   }
 }

@@ -3,16 +3,15 @@
 import {
   BufferGeometry,
   Material,
-  Texture,
   WebGLRenderer,
   InstancedMesh,
   BufferAttribute,
   DataTexture,
   RGBAFormat,
-  FloatType,
   LinearFilter,
   ClampToEdgeWrapping,
 } from "three";
+import { devLog } from "@/utils/devLogger";
 
 // GPU Memory Configuration
 const GPU_MEMORY_CONFIG = {
@@ -80,7 +79,7 @@ export class GPUMemoryManager {
     const info = this.renderer.info;
 
     if (process.env.NODE_ENV === "development") {
-      console.debug("🚀 GPU Capabilities:", {
+      devLog("🚀 GPU Capabilities:", {
         renderer: info.render.calls,
         triangles: info.render.triangles,
         points: info.render.points,
@@ -271,7 +270,7 @@ export class GPUMemoryManager {
       this.checkMemoryPressure();
 
       if (process.env.NODE_ENV === "development") {
-        console.debug("💾 Memory Manager Stats:", {
+        devLog("💾 Memory Manager Stats:", {
           memoryUsage: this.memoryUsage,
           metrics: this.metrics,
           resourceCount: this.resources.size,

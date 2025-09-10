@@ -1,3 +1,5 @@
+import { devLog } from "@/utils/devLogger";
+
 /**
  * Archipelago Generator - Advanced Multi-Island System
  *
@@ -155,27 +157,27 @@ export class ArchipelagoGenerator {
   generateArchipelago(): ArchipelagoResult {
     const startTime = performance.now();
 
-    console.log('🏝️ Generating archipelago with seed:', this.config.seed);
+    devLog('🏝️ Generating archipelago with seed:', this.config.seed);
 
     // Step 1: Generate island specifications
     const islands = this.generateIslandSpecs();
-    console.log('📍 Generated', islands.length, 'island specifications');
+    devLog('📍 Generated', islands.length, 'island specifications');
 
     // Step 2: Create heightmap using advanced noise blending
     this.generateHeightmap(islands);
-    console.log('🗺️ Generated heightmap');
+    devLog('🗺️ Generated heightmap');
 
     // Step 3: Apply advanced smoothing and erosion
     this.applyAdvancedSmoothing();
-    console.log('🌊 Applied coastline smoothing');
+    devLog('🌊 Applied coastline smoothing');
 
     // Step 4: Generate biome mapping
     this.generateBiomeMap(islands);
-    console.log('🌿 Generated biome mapping');
+    devLog('🌿 Generated biome mapping');
 
     // Step 5: Create block placements with single-block precision
     const placements = this.generateBlockPlacements(islands);
-    console.log('🏗️ Generated', placements.length, 'block placements');
+    devLog('🏗️ Generated', placements.length, 'block placements');
 
     const endTime = performance.now();
     const generationTimeMs = endTime - startTime;

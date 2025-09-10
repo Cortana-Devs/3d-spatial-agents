@@ -1,3 +1,5 @@
+import { devLog, devWarn, devError } from "@/utils/devLogger";
+
 /**
  * Performance Manager for Module Isolation
  * Prevents cross-module performance interference in the Descendants metaverse
@@ -83,7 +85,7 @@ export class ModulePerformanceManager {
     config.dependencies.forEach(dep => deps.add(dep))
     this.dependencies.set(config.name, deps)
 
-    console.log(`📊 Module registered: ${config.name} (priority: ${config.priority})`)
+    devLog(`📊 Module registered: ${config.name} (priority: ${config.priority})`)
   }
 
   /**
@@ -92,7 +94,7 @@ export class ModulePerformanceManager {
   startRenderLoop(moduleName: string, callback: (deltaTime: number) => void): void {
     const config = this.modules.get(moduleName)
     if (!config) {
-      console.warn(`Module ${moduleName} not registered`)
+      devWarn(`Module ${moduleName} not registered`)
       return
     }
 
@@ -133,7 +135,7 @@ export class ModulePerformanceManager {
           this.updateMetrics(moduleName, frameTime)
 
         } catch (error) {
-          console.error(`Error in ${moduleName} render loop:`, error)
+          devError(`Error in ${moduleName} render loop:`, error)
         }
       }
 
@@ -141,7 +143,7 @@ export class ModulePerformanceManager {
     }
 
     this.renderLoops.set(moduleName, requestAnimationFrame(loop))
-    console.log(`🔄 Started render loop: ${moduleName}`)
+    devLog(`🔄 Started render loop: ${moduleName}`)
   }
 
   /**
@@ -152,7 +154,7 @@ export class ModulePerformanceManager {
     if (loopId) {
       cancelAnimationFrame(loopId)
       this.renderLoops.delete(moduleName)
-      console.log(`⏹️ Stopped render loop: ${moduleName}`)
+      devLog(`⏹️ Stopped render loop: ${moduleName}`)
     }
   }
 
@@ -187,7 +189,7 @@ export class ModulePerformanceManager {
           try {
             updateFn()
           } catch (error) {
-            console.error(`Error processing update for ${moduleName}:`, error)
+            devError(`Error processing update for ${moduleName}:`, error)
           }
         })
 
@@ -234,7 +236,7 @@ export class ModulePerformanceManager {
       console.warn(`⚡ Throttling module: ${moduleName} (frameTime: ${metrics.frameTime.toFixed(2)}ms)`)
     } else if (!shouldThrottle && this.throttledModules.has(moduleName)) {
       this.throttledModules.delete(moduleName)
-      console.log(`✅ Unthrottling module: ${moduleName}`)
+      devLog(`✅ Unthrottling module: ${moduleName}`)
     }
   }
 
@@ -250,7 +252,7 @@ export class ModulePerformanceManager {
       this.analyzePerformance()
     }, intervalMs)
 
-    console.log('📊 Performance monitoring started')
+    devLog('📊 Performance monitoring started')
   }
 
   /**
@@ -262,7 +264,7 @@ export class ModulePerformanceManager {
       this.monitoringInterval = null
     }
     this.isMonitoring = false
-    console.log('📊 Performance monitoring stopped')
+    devLog('📊 Performance monitoring stopped')
   }
 
   /**
@@ -289,15 +291,15 @@ export class ModulePerformanceManager {
 
     // Log performance warnings
     if (totalFrameTime > this.budget.totalFrameTimeMs) {
-      console.warn(`⚠️ Frame budget exceeded: ${totalFrameTime.toFixed(2)}ms > ${this.budget.totalFrameTimeMs}ms`)
+      devWarn(`⚠️ Frame budget exceeded: ${totalFrameTime.toFixed(2)}ms > ${this.budget.totalFrameTimeMs}ms`)
     }
 
     if (bottlenecks.length > 0) {
-      console.warn(`🔍 Performance bottlenecks detected:`, bottlenecks)
+      devWarn(`🔍 Performance bottlenecks detected:`, bottlenecks)
     }
 
     if (totalRenderCalls > this.budget.maxRenderCalls) {
-      console.warn(`⚠️ Too many render calls: ${totalRenderCalls} > ${this.budget.maxRenderCalls}`)
+      devWarn(`⚠️ Too many render calls: ${totalRenderCalls} > ${this.budget.maxRenderCalls}`)
     }
   }
 
@@ -379,7 +381,7 @@ export class ModulePerformanceManager {
     this.dependencies.clear()
     this.updateQueue.clear()
 
-    console.log('🧹 PerformanceManager disposed')
+    devLog('🧹 PerformanceManager disposed')
   }
 }
 

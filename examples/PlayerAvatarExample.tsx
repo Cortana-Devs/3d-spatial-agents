@@ -1,14 +1,15 @@
-'use client'
+"use client";
 
-import React, { useEffect, useState, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Environment, Grid, Stats } from '@react-three/drei'
-import { Vector3 } from 'three'
-import { useWorldStore } from '../store/worldStore'
-import PlayerAvatarManager from '../components/modules/PlayerAvatarManager'
-import EnhancedPlayerControlModule from '../components/modules/EnhancedPlayerControlModule'
-import IsolatedAnimationManager from '../components/animations/IsolatedAnimationManager'
-import ModuleManager from '../components/modules/ModuleManager'
+import React, { useEffect, useState, useRef } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Environment, Grid, Stats } from "@react-three/drei";
+import { Vector3 } from "three";
+import { useWorldStore } from "../store/worldStore";
+import PlayerAvatarManager from "../components/modules/PlayerAvatarManager";
+import EnhancedPlayerControlModule from "../components/modules/EnhancedPlayerControlModule";
+import IsolatedAnimationManager from "../components/animations/IsolatedAnimationManager";
+import { ModuleManager } from "../components/modules/ModuleManager";
+import RestoreBlocksButton from "../components/debug/RestoreBlocksButton";
 
 /**
  * PlayerAvatarExample - Comprehensive demonstration of the Player Avatar Integration System
@@ -27,73 +28,89 @@ export function PlayerAvatarExample() {
     activeCamera,
     setCameraMode,
     setPlayerAvatar,
-    clearPlayerAvatar
-  } = useWorldStore()
+    clearPlayerAvatar,
+    blockMap,
+  } = useWorldStore();
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [currentModel, setCurrentModel] = useState('/models/default-avatar.glb')
-  const [showDebugInfo, setShowDebugInfo] = useState(true)
-  const [performanceMode, setPerformanceMode] = useState<'high' | 'medium' | 'low'>('high')
-  const [avatarVisible, setAvatarVisible] = useState(true)
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentModel, setCurrentModel] = useState(
+    "/models/default-avatar.glb",
+  );
+  const [showDebugInfo, setShowDebugInfo] = useState(true);
+  const [performanceMode, setPerformanceMode] = useState<
+    "high" | "medium" | "low"
+  >("high");
+  const [avatarVisible, setAvatarVisible] = useState(true);
 
   // Sample avatar models for demonstration
   const availableModels = [
-    { name: 'Default Avatar', url: '/models/default-avatar.glb' },
-    { name: 'Business Person', url: '/models/business-avatar.glb' },
-    { name: 'Casual Character', url: '/models/casual-avatar.glb' },
-    { name: 'Sci-Fi Character', url: '/models/scifi-avatar.glb' }
-  ]
+    { name: "Default Avatar", url: "/models/default-avatar.glb" },
+    { name: "Business Person", url: "/models/business-avatar.glb" },
+    { name: "Casual Character", url: "/models/casual-avatar.glb" },
+    { name: "Sci-Fi Character", url: "/models/scifi-avatar.glb" },
+  ];
 
   // Avatar loading handler
   const handleLoadAvatar = async (modelUrl: string) => {
     try {
-      setIsLoading(true)
-      setCurrentModel(modelUrl)
+      setIsLoading(true);
+      setCurrentModel(modelUrl);
 
       // Avatar will be loaded by PlayerAvatarManager
-      console.log(`🔄 Loading avatar: ${modelUrl}`)
-
+      console.log(`🔄 Loading avatar: ${modelUrl}`);
     } catch (error) {
-      console.error('Failed to load avatar:', error)
-      alert(`Failed to load avatar: ${error.message}`)
+      console.error("Failed to load avatar:", error);
+      alert(
+        `Failed to load avatar: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // Camera mode switching
-  const handleCameraModeChange = (mode: 'fly' | 'orbit') => {
-    setCameraMode(mode)
-    console.log(`📷 Camera mode changed to: ${mode}`)
-  }
+  const handleCameraModeChange = (mode: "fly" | "orbit") => {
+    setCameraMode(mode);
+    console.log(`📷 Camera mode changed to: ${mode}`);
+  };
 
   // Performance mode adjustment
-  const handlePerformanceModeChange = (mode: 'high' | 'medium' | 'low') => {
-    setPerformanceMode(mode)
+  const handlePerformanceModeChange = (mode: "high" | "medium" | "low") => {
+    setPerformanceMode(mode);
 
     // Automatically adjust avatar LOD based on performance mode
     if (playerAvatar) {
-      let lodLevel: 'high' | 'medium' | 'low'
+      let lodLevel: "high" | "medium" | "low";
       switch (mode) {
-        case 'high': lodLevel = 'high'; break
-        case 'medium': lodLevel = 'medium'; break
-        case 'low': lodLevel = 'low'; break
+        case "high":
+          lodLevel = "high";
+          break;
+        case "medium":
+          lodLevel = "medium";
+          break;
+        case "low":
+          lodLevel = "low";
+          break;
       }
 
       // This would be handled by the avatar manager
-      console.log(`⚡ Performance mode: ${mode}, LOD: ${lodLevel}`)
+      console.log(`⚡ Performance mode: ${mode}, LOD: ${lodLevel}`);
     }
-  }
+  };
 
   return (
     <div className="w-full h-screen relative bg-gradient-to-b from-indigo-900 via-purple-900 to-pink-900">
       {/* Control Panel */}
       <div className="absolute top-4 right-4 z-10 bg-black/80 backdrop-blur-md rounded-lg p-4 text-white min-w-80">
-        <h2 className="text-lg font-bold text-blue-400 mb-4">🎮 Player Avatar Demo</h2>
+        <h2 className="text-lg font-bold text-blue-400 mb-4">
+          🎮 Player Avatar Demo
+        </h2>
 
         {/* Avatar Model Selection */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Avatar Model:</label>
+          <label className="block text-sm font-medium mb-2">
+            Avatar Model:
+          </label>
           <select
             value={currentModel}
             onChange={(e) => handleLoadAvatar(e.target.value)}
@@ -113,21 +130,21 @@ export function PlayerAvatarExample() {
           <label className="block text-sm font-medium mb-2">Camera Mode:</label>
           <div className="flex gap-2">
             <button
-              onClick={() => handleCameraModeChange('fly')}
+              onClick={() => handleCameraModeChange("fly")}
               className={`px-3 py-1 rounded text-sm ${
-                activeCamera === 'fly'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300'
+                activeCamera === "fly"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-700 text-gray-300"
               }`}
             >
               First Person
             </button>
             <button
-              onClick={() => handleCameraModeChange('orbit')}
+              onClick={() => handleCameraModeChange("orbit")}
               className={`px-3 py-1 rounded text-sm ${
-                activeCamera === 'orbit'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300'
+                activeCamera === "orbit"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-700 text-gray-300"
               }`}
             >
               Third Person
@@ -137,16 +154,18 @@ export function PlayerAvatarExample() {
 
         {/* Performance Mode */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Performance Mode:</label>
+          <label className="block text-sm font-medium mb-2">
+            Performance Mode:
+          </label>
           <div className="flex gap-2">
-            {(['high', 'medium', 'low'] as const).map((mode) => (
+            {(["high", "medium", "low"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => handlePerformanceModeChange(mode)}
                 className={`px-3 py-1 rounded text-sm capitalize ${
                   performanceMode === mode
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-700 text-gray-300'
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-700 text-gray-300"
                 }`}
               >
                 {mode}
@@ -157,17 +176,19 @@ export function PlayerAvatarExample() {
 
         {/* Avatar Controls */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Avatar Controls:</label>
+          <label className="block text-sm font-medium mb-2">
+            Avatar Controls:
+          </label>
           <div className="flex gap-2">
             <button
               onClick={() => setAvatarVisible(!avatarVisible)}
               className={`px-3 py-1 rounded text-sm ${
                 avatarVisible
-                  ? 'bg-green-600 text-white'
-                  : 'bg-red-600 text-white'
+                  ? "bg-green-600 text-white"
+                  : "bg-red-600 text-white"
               }`}
             >
-              {avatarVisible ? 'Hide' : 'Show'}
+              {avatarVisible ? "Hide" : "Show"}
             </button>
             <button
               onClick={() => clearPlayerAvatar()}
@@ -193,13 +214,22 @@ export function PlayerAvatarExample() {
 
         {/* Avatar Status */}
         <div className="border-t border-gray-600 pt-4">
-          <h3 className="text-sm font-medium text-blue-400 mb-2">Avatar Status:</h3>
+          <h3 className="text-sm font-medium text-blue-400 mb-2">
+            Avatar Status:
+          </h3>
           <div className="text-xs space-y-1">
-            <div>Status: {isLoading ? '🔄 Loading...' : playerAvatar?.isLoaded ? '✅ Loaded' : '❌ Not Loaded'}</div>
-            <div>Model: {currentModel.split('/').pop()}</div>
-            <div>Animation: {playerAvatar?.currentAnimation || 'None'}</div>
-            <div>LOD: {playerAvatar?.renderLOD || 'N/A'}</div>
-            <div>Visible: {playerAvatar?.isVisible ? 'Yes' : 'No'}</div>
+            <div>
+              Status:{" "}
+              {isLoading
+                ? "🔄 Loading..."
+                : playerAvatar?.isLoaded
+                  ? "✅ Loaded"
+                  : "❌ Not Loaded"}
+            </div>
+            <div>Model: {currentModel.split("/").pop()}</div>
+            <div>Animation: {playerAvatar?.currentAnimation || "None"}</div>
+            <div>LOD: {playerAvatar?.renderLOD || "N/A"}</div>
+            <div>Visible: {playerAvatar?.isVisible ? "Yes" : "No"}</div>
           </div>
         </div>
       </div>
@@ -208,12 +238,24 @@ export function PlayerAvatarExample() {
       <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur-md rounded-lg p-4 text-white max-w-md">
         <h3 className="text-lg font-bold text-green-400 mb-2">🕹️ Controls</h3>
         <div className="text-sm space-y-1">
-          <div><strong>Movement:</strong> WASD or Arrow Keys</div>
-          <div><strong>Look:</strong> Mouse (click to lock cursor)</div>
-          <div><strong>Sprint:</strong> Hold Shift</div>
-          <div><strong>Fly Mode:</strong> Space/C for up/down</div>
-          <div><strong>Crouch:</strong> Z key</div>
-          <div><strong>Exit Cursor Lock:</strong> Escape</div>
+          <div>
+            <strong>Movement:</strong> WASD or Arrow Keys
+          </div>
+          <div>
+            <strong>Look:</strong> Mouse (click to lock cursor)
+          </div>
+          <div>
+            <strong>Sprint:</strong> Hold Shift
+          </div>
+          <div>
+            <strong>Fly Mode:</strong> Space/C for up/down
+          </div>
+          <div>
+            <strong>Crouch:</strong> Z key
+          </div>
+          <div>
+            <strong>Exit Cursor Lock:</strong> Escape
+          </div>
         </div>
       </div>
 
@@ -234,12 +276,12 @@ export function PlayerAvatarExample() {
           position: [10, 10, 10],
           fov: 50,
           near: 0.1,
-          far: 1000
+          far: 1000,
         }}
         gl={{
           antialias: true,
           alpha: false,
-          powerPreference: "high-performance"
+          powerPreference: "high-performance",
         }}
       >
         {/* Lighting */}
@@ -280,6 +322,21 @@ export function PlayerAvatarExample() {
         {/* Sample World Objects */}
         <SampleWorldObjects />
 
+        {/* World Store Blocks - Actual blocks from the store */}
+        <group name="world-store-blocks">
+          {Array.from(blockMap.values()).map((block) => (
+            <mesh
+              key={block.id}
+              position={[block.position.x, block.position.y, block.position.z]}
+              castShadow
+              receiveShadow
+            >
+              <boxGeometry args={[0.95, 0.95, 0.95]} />
+              <meshStandardMaterial color={block.color} />
+            </mesh>
+          ))}
+        </group>
+
         {/* Module Manager - Provides performance isolation */}
         <ModuleManager>
           {/* Animation Manager - Handles all animations */}
@@ -290,17 +347,17 @@ export function PlayerAvatarExample() {
             modelUrl={currentModel}
             enableAnimations={true}
             performanceMode={performanceMode}
-            hideInFirstPerson={activeCamera === 'fly'}
+            hideInFirstPerson={activeCamera === "fly"}
             onAvatarLoaded={(avatar) => {
-              console.log('✅ Avatar loaded in example:', avatar.characterId)
-              setIsLoading(false)
+              console.log("✅ Avatar loaded in example:", avatar.characterId);
+              setIsLoading(false);
             }}
             onAnimationChanged={(animation) => {
-              console.log(`🎭 Animation changed: ${animation}`)
+              console.log(`🎭 Animation changed: ${animation}`);
             }}
             onError={(error) => {
-              console.error('❌ Avatar error:', error)
-              setIsLoading(false)
+              console.error("❌ Avatar error:", error);
+              setIsLoading(false);
             }}
           />
 
@@ -319,7 +376,7 @@ export function PlayerAvatarExample() {
         </ModuleManager>
 
         {/* Camera Controls for Third Person */}
-        {activeCamera === 'orbit' && (
+        {activeCamera === "orbit" && (
           <OrbitControls
             target={playerAvatar?.position || [0, 1, 0]}
             enablePan={true}
@@ -336,10 +393,13 @@ export function PlayerAvatarExample() {
         {showDebugInfo && <Stats />}
       </Canvas>
 
+      {/* Restore Blocks Button - Show if blocks are missing */}
+      {blockMap.size === 0 && <RestoreBlocksButton />}
+
       {/* Performance Monitor */}
       {showDebugInfo && <PerformanceMonitor />}
     </div>
-  )
+  );
 }
 
 /**
@@ -385,12 +445,17 @@ function SampleWorldObjects() {
       </mesh>
 
       {/* Ramps */}
-      <mesh position={[-5, 0.5, 0]} rotation={[0, 0, -0.2]} castShadow receiveShadow>
+      <mesh
+        position={[-5, 0.5, 0]}
+        rotation={[0, 0, -0.2]}
+        castShadow
+        receiveShadow
+      >
         <boxGeometry args={[5, 0.2, 2]} />
         <meshStandardMaterial color="#555" />
       </mesh>
     </group>
-  )
+  );
 }
 
 /**
@@ -401,28 +466,28 @@ function PerformanceMonitor() {
     fps: 0,
     frameTime: 0,
     memoryUsage: 0,
-    avatarMemory: 0
-  })
+    avatarMemory: 0,
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
       // Get performance metrics from global APIs
-      const avatarAPI = (window as any).__playerAvatarAPI
-      const animationAPI = (window as any).__animationAPI
+      const avatarAPI = (window as any).__playerAvatarAPI;
+      const animationAPI = (window as any).__animationAPI;
 
-      const avatarMetrics = avatarAPI?.getPerformanceMetrics?.() || {}
-      const animationMetrics = animationAPI?.getMetrics?.() || {}
+      const avatarMetrics = avatarAPI?.getPerformanceMetrics?.() || {};
+      const animationMetrics = animationAPI?.getMetrics?.() || {};
 
       setMetrics({
         fps: avatarMetrics.averageFPS || 0,
         frameTime: avatarMetrics.renderTime || 0,
         memoryUsage: animationMetrics.memoryUsage || 0,
-        avatarMemory: avatarMetrics.memoryUsage || 0
-      })
-    }, 1000)
+        avatarMemory: avatarMetrics.memoryUsage || 0,
+      });
+    }, 1000);
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-md rounded-lg p-3 text-white text-xs">
@@ -432,7 +497,7 @@ function PerformanceMonitor() {
       <div>Memory: {Math.round(metrics.memoryUsage)}MB</div>
       <div>Avatar: {Math.round(metrics.avatarMemory / 1024 / 1024)}MB</div>
     </div>
-  )
+  );
 }
 
 /**
@@ -441,36 +506,36 @@ function PerformanceMonitor() {
 export const PlayerAvatarUsageExamples = {
   // Basic avatar loading
   loadAvatar: async () => {
-    const avatarAPI = (window as any).__playerAvatarAPI
+    const avatarAPI = (window as any).__playerAvatarAPI;
     if (avatarAPI) {
-      const avatar = await avatarAPI.loadAvatar('/models/test-avatar.glb')
-      console.log('Avatar loaded:', avatar)
+      const avatar = await avatarAPI.loadAvatar("/models/test-avatar.glb");
+      console.log("Avatar loaded:", avatar);
     }
   },
 
   // Animation control
   playAnimation: (animationName: string) => {
-    const avatarAPI = (window as any).__playerAvatarAPI
+    const avatarAPI = (window as any).__playerAvatarAPI;
     if (avatarAPI) {
-      avatarAPI.playAnimation(animationName, true)
+      avatarAPI.playAnimation(animationName, true);
     }
   },
 
   // Performance optimization
   optimizePerformance: () => {
-    const avatarAPI = (window as any).__playerAvatarAPI
+    const avatarAPI = (window as any).__playerAvatarAPI;
     if (avatarAPI) {
-      avatarAPI.optimizeForPerformance()
+      avatarAPI.optimizeForPerformance();
     }
   },
 
   // LOD control
-  setLOD: (level: 'high' | 'medium' | 'low') => {
-    const avatarAPI = (window as any).__playerAvatarAPI
+  setLOD: (level: "high" | "medium" | "low") => {
+    const avatarAPI = (window as any).__playerAvatarAPI;
     if (avatarAPI) {
-      avatarAPI.setLOD(level)
+      avatarAPI.setLOD(level);
     }
-  }
-}
+  },
+};
 
-export default PlayerAvatarExample
+export default PlayerAvatarExample;

@@ -21,7 +21,7 @@ import {
 } from "../../hooks/performance/useIsolatedRender";
 import { useWorldStore } from "../../store/worldStore";
 import type { AISimulant } from "../../types";
-import { createScopedLogger } from "@/utils/devLogger";
+import { createScopedLogger, devWarn, devError } from "@/utils/devLogger";
 
 interface AnimationState {
   mixer: AnimationMixer | null;
@@ -129,7 +129,7 @@ export function IsolatedAnimationManager() {
           animation.lastUpdate = performance.now();
           processed++;
         } catch (error) {
-          console.error(`Animation update error for ${animation.id}:`, error);
+          devError(`Animation update error for ${animation.id}:`, error);
         }
       }
 
@@ -179,9 +179,7 @@ export function IsolatedAnimationManager() {
       priority: number = 5,
     ) => {
       if (animations.has(simulantId)) {
-        console.warn(
-          `Animation already registered for simulant: ${simulantId}`,
-        );
+        devWarn(`Animation already registered for simulant: ${simulantId}`);
         return;
       }
 
@@ -239,13 +237,13 @@ export function IsolatedAnimationManager() {
     ) => {
       const animation = animations.get(simulantId);
       if (!animation) {
-        console.warn(`No animation found for simulant: ${simulantId}`);
+        devWarn(`No animation found for simulant: ${simulantId}`);
         return;
       }
 
       const newAction = animation.actions.get(animationName);
       if (!newAction) {
-        console.warn(
+        devWarn(
           `Animation ${animationName} not found for simulant: ${simulantId}`,
         );
         return;
@@ -378,7 +376,7 @@ export function IsolatedAnimationManager() {
       // Dynamic performance adjustment
       if (averageFrameTime > 5.0 && maxAnimationsPerFrame.current > 2) {
         maxAnimationsPerFrame.current -= 1;
-        console.warn(
+        devWarn(
           `🐌 Reducing animation budget to ${maxAnimationsPerFrame.current} per frame`,
         );
       } else if (averageFrameTime < 2.0 && maxAnimationsPerFrame.current < 10) {

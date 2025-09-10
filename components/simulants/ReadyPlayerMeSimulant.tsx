@@ -11,6 +11,8 @@ import { useRPMAnimations } from "../../utils/useRPMAnimations";
 import { useAnimationController } from "../../utils/useAnimationController";
 import { getDefaultAnimationPaths } from "../../utils/animationUtils";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
+import { devError } from "@/utils/devLogger";
+
 // import { usePerformanceOptimization } from "../../utils/usePerformanceOptimization";
 
 // Enhanced Ready Player Me simulant configuration
@@ -174,7 +176,7 @@ export default function ReadyPlayerMeSimulant({
     }
 
     if (externalAnimations.error) {
-      console.error(
+      devError(
         `❌ Animation loading error for ${simulant.id}:`,
         externalAnimations.error,
       );

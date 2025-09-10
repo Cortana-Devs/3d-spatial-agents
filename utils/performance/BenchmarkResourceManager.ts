@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { devWarn } from "@/utils/devLogger";
+
 
 class ResourcePool<T> {
   private pool: T[] = [];
@@ -28,7 +30,7 @@ class ResourcePool<T> {
 
   release(item: T): void {
     if (!this.inUse.has(item)) {
-      console.warn('Attempting to release an item not in use');
+      devWarn('Attempting to release an item not in use');
       return;
     }
     this.inUse.delete(item);

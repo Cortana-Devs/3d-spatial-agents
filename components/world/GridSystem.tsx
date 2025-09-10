@@ -14,6 +14,7 @@ import {
   AdditiveBlending,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
+import { devLog } from "@/utils/devLogger";
 
 // Grid configuration interface
 export interface GridConfig {
@@ -377,8 +378,7 @@ export default function GridSystem({
   // Debug logging
   React.useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      const gsLogDebug = (...args: any[]) =>
-        console.debug("[world:GridSystem]", ...args);
+      const gsLogDebug = (...args: unknown[]) => devLog("[world:GridSystem]", ...args);
       gsLogDebug("Grid config", gridConfig);
     }
   }, [gridConfig]);

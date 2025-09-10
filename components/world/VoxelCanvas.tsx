@@ -24,7 +24,6 @@ import {
   PointsMaterial,
   AdditiveBlending,
   DoubleSide,
-  NormalBlending,
   BoxGeometry,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
@@ -37,27 +36,17 @@ import {
 } from "../../types";
 import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
-import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
-import GPUOptimizedRenderer from "./GPUOptimizedRenderer";
 import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
 import { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
-import FloorBlock from "./FloorBlock";
-import AdaptiveGlassRenderer from "./AdaptiveGlassRenderer";
-import {
-  useIsolatedRender,
-  useBlockPlacementRender,
-  useAnimationRender,
-  useBatchedUpdates,
-  usePerformanceMonitor,
-} from "../../hooks/performance/useIsolatedRender";
-import {
-  performanceManager,
-  MODULE_CONFIGS,
-} from "../../utils/performance/PerformanceManager";
+// Removed unused renderer imports
+import { useIsolatedRender } from "../../hooks/performance/useIsolatedRender";
+// Removed unused performanceManager and MODULE_CONFIGS imports
 import { UnifiedDebugPanel } from "../debug/UnifiedDebugPanel";
 import { createLogger } from "../../utils/logging/logger";
+import { transparencySortingFix } from "../../utils/TransparencySortingFix";
+import { usePerformanceMonitor } from "../../hooks/performance/useIsolatedRender";
 
 // LOD Configuration for performance optimization
 const log = createLogger("world:VoxelCanvas");
@@ -243,7 +232,7 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
       // Ensure we have the right count
       instancedMesh.count = typeBlocks.length;
 
-      typeBlocks.forEach((block, index) => {
+      typeBlocks.forEach((block, index: number) => {
         const distance = camera.position.distanceTo(block.position);
 
         // LOD-based scaling - use consistent scaling
@@ -309,7 +298,7 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
         return (
           <instancedMesh
             key={type}
-            ref={(ref) => {
+            ref={(ref: InstancedMesh | null) => {
               if (ref) {
                 instancedMeshRefs.current[type as BlockType] = ref;
                 // Initialize instance colors if not already done
@@ -642,39 +631,9 @@ function ClickHandler() {
         const hasExistingBlock = blockMap.has(positionKey);
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
-        if (process.env.NODE_ENV === "development") {
-          void import("@/utils/devLogger").then(({ devLog }) =>
-            devLog("🖱️ Click: place attempt", {
-              positionKey,
-              hasExistingBlock,
-              atLimit,
-              selectedBlockType,
-              selectionMode,
-            }),
-          );
-        }
-
         if (!hasExistingBlock && !atLimit) {
           const success = addBlock(snappedPosition, selectedBlockType, "human");
-          if (process.env.NODE_ENV === "development") {
-            void import("@/utils/devLogger").then(({ devLog }) =>
-              devLog("🖱️ Click: place result", { success }),
-            );
-          }
         } else {
-          if (process.env.NODE_ENV === "development") {
-            void import("@/utils/devLogger").then(({ devLog }) =>
-              devLog("🖱️ Click: place blocked", {
-                hasExistingBlock,
-                atLimit,
-                reason: hasExistingBlock
-                  ? "Position occupied"
-                  : atLimit
-                    ? "At limit"
-                    : "Unknown",
-              }),
-            );
-          }
         }
       }
     },
@@ -884,11 +843,11 @@ function SceneContent({
 
     if (blockMap.size === 0) {
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
-          ifDev(() =>
-            devLog("VoxelCanvas: creating default floor and test blocks"),
-          ),
-        );
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() =>
+        //     devLog("VoxelCanvas: creating default floor and test blocks"),
+        //   ),
+        // );
       }
       const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
       const halfSize = Math.floor(floorSize / 2);
@@ -897,6 +856,13 @@ function SceneContent({
       for (let x = -halfSize; x <= halfSize; x++) {
         for (let z = -halfSize; z <= halfSize; z++) {
           const position = new Vector3(x, 0, z); // Place at y=0 for seamless positioning
+
+          // Debug log the default floor Y positioning
+          // debugBlockYPositioning.logInitialPositioning(
+          //   `default-floor-${x}-${z}`,
+          //   { x, y: 0, z },
+          //   "default floor block",
+          // );
 
           // Create more visible pattern with better block distribution
           const isEven = (x + z) % 2 === 0;
@@ -926,27 +892,66 @@ function SceneContent({
       }
 
       // Add prominent test blocks above the floor for visibility testing
-      // dev: suppressed test block placement log
-      addBlock(new Vector3(0, 1, 0), BlockType.NUMBER_4, "system"); // Glowing center beacon
-      addBlock(new Vector3(3, 1, 0), BlockType.STONE, "system"); // Solid reference block
-      addBlock(new Vector3(-3, 1, 0), BlockType.WOOD, "system"); // Wood reference block
-      addBlock(new Vector3(0, 1, 3), BlockType.LEAF, "system"); // Leaf reference block
-      addBlock(new Vector3(0, 2, 0), BlockType.FROSTED_GLASS, "system"); // Glass visibility test
-      addBlock(new Vector3(1, 1, 1), BlockType.NUMBER_6, "system"); // Sunset glass test
-      addBlock(new Vector3(-1, 1, -1), BlockType.NUMBER_7, "system"); // Ultra-light glass test
+      // Debug log test block Y positioning
+      const testBlocks = [
+        {
+          pos: new Vector3(0, 1, 0),
+          type: BlockType.NUMBER_4,
+          name: "Glowing center beacon",
+        },
+        {
+          pos: new Vector3(3, 1, 0),
+          type: BlockType.STONE,
+          name: "Solid reference block",
+        },
+        {
+          pos: new Vector3(-3, 1, 0),
+          type: BlockType.WOOD,
+          name: "Wood reference block",
+        },
+        {
+          pos: new Vector3(0, 1, 3),
+          type: BlockType.LEAF,
+          name: "Leaf reference block",
+        },
+        {
+          pos: new Vector3(0, 2, 0),
+          type: BlockType.FROSTED_GLASS,
+          name: "Glass visibility test",
+        },
+        {
+          pos: new Vector3(1, 1, 1),
+          type: BlockType.NUMBER_6,
+          name: "Sunset glass test",
+        },
+        {
+          pos: new Vector3(-1, 1, -1),
+          type: BlockType.NUMBER_7,
+          name: "Ultra-light glass test",
+        },
+      ];
+
+      testBlocks.forEach(({ pos, type, name }) => {
+        // debugBlockYPositioning.logInitialPositioning(
+        //   `test-block-${pos.x}-${pos.y}-${pos.z}`,
+        //   { x: pos.x, y: pos.y, z: pos.z },
+        //   `${name} (${type})`,
+        // );
+        addBlock(pos, type, "system");
+      });
 
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
-          ifDev(() => devLog("VoxelCanvas: default blocks created")),
-        );
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() => devLog("VoxelCanvas: default blocks created")),
+        // );
       }
     } else {
       if (process.env.NODE_ENV === "development") {
-        void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
-          ifDev(() =>
-            devLog("VoxelCanvas: blocks already exist", blockMap.size),
-          ),
-        );
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() =>
+        //     devLog("VoxelCanvas: blocks already exist", blockMap.size),
+        //   ),
+        // );
       }
     }
   }, [blockMap.size, gridConfig.size, addBlock]);
@@ -982,27 +987,7 @@ function SceneContent({
         />
       ))}
 
-      {/* GPU-Optimized high-performance block rendering - DISABLED FOR DEBUG */}
-      {false && (
-        <GPUOptimizedRenderer
-          blocks={blockMap}
-          maxRenderDistance={500}
-          enableAdvancedEffects={true}
-          performanceMode="ultra"
-        />
-      )}
-
-      {/* Adaptive Glass Renderer for intelligent optimization - DISABLED FOR DEBUG */}
-      {false && (
-        <AdaptiveGlassRenderer
-          blocks={blockMap}
-          glassBlockTypes={[
-            BlockType.FROSTED_GLASS,
-            BlockType.NUMBER_6,
-            BlockType.NUMBER_7,
-          ]}
-        />
-      )}
+      {/* Removed disabled renderers that were never used */}
 
       {/* Intelligent grid system with spatial indexing */}
       <GridSystem config={gridConfig} />
@@ -1034,9 +1019,6 @@ function CameraBridge() {
   useFrame(() => {
     // Update transparency sorting with current camera
     if (camera) {
-      const {
-        transparencySortingFix,
-      } = require("../../utils/TransparencySortingFix");
       transparencySortingFix.updateTransparencySorting(camera);
     }
   });
@@ -1222,6 +1204,47 @@ export default function VoxelCanvas({
           precision: "highp",
         }}
         onCreated={(state) => {
+          // Debug log initial camera Y positioning
+          // debugBlockYPositioning.logInitialPositioning(
+          //   "main-camera-canvas",
+          //   {
+          //     x: state.camera.position.x,
+          //     y: state.camera.position.y,
+          //     z: state.camera.position.z,
+          //   },
+          //   "Canvas camera initialization",
+          // );
+
+          // Log debug system status on startup
+          if (process.env.NODE_ENV === "development") {
+            Promise.all([
+              import("../../utils/debugLogger"),
+              import("@/utils/devLogger"),
+            ]).then(([debug, { devLog }]) => {
+              // console.group("🔧 Y-Level Debug System Status");
+              // console.log("Environment:", process.env.NODE_ENV);
+              // devLog(
+              //   "Simulant Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_SIMULANT_Y_POSITIONING ||
+              //     "disabled",
+              // );
+              // devLog(
+              //   "Block Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_BLOCK_Y_POSITIONING || "disabled",
+              // );
+              // devLog(
+              //   "Validation Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_Y_LEVEL_VALIDATION || "disabled",
+              // );
+              // devLog(
+              //   "General Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_POSITIONING_GENERAL || "disabled",
+              // );
+              // console.groupEnd();
+              // Removed unused debug code
+            });
+          }
+
           // Initialize GPU memory manager with renderer
           gpuMemoryManager.initialize(state.gl);
 
@@ -1239,15 +1262,14 @@ export default function VoxelCanvas({
         <SceneContent cameraMode={cameraMode} followTarget={followTarget} />
       </Canvas>
 
-      {/* Camera controls UI - hidden since moved into FloatingSidebar; keep for large screens if desired */}
-      <div className="hidden">
-        <CameraControls
-          currentMode={cameraMode}
-          onModeChange={handleCameraModeChange}
-          onPresetApply={handlePresetApply}
-          onFocusOnBlock={handleFocusOnBlock}
-        />
-      </div>
+      {/* Removed hidden camera controls that were moved to FloatingSidebar */}
+
+      {/* Debug Status Indicator */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="fixed bottom-4 left-4 bg-green-500/20 text-green-300 px-3 py-2 rounded-lg border border-green-500/30 text-xs">
+          🔧 Debug Mode Active - Check Console
+        </div>
+      )}
 
       {/* Unified Debug Panel for development */}
       {process.env.NODE_ENV === "development" && (

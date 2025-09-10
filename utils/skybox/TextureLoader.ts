@@ -1,3 +1,4 @@
+import { devWarn, devError } from "@/utils/devLogger";
 import {
   CubeTextureLoader,
   CubeTexture,
@@ -28,7 +29,7 @@ export class SkyboxTextureLoader {
 
     // Configure loading manager for better error handling
     this.loadingManager.onError = (url) => {
-      console.error(`Failed to load texture from URL: ${url}`);
+      devError(`Failed to load texture from URL: ${url}`);
     };
   }
 
@@ -97,7 +98,7 @@ export class SkyboxTextureLoader {
         return;
       }
 
-      let loadedCount = 0;
+      const loadedCount = 0;
       const totalCount = urls.length;
 
       this.cubeLoader.load(
@@ -107,7 +108,7 @@ export class SkyboxTextureLoader {
 
           // Validate load time performance
           if (loadTime > PERFORMANCE_TARGETS.textureLoading.maxLoadTime) {
-            console.warn(
+            devWarn(
               `Skybox load time exceeded target: ${loadTime}ms > ${PERFORMANCE_TARGETS.textureLoading.maxLoadTime}ms`,
             );
           }
@@ -133,7 +134,7 @@ export class SkyboxTextureLoader {
         },
         (error) => {
           const loadTime = performance.now() - startTime;
-          console.error(
+          devError(
             `Failed to load skybox texture for preset ${preset.id}:`,
             error,
           );
@@ -198,7 +199,7 @@ export class SkyboxTextureLoader {
       for (const face of SKYBOX_ASSETS.naming) {
         // Try different formats in order of preference
         const formats = [".webp", ".jpg", ".png", ".avif"];
-        let url = `${assetPath}${face}${formats[0]}`; // Default to WebP
+        const url = `${assetPath}${face}${formats[0]}`; // Default to WebP
 
         // For now, assume WebP. In production, you might want to detect format support
         urls.push(url);

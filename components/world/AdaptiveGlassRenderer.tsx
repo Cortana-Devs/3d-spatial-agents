@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { devWarn, devError } from "@/utils/devLogger";
 import { BlockType } from "../../types/blocks";
 import { Block } from "../../types";
 import SeamlessGlassRenderer from "./SeamlessGlassRenderer";
@@ -94,7 +95,7 @@ const detectDeviceCapabilities = (
 
       return 1; // Low-end
     } catch (error) {
-      console.warn("Error detecting GPU tier:", error);
+      devWarn("Error detecting GPU tier:", error);
       return 1; // Default to low-end on error
     }
   };
@@ -316,7 +317,7 @@ export default function AdaptiveGlassRenderer({
         try {
           const contextLost = gl.isContextLost && gl.isContextLost();
           if (contextLost) {
-            console.warn("WebGL context is lost, using fallback settings");
+            devWarn("WebGL context is lost, using fallback settings");
             throw new Error("WebGL context lost");
           }
 
@@ -347,7 +348,7 @@ export default function AdaptiveGlassRenderer({
             }
           }
         } catch (error) {
-          console.error("Error detecting device capabilities:", error);
+          devError("Error detecting device capabilities:", error);
           setDeviceCapabilities({
             type: "desktop",
             gpuTier: 2,
@@ -361,7 +362,7 @@ export default function AdaptiveGlassRenderer({
           setActiveRenderer("standard");
         }
       } else {
-        console.warn("WebGL context not ready, using fallback settings");
+        devWarn("WebGL context not ready, using fallback settings");
         setDeviceCapabilities({
           type: "desktop",
           gpuTier: 2,

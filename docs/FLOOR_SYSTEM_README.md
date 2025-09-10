@@ -99,7 +99,7 @@ floorManager.placeFloor({
   pattern: "checkerboard",
   size: 50,
   centerPosition: new Vector3(0, 0, 0),
-  yLevel: -0.5,
+  yLevel: 0, // Floor blocks at Y=0, top face at Y=0.5 (player ground level)
   replaceExisting: false,
   fillHoles: true
 });
@@ -122,7 +122,7 @@ floorManager.placeCustomPatternFloor({
   customPattern: customPattern,
   size: 16, // Will repeat the 4x4 pattern
   centerPosition: new Vector3(0, 0, 0),
-  yLevel: -0.5
+  yLevel: 0 // Floor blocks at Y=0, walkable surface at Y=0.5
 });
 ```
 
@@ -134,7 +134,7 @@ floorManager.clearFloor({
   maxX: 25,
   minZ: -25,
   maxZ: 25,
-  yLevel: -0.5
+  yLevel: 0
 });
 
 // Fill holes in existing floor
@@ -143,7 +143,7 @@ floorManager.fillFloorHoles({
   maxX: 10,
   minZ: -10,
   maxZ: 10,
-  yLevel: -0.5
+  yLevel: 0
 }, BlockType.STONE);
 ```
 
@@ -157,7 +157,7 @@ interface FloorConfiguration {
   customPattern?: BlockType[];             // Custom pattern array (for "custom" pattern)
   size: number;                           // Size in grid units
   centerPosition?: Vector3;               // Center position (default: 0,0,0)
-  yLevel?: number;                        // Y level for placement (default: -0.5)
+  yLevel?: number;                        // Y level for placement (default: 0, top face at 0.5)
   fillHoles?: boolean;                    // Fill existing holes
   replaceExisting?: boolean;              // Replace existing blocks
 }
@@ -245,7 +245,7 @@ All existing block types are supported:
 ### Common Issues
 
 #### Floor Not Appearing
-- Check Y level (try -0.5 or -1.0)
+- Check Y level (default is 0, creates walkable surface at 0.5)
 - Verify block limits not exceeded
 - Ensure grid is visible
 - Check console for error messages
