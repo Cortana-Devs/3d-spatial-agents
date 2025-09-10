@@ -522,7 +522,7 @@ export class AnimationMemoryManager {
     this.clearCache()
 
     if (this.enableLogging) {
-      console.log('🗑️ AnimationMemoryManager disposed')
+      devLog('🗑️ AnimationMemoryManager disposed')
     }
   }
 }

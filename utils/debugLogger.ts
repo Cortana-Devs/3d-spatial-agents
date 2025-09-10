@@ -607,7 +607,7 @@ declare global {
 })();
 
 // Export the main debug functions
-export default {
+const debugAPI = {
   simulant: debugSimulantYPositioning,
   block: debugBlockYPositioning,
   validation: debugYLevelValidation,
@@ -617,3 +617,5 @@ export default {
   getEnabledCategories: getEnabledDebugCategories,
   isAnyEnabled: isAnyDebugEnabled,
 };
+
+export default debugAPI;

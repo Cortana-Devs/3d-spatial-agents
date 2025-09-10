@@ -246,7 +246,7 @@ export class AdaptiveQualityManager {
           this.setQualityPreset(recommendedPreset)
           resolve(recommendedPreset)
           
-          console.log(`Benchmark complete. Average FPS: ${avgFPS.toFixed(1)}, Recommended: ${recommendedPreset.name}`)
+          devLog(`Benchmark complete. Average FPS: ${avgFPS.toFixed(1)}, Recommended: ${recommendedPreset.name}`)
         }
       }, 100)
     })

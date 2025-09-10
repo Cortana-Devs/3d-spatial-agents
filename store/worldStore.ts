@@ -12,6 +12,7 @@ import {
   CameraMode,
   WorldState as BaseWorldState,
 } from "../types";
+import { PlayerAvatarState } from "../types/playerAvatar";
 import { devWarn } from "@/utils/devLogger";
 import {
   BLOCK_DEFINITIONS,
@@ -107,6 +108,7 @@ interface WorldSnapshot {
   simulants: Map<string, AISimulant>;
   playerAvatar: PlayerAvatarState | null;
   timestamp: number;
+  blockCount: number;
 }
 
 // (Removed unused WorldAction interface)
@@ -256,6 +258,8 @@ export const useWorldStore = create<WorldState>()(
           // Save current state to history before making changes
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
+            simulants: new Map(draft.simulants),
+            playerAvatar: draft.playerAvatar ? { ...draft.playerAvatar } : null,
             blockCount: draft.blockCount,
             timestamp: Date.now(),
           };
@@ -350,6 +354,8 @@ export const useWorldStore = create<WorldState>()(
           // Save current state to history before making changes
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
+            simulants: new Map(draft.simulants),
+            playerAvatar: draft.playerAvatar ? { ...draft.playerAvatar } : null,
             blockCount: draft.blockCount,
             timestamp: Date.now(),
           };
@@ -405,6 +411,8 @@ export const useWorldStore = create<WorldState>()(
         // Save snapshot before making changes
         const snapshot: WorldSnapshot = {
           blockMap: new Map(state.blockMap),
+          simulants: new Map(state.simulants),
+          playerAvatar: state.playerAvatar ? { ...state.playerAvatar } : null,
           blockCount: state.blockCount,
           timestamp: Date.now(),
         };
@@ -575,6 +583,10 @@ export const useWorldStore = create<WorldState>()(
             // Save current state to redo stack before undoing
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
+              simulants: new Map(draft.simulants),
+              playerAvatar: draft.playerAvatar
+                ? { ...draft.playerAvatar }
+                : null,
               blockCount: draft.blockCount,
               timestamp: Date.now(),
             };
@@ -605,6 +617,10 @@ export const useWorldStore = create<WorldState>()(
             // Save current state back to undo history
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
+              simulants: new Map(draft.simulants),
+              playerAvatar: draft.playerAvatar
+                ? { ...draft.playerAvatar }
+                : null,
               blockCount: draft.blockCount,
               timestamp: Date.now(),
             };
@@ -684,6 +700,7 @@ export const useWorldStore = create<WorldState>()(
           blockMap: new Map(state.blockMap),
           simulants: new Map(state.simulants),
           playerAvatar: state.playerAvatar ? { ...state.playerAvatar } : null,
+          blockCount: state.blockCount,
           timestamp: Date.now(),
         };
 

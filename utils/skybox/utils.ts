@@ -264,7 +264,7 @@ export function createQuickSkybox(name: string, options?: SkyboxPathOptions) {
   }
 }
 
-export default {
+const skyboxUtils = {
   buildSkyboxUrls,
   validateSkyboxPath,
   validateSkyboxUrls,
@@ -275,3 +275,5 @@ export default {
   COMMON_SKYBOX_PATHS,
   SUPPORTED_FORMATS
 }
+
+export default skyboxUtils

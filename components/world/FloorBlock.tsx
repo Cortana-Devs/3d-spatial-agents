@@ -2,9 +2,8 @@
 
 import React, { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import {
 import { devWarn } from "@/utils/devLogger";
-
+import {
   Mesh,
   PlaneGeometry,
   MeshStandardMaterial,

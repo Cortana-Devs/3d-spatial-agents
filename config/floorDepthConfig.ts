@@ -6,7 +6,8 @@
  * the player's feet the floor blocks are placed.
  */
 
-import { Y_LEVEL_CONSTANTS, Y_LEVEL_VALIDATION } from './yLevelConstants';
+import { Y_LEVEL_CONSTANTS } from './yLevelConstants';
+import { devLog } from "@/utils/devLogger";
 
 // Configuration interface for floor depth settings
 export interface FloorDepthConfig {
@@ -72,8 +73,7 @@ export const FLOOR_DEPTH_PRESETS: Record<string, FloorDepthConfig> = {
   }
 };
 
-// Current active floor depth configuration
-const currentFloorDepthConfig: FloorDepthConfig = FLOOR_DEPTH_PRESETS.DEFAULT;
+// Current active floor depth configuration is managed by FloorDepthManager singleton
 
 /**
  * Floor Depth Manager - Controls floor positioning relative to player level
@@ -105,13 +105,13 @@ export class FloorDepthManager {
   setPreset(presetName: keyof typeof FLOOR_DEPTH_PRESETS): boolean {
     const preset = FLOOR_DEPTH_PRESETS[presetName];
     if (!preset) {
-      console.warn(`Floor depth preset "${presetName}" not found`);
+      devLog(`Floor depth preset "${presetName}" not found`);
       return false;
     }
 
     this.currentConfig = preset;
     this.notifyListeners();
-    console.log(`Floor depth set to: ${preset.description}`);
+    devLog(`Floor depth set to: ${preset.description}`);
     return true;
   }
 
@@ -130,7 +130,7 @@ export class FloorDepthManager {
 
     this.currentConfig = customConfig;
     this.notifyListeners();
-    console.log(`Custom floor depth set: ${customConfig.description}`);
+    devLog(`Custom floor depth set: ${customConfig.description}`);
     return customConfig;
   }
 
@@ -300,9 +300,11 @@ export const floorDepthUtils = {
 };
 
 // Default export
-export default {
+const floorDepthExports = {
   manager: floorDepthManager,
   utils: floorDepthUtils,
   presets: FLOOR_DEPTH_PRESETS,
   FloorDepthManager
 };
+
+export default floorDepthExports;
