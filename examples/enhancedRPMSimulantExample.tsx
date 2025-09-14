@@ -6,7 +6,7 @@
 import React, { useState, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import ReadyPlayerMeSimulant from '../components/simulants/ReadyPlayerMeSimulant'
+import ReadyPlayerMeSimulant from '@components/simulants/ReadyPlayerMeSimulant'
 import type { AISimulant } from '../types'
 
 // Example simulant data

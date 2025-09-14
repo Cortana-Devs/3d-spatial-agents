@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment } from '@react-three/drei'
-import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
+import { FrostedGlassFloor } from '@components/floors/FrostedGlassFloor'
 import { FloorFactory } from '../utils/floorFactory'
 import { GlassType } from '../types/floorTypes'
 import * as THREE from 'three'

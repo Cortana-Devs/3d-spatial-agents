@@ -1,5 +1,5 @@
 import React from 'react'
-import { usePerformanceMonitor } from '../systems/PerformanceMonitor'
+import { usePerformanceMonitor } from '@systems/PerformanceMonitor'
 import { FloorDebugData } from '../types/debug'
 
 export const FloorInspectorPanel: React.FC<{

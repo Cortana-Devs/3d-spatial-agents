@@ -2,17 +2,17 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, Text, Line } from "@react-three/drei";
 import { FloorFactory } from "../../utils/floorFactory";
-import { FloorNavigationAnalyzer } from "../components/floors/ai/FloorNavigationProperties";
-import { TransparentSurfacePerception } from "../components/floors/ai/TransparentSurfacePerception";
+import { FloorNavigationAnalyzer } from "@floor-ai/FloorNavigationProperties";
+import { TransparentSurfacePerception } from "@floor-ai/TransparentSurfacePerception";
 import {
   TransparentNavMeshGenerator,
   NavMesh,
   NavMeshNode,
-} from "../components/floors/ai/TransparentNavMeshGenerator";
+} from "@floor-ai/TransparentNavMeshGenerator";
 import {
   TransparentPathfinder,
   PathNode,
-} from "../components/floors/ai/TransparentPathfinder";
+} from "@floor-ai/TransparentPathfinder";
 import { FrostedGlassFloor } from "../../types/floorTypes";
 import * as THREE from "three";
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, Stats } from '@react-three/drei'
-import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
+import { FrostedGlassFloor } from '@components/floors/FrostedGlassFloor'
 import { FloorFactory } from '../utils/floorFactory'
-import { usePerformanceMonitor } from '../systems/PerformanceMonitor'
-import { useAdaptiveQuality } from '../systems/AdaptiveQuality'
-import { QUALITY_PRESETS } from '../systems/AdaptiveQuality'
+import { usePerformanceMonitor } from '@systems/PerformanceMonitor'
+import { useAdaptiveQuality } from '@systems/AdaptiveQuality'
+import { QUALITY_PRESETS } from '@systems/AdaptiveQuality'
 import * as THREE from 'three'
 
 export const PerformanceTestScene: React.FC = () => {

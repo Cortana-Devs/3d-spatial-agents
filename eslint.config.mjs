@@ -27,6 +27,14 @@ const eslintConfig = [
     rules: {
       "no-console": ["error", { allow: ["warn", "error"] }],
       "@typescript-eslint/no-explicit-any": "warn",
+      // Prefer alias paths over brittle relative imports to improve maintainability
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "ImportDeclaration[source.value=/^\\.\\.\\//]",
+          message: "Use path aliases like @components, @systems, @floor-ai instead of relative up-level imports",
+        },
+      ],
     },
   },
   {

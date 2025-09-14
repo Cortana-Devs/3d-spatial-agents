@@ -1,7 +1,7 @@
-import { FloorLODManager, LOD_LEVELS } from '../systems/FloorLODManager'
-import { TransparencyBatcher } from '../systems/TransparencyBatcher'
-import { PerformanceMonitor } from '../systems/PerformanceMonitor'
-import { AdaptiveQualityManager, QUALITY_PRESETS } from '../systems/AdaptiveQuality'
+import { FloorLODManager, LOD_LEVELS } from '@systems/FloorLODManager'
+import { TransparencyBatcher } from '@systems/TransparencyBatcher'
+import { PerformanceMonitor } from '@systems/PerformanceMonitor'
+import { AdaptiveQualityManager, QUALITY_PRESETS } from '@systems/AdaptiveQuality'
 import * as THREE from 'three'
 
 describe('Performance Optimization Systems', () => {

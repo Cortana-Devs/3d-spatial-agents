@@ -14,9 +14,9 @@ import { Vector3 } from 'three';
 import { useWorldStore } from '../store/worldStore';
 import { useIslandGeneration } from '../hooks/useIslandGeneration';
 import { BlockType } from '../types/blocks';
-import IslandGenDevPanel from '../components/debug/IslandGenDevPanel';
-import IslandDebugOverlay from '../components/debug/IslandDebugOverlay';
-import IslandGenExample from '../components/debug/IslandGenExample';
+import IslandGenDevPanel from '@components/debug/IslandGenDevPanel';
+import IslandDebugOverlay from '@components/debug/IslandDebugOverlay';
+import IslandGenExample from '@components/debug/IslandGenExample';
 
 // World visualization component
 const WorldBlocks: React.FC = () => {

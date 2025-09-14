@@ -3,7 +3,7 @@
 import React, { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { SimpleSkybox } from "../../components/skybox/EnhancedSkybox";
+import { SimpleSkybox } from "@components/skybox/EnhancedSkybox";
 import { devLog } from "@/utils/devLogger";
 
 export default function SkyboxTestPage() {
