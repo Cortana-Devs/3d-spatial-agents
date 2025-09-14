@@ -7,6 +7,8 @@ import SimpleAnimatedAvatar from "./SimpleAnimatedAvatar";
 import BasicAnimationTest from "./BasicAnimationTest";
 import ExternalAnimationTest from "./ExternalAnimationTest";
 import { AISimulant } from "../../types";
+import { debugSimulantYPositioning } from "../../utils/debugLogger";
+import { Y_LEVEL_CONSTANTS } from "../../config/yLevelConstants";
 
 // Simulant manager configuration
 interface SimulantManagerProps {
@@ -37,7 +39,7 @@ export default function SimulantManager({
   enableGridSnap = true,
   maxSimulants = PERFORMANCE_CONFIG.maxSimulants,
 }: SimulantManagerProps) {
-  const { simulants } = useWorldStore();
+  const { simulants, updateSimulant } = useWorldStore();
 
   // Convert Map to Array and apply performance limits
   const activeSimulants = useMemo(() => {
@@ -73,9 +75,44 @@ export default function SimulantManager({
   // Debug info (development only)
   React.useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.log("Simulant Manager Stats:", performanceStats);
+      // void import("@/utils/devLogger").then(({ devLog }) =>
+      //   devLog("Simulant Manager Stats:", performanceStats),
+      // );
+
+      // Debug Y-level positioning for all active simulants
+      // activeSimulants.forEach((simulant) => {
+      //   debugSimulantYPositioning.logDefaultPositioning(
+      //     simulant.id,
+      //     simulant.position,
+      //     "Active simulant rendering",
+      //   );
+      // });
+
+      // Validate and auto-correct simulant Y positioning
+      activeSimulants.forEach((simulant) => {
+        const isProperlyPositioned =
+          Math.abs(
+            simulant.position.y - Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+          ) < 0.1;
+        if (!isProperlyPositioned) {
+          const correctedPosition = {
+            ...simulant.position,
+            y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+          };
+
+          // debugSimulantYPositioning.logYAdjustment(
+          //   simulant.id,
+          //   simulant.position.y,
+          //   correctedPosition.y,
+          //   "Auto-correction: simulant Y positioning fixed to ground level",
+          // );
+
+          // Update the simulant position in the store
+          updateSimulant(simulant.id, { position: correctedPosition });
+        }
+      });
     }
-  }, [performanceStats]);
+  }, [performanceStats, activeSimulants, updateSimulant]);
 
   return (
     <group name="simulant-manager">
@@ -86,7 +123,7 @@ export default function SimulantManager({
           <BasicAnimationTest />
         </>
       )}
-      
+
       {/* Render active simulants with working animation system */}
       {activeSimulants.map((simulant) => (
         <SimpleAnimatedAvatar
@@ -114,15 +151,24 @@ export const SimulantUtils = {
   createTestSimulant: (
     id: string,
     position: { x: number; y: number; z: number },
-  ): AISimulant => ({
-    id,
-    name: `Simulant-${id}`,
-    position,
-    status: "active",
-    lastAction: "standing idle",
-    conversationHistory: [],
-    geminiSessionId: `session-${id}`,
-  }),
+  ): AISimulant => {
+    // Debug log the test simulant creation with Y positioning
+    debugSimulantYPositioning.logSpawnPositioning(
+      id,
+      position,
+      "Test simulant creation",
+    );
+
+    return {
+      id,
+      name: `Simulant-${id}`,
+      position,
+      status: "active",
+      lastAction: "standing idle",
+      conversationHistory: [],
+      geminiSessionId: `session-${id}`,
+    };
+  },
 
   // Calculate optimal simulant positions to avoid overlap
   calculateSpawnPositions: (
@@ -134,11 +180,20 @@ export const SimulantUtils = {
     const positions = [];
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2;
-      positions.push({
+      const position = {
         x: centerX + Math.cos(angle) * radius,
-        y: 0,
+        y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL, // Ground level Y positioning - above floor blocks at Y=0
         z: centerZ + Math.sin(angle) * radius,
-      });
+      };
+
+      // Debug log the calculated spawn position
+      debugSimulantYPositioning.logDefaultPositioning(
+        `calculated-${i}`,
+        position,
+        `Calculated spawn position ${i + 1} of ${count} in circular formation`,
+      );
+
+      positions.push(position);
     }
     return positions;
   },

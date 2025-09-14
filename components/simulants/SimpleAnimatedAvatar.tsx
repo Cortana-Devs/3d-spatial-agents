@@ -5,6 +5,7 @@ import { useGLTF, useAnimations } from "@react-three/drei";
 import { Group } from "three";
 import { AISimulant } from "../../types";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
+import { debugSimulantYPositioning } from "../../utils/debugLogger";
 
 interface SimpleAnimatedAvatarProps {
   simulant: AISimulant;
@@ -26,7 +27,7 @@ export default function SimpleAnimatedAvatar({
   const animationTimeRef = useRef<number>(0);
 
   // Load avatar with LOD considerations
-  const avatarGLTF = useGLTF("/models/player_ReadyPlayerMe.glb");
+  const avatarGLTF = useGLTF("/models/player-ready-player-me.glb");
 
   // Create a per-instance clone of the avatar to avoid re-parenting conflicts between simulants
   const avatarScene = useMemo(() => {
@@ -34,25 +35,25 @@ export default function SimpleAnimatedAvatar({
   }, [avatarGLTF.scene]);
 
   // Load varied animations
-  const walkGLTF = useGLTF("/animation_GLB/M_Walk_001.glb");
-  const runGLTF = useGLTF("/animation_GLB/M_Run_001.glb");
-  const crouchWalkGLTF = useGLTF("/animation_GLB/M_Crouch_Walk_003.glb");
-  const walkBackGLTF = useGLTF("/animation_GLB/M_Walk_Backwards_001.glb");
-  const jumpGLTF = useGLTF("/animation_GLB/M_Walk_Jump_002.glb");
-  const danceGLTF = useGLTF("/animation_GLB/F_Dances_007.glb");
-  const talkGLTF = useGLTF("/animation_GLB/M_Talking_Variations_005.glb");
+  const walkGLTF = useGLTF("/animations/M_Walk_001.glb");
+  const runGLTF = useGLTF("/animations/M_Run_001.glb");
+  const crouchWalkGLTF = useGLTF("/animations/M_Crouch_Walk_003.glb");
+  const walkBackGLTF = useGLTF("/animations/M_Walk_Backwards_001.glb");
+  const jumpGLTF = useGLTF("/animations/M_Walk_Jump_002.glb");
+  const danceGLTF = useGLTF("/animations/F_Dances_007.glb");
+  const talkGLTF = useGLTF("/animations/M_Talking_Variations_005.glb");
   const expressionGLTF = useGLTF(
-    "/animation_GLB/M_Standing_Expressions_013.glb",
+    "/animations/M_Standing_Expressions_013.glb",
   );
-  const tposeGLTF = useGLTF("/animation_GLB/Masculine_TPose.glb");
+  const tposeGLTF = useGLTF("/animations/Masculine_TPose.glb");
   const idle1GLTF = useGLTF(
-    "/animation_GLB/F_Standing_Idle_Variations_001.glb",
+    "/animations/F_Standing_Idle_Variations_001.glb",
   );
   const idle2GLTF = useGLTF(
-    "/animation_GLB/F_Standing_Idle_Variations_002.glb",
+    "/animations/F_Standing_Idle_Variations_002.glb",
   );
   const idle3GLTF = useGLTF(
-    "/animation_GLB/F_Standing_Idle_Variations_006.glb",
+    "/animations/F_Standing_Idle_Variations_006.glb",
   );
 
   // Strip root motion and apply quality filtering
@@ -263,6 +264,28 @@ export default function SimpleAnimatedAvatar({
     animationQuality,
   ]);
 
+  // Debug log Y positioning when simulant position changes
+  React.useEffect(() => {
+    debugSimulantYPositioning.logDefaultPositioning(
+      simulant.id,
+      simulant.position,
+      "SimpleAnimatedAvatar position update",
+    );
+
+    // Validate Y positioning
+    const isProperlyGrounded = Math.abs(simulant.position.y - 0.5) < 0.1;
+    debugSimulantYPositioning.logValidation(
+      simulant.id,
+      simulant.position,
+      isProperlyGrounded,
+      isProperlyGrounded
+        ? []
+        : [
+            `Y position ${simulant.position.y} is not at ground level (expected ~0.5)`,
+          ],
+    );
+  }, [simulant.position, simulant.id]);
+
   return (
     <group
       ref={groupRef}
@@ -305,16 +328,16 @@ export default function SimpleAnimatedAvatar({
 }
 
 // Preload all
-useGLTF.preload("/models/player_ReadyPlayerMe.glb");
-useGLTF.preload("/animation_GLB/M_Walk_001.glb");
-useGLTF.preload("/animation_GLB/M_Run_001.glb");
-useGLTF.preload("/animation_GLB/M_Crouch_Walk_003.glb");
-useGLTF.preload("/animation_GLB/M_Walk_Backwards_001.glb");
-useGLTF.preload("/animation_GLB/M_Walk_Jump_002.glb");
-useGLTF.preload("/animation_GLB/F_Dances_007.glb");
-useGLTF.preload("/animation_GLB/M_Talking_Variations_005.glb");
-useGLTF.preload("/animation_GLB/M_Standing_Expressions_013.glb");
-useGLTF.preload("/animation_GLB/Masculine_TPose.glb");
-useGLTF.preload("/animation_GLB/F_Standing_Idle_Variations_001.glb");
-useGLTF.preload("/animation_GLB/F_Standing_Idle_Variations_002.glb");
-useGLTF.preload("/animation_GLB/F_Standing_Idle_Variations_006.glb");
+useGLTF.preload("/models/player-ready-player-me.glb");
+useGLTF.preload("/animations/M_Walk_001.glb");
+useGLTF.preload("/animations/M_Run_001.glb");
+useGLTF.preload("/animations/M_Crouch_Walk_003.glb");
+useGLTF.preload("/animations/M_Walk_Backwards_001.glb");
+useGLTF.preload("/animations/M_Walk_Jump_002.glb");
+useGLTF.preload("/animations/F_Dances_007.glb");
+useGLTF.preload("/animations/M_Talking_Variations_005.glb");
+useGLTF.preload("/animations/M_Standing_Expressions_013.glb");
+useGLTF.preload("/animations/Masculine_TPose.glb");
+useGLTF.preload("/animations/F_Standing_Idle_Variations_001.glb");
+useGLTF.preload("/animations/F_Standing_Idle_Variations_002.glb");
+useGLTF.preload("/animations/F_Standing_Idle_Variations_006.glb");

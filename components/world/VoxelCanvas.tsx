@@ -23,6 +23,8 @@ import {
   InstancedBufferAttribute,
   PointsMaterial,
   AdditiveBlending,
+  DoubleSide,
+  BoxGeometry,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
 import {
@@ -34,22 +36,20 @@ import {
 } from "../../types";
 import GridSystem from "./GridSystem";
 import CameraController, { CAMERA_PRESETS } from "./CameraController";
-import CameraControls from "./CameraControls";
 import SimulantManager from "../simulants/SimulantManager";
+import { gpuMemoryManager } from "../../utils/performance/GPUMemoryManager";
+import { CanvasGPUMonitor } from "./CanvasGPUMonitor";
 import { SimpleSkybox } from "../skybox/EnhancedSkybox";
-import {
-  useIsolatedRender,
-  useBlockPlacementRender,
-  useAnimationRender,
-  useBatchedUpdates,
-  usePerformanceMonitor,
-} from "../../hooks/performance/useIsolatedRender";
-import {
-  performanceManager,
-  MODULE_CONFIGS,
-} from "../../utils/performance/PerformanceManager";
+// Removed unused renderer imports
+import { useIsolatedRender } from "../../hooks/performance/useIsolatedRender";
+// Removed unused performanceManager and MODULE_CONFIGS imports
+import { UnifiedDebugPanel } from "../debug/UnifiedDebugPanel";
+import { createLogger } from "../../utils/logging/logger";
+import { transparencySortingFix } from "../../utils/TransparencySortingFix";
+import { usePerformanceMonitor } from "../../hooks/performance/useIsolatedRender";
 
 // LOD Configuration for performance optimization
+const log = createLogger("world:VoxelCanvas");
 interface LODConfig {
   highDetail: number; // 0-30 units
   mediumDetail: number; // 30-60 units
@@ -232,7 +232,7 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
       // Ensure we have the right count
       instancedMesh.count = typeBlocks.length;
 
-      typeBlocks.forEach((block, index) => {
+      typeBlocks.forEach((block, index: number) => {
         const distance = camera.position.distanceTo(block.position);
 
         // LOD-based scaling - use consistent scaling
@@ -298,7 +298,7 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
         return (
           <instancedMesh
             key={type}
-            ref={(ref) => {
+            ref={(ref: InstancedMesh | null) => {
               if (ref) {
                 instancedMeshRefs.current[type as BlockType] = ref;
                 // Initialize instance colors if not already done
@@ -316,23 +316,42 @@ function OptimizedBlockRenderer({ blocks }: OptimizedBlockRendererProps) {
             }}
             args={[undefined, undefined, maxInstances]}
           >
-            <boxGeometry args={[0.98, 0.98, 0.98]} />
-            <meshStandardMaterial
-              color={definition.color}
-              roughness={definition.roughness}
-              metalness={definition.metalness}
-              transparent={definition.transparency !== undefined}
-              opacity={
-                definition.transparency ? 1 - definition.transparency : 1
+            <boxGeometry
+              args={
+                type === BlockType.NUMBER_7
+                  ? [1.0, 1.0, 1.0]
+                  : [0.98, 0.98, 0.98]
               }
-              emissive={definition.emissive || "#000000"}
-              emissiveIntensity={definition.emissiveIntensity || 0}
-              vertexColors={true} // Enable vertex colors for per-instance coloring
-              toneMapped={false} // Prevent tone mapping artifacts
-              polygonOffset={true} // Prevent z-fighting
-              polygonOffsetFactor={1}
-              polygonOffsetUnits={1}
             />
+            {type === BlockType.NUMBER_7 ? (
+              <meshBasicMaterial
+                color={definition.color}
+                transparent={true}
+                opacity={0.15}
+                vertexColors={true}
+                side={DoubleSide}
+                depthWrite={true}
+                alphaTest={0.1}
+                fog={false}
+              />
+            ) : (
+              <meshStandardMaterial
+                color={definition.color}
+                roughness={definition.roughness}
+                metalness={definition.metalness}
+                transparent={definition.transparency !== undefined}
+                opacity={
+                  definition.transparency ? 1 - definition.transparency : 1
+                }
+                emissive={definition.emissive || "#000000"}
+                emissiveIntensity={definition.emissiveIntensity || 0}
+                vertexColors={true} // Enable vertex colors for per-instance coloring
+                toneMapped={false} // Prevent tone mapping artifacts
+                polygonOffset={true} // Prevent z-fighting
+                polygonOffsetFactor={1}
+                polygonOffsetUnits={1}
+              />
+            )}
           </instancedMesh>
         );
       })}
@@ -362,21 +381,30 @@ function VoxelBlock({
 }: VoxelBlockProps) {
   const meshRef = useRef<Mesh>(null);
   const [showParticles, setShowParticles] = useState(false);
-  const { camera } = useThree();
+  const { blockMap } = useWorldStore();
 
-  const distance = useMemo(() => {
-    return camera.position.distanceTo(new Vector3(...position));
-  }, [camera.position, position]);
+  // Get neighbor blocks for seamless rendering
+  const neighbors = useMemo(() => {
+    const [x, y, z] = position;
+    const neighbors = {
+      top: blockMap.has(`${x},${y + 1},${z}`),
+      bottom: blockMap.has(`${x},${y - 1},${z}`),
+      north: blockMap.has(`${x},${y},${z + 1}`),
+      south: blockMap.has(`${x},${y},${z - 1}`),
+      east: blockMap.has(`${x + 1},${y},${z}`),
+      west: blockMap.has(`${x - 1},${y},${z}`),
+    };
+    return neighbors;
+  }, [blockMap, position]);
 
-  // LOD-based geometry selection
-  const geometryArgs = useMemo((): [number, number, number] => {
-    if (distance > LOD_CONFIG.mediumDetail) {
-      return [0.9, 0.9, 0.9]; // Low detail
-    } else if (distance > LOD_CONFIG.highDetail) {
-      return [0.94, 0.94, 0.94]; // Medium detail
-    }
-    return [0.98, 0.98, 0.98]; // High detail
-  }, [distance]);
+  // Create geometry based on exposed faces for seamless blocks
+  const geometry = useMemo(() => {
+    const geo = new BoxGeometry(1.0, 1.0, 1.0);
+
+    // For seamless appearance, we keep full 1x1x1 geometry
+    // The seamless effect comes from precise positioning and materials
+    return geo;
+  }, []);
 
   const handleClick = useCallback(
     (event: { stopPropagation: () => void }) => {
@@ -397,7 +425,13 @@ function VoxelBlock({
         setShowParticles(true);
         // Delay the actual removal to show particle effect
         setTimeout(() => {
-          onRemove(new Vector3(...position));
+          // Ensure coordinates are properly rounded for consistent key matching
+          const roundedPosition = new Vector3(
+            Math.round(position[0]),
+            Math.round(position[1]),
+            Math.round(position[2]),
+          );
+          onRemove(roundedPosition);
         }, 100);
       }
     },
@@ -429,8 +463,8 @@ function VoxelBlock({
         position={position}
         onClick={handleClick}
         onContextMenu={handleRightClick}
+        geometry={geometry}
       >
-        <boxGeometry args={geometryArgs} />
         <meshStandardMaterial
           color={isHovered ? "#ffffff" : isSelected ? "#00D4FF" : color}
           roughness={definition.roughness}
@@ -451,10 +485,9 @@ function VoxelBlock({
                 ? 0.15
                 : definition.emissiveIntensity || 0
           }
-          toneMapped={false} // Prevent tone mapping artifacts
-          polygonOffset={true} // Prevent z-fighting
-          polygonOffsetFactor={1}
-          polygonOffsetUnits={1}
+          toneMapped={false}
+          // Seamless rendering - no polygon offset for exact adjacency
+          polygonOffset={false}
         />
       </mesh>
 
@@ -487,11 +520,13 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
     }
   });
 
+  // dev: ghost render log suppressed to reduce noise
+
   if (!position) return null;
 
   return (
     <mesh ref={meshRef} position={[position[0], position[1], position[2]]}>
-      <boxGeometry args={[0.98, 0.98, 0.98]} />
+      <boxGeometry args={[1.0, 1.0, 1.0]} />
       <meshStandardMaterial
         color={color}
         transparent
@@ -500,6 +535,7 @@ function GhostBlock({ position, type, color }: GhostBlockProps) {
         metalness={type === "stone" ? 0.1 : 0}
         emissive={color}
         emissiveIntensity={0.3}
+        polygonOffset={false}
       />
     </mesh>
   );
@@ -586,7 +622,7 @@ function ClickHandler() {
         // Snap to grid
         const snappedPosition = new Vector3(
           Math.round(intersectionPoint.x),
-          Math.max(0, Math.round(intersectionPoint.y)), // Prevent negative Y
+          Math.round(intersectionPoint.y),
           Math.round(intersectionPoint.z),
         );
 
@@ -596,7 +632,8 @@ function ClickHandler() {
         const atLimit = blockMap.size >= worldLimits.maxBlocks;
 
         if (!hasExistingBlock && !atLimit) {
-          addBlock(snappedPosition, selectedBlockType, "human");
+          const success = addBlock(snappedPosition, selectedBlockType, "human");
+        } else {
         }
       }
     },
@@ -636,7 +673,7 @@ function ClickHandler() {
         // Snap to grid
         const snappedPosition: [number, number, number] = [
           Math.round(intersectionPoint.x),
-          Math.max(0, Math.round(intersectionPoint.y)), // Prevent negative Y
+          Math.round(intersectionPoint.y),
           Math.round(intersectionPoint.z),
         ];
 
@@ -646,6 +683,8 @@ function ClickHandler() {
 
         if (!hasExistingBlock) {
           setGhostPosition(snappedPosition);
+          // Debug ghost position
+          // dev: ghost preview logging suppressed
         } else {
           setGhostPosition(null);
         }
@@ -717,17 +756,16 @@ function ClickHandler() {
   }, [handleClick, handleRightClick, handleMouseMove]);
 
   // Get block definition for ghost preview
-  const blockDefinitions = {
-    stone: { color: "#666666" },
-    leaf: { color: "#4CAF50" },
-    wood: { color: "#8D6E63" },
-  };
+  const blockDefinitions = BLOCK_DEFINITIONS;
+
+  // Safely get color with a fallback
+  const blockColor = blockDefinitions[selectedBlockType]?.color || "#FF0000";
 
   return (
     <GhostBlock
       position={ghostPosition}
       type={selectedBlockType}
-      color={blockDefinitions[selectedBlockType].color}
+      color={blockColor}
     />
   );
 }
@@ -740,13 +778,14 @@ function SceneContent({
   cameraMode: CameraMode;
   followTarget?: string;
 }) {
-  const { blockMap, removeBlock, selectionMode, gridConfig } = useWorldStore();
+  const { blockMap, removeBlock, selectionMode, gridConfig, addBlock } =
+    useWorldStore();
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [hoveredBlockId] = useState<string | null>(null);
   const [useInstancedRendering, setUseInstancedRendering] = useState(true);
 
   const blocks = useMemo(() => {
-    return Array.from(blockMap.values()).map((block) => ({
+    const blockArray = Array.from(blockMap.values()).map((block) => ({
       id: block.id,
       position: new Vector3(
         block.position.x,
@@ -758,6 +797,21 @@ function SceneContent({
       isHovered: block.id === hoveredBlockId,
       isSelected: block.id === selectedBlockId,
     }));
+
+    if (process.env.NODE_ENV === "development") {
+      log.debug("🔄 VoxelCanvas: blocks updated", {
+        count: blockArray.length,
+        mapSize: blockMap.size,
+      });
+    }
+
+    if (blockArray.length > 0) {
+      // dev: suppressed detailed block type/sample logs
+    } else {
+      // dev: suppressed empty block-array warning
+    }
+
+    return blockArray;
   }, [blockMap, hoveredBlockId, selectedBlockId]);
 
   const handleBlockClick = useCallback(
@@ -783,6 +837,127 @@ function SceneContent({
     setUseInstancedRendering(blocks.length > 50);
   }, [blocks.length]);
 
+  // Create default mixed glass floor if no blocks exist
+  useEffect(() => {
+    // dev: suppressed frequent block creation check log
+
+    if (blockMap.size === 0) {
+      if (process.env.NODE_ENV === "development") {
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() =>
+        //     devLog("VoxelCanvas: creating default floor and test blocks"),
+        //   ),
+        // );
+      }
+      const floorSize = Math.min(gridConfig.size, 30); // Limit initial floor size
+      const halfSize = Math.floor(floorSize / 2);
+
+      // Create mixed pattern with more visible blocks for debugging
+      for (let x = -halfSize; x <= halfSize; x++) {
+        for (let z = -halfSize; z <= halfSize; z++) {
+          const position = new Vector3(x, 0, z); // Place at y=0 for seamless positioning
+
+          // Debug log the default floor Y positioning
+          // debugBlockYPositioning.logInitialPositioning(
+          //   `default-floor-${x}-${z}`,
+          //   { x, y: 0, z },
+          //   "default floor block",
+          // );
+
+          // Create more visible pattern with better block distribution
+          const isEven = (x + z) % 2 === 0;
+          const isCorner = Math.abs(x) === halfSize && Math.abs(z) === halfSize;
+          const isCenter = x === 0 && z === 0;
+          const isInnerRing = Math.abs(x) <= 2 && Math.abs(z) <= 2;
+
+          let finalBlockType: BlockType;
+
+          // Create highly visible pattern
+          if (isCorner) {
+            finalBlockType = BlockType.STONE; // Solid corners for reference
+          } else if (isCenter) {
+            finalBlockType = BlockType.NUMBER_4; // Glowing center beacon
+          } else if (isInnerRing) {
+            // Inner area - mix of solid and visible glass
+            finalBlockType = isEven ? BlockType.WOOD : BlockType.FROSTED_GLASS;
+          } else {
+            // Outer area - use more visible glass types
+            finalBlockType = isEven
+              ? BlockType.FROSTED_GLASS
+              : BlockType.NUMBER_6; // Use NUMBER_6 instead of NUMBER_7 for better visibility
+          }
+
+          addBlock(position, finalBlockType, "system");
+        }
+      }
+
+      // Add prominent test blocks above the floor for visibility testing
+      // Debug log test block Y positioning
+      const testBlocks = [
+        {
+          pos: new Vector3(0, 1, 0),
+          type: BlockType.NUMBER_4,
+          name: "Glowing center beacon",
+        },
+        {
+          pos: new Vector3(3, 1, 0),
+          type: BlockType.STONE,
+          name: "Solid reference block",
+        },
+        {
+          pos: new Vector3(-3, 1, 0),
+          type: BlockType.WOOD,
+          name: "Wood reference block",
+        },
+        {
+          pos: new Vector3(0, 1, 3),
+          type: BlockType.LEAF,
+          name: "Leaf reference block",
+        },
+        {
+          pos: new Vector3(0, 2, 0),
+          type: BlockType.FROSTED_GLASS,
+          name: "Glass visibility test",
+        },
+        {
+          pos: new Vector3(1, 1, 1),
+          type: BlockType.NUMBER_6,
+          name: "Sunset glass test",
+        },
+        {
+          pos: new Vector3(-1, 1, -1),
+          type: BlockType.NUMBER_7,
+          name: "Ultra-light glass test",
+        },
+      ];
+
+      testBlocks.forEach(({ pos, type, name }) => {
+        // debugBlockYPositioning.logInitialPositioning(
+        //   `test-block-${pos.x}-${pos.y}-${pos.z}`,
+        //   { x: pos.x, y: pos.y, z: pos.z },
+        //   `${name} (${type})`,
+        // );
+        addBlock(pos, type, "system");
+      });
+
+      if (process.env.NODE_ENV === "development") {
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() => devLog("VoxelCanvas: default blocks created")),
+        // );
+      }
+    } else {
+      if (process.env.NODE_ENV === "development") {
+        // void import("@/utils/devLogger").then(({ devLog, ifDev }) =>
+        //   ifDev(() =>
+        //     devLog("VoxelCanvas: blocks already exist", blockMap.size),
+        //   ),
+        // );
+      }
+    }
+  }, [blockMap.size, gridConfig.size, addBlock]);
+
+  // dev: suppressed render-size log
+
   return (
     <>
       <SceneLighting />
@@ -798,24 +973,21 @@ function SceneContent({
         enableDoubleClickFocus={true}
       />
 
-      {/* Optimized block rendering */}
-      {useInstancedRendering ? (
-        <OptimizedBlockRenderer blocks={blocks} />
-      ) : (
-        // Individual block rendering for smaller counts or when precision is needed
-        blocks.map((block) => (
-          <VoxelBlock
-            key={block.id}
-            position={[block.position.x, block.position.y, block.position.z]}
-            type={block.type}
-            color={block.color}
-            isHovered={block.isHovered}
-            isSelected={block.isSelected}
-            onSelect={() => handleBlockClick(block.id)}
-            onRemove={handleBlockRemove}
-          />
-        ))
-      )}
+      {/* Debug: Simple block rendering for troubleshooting */}
+      {blocks.map((block) => (
+        <VoxelBlock
+          key={block.id}
+          position={[block.position.x, block.position.y, block.position.z]}
+          type={block.type}
+          color={block.color}
+          isHovered={block.isHovered}
+          isSelected={block.isSelected}
+          onSelect={() => handleBlockClick(block.id)}
+          onRemove={handleBlockRemove}
+        />
+      ))}
+
+      {/* Removed disabled renderers that were never used */}
 
       {/* Intelligent grid system with spatial indexing */}
       <GridSystem config={gridConfig} />
@@ -830,8 +1002,28 @@ function SceneContent({
 
       {/* Click handler and ghost preview */}
       <ClickHandler />
+
+      {/* GPU Performance Monitor (Canvas-internal) */}
+      <CanvasGPUMonitor />
+
+      {/* Camera Bridge for external components */}
+      <CameraBridge />
     </>
   );
+}
+
+// Bridge component to provide camera data to external components
+function CameraBridge() {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    // Update transparency sorting with current camera
+    if (camera) {
+      transparencySortingFix.updateTransparencySorting(camera);
+    }
+  });
+
+  return null;
 }
 
 // Isolated performance monitoring hook
@@ -920,7 +1112,7 @@ export default function VoxelCanvas({
   const handlePresetApply = useCallback(
     (presetName: keyof typeof CAMERA_PRESETS) => {
       // This will be handled by the CameraController component
-      console.log("Applying preset:", presetName);
+      log.debug("Camera preset apply", presetName);
     },
     [],
   );
@@ -935,38 +1127,59 @@ export default function VoxelCanvas({
           block.position.y,
           block.position.z,
         );
-        console.log("Focusing on block at:", blockPosition);
+        log.debug("Focusing on block", { position: blockPosition });
         // The actual focusing will be handled by the CameraController
       }
     },
     [blockMap],
   );
 
-  // Dynamic performance settings based on block count
+  // Ultra-optimized performance settings with GPU monitoring
   const performanceSettings = useMemo(() => {
-    if (blockCount > 500) {
+    // Check for performance-heavy NUMBER_7 blocks
+    const number7Count = Array.from(blockMap.values()).filter(
+      (block) => block.type === BlockType.NUMBER_7,
+    ).length;
+
+    // Get GPU memory pressure
+    const memoryStats = gpuMemoryManager.getMemoryStats();
+    const memoryPressure = memoryStats.pressure;
+
+    // Advanced performance scaling
+    if (blockCount > 2000 || number7Count > 50 || memoryPressure > 0.8) {
       return {
         shadows: false,
         antialias: false,
-        dpr: [1, 1.5] as [number, number],
-        performance: { min: 0.3, max: 0.8, debounce: 300 },
+        dpr: [0.5, 1] as [number, number],
+        performance: { min: 0.2, max: 0.6, debounce: 500 },
+        powerPreference: "high-performance",
       };
-    } else if (blockCount > 200) {
+    } else if (blockCount > 1000 || number7Count > 20 || memoryPressure > 0.6) {
+      return {
+        shadows: false,
+        antialias: false,
+        dpr: [1, 1.25] as [number, number],
+        performance: { min: 0.3, max: 0.7, debounce: 300 },
+        powerPreference: "high-performance",
+      };
+    } else if (blockCount > 500 || number7Count > 10 || memoryPressure > 0.4) {
       return {
         shadows: true,
         antialias: false,
-        dpr: [1, 2] as [number, number],
-        performance: { min: 0.4, max: 0.9, debounce: 250 },
+        dpr: [1, 1.5] as [number, number],
+        performance: { min: 0.4, max: 0.8, debounce: 200 },
+        powerPreference: "high-performance",
       };
     } else {
       return {
         shadows: true,
         antialias: true,
         dpr: [1, 2] as [number, number],
-        performance: { min: 0.5, max: 1, debounce: 200 },
+        performance: { min: 0.6, max: 1.0, debounce: 100 },
+        powerPreference: "high-performance",
       };
     }
-  }, [blockCount]);
+  }, [blockCount, blockMap]);
 
   return (
     <div className={`w-full h-full relative ${className}`}>
@@ -984,10 +1197,63 @@ export default function VoxelCanvas({
           powerPreference: "high-performance",
           stencil: false,
           depth: true,
-          logarithmicDepthBuffer: blockCount > 800, // For very large worlds
+          logarithmicDepthBuffer: blockCount > 1500,
           preserveDrawingBuffer: false,
           premultipliedAlpha: false,
           failIfMajorPerformanceCaveat: false,
+          precision: "highp",
+        }}
+        onCreated={(state) => {
+          // Debug log initial camera Y positioning
+          // debugBlockYPositioning.logInitialPositioning(
+          //   "main-camera-canvas",
+          //   {
+          //     x: state.camera.position.x,
+          //     y: state.camera.position.y,
+          //     z: state.camera.position.z,
+          //   },
+          //   "Canvas camera initialization",
+          // );
+
+          // Log debug system status on startup
+          if (process.env.NODE_ENV === "development") {
+            Promise.all([
+              import("../../utils/debugLogger"),
+              import("@/utils/devLogger"),
+            ]).then(([debug, { devLog }]) => {
+              // console.group("🔧 Y-Level Debug System Status");
+              // console.log("Environment:", process.env.NODE_ENV);
+              // devLog(
+              //   "Simulant Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_SIMULANT_Y_POSITIONING ||
+              //     "disabled",
+              // );
+              // devLog(
+              //   "Block Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_BLOCK_Y_POSITIONING || "disabled",
+              // );
+              // devLog(
+              //   "Validation Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_Y_LEVEL_VALIDATION || "disabled",
+              // );
+              // devLog(
+              //   "General Debug:",
+              //   process.env.NEXT_PUBLIC_DEBUG_POSITIONING_GENERAL || "disabled",
+              // );
+              // console.groupEnd();
+              // Removed unused debug code
+            });
+          }
+
+          // Initialize GPU memory manager with renderer
+          gpuMemoryManager.initialize(state.gl);
+
+          // Enable GPU optimizations
+          const gl = state.gl.getContext();
+          gl.getExtension("OES_vertex_array_object");
+          gl.getExtension("WEBGL_draw_buffers");
+          gl.getExtension("OES_texture_float");
+          gl.getExtension("OES_texture_float_linear");
         }}
         dpr={performanceSettings.dpr}
         performance={performanceSettings.performance}
@@ -996,17 +1262,24 @@ export default function VoxelCanvas({
         <SceneContent cameraMode={cameraMode} followTarget={followTarget} />
       </Canvas>
 
-      {/* Camera controls UI - hidden since moved into FloatingSidebar; keep for large screens if desired */}
-      <div className="hidden">
-        <CameraControls
-          currentMode={cameraMode}
-          onModeChange={handleCameraModeChange}
-          onPresetApply={handlePresetApply}
-          onFocusOnBlock={handleFocusOnBlock}
-        />
-      </div>
+      {/* Removed hidden camera controls that were moved to FloatingSidebar */}
 
-      {enablePerformanceStats && <PerformanceStats />}
+      {/* Debug Status Indicator */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="fixed bottom-4 left-4 bg-green-500/20 text-green-300 px-3 py-2 rounded-lg border border-green-500/30 text-xs">
+          🔧 Debug Mode Active - Check Console
+        </div>
+      )}
+
+      {/* Unified Debug Panel for development */}
+      {process.env.NODE_ENV === "development" && (
+        <UnifiedDebugPanel
+          enabled={true}
+          position="top-right"
+          cameraMode={cameraMode}
+          followTarget={followTarget}
+        />
+      )}
 
       {/* Simulant Controls are now inside FloatingSidebar */}
 

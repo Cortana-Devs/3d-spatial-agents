@@ -1,3 +1,5 @@
+import { devLog, devWarn } from "@/utils/devLogger";
+
 /**
  * Enhanced animation management hook for Ready Player Me avatars
  * Extends React Three Fiber's useAnimations with external clip support,
@@ -193,7 +195,7 @@ export function useRPMAnimations(
     const action = actions[name]
     if (!action) {
       if (config.enableLogging) {
-        console.warn(`Animation "${name}" not found`)
+        devWarn(`Animation "${name}" not found`)
       }
       return
     }
@@ -249,7 +251,7 @@ export function useRPMAnimations(
     }
     
     if (config.enableLogging) {
-      console.log(`🎬 Playing animation: ${name}`)
+      devLog(`🎬 Playing animation: ${name}`)
     }
   }, [actions, config])
   
@@ -273,7 +275,7 @@ export function useRPMAnimations(
     }
     
     if (config.enableLogging) {
-      console.log(`⏹️ Stopped animation: ${name}`)
+      devLog(`⏹️ Stopped animation: ${name}`)
     }
   }, [actions, config])
   
@@ -294,7 +296,7 @@ export function useRPMAnimations(
     }
     
     if (config.enableLogging) {
-      console.log(`⏸️ Paused animation: ${name}`)
+      devLog(`⏸️ Paused animation: ${name}`)
     }
   }, [actions, config])
   
@@ -315,7 +317,7 @@ export function useRPMAnimations(
     }
     
     if (config.enableLogging) {
-      console.log(`▶️ Resumed animation: ${name}`)
+      devLog(`▶️ Resumed animation: ${name}`)
     }
   }, [actions, config])
   
@@ -330,7 +332,7 @@ export function useRPMAnimations(
     const action = actions[name]
     if (!action) {
       if (config.enableLogging) {
-        console.warn(`Animation "${name}" not found for cross-fade`)
+        devWarn(`Animation "${name}" not found for cross-fade`)
       }
       return
     }
@@ -362,7 +364,7 @@ export function useRPMAnimations(
     })
     
     if (config.enableLogging) {
-      console.log(`🔄 Cross-fading from "${currentName}" to "${name}" over ${duration}s`)
+      devLog(`🔄 Cross-fading from "${currentName}" to "${name}" over ${duration}s`)
     }
   }, [actions, state.currentAnimation, config, playAnimation])
   
@@ -438,7 +440,7 @@ export function useRPMAnimations(
       }
       
       if (config.enableLogging) {
-        console.log(`🏁 Animation finished: ${animationName}`)
+        devLog(`🏁 Animation finished: ${animationName}`)
       }
     }
     
@@ -451,7 +453,7 @@ export function useRPMAnimations(
       }
       
       if (config.enableLogging) {
-        console.log(`🔄 Animation looped: ${animationName}`)
+        devLog(`🔄 Animation looped: ${animationName}`)
       }
     }
     

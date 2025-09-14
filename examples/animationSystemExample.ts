@@ -22,14 +22,14 @@ export async function basicAnimationLoadingExample() {
 
   try {
     // Load a Ready Player Me avatar
-    const avatarGLTF = await animationLoader.loadAvatarGLTF('/models/player_ReadyPlayerMe.glb')
+    const avatarGLTF = await animationLoader.loadAvatarGLTF('/models/player-ready-player-me.glb')
     console.log('✅ Avatar loaded successfully:', avatarGLTF.scene)
 
     // Load external animation clips
     const animationPaths = [
-      '/animation_GLB/M_Walk_001.glb',
-      '/animation_GLB/M_Run_001.glb',
-      '/animation_GLB/F_Standing_Idle_Variations_001.glb'
+      '/animations/M_Walk_001.glb',
+      '/animations/M_Run_001.glb',
+      '/animations/F_Standing_Idle_Variations_001.glb'
     ]
 
     const clips = await animationLoader.loadAnimationClips(animationPaths)
@@ -104,12 +104,12 @@ export async function cacheManagementExample() {
 
   try {
     // Load some assets
-    await customLoader.loadAvatarGLTF('/models/player_ReadyPlayerMe.glb')
+    await customLoader.loadAvatarGLTF('/models/player-ready-player-me.glb')
 
     const animationPaths = [
-      '/animation_GLB/M_Walk_001.glb',
-      '/animation_GLB/M_Run_001.glb',
-      '/animation_GLB/F_Dances_007.glb'
+      '/animations/M_Walk_001.glb',
+      '/animations/M_Run_001.glb',
+      '/animations/F_Dances_007.glb'
     ]
 
     await customLoader.loadAnimationClips(animationPaths)
@@ -124,7 +124,7 @@ export async function cacheManagementExample() {
     console.log(`  Utilization: ${stats.utilizationPercent.toFixed(1)}%`)
 
     // Test cache retrieval
-    const cachedAvatar = customLoader.getCachedAvatar('/models/player_ReadyPlayerMe.glb')
+    const cachedAvatar = customLoader.getCachedAvatar('/models/player-ready-player-me.glb')
     console.log(`✅ Avatar cached: ${cachedAvatar ? 'Yes' : 'No'}`)
 
     const cachedClip = customLoader.getCachedClip('walk_male')
@@ -152,11 +152,11 @@ export function animationUtilitiesExample() {
   console.log('🛠️ Animation Utilities Example')
 
   const filePaths = [
-    '/animation_GLB/M_Walk_001.glb',
-    '/animation_GLB/F_Standing_Idle_Variations_002.glb',
-    '/animation_GLB/M_Run_001.glb',
-    '/animation_GLB/F_Dances_007.glb',
-    '/animation_GLB/M_Talking_Variations_005.glb'
+    '/animations/M_Walk_001.glb',
+    '/animations/F_Standing_Idle_Variations_002.glb',
+    '/animations/M_Run_001.glb',
+    '/animations/F_Dances_007.glb',
+    '/animations/M_Talking_Variations_005.glb'
   ]
 
   console.log('🎯 Processing animation files:')
@@ -204,8 +204,8 @@ export async function errorHandlingExample() {
     // Try to load non-existent animation clips
     console.log('🔍 Attempting to load non-existent animations...')
     const clips = await loader.loadAnimationClips([
-      '/animation_GLB/nonexistent1.glb',
-      '/animation_GLB/nonexistent2.glb'
+      '/animations/nonexistent1.glb',
+      '/animations/nonexistent2.glb'
     ])
     console.log(`✅ Gracefully handled missing files, loaded ${clips.size} clips`)
   } catch (error) {

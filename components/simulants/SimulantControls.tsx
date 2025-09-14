@@ -8,6 +8,9 @@ import { Plus, Minus, Play, Pause, RotateCcw, Users } from "lucide-react";
 import { useWorldStore } from "../../store/worldStore";
 import { SimulantUtils } from "./SimulantManager";
 import { AISimulant } from "../../types";
+import { Y_LEVEL_CONSTANTS } from "../../config/yLevelConstants";
+import { devWarn } from "@/utils/devLogger";
+
 
 // Simulant control panel for testing and management
 interface SimulantControlsProps {
@@ -43,14 +46,15 @@ export default function SimulantControls({
   className = "",
   maxSimulants = 10,
 }: SimulantControlsProps) {
-  const { simulants, addSimulant, removeSimulant, updateSimulant } = useWorldStore();
+  const { simulants, addSimulant, removeSimulant, updateSimulant } =
+    useWorldStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(0);
 
   // Get simulant statistics
   const simulantStats = React.useMemo(() => {
     const stats = { total: 0, active: 0, idle: 0, disconnected: 0 };
-    simulants.forEach(simulant => {
+    simulants.forEach((simulant) => {
       stats.total++;
       stats[simulant.status]++;
     });
@@ -60,22 +64,27 @@ export default function SimulantControls({
   // Create a new test simulant
   const handleAddSimulant = useCallback(() => {
     if (simulants.size >= maxSimulants) {
-      console.warn(`Maximum simulants reached: ${maxSimulants}`);
+      devWarn(`Maximum simulants reached: ${maxSimulants}`);
       return;
     }
 
     const preset = SIMULANT_PRESETS[selectedPreset];
     const simulantId = `simulant-${Date.now()}`;
-    
+
     // Calculate spawn position to avoid overlap
     const spawnPositions = SimulantUtils.calculateSpawnPositions(
       simulants.size + 1,
       0, // Center X
       0, // Center Z
-      3 + simulants.size * 0.5 // Expanding radius
+      3 + simulants.size * 0.5, // Expanding radius
     );
-    
-    const spawnPosition = spawnPositions[simulants.size] || spawnPositions[0] || { x: 0, y: 0, z: 0 };
+
+    const spawnPosition = spawnPositions[simulants.size] ||
+      spawnPositions[0] || {
+        x: 0,
+        y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
+        z: 0,
+      };
 
     const newSimulant: AISimulant = {
       id: simulantId,
@@ -88,7 +97,7 @@ export default function SimulantControls({
     };
 
     addSimulant(newSimulant);
-    
+
     // Cycle to next preset for variety
     setSelectedPreset((prev) => (prev + 1) % SIMULANT_PRESETS.length);
   }, [simulants.size, maxSimulants, selectedPreset, addSimulant]);
@@ -106,7 +115,9 @@ export default function SimulantControls({
 
   // Toggle all simulants between active and idle
   const handleToggleAllSimulants = useCallback(() => {
-    const hasActiveSimulants = Array.from(simulants.values()).some(s => s.status === "active");
+    const hasActiveSimulants = Array.from(simulants.values()).some(
+      (s) => s.status === "active",
+    );
     const newStatus = hasActiveSimulants ? "idle" : "active";
 
     simulants.forEach((simulant) => {
@@ -172,7 +183,9 @@ export default function SimulantControls({
               {/* Statistics */}
               <div className="text-xs text-white/60">
                 <div className="grid grid-cols-2 gap-2">
-                  <div>Total: {simulantStats.total}/{maxSimulants}</div>
+                  <div>
+                    Total: {simulantStats.total}/{maxSimulants}
+                  </div>
                   <div>Active: {simulantStats.active}</div>
                   <div>Idle: {simulantStats.idle}</div>
                   <div>Offline: {simulantStats.disconnected}</div>
@@ -183,8 +196,10 @@ export default function SimulantControls({
 
               {/* Add/Remove Controls */}
               <div className="space-y-2">
-                <div className="text-xs text-white/60 mb-2">Manage Simulants</div>
-                
+                <div className="text-xs text-white/60 mb-2">
+                  Manage Simulants
+                </div>
+
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -196,7 +211,7 @@ export default function SimulantControls({
                     <Plus size={12} className="mr-1" />
                     Add
                   </Button>
-                  
+
                   <Button
                     variant="ghost"
                     size="sm"
@@ -220,7 +235,7 @@ export default function SimulantControls({
               {/* Action Controls */}
               <div className="space-y-2">
                 <div className="text-xs text-white/60 mb-2">Actions</div>
-                
+
                 <Button
                   variant="ghost"
                   size="sm"

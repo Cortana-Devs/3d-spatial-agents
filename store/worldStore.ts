@@ -12,6 +12,16 @@ import {
   CameraMode,
   WorldState as BaseWorldState,
 } from "../types";
+import { PlayerAvatarState } from "../types/playerAvatar";
+import { devWarn } from "@/utils/devLogger";
+import {
+  BLOCK_DEFINITIONS,
+  BlockType as ImportedBlockType,
+} from "../types/blocks";
+import {
+  debugBlockYPositioning,
+  debugSimulantYPositioning,
+} from "../utils/debugLogger";
 
 // Enable MapSet plugin for Immer to work with Map and Set
 enableMapSet();
@@ -31,6 +41,9 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
   // AI Simulant State (keeping Map as specified in design)
   simulants: Map<string, AISimulant>;
 
+  // Player Avatar State
+  playerAvatar: PlayerAvatarState | null;
+
   // Undo/Redo system with circular buffer
   history: {
     states: WorldSnapshot[];
@@ -38,6 +51,9 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
     maxStates: number;
     redoStates: WorldSnapshot[]; // Store states for redo
   };
+
+  // Internal state
+  lastBlockLimitWarning: number;
 
   // Actions
   addBlock: (position: Vector3, type: BlockType, userId: string) => boolean;
@@ -47,6 +63,7 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
     userId: string,
   ) => boolean;
   removeBlock: (position: Vector3, userId: string) => boolean;
+  clearAllBlocks: () => void;
   removeBlockById: (id: string, userId: string) => boolean;
   getBlock: (position: Vector3) => Block | undefined;
   getBlockById: (id: string) => Block | undefined;
@@ -57,6 +74,13 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
   addSimulant: (simulant: AISimulant) => void;
   removeSimulant: (id: string) => void;
   updateSimulant: (id: string, updates: Partial<AISimulant>) => void;
+
+  // Player Avatar management
+  setPlayerAvatar: (avatar: PlayerAvatarState) => void;
+  updateAvatarPosition: (position: Vector3) => void;
+  updateAvatarAnimation: (animation: string) => void;
+  updateAvatarState: (updates: Partial<PlayerAvatarState>) => void;
+  clearPlayerAvatar: () => void;
 
   // Undo/Redo operations
   undo: () => boolean;
@@ -81,8 +105,10 @@ interface WorldState extends Omit<BaseWorldState, "blocks" | "simulants"> {
 // Snapshot for undo/redo system
 interface WorldSnapshot {
   blockMap: Map<string, Block>;
-  blockCount: number;
+  simulants: Map<string, AISimulant>;
+  playerAvatar: PlayerAvatarState | null;
   timestamp: number;
+  blockCount: number;
 }
 
 // (Removed unused WorldAction interface)
@@ -96,7 +122,11 @@ interface WorldStats {
 
 // Utility functions for spatial hash map
 const positionToKey = (position: Vector3): string => {
-  return `${Math.round(position.x)},${Math.round(position.y)},${Math.round(position.z)}`;
+  // Use integer centers for seamless adjacency (no gaps between blocks)
+  const x = Math.round(position.x);
+  const y = Math.round(position.y);
+  const z = Math.round(position.z);
+  return `${x},${y},${z}`;
 };
 
 const keyToPosition = (key: string): Vector3 => {
@@ -104,24 +134,8 @@ const keyToPosition = (key: string): Vector3 => {
   return new Vector3(x, y, z);
 };
 
-// Block definitions with Axiom Design System colors
-const blockDefinitions: Record<
-  BlockType,
-  { color: string; description: string }
-> = {
-  stone: {
-    color: "#666666",
-    description: "Solid foundation material",
-  },
-  leaf: {
-    color: "#4CAF50",
-    description: "Organic living material",
-  },
-  wood: {
-    color: "#8D6E63",
-    description: "Natural building material",
-  },
-};
+// Use imported block definitions
+const blockDefinitions = BLOCK_DEFINITIONS;
 
 // Create the Zustand store with immer for immutable updates
 export const useWorldStore = create<WorldState>()(
@@ -130,11 +144,13 @@ export const useWorldStore = create<WorldState>()(
       // Initial state
       blockMap: new Map<string, Block>(),
       blockCount: 0,
-      worldLimits: { maxBlocks: 1000 },
+      worldLimits: { maxBlocks: 10000 },
+      lastBlockLimitWarning: 0,
       selectedBlockType: BlockType.STONE,
-      selectionMode: SelectionMode.EMPTY, // Start in empty hand mode
+      selectionMode: SelectionMode.PLACE, // Start in place mode for better UX
       activeCamera: "orbit",
       simulants: new Map<string, AISimulant>(),
+      playerAvatar: null,
       lastUpdate: Date.now(),
       syncStatus: "disconnected",
 
@@ -168,8 +184,20 @@ export const useWorldStore = create<WorldState>()(
         const state = get();
 
         // Check block limit
+
         if (state.blockCount >= state.worldLimits.maxBlocks) {
-          console.warn("Block limit reached:", state.worldLimits.maxBlocks);
+          // Only log once per second to prevent spam
+          const now = Date.now();
+          if (
+            !state.lastBlockLimitWarning ||
+            now - state.lastBlockLimitWarning > 1000
+          ) {
+            devWarn(
+              `Block limit reached: ${state.blockCount}/${state.worldLimits.maxBlocks}`,
+            );
+            set({ lastBlockLimitWarning: now });
+          }
+
           return false;
         }
 
@@ -177,18 +205,39 @@ export const useWorldStore = create<WorldState>()(
 
         // Collision detection - check if block already exists at position
         if (state.blockMap.has(key)) {
-          console.warn("Block already exists at position:", position);
+          devWarn("Block already exists at position:", position);
+
           return false;
         }
 
+        // Round position for consistent placement
+        const roundedPosition = {
+          x: Math.round(position.x),
+          y: Math.round(position.y),
+          z: Math.round(position.z),
+        };
+
+        // Debug log the initial Y positioning for the block
+        const blockId = uuidv4();
+        // debugBlockYPositioning.logInitialPositioning(
+        //   blockId,
+        //   roundedPosition,
+        //   type,
+        // );
+
+        // Log Y calculation if there was any adjustment
+        // if (Math.abs(roundedPosition.y - position.y) > 0.001) {
+        //   debugBlockYPositioning.logPlacementCalculation(
+        //     position,
+        //     roundedPosition.y,
+        //     "Y-coordinate rounding to integer grid",
+        //   );
+        // }
+
         // Create the block
         const block: Block = {
-          id: uuidv4(),
-          position: {
-            x: Math.round(position.x),
-            y: Math.round(position.y),
-            z: Math.round(position.z),
-          },
+          id: blockId,
+          position: roundedPosition,
           type,
           color: blockDefinitions[type].color,
           metadata: {
@@ -198,10 +247,19 @@ export const useWorldStore = create<WorldState>()(
           },
         };
 
+        // Log placement validation
+        // debugBlockYPositioning.logPlacementValidation(
+        //   roundedPosition,
+        //   true, // Block creation is successful at this point
+        //   [],
+        // );
+
         set((draft) => {
           // Save current state to history before making changes
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
+            simulants: new Map(draft.simulants),
+            playerAvatar: draft.playerAvatar ? { ...draft.playerAvatar } : null,
             blockCount: draft.blockCount,
             timestamp: Date.now(),
           };
@@ -244,13 +302,51 @@ export const useWorldStore = create<WorldState>()(
         return get().addBlock(position, type, userId);
       },
 
+      clearAllBlocks: (): void => {
+        set((state) => {
+          state.blockMap.clear();
+          state.blockCount = 0;
+          state.lastUpdate = Date.now();
+        });
+      },
+
       removeBlock: (position: Vector3, userId: string): boolean => {
         void userId;
         const state = get();
-        const key = positionToKey(position);
+
+        // Ensure position coordinates are properly rounded to match storage
+        const roundedPosition = new Vector3(
+          Math.round(position.x),
+          Math.round(position.y),
+          Math.round(position.z),
+        );
+
+        // Debug log Y-level snapping for block removal
+        if (Math.abs(roundedPosition.y - position.y) > 0.001) {
+          debugBlockYPositioning.logYSnapping(
+            position.y,
+            roundedPosition.y,
+            1.0, // Integer grid snapping
+          );
+        }
+        const key = positionToKey(roundedPosition);
+
+        // Check cooldown to prevent rapid-fire removal attempts
+        const now = Date.now();
+        const lastRemoval = state.lastUpdate || 0;
+        if (now - lastRemoval < 50) {
+          // 50ms cooldown between removals
+          return false;
+        }
 
         if (!state.blockMap.has(key)) {
-          console.warn("No block found at position:", position);
+          devWarn(
+            `No block found at position: (${position.x}, ${position.y}, ${position.z}), rounded: (${roundedPosition.x}, ${roundedPosition.y}, ${roundedPosition.z}), key: ${key}`,
+          );
+          devWarn(
+            "Available block keys:",
+            Array.from(state.blockMap.keys()).slice(0, 10),
+          );
           return false;
         }
 
@@ -258,6 +354,8 @@ export const useWorldStore = create<WorldState>()(
           // Save current state to history before making changes
           const snapshot: WorldSnapshot = {
             blockMap: new Map(draft.blockMap),
+            simulants: new Map(draft.simulants),
+            playerAvatar: draft.playerAvatar ? { ...draft.playerAvatar } : null,
             blockCount: draft.blockCount,
             timestamp: Date.now(),
           };
@@ -306,13 +404,15 @@ export const useWorldStore = create<WorldState>()(
         }
 
         if (!blockKey) {
-          console.warn("No block found with ID:", id);
+          devWarn("No block found with ID:", id);
           return false;
         }
 
         // Save snapshot before making changes
         const snapshot: WorldSnapshot = {
           blockMap: new Map(state.blockMap),
+          simulants: new Map(state.simulants),
+          playerAvatar: state.playerAvatar ? { ...state.playerAvatar } : null,
           blockCount: state.blockCount,
           timestamp: Date.now(),
         };
@@ -378,9 +478,15 @@ export const useWorldStore = create<WorldState>()(
 
       // Simulant management
       addSimulant: (simulant: AISimulant): void => {
+        // Debug log simulant Y positioning when added to world
+        debugSimulantYPositioning.logSpawnPositioning(
+          simulant.id,
+          simulant.position,
+          "Added to world store",
+        );
+
         set((draft) => {
           draft.simulants.set(simulant.id, simulant);
-          draft.lastUpdate = Date.now();
         });
       },
 
@@ -395,9 +501,66 @@ export const useWorldStore = create<WorldState>()(
         set((draft) => {
           const simulant = draft.simulants.get(id);
           if (simulant) {
+            // Debug log Y position changes
+            if (
+              updates.position &&
+              updates.position.y !== simulant.position.y
+            ) {
+              debugSimulantYPositioning.logYAdjustment(
+                id,
+                simulant.position.y,
+                updates.position.y,
+                "Simulant position update",
+              );
+            }
+
             Object.assign(simulant, updates);
+          }
+        });
+      },
+
+      // Player Avatar management
+      setPlayerAvatar: (avatar: PlayerAvatarState): void => {
+        set((draft) => {
+          draft.playerAvatar = avatar;
+          draft.lastUpdate = Date.now();
+        });
+      },
+
+      updateAvatarPosition: (position: Vector3): void => {
+        set((draft) => {
+          if (draft.playerAvatar) {
+            draft.playerAvatar.position = position.clone();
+            draft.playerAvatar.lastUpdateTime = performance.now();
             draft.lastUpdate = Date.now();
           }
+        });
+      },
+
+      updateAvatarAnimation: (animation: string): void => {
+        set((draft) => {
+          if (draft.playerAvatar) {
+            draft.playerAvatar.currentAnimation = animation;
+            draft.playerAvatar.lastUpdateTime = performance.now();
+            draft.lastUpdate = Date.now();
+          }
+        });
+      },
+
+      updateAvatarState: (updates: Partial<PlayerAvatarState>): void => {
+        set((draft) => {
+          if (draft.playerAvatar) {
+            Object.assign(draft.playerAvatar, updates);
+            draft.playerAvatar.lastUpdateTime = performance.now();
+            draft.lastUpdate = Date.now();
+          }
+        });
+      },
+
+      clearPlayerAvatar: (): void => {
+        set((draft) => {
+          draft.playerAvatar = null;
+          draft.lastUpdate = Date.now();
         });
       },
 
@@ -420,6 +583,10 @@ export const useWorldStore = create<WorldState>()(
             // Save current state to redo stack before undoing
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
+              simulants: new Map(draft.simulants),
+              playerAvatar: draft.playerAvatar
+                ? { ...draft.playerAvatar }
+                : null,
               blockCount: draft.blockCount,
               timestamp: Date.now(),
             };
@@ -450,6 +617,10 @@ export const useWorldStore = create<WorldState>()(
             // Save current state back to undo history
             const currentState: WorldSnapshot = {
               blockMap: new Map(draft.blockMap),
+              simulants: new Map(draft.simulants),
+              playerAvatar: draft.playerAvatar
+                ? { ...draft.playerAvatar }
+                : null,
               blockCount: draft.blockCount,
               timestamp: Date.now(),
             };
@@ -511,7 +682,9 @@ export const useWorldStore = create<WorldState>()(
         });
       },
 
-      updateGridConfig: (updates: Partial<import("../types").GridConfig>): void => {
+      updateGridConfig: (
+        updates: Partial<import("../types").GridConfig>,
+      ): void => {
         set((draft) => {
           Object.assign(draft.gridConfig, updates);
           draft.lastUpdate = Date.now();
@@ -525,6 +698,8 @@ export const useWorldStore = create<WorldState>()(
         // Save snapshot before clearing
         const snapshot: WorldSnapshot = {
           blockMap: new Map(state.blockMap),
+          simulants: new Map(state.simulants),
+          playerAvatar: state.playerAvatar ? { ...state.playerAvatar } : null,
           blockCount: state.blockCount,
           timestamp: Date.now(),
         };
@@ -558,6 +733,7 @@ export const useWorldStore = create<WorldState>()(
           draft.blockMap.clear();
           draft.blockCount = 0;
           draft.simulants.clear();
+          draft.playerAvatar = null;
           draft.lastUpdate = Date.now();
         });
       },
@@ -566,11 +742,17 @@ export const useWorldStore = create<WorldState>()(
         const state = get();
         const blocks = Array.from(state.blockMap.values());
 
-        // Calculate block counts by type
+        // Calculate block counts by type - initialize all block types
         const blocksByType: Record<BlockType, number> = {
-          stone: 0,
-          leaf: 0,
-          wood: 0,
+          [BlockType.STONE]: 0,
+          [BlockType.LEAF]: 0,
+          [BlockType.WOOD]: 0,
+          [BlockType.FROSTED_GLASS]: 0,
+          [BlockType.FLOOR]: 0,
+          [BlockType.NUMBER_4]: 0,
+          [BlockType.NUMBER_5]: 0,
+          [BlockType.NUMBER_6]: 0,
+          [BlockType.NUMBER_7]: 0,
         };
 
         let minX = Infinity,
@@ -620,7 +802,8 @@ export const useWorldStore = create<WorldState>()(
         set(() => ({
           blockMap: new Map<string, Block>(),
           blockCount: 0,
-          worldLimits: { maxBlocks: 1000 },
+          worldLimits: { maxBlocks: 10000 },
+          lastBlockLimitWarning: 0,
           selectedBlockType: BlockType.STONE,
           selectionMode: SelectionMode.EMPTY,
           activeCamera: "orbit",

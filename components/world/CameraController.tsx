@@ -7,6 +7,10 @@ import { Vector3, Euler, MathUtils } from "three";
 import * as THREE from "three";
 import { useWorldStore } from "../../store/worldStore";
 import { CameraMode, CameraState } from "../../types";
+import { useSafeCameraMode } from "../../hooks/useSafeCameraMode";
+import { debugSimulantYPositioning } from "../../utils/debugLogger";
+import { devWarn } from "@/utils/devLogger";
+
 
 // Camera configuration constants
 const CAMERA_CONFIG = {
@@ -120,6 +124,13 @@ export default function CameraController({
   const orbitControlsRef = useRef<React.ElementRef<typeof OrbitControls>>(null);
   const { simulants } = useWorldStore();
 
+  // Use safe camera mode management
+  const safeCameraMode = useSafeCameraMode({
+    enableDoubleClickFocus,
+    preventUnintentionalSwitches: true,
+    minModeChangeDelay: 500,
+  });
+
   // Fly mode controls state
   const flyControls = useRef<FlyControls>({
     keys: {
@@ -159,13 +170,21 @@ export default function CameraController({
   // Store previous mode for smooth transitions
   const previousMode = useRef<CameraMode>(mode);
 
+  // Protection against rapid mode switches
+  const lastModeChange = useRef<number>(0);
+  const modeChangeDelay = 500; // Minimum time between mode changes (ms)
+
   // Keyboard event handlers for fly mode
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (mode !== "fly") return;
 
       // Prevent default behavior for movement keys
-      if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space', 'ShiftLeft'].includes(event.code)) {
+      if (
+        ["KeyW", "KeyS", "KeyA", "KeyD", "Space", "ShiftLeft"].includes(
+          event.code,
+        )
+      ) {
         event.preventDefault();
       }
 
@@ -238,7 +257,7 @@ export default function CameraController({
   const handlePointerLockChange = useCallback(() => {
     flyControls.current.isPointerLocked =
       document.pointerLockElement === gl.domElement;
-    
+
     // Reset mouse movement when pointer lock changes
     flyControls.current.mouseMovement.x = 0;
     flyControls.current.mouseMovement.y = 0;
@@ -250,18 +269,6 @@ export default function CameraController({
     }
   }, [mode, gl.domElement]);
 
-  // Double-click handler for block focusing
-  const handleDoubleClick = useCallback(
-    (event: MouseEvent) => {
-      if (!enableDoubleClickFocus) return;
-
-      // Implementation for double-click block focusing will be added
-      // This would involve raycasting to find the clicked block and focusing on it
-      console.log("Double-click focus not yet implemented", event);
-    },
-    [enableDoubleClickFocus],
-  );
-
   // Camera transition function
   const startTransition = useCallback(
     (
@@ -271,6 +278,27 @@ export default function CameraController({
       duration: number = CAMERA_CONFIG.cinematic.transitionDuration,
       easing: keyof typeof easingFunctions = "easeInOutCubic",
     ) => {
+      // Debug log camera transition start
+      debugSimulantYPositioning.logDefaultPositioning(
+        "main-camera",
+        {
+          x: camera.position.x,
+          y: camera.position.y,
+          z: camera.position.z,
+        },
+        `Camera transition starting from current position`,
+      );
+
+      debugSimulantYPositioning.logDefaultPositioning(
+        "main-camera",
+        {
+          x: endPosition.x,
+          y: endPosition.y,
+          z: endPosition.z,
+        },
+        `Camera transition targeting end position`,
+      );
+
       transition.current = {
         isTransitioning: true,
         startTime: Date.now(),
@@ -288,9 +316,50 @@ export default function CameraController({
     [camera],
   );
 
+  // Double-click handler for block focusing - only trigger in orbit mode
+  const handleDoubleClick = useCallback(
+    (event: MouseEvent) => {
+      // Use safe camera mode handler
+      if (!safeCameraMode.handleDoubleClickFocus(event)) return;
+
+      // Only trigger if we're not already in a transition
+      if (transition.current.isTransitioning || safeCameraMode.isTransitioning)
+        return;
+
+      // Basic implementation to focus on clicked area
+      const rect = gl.domElement.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      // Create a basic focus position based on click location
+      const focusPosition = new Vector3(x * 5, 0, y * 5);
+
+      // Only do a smooth transition within orbit mode, don't switch modes
+      if (orbitControlsRef.current && mode === "orbit") {
+        orbitControlsRef.current.target.copy(focusPosition);
+        orbitControlsRef.current.update();
+      }
+    },
+    [safeCameraMode, gl.domElement, mode],
+  );
+
   // Mode change handler with smooth transitions
   useEffect(() => {
+    const now = Date.now();
+
+    // Prevent rapid mode switches that might cause unwanted cinematic mode
+    if (
+      previousMode.current !== mode &&
+      now - lastModeChange.current < modeChangeDelay
+    ) {
+      devWarn(
+        `Camera mode change blocked: too soon after last change (${now - lastModeChange.current}ms)`,
+      );
+      return;
+    }
+
     if (previousMode.current !== mode) {
+      lastModeChange.current = now;
       // Save current camera state
       cameraState.current = {
         position: camera.position.clone(),
@@ -319,12 +388,32 @@ export default function CameraController({
           if (orbitControlsRef.current) {
             orbitControlsRef.current.enabled = false;
           }
-          // Start cinematic transition to overview position
-          startTransition(
-            CAMERA_PRESETS.overview.position,
-            CAMERA_PRESETS.overview.target,
-            CAMERA_PRESETS.overview.fov,
-          );
+          // Only start cinematic transition if explicitly switched to cinematic mode
+          // and not already transitioning, and it's a safe mode change
+          if (
+            !transition.current.isTransitioning &&
+            !safeCameraMode.isTransitioning
+          ) {
+            void import("@/utils/devLogger").then(({ devLog }) =>
+              devLog("Starting cinematic mode transition"),
+            );
+            // Debug log camera preset positioning
+            debugSimulantYPositioning.logDefaultPositioning(
+              "main-camera",
+              {
+                x: CAMERA_PRESETS.overview.position.x,
+                y: CAMERA_PRESETS.overview.position.y,
+                z: CAMERA_PRESETS.overview.position.z,
+              },
+              "Camera switching to cinematic mode (overview preset)",
+            );
+
+            startTransition(
+              CAMERA_PRESETS.overview.position,
+              CAMERA_PRESETS.overview.target,
+              CAMERA_PRESETS.overview.fov,
+            );
+          }
           break;
 
         case "follow-simulant":
@@ -397,7 +486,19 @@ export default function CameraController({
       // Apply movement with frame rate independence
       const movement = controls.velocity
         .clone()
-        .multiplyScalar(Math.min(delta, 1/30) * config.moveSpeed); // Cap delta to prevent large jumps
+        .multiplyScalar(Math.min(delta, 1 / 30) * config.moveSpeed); // Cap delta to prevent large jumps
+
+      // Debug log Y movement in fly mode
+      if (Math.abs(movement.y) > 0.01) {
+        const oldY = camera.position.y;
+        debugSimulantYPositioning.logYAdjustment(
+          "main-camera",
+          oldY,
+          oldY + movement.y,
+          `Fly mode Y movement (velocity: ${controls.velocity.y.toFixed(3)})`,
+        );
+      }
+
       camera.position.add(movement);
     },
     [camera],
@@ -421,8 +522,30 @@ export default function CameraController({
     const offset = new Vector3(0, config.followHeight, -config.followDistance);
     const desiredPosition = simulantPos.clone().add(offset);
 
+    // Debug log simulant following Y positioning
+    debugSimulantYPositioning.logDefaultPositioning(
+      "main-camera",
+      {
+        x: desiredPosition.x,
+        y: desiredPosition.y,
+        z: desiredPosition.z,
+      },
+      `Following simulant ${target} (height: ${config.followHeight}, distance: ${config.followDistance})`,
+    );
+
     // Smooth camera movement
+    const oldY = camera.position.y;
     camera.position.lerp(desiredPosition, config.smoothness);
+
+    // Debug log Y adjustment during simulant following
+    if (Math.abs(camera.position.y - oldY) > 0.01) {
+      debugSimulantYPositioning.logYAdjustment(
+        "main-camera",
+        oldY,
+        camera.position.y,
+        "Camera following simulant Y adjustment",
+      );
+    }
 
     // Look at simulant with slight look-ahead
     const lookTarget = simulantPos.clone();
@@ -440,8 +563,17 @@ export default function CameraController({
 
     // Mouse events for fly mode
     document.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("click", requestPointerLock);
-    canvas.addEventListener("dblclick", handleDoubleClick);
+    // Only add click handler for fly mode
+    if (mode === "fly") {
+      canvas.addEventListener("click", requestPointerLock);
+    }
+
+    // Only add double-click handler in orbit mode to prevent accidental mode switches
+    if (mode === "orbit" && enableDoubleClickFocus) {
+      canvas.addEventListener("dblclick", handleDoubleClick, {
+        passive: false,
+      });
+    }
 
     // Pointer lock events
     document.addEventListener("pointerlockchange", handlePointerLockChange);
@@ -465,6 +597,9 @@ export default function CameraController({
     requestPointerLock,
     handleDoubleClick,
     handlePointerLockChange,
+    mode,
+    enableDoubleClickFocus,
+    safeCameraMode,
   ]);
 
   // Main camera update loop
@@ -479,11 +614,22 @@ export default function CameraController({
         easingFunctions[transition.current.easing](progress);
 
       // Interpolate position
+      const oldY = camera.position.y;
       camera.position.lerpVectors(
         transition.current.startPosition,
         transition.current.endPosition,
         easedProgress,
       );
+
+      // Debug log Y position changes during camera transitions
+      if (Math.abs(camera.position.y - oldY) > 0.1) {
+        debugSimulantYPositioning.logYAdjustment(
+          "main-camera",
+          oldY,
+          camera.position.y,
+          `Camera transition interpolation (progress: ${(progress * 100).toFixed(1)}%)`,
+        );
+      }
 
       // Interpolate target (for orbit controls)
       if (orbitControlsRef.current) {

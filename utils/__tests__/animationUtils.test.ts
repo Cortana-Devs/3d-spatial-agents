@@ -13,10 +13,10 @@ import {
 describe('animationUtils', () => {
   describe('extractClipName', () => {
     it('should extract semantic names from Mixamo file paths', () => {
-      expect(extractClipName('/animation_GLB/M_Walk_001.glb')).toBe('walk_male')
-      expect(extractClipName('/animation_GLB/F_Standing_Idle_Variations_001.glb')).toBe('idle_female_1')
-      expect(extractClipName('/animation_GLB/M_Run_001.glb')).toBe('run_male')
-      expect(extractClipName('/animation_GLB/F_Dances_007.glb')).toBe('dance_female')
+      expect(extractClipName('/animations/M_Walk_001.glb')).toBe('walk_male')
+      expect(extractClipName('/animations/F_Standing_Idle_Variations_001.glb')).toBe('idle_female_1')
+      expect(extractClipName('/animations/M_Run_001.glb')).toBe('run_male')
+      expect(extractClipName('/animations/F_Dances_007.glb')).toBe('dance_female')
     })
 
     it('should handle unknown file names', () => {
@@ -204,7 +204,7 @@ describe('animationUtils', () => {
 
   describe('createCacheKey', () => {
     it('should create valid cache keys from paths', () => {
-      expect(createCacheKey('/animation_GLB/M_Walk_001.glb')).toBe('_animation_GLB_M_Walk_001_glb')
+      expect(createCacheKey('/animations/M_Walk_001.glb')).toBe('_animation_GLB_M_Walk_001_glb')
       expect(createCacheKey('/models/avatar.glb')).toBe('_models_avatar_glb')
     })
 
@@ -214,7 +214,7 @@ describe('animationUtils', () => {
     })
 
     it('should be consistent', () => {
-      const path = '/animation_GLB/test.glb'
+      const path = '/animations/test.glb'
       expect(createCacheKey(path)).toBe(createCacheKey(path))
     })
   })

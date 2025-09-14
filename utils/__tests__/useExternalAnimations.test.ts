@@ -20,7 +20,7 @@ vi.mock('../animationUtils', () => ({
     return filename.toLowerCase()
   }),
   getDefaultAnimationPaths: vi.fn(() => [
-    '/animation_GLB/M_Walk_001.glb'
+    '/animations/M_Walk_001.glb'
   ])
 }))
 

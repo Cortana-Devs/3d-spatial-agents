@@ -24,15 +24,15 @@ export function BasicAnimationControllerExample() {
   }
 
   // Load avatar and external animations
-  const avatarGLTF = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const avatarGLTF = useGLTF('/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations([
-    '/animation_GLB/F_Standing_Idle_Variations_001.glb',
-    '/animation_GLB/M_Walk_001.glb',
-    '/animation_GLB/M_Run_001.glb',
-    '/animation_GLB/M_Walk_Jump_002.glb',
-    '/animation_GLB/M_Standing_Expressions_013.glb',
-    '/animation_GLB/M_Talking_Variations_005.glb',
-    '/animation_GLB/F_Dances_007.glb'
+    '/animations/F_Standing_Idle_Variations_001.glb',
+    '/animations/M_Walk_001.glb',
+    '/animations/M_Run_001.glb',
+    '/animations/M_Walk_Jump_002.glb',
+    '/animations/M_Standing_Expressions_013.glb',
+    '/animations/M_Talking_Variations_005.glb',
+    '/animations/F_Dances_007.glb'
   ])
 
   // Initialize animation manager
@@ -105,20 +105,20 @@ export function AdvancedAnimationControllerExample() {
     geminiSessionId: 'advanced-session'
   }
 
-  const avatarGLTF = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const avatarGLTF = useGLTF('/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations([
-    '/animation_GLB/F_Standing_Idle_Variations_001.glb',
-    '/animation_GLB/F_Standing_Idle_Variations_002.glb',
-    '/animation_GLB/F_Standing_Idle_Variations_006.glb',
-    '/animation_GLB/M_Walk_001.glb',
-    '/animation_GLB/M_Run_001.glb',
-    '/animation_GLB/M_Walk_Jump_002.glb',
-    '/animation_GLB/M_Crouch_Walk_003.glb',
-    '/animation_GLB/M_Standing_Expressions_013.glb',
-    '/animation_GLB/M_Talking_Variations_005.glb',
-    '/animation_GLB/M_Walk_Backwards_001.glb',
-    '/animation_GLB/F_Dances_007.glb',
-    '/animation_GLB/Masculine_TPose.glb'
+    '/animations/F_Standing_Idle_Variations_001.glb',
+    '/animations/F_Standing_Idle_Variations_002.glb',
+    '/animations/F_Standing_Idle_Variations_006.glb',
+    '/animations/M_Walk_001.glb',
+    '/animations/M_Run_001.glb',
+    '/animations/M_Walk_Jump_002.glb',
+    '/animations/M_Crouch_Walk_003.glb',
+    '/animations/M_Standing_Expressions_013.glb',
+    '/animations/M_Talking_Variations_005.glb',
+    '/animations/M_Walk_Backwards_001.glb',
+    '/animations/F_Dances_007.glb',
+    '/animations/Masculine_TPose.glb'
   ])
 
   const animationManager = useRPMAnimations(avatarGLTF, externalClips, {
@@ -292,13 +292,13 @@ export function PerformanceOptimizedExample() {
 
   // Load only essential animations for performance
   const essentialAnimations = [
-    '/animation_GLB/F_Standing_Idle_Variations_001.glb', // Idle
-    '/animation_GLB/M_Walk_001.glb', // Walk
-    '/animation_GLB/M_Run_001.glb', // Run
-    '/animation_GLB/Masculine_TPose.glb' // Fallback
+    '/animations/F_Standing_Idle_Variations_001.glb', // Idle
+    '/animations/M_Walk_001.glb', // Walk
+    '/animations/M_Run_001.glb', // Run
+    '/animations/Masculine_TPose.glb' // Fallback
   ]
 
-  const avatarGLTF = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const avatarGLTF = useGLTF('/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations(essentialAnimations)
 
   const animationManager = useRPMAnimations(avatarGLTF, externalClips, {

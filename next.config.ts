@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
 
+  // Strip console.* in production
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production" ? { exclude: ["error"] } : false,
+  },
+
   // Optimize for 3D rendering and performance
   experimental: {
     optimizePackageImports: [

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Suspense } from "react";
-import ModularVoxelCanvas from "../../components/world/ModularVoxelCanvas";
+import ModularVoxelCanvas from "@components/world/ModularVoxelCanvas";
 import { useWorldStore } from "../../store/worldStore";
 import { Vector3 } from "three";
 import { BlockType } from "../../types";

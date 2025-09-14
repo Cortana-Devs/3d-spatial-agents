@@ -1,3 +1,5 @@
+import { devLog } from "@/utils/devLogger";
+
 /**
  * Performance Optimization Hook
  * Integrates LOD system, memory management, culling, and performance monitoring
@@ -343,7 +345,7 @@ export function usePerformanceOptimization(
     }
     
     if (config.enableLogging) {
-      console.log('🚀 Manual optimization performed')
+      devLog('🚀 Manual optimization performed')
     }
   }, [simulants, config.enableLogging])
 
@@ -357,7 +359,7 @@ export function usePerformanceOptimization(
     }
     
     if (config.enableLogging) {
-      console.log('🗑️ Forced garbage collection')
+      devLog('🗑️ Forced garbage collection')
     }
   }, [clearAnimationCache, config.enableLogging])
 

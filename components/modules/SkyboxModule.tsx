@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useRef, useCallback, useMemo, useState } from 'react';
-import { useThree, useFrame } from '@react-three/fiber';
-import { CubeTextureLoader, Scene } from 'three';
-import { useModuleSystem } from './ModuleManager';
+import React, { useRef, useCallback, useMemo, useState } from "react";
+import { useThree, useFrame } from "@react-three/fiber";
+import { CubeTextureLoader, Scene, CubeTexture, Texture } from "three";
+import { useModuleSystem } from "./ModuleManager";
+import type { ModuleState } from "./ModuleManager";
+import { devWarn, devError } from "@/utils/devLogger";
+
 
 interface SkyboxModuleProps {
   skyboxPath?: string;
@@ -22,16 +25,16 @@ interface SkyboxState {
 }
 
 const DEFAULT_SKYBOX_FACES = [
-  '1.jpg', // positive x
-  '2.jpg', // negative x
-  '3.jpg', // positive y
-  '4.jpg', // negative y
-  '5.jpg', // positive z
-  '6.jpg', // negative z
+  "1.jpg", // positive x
+  "2.jpg", // negative x
+  "3.jpg", // positive y
+  "4.jpg", // negative y
+  "5.jpg", // positive z
+  "6.jpg", // negative z
 ];
 
 export function SkyboxModule({
-  skyboxPath = '/skyboxes/default/',
+  skyboxPath = "/skyboxes/default/",
   enableDynamicSkybox = false,
   transitionDuration = 2000,
   enableTimeOfDay = false,
@@ -49,15 +52,15 @@ export function SkyboxModule({
   });
 
   // Performance-optimized refs
-  const cubeTextureRef = useRef<any>(null);
+  const cubeTextureRef = useRef<CubeTexture | null>(null);
   const loaderRef = useRef<CubeTextureLoader>(new CubeTextureLoader());
   const lastUpdateRef = useRef<number>(0);
   const transitionStartRef = useRef<number>(0);
-  const previousTextureRef = useRef<any>(null);
+  const previousTextureRef = useRef<Texture | null>(null);
 
   // Register this module with performance isolation
   const { requestFrame, setEnabled, getStats } = useModuleSystem({
-    id: 'skybox-system',
+    id: "skybox-system",
     priority: 2, // Low priority - skybox updates are not time-critical
     maxFrameTime: 2, // Very low frame time budget for skybox
     targetFPS: updateFrequency, // Very low update frequency
@@ -65,93 +68,101 @@ export function SkyboxModule({
   });
 
   // Load skybox texture with progress tracking
-  const loadSkyboxTexture = useCallback(async (path: string): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      setSkyboxState(prev => ({
-        ...prev,
-        isLoading: true,
-        error: null,
-        loadProgress: 0
-      }));
+  const loadSkyboxTexture = useCallback(
+    async (path: string): Promise<CubeTexture> => {
+      return new Promise((resolve, reject) => {
+        setSkyboxState((prev) => ({
+          ...prev,
+          isLoading: true,
+          error: null,
+          loadProgress: 0,
+        }));
 
-      const faces = DEFAULT_SKYBOX_FACES.map(face => path + face);
+        const faces = DEFAULT_SKYBOX_FACES.map((face) => path + face);
 
-      // Create loader with progress tracking
-      const loader = new CubeTextureLoader();
+        // Create loader with progress tracking
+        const loader = new CubeTextureLoader();
 
-      // Setup progress tracking
-      let loadedCount = 0;
-      const totalCount = faces.length;
+        // Setup progress tracking
+        let loadedCount = 0;
+        const totalCount = faces.length;
 
-      const texture = loader.load(
-        faces,
-        // onLoad
-        (cubeTexture) => {
-          setSkyboxState(prev => ({
-            ...prev,
-            isLoaded: true,
-            isLoading: false,
-            loadProgress: 100,
-            currentSkybox: path
-          }));
-          resolve(cubeTexture);
-        },
-        // onProgress
-        (progress) => {
-          loadedCount++;
-          const progressPercent = (loadedCount / totalCount) * 100;
-          setSkyboxState(prev => ({
-            ...prev,
-            loadProgress: progressPercent
-          }));
-        },
-        // onError
-        (error) => {
-          console.error('[SkyboxModule] Failed to load skybox:', error);
-          setSkyboxState(prev => ({
-            ...prev,
-            isLoading: false,
-            error: `Failed to load skybox: ${error}`,
-            loadProgress: 0
-          }));
-          reject(error);
-        }
-      );
-    });
-  }, []);
+        const texture = loader.load(
+          faces,
+          // onLoad
+          (cubeTexture) => {
+            setSkyboxState((prev) => ({
+              ...prev,
+              isLoaded: true,
+              isLoading: false,
+              loadProgress: 100,
+              currentSkybox: path,
+            }));
+            resolve(cubeTexture);
+          },
+          // onProgress
+          (progress) => {
+            loadedCount++;
+            const progressPercent = (loadedCount / totalCount) * 100;
+            setSkyboxState((prev) => ({
+              ...prev,
+              loadProgress: progressPercent,
+            }));
+          },
+          // onError
+          (error) => {
+            devError("[SkyboxModule] Failed to load skybox:", error);
+            setSkyboxState((prev) => ({
+              ...prev,
+              isLoading: false,
+              error: `Failed to load skybox: ${error}`,
+              loadProgress: 0,
+            }));
+            reject(error);
+          },
+        );
+      });
+    },
+    [],
+  );
 
   // Apply skybox to scene
-  const applySkyboxToScene = useCallback((texture: any) => {
-    if (!texture || !scene) return;
+  const applySkyboxToScene = useCallback(
+    (texture: CubeTexture) => {
+      if (!texture || !scene) return;
 
-    try {
-      // Store previous texture for cleanup
-      if (scene.background && scene.background !== texture) {
-        previousTextureRef.current = scene.background;
+      try {
+        // Store previous texture for cleanup
+        if (scene.background && scene.background !== texture) {
+          previousTextureRef.current = scene.background as Texture;
+        }
+
+        // Apply new skybox
+        scene.background = texture;
+        cubeTextureRef.current = texture;
+
+        // Cleanup previous texture after a delay to allow for transitions
+        if (previousTextureRef.current && enableDynamicSkybox) {
+          setTimeout(() => {
+            if (
+              previousTextureRef.current &&
+              previousTextureRef.current.dispose
+            ) {
+              previousTextureRef.current.dispose();
+              previousTextureRef.current = null;
+            }
+          }, transitionDuration);
+        }
+      } catch (error) {
+        devError("[SkyboxModule] Error applying skybox to scene:", error);
+        setSkyboxState((prev) => ({
+          ...prev,
+          error: `Error applying skybox: ${error}`,
+        }));
       }
-
-      // Apply new skybox
-      scene.background = texture;
-      cubeTextureRef.current = texture;
-
-      // Cleanup previous texture after a delay to allow for transitions
-      if (previousTextureRef.current && enableDynamicSkybox) {
-        setTimeout(() => {
-          if (previousTextureRef.current && previousTextureRef.current.dispose) {
-            previousTextureRef.current.dispose();
-            previousTextureRef.current = null;
-          }
-        }, transitionDuration);
-      }
-
-    } catch (error) {
-      console.error('[SkyboxModule] Error applying skybox to scene:', error);
-      setSkyboxState(prev => ({
-        ...prev,
-        error: `Error applying skybox: ${error}`
-      }));
-    }
-  }, [scene, enableDynamicSkybox, transitionDuration]);
+    },
+    [scene, enableDynamicSkybox, transitionDuration],
+  );
 
   // Initialize skybox loading
   React.useEffect(() => {
@@ -164,7 +175,7 @@ export function SkyboxModule({
           applySkyboxToScene(texture);
         }
       } catch (error) {
-        console.error('[SkyboxModule] Skybox initialization failed:', error);
+        devError("[SkyboxModule] Skybox initialization failed:", error);
       }
     };
 
@@ -185,40 +196,57 @@ export function SkyboxModule({
     let timeBasedSkybox = skyboxPath;
 
     if (hours >= 6 && hours < 12) {
-      timeBasedSkybox = '/skyboxes/morning/';
+      timeBasedSkybox = "/skyboxes/morning/";
     } else if (hours >= 12 && hours < 18) {
-      timeBasedSkybox = '/skyboxes/day/';
+      timeBasedSkybox = "/skyboxes/day/";
     } else if (hours >= 18 && hours < 22) {
-      timeBasedSkybox = '/skyboxes/evening/';
+      timeBasedSkybox = "/skyboxes/evening/";
     } else {
-      timeBasedSkybox = '/skyboxes/night/';
+      timeBasedSkybox = "/skyboxes/night/";
     }
 
     // Only switch if different from current
-    if (timeBasedSkybox !== skyboxState.currentSkybox && !skyboxState.isLoading) {
+    if (
+      timeBasedSkybox !== skyboxState.currentSkybox &&
+      !skyboxState.isLoading
+    ) {
       loadSkyboxTexture(timeBasedSkybox)
         .then(applySkyboxToScene)
-        .catch(error => console.error('[SkyboxModule] Time of day skybox switch failed:', error));
+        .catch((error) =>
+          devError(
+            "[SkyboxModule] Time of day skybox switch failed:",
+            error,
+          ),
+        );
     }
-  }, [enableTimeOfDay, skyboxPath, skyboxState.currentSkybox, skyboxState.isLoading, loadSkyboxTexture, applySkyboxToScene]);
+  }, [
+    enableTimeOfDay,
+    skyboxPath,
+    skyboxState.currentSkybox,
+    skyboxState.isLoading,
+    loadSkyboxTexture,
+    applySkyboxToScene,
+  ]);
 
   // Main skybox update loop (very infrequent)
-  const skyboxUpdateLoop = useCallback((deltaTime: number) => {
-    const currentTime = performance.now();
-    const timeSinceLastUpdate = currentTime - lastUpdateRef.current;
-    const updateInterval = 1000 / updateFrequency;
+  const skyboxUpdateLoop = useCallback(
+    (deltaTime: number) => {
+      const currentTime = performance.now();
+      const timeSinceLastUpdate = currentTime - lastUpdateRef.current;
+      const updateInterval = 1000 / updateFrequency;
 
-    // Only update at the specified frequency (very low for skybox)
-    if (timeSinceLastUpdate < updateInterval) {
-      return;
-    }
+      // Only update at the specified frequency (very low for skybox)
+      if (timeSinceLastUpdate < updateInterval) {
+        return;
+      }
 
-    lastUpdateRef.current = currentTime;
+      lastUpdateRef.current = currentTime;
 
-    // Perform time of day updates
-    timeOfDayUpdate();
-
-  }, [updateFrequency, timeOfDayUpdate]);
+      // Perform time of day updates
+      timeOfDayUpdate();
+    },
+    [updateFrequency, timeOfDayUpdate],
+  );
 
   // Register update loop with module system
   React.useEffect(() => {
@@ -228,17 +256,18 @@ export function SkyboxModule({
   // Performance monitoring
   const stats = getStats();
   React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && stats) {
+    if (process.env.NODE_ENV === "development" && stats) {
       // Skybox should have very minimal performance impact
       if (stats.averageFrameTime > 1) {
-        console.warn('[SkyboxModule] Unexpected performance impact detected');
+        console.warn("[SkyboxModule] Unexpected performance impact detected");
       }
     }
   }, [stats]);
 
   // Enable/disable based on whether skybox features are needed
   React.useEffect(() => {
-    const shouldEnable = enableDynamicSkybox || enableTimeOfDay || !skyboxState.isLoaded;
+    const shouldEnable =
+      enableDynamicSkybox || enableTimeOfDay || !skyboxState.isLoaded;
     setEnabled(shouldEnable);
   }, [enableDynamicSkybox, enableTimeOfDay, skyboxState.isLoaded, setEnabled]);
 
@@ -260,38 +289,37 @@ export function SkyboxModule({
   }, [scene]);
 
   // Export skybox control functions for external use
-  const skyboxControls = useMemo(() => ({
-    switchSkybox: async (newPath: string) => {
-      if (skyboxState.isLoading) {
-        console.warn('[SkyboxModule] Skybox switch ignored - already loading');
-        return false;
-      }
+  const skyboxControls = useMemo(
+    () => ({
+      switchSkybox: async (newPath: string) => {
+        if (skyboxState.isLoading) {
+          devWarn(
+            "[SkyboxModule] Skybox switch ignored - already loading",
+          );
+          return false;
+        }
 
-      try {
-        const texture = await loadSkyboxTexture(newPath);
-        applySkyboxToScene(texture);
-        return true;
-      } catch (error) {
-        console.error('[SkyboxModule] Manual skybox switch failed:', error);
-        return false;
-      }
-    },
-    getCurrentSkybox: () => skyboxState.currentSkybox,
-    isLoading: () => skyboxState.isLoading,
-    getLoadProgress: () => skyboxState.loadProgress,
-  }), [skyboxState, loadSkyboxTexture, applySkyboxToScene]);
-
-  // Expose controls to parent components via ref
-  React.useImperativeHandle(React.createRef(), () => skyboxControls, [skyboxControls]);
+        try {
+          const texture = await loadSkyboxTexture(newPath);
+          applySkyboxToScene(texture);
+          return true;
+        } catch (error) {
+          devError("[SkyboxModule] Manual skybox switch failed:", error);
+          return false;
+        }
+      },
+      getCurrentSkybox: () => skyboxState.currentSkybox,
+      isLoading: () => skyboxState.isLoading,
+      getLoadProgress: () => skyboxState.loadProgress,
+    }),
+    [skyboxState, loadSkyboxTexture, applySkyboxToScene],
+  );
 
   return (
     <group name="skybox-module">
       {/* Debug visualization */}
-      {process.env.NODE_ENV === 'development' && (
-        <SkyboxDebugOverlay
-          state={skyboxState}
-          stats={stats}
-        />
+      {process.env.NODE_ENV === "development" && (
+        <SkyboxDebugOverlay state={skyboxState} stats={stats} />
       )}
 
       {/* Loading indicator */}
@@ -308,9 +336,9 @@ function SkyboxDebugOverlay({
   stats,
 }: {
   state: SkyboxState;
-  stats: any;
+  stats: ModuleState | null;
 }) {
-  if (process.env.NODE_ENV !== 'development') return null;
+  if (process.env.NODE_ENV !== "development") return null;
 
   return (
     <group name="skybox-debug">
@@ -319,16 +347,23 @@ function SkyboxDebugOverlay({
         <sphereGeometry args={[0.2]} />
         <meshBasicMaterial
           color={
-            state.error ? '#ff0000' :
-            state.isLoading ? '#ffaa00' :
-            state.isLoaded ? '#00ff00' : '#666666'
+            state.error
+              ? "#ff0000"
+              : state.isLoading
+                ? "#ffaa00"
+                : state.isLoaded
+                  ? "#00ff00"
+                  : "#666666"
           }
         />
       </mesh>
 
       {/* Loading progress indicator */}
       {state.isLoading && state.loadProgress > 0 && (
-        <mesh position={[-5, 3.5, 0]} scale={[state.loadProgress / 100, 0.1, 0.1]}>
+        <mesh
+          position={[-5, 3.5, 0]}
+          scale={[state.loadProgress / 100, 0.1, 0.1]}
+        >
           <boxGeometry args={[1, 1, 1]} />
           <meshBasicMaterial color="#00aaff" />
         </mesh>
@@ -347,7 +382,7 @@ function SkyboxLoadingIndicator({ progress }: { progress: number }) {
         <meshBasicMaterial
           color="#ffffff"
           transparent
-          opacity={0.3 + (Math.sin(Date.now() * 0.005) * 0.2)}
+          opacity={0.3 + Math.sin(Date.now() * 0.005) * 0.2}
         />
       </mesh>
     </group>

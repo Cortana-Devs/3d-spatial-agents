@@ -1,14 +1,18 @@
 "use client";
 
 // Module System Core
-export { ModuleManager, useModuleSystem, ModulePerformanceMonitor } from './ModuleManager';
-export type { ModuleConfig, ModuleState, ModuleContext } from './ModuleManager';
+export {
+  ModuleManager,
+  useModuleSystem,
+  ModulePerformanceMonitor,
+} from "./ModuleManager";
+export type { ModuleConfig, ModuleState, ModuleContext } from "./ModuleManager";
 
 // Individual Modules
-export { default as AnimationModule } from './AnimationModule';
-export { default as BlockPlacementModule } from './BlockPlacementModule';
-export { default as PlayerControlModule } from './PlayerControlModule';
-export { default as SkyboxModule } from './SkyboxModule';
+export { default as AnimationModule } from "./AnimationModule";
+export { default as BlockPlacementModule } from "./BlockPlacementModule";
+export { default as PlayerControlModule } from "./PlayerControlModule";
+export { default as SkyboxModule } from "./SkyboxModule";
 
 // Module Types
 export interface ModuleSystemProps {
@@ -24,7 +28,7 @@ export const PERFORMANCE_PRESETS = {
   HIGH_PERFORMANCE: {
     animations: {
       maxSimulants: 30,
-      animationQuality: 'high' as const,
+      animationQuality: "high" as const,
       maxAnimationsPerFrame: 8,
     },
     blockPlacement: {
@@ -40,7 +44,7 @@ export const PERFORMANCE_PRESETS = {
   BALANCED: {
     animations: {
       maxSimulants: 20,
-      animationQuality: 'medium' as const,
+      animationQuality: "medium" as const,
       maxAnimationsPerFrame: 5,
     },
     blockPlacement: {
@@ -56,7 +60,7 @@ export const PERFORMANCE_PRESETS = {
   LOW_END: {
     animations: {
       maxSimulants: 10,
-      animationQuality: 'low' as const,
+      animationQuality: "low" as const,
       maxAnimationsPerFrame: 3,
     },
     blockPlacement: {
@@ -75,37 +79,47 @@ export const PERFORMANCE_PRESETS = {
 export const ModuleUtils = {
   // Detect performance tier based on device capabilities
   detectPerformanceTier: (): keyof typeof PERFORMANCE_PRESETS => {
-    if (typeof window === 'undefined') return 'BALANCED';
+    if (typeof window === "undefined") return "BALANCED";
 
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
 
-    if (!gl) return 'LOW_END';
+    if (!gl) return "LOW_END";
 
     // Basic GPU detection
-    const renderer = gl.getParameter(gl.RENDERER) || '';
-    const vendor = gl.getParameter(gl.VENDOR) || '';
+    const renderer = gl.getParameter(gl.RENDERER) || "";
+    const vendor = gl.getParameter(gl.VENDOR) || "";
 
     // High-end indicators
-    if (renderer.includes('RTX') || renderer.includes('RX 6') || renderer.includes('RX 7')) {
-      return 'HIGH_PERFORMANCE';
+    if (
+      renderer.includes("RTX") ||
+      renderer.includes("RX 6") ||
+      renderer.includes("RX 7")
+    ) {
+      return "HIGH_PERFORMANCE";
     }
 
     // Low-end indicators
-    if (renderer.includes('Intel') || renderer.includes('Mali') || renderer.includes('Adreno')) {
-      return 'LOW_END';
+    if (
+      renderer.includes("Intel") ||
+      renderer.includes("Mali") ||
+      renderer.includes("Adreno")
+    ) {
+      return "LOW_END";
     }
 
     // Check memory
-    const memory = (navigator as any).deviceMemory;
-    if (memory && memory < 4) return 'LOW_END';
-    if (memory && memory >= 8) return 'HIGH_PERFORMANCE';
+    const memory = navigator.deviceMemory;
+    if (memory && memory < 4) return "LOW_END";
+    if (memory && memory >= 8) return "HIGH_PERFORMANCE";
 
-    return 'BALANCED';
+    return "BALANCED";
   },
 
   // Get recommended settings based on current performance
-  getRecommendedSettings: (performanceTier?: keyof typeof PERFORMANCE_PRESETS) => {
+  getRecommendedSettings: (
+    performanceTier?: keyof typeof PERFORMANCE_PRESETS,
+  ) => {
     const tier = performanceTier || ModuleUtils.detectPerformanceTier();
     return PERFORMANCE_PRESETS[tier];
   },
@@ -131,10 +145,10 @@ export const ModuleUtils = {
       },
 
       getRecommendation: () => {
-        if (averageFPS < 25) return 'LOW_END';
-        if (averageFPS > 55) return 'HIGH_PERFORMANCE';
-        return 'BALANCED';
-      }
+        if (averageFPS < 25) return "LOW_END";
+        if (averageFPS > 55) return "HIGH_PERFORMANCE";
+        return "BALANCED";
+      },
     };
   },
 };

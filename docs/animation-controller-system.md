@@ -31,11 +31,11 @@ import { useExternalAnimations } from '../utils/useExternalAnimations'
 
 function AnimatedSimulant({ simulant }: { simulant: AISimulant }) {
   // Load avatar and animations
-  const avatarGLTF = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const avatarGLTF = useGLTF('/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations([
-    '/animation_GLB/F_Standing_Idle_Variations_001.glb',
-    '/animation_GLB/M_Walk_001.glb',
-    '/animation_GLB/M_Run_001.glb'
+    '/animations/F_Standing_Idle_Variations_001.glb',
+    '/animations/M_Walk_001.glb',
+    '/animations/M_Run_001.glb'
   ])
 
   // Initialize animation manager

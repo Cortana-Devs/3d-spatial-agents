@@ -10,6 +10,9 @@ export * as animationTypes from "./animations";
 // Re-export skybox types
 export * from "./skybox";
 
+// Re-export player avatar types
+export * from "./playerAvatar";
+
 // AI Simulant Types
 export interface AISimulant {
   id: string;
@@ -70,7 +73,7 @@ export interface SimulantUpdate {
 export interface WorldState {
   // World Data
   blocks: Block[];
-  worldLimits: { maxBlocks: 1000 };
+  worldLimits: { maxBlocks: 10000 };
 
   // Human User State
   selectedBlockType: BlockType;

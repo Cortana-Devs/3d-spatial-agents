@@ -123,7 +123,9 @@ export default function ModularVoxelCanvas({
 
   const handlePresetApply = useCallback(
     (presetName: keyof typeof CAMERA_PRESETS) => {
-      console.log("Applying preset:", presetName);
+      void import("@/utils/devLogger").then(({ devLog }) =>
+        devLog("Applying preset:", presetName),
+      );
     },
     [],
   );
@@ -137,7 +139,9 @@ export default function ModularVoxelCanvas({
           block.position.y,
           block.position.z,
         );
-        console.log("Focusing on block at:", blockPosition);
+        void import("@/utils/devLogger").then(({ devLog }) =>
+          devLog("Focusing on block at:", blockPosition),
+        );
       }
     },
     [blockMap],

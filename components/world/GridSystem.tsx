@@ -14,6 +14,7 @@ import {
   AdditiveBlending,
 } from "three";
 import { useWorldStore } from "../../store/worldStore";
+import { devLog } from "@/utils/devLogger";
 
 // Grid configuration interface
 export interface GridConfig {
@@ -131,6 +132,7 @@ interface SnapIndicatorProps {
   visible: boolean;
 }
 
+// SnapIndicator uses position.y as the top-of-block grid level (not block center)
 function SnapIndicator({ position, visible }: SnapIndicatorProps) {
   const meshRef = useRef<Mesh>(null);
 
@@ -149,7 +151,7 @@ function SnapIndicator({ position, visible }: SnapIndicatorProps) {
   if (!visible || !position) return null;
 
   return (
-    <mesh ref={meshRef} position={[position.x, position.y, position.z]}>
+    <mesh ref={meshRef} position={[position.x, position.y + 0.01, position.z]}>
       <ringGeometry args={[0.4, 0.5, 16]} />
       <meshBasicMaterial
         color="#00D4FF"
@@ -375,45 +377,27 @@ export default function GridSystem({
 
   // Debug logging
   React.useEffect(() => {
-    console.log("Grid Config:", gridConfig);
+    if (process.env.NODE_ENV === "development") {
+      const gsLogDebug = (...args: unknown[]) => devLog("[world:GridSystem]", ...args);
+      gsLogDebug("Grid config", gridConfig);
+    }
   }, [gridConfig]);
-
-  if (!gridConfig.visibility) {
-    console.log("Grid not visible - visibility is false");
-    return null;
-  }
-
-
 
   return (
     <group>
-      {/* Debug helper - visible cube to confirm grid system is rendering */}
-      <mesh position={[0, 0.5, 0]}>
-        <boxGeometry args={[0.1, 0.1, 0.1]} />
-        <meshBasicMaterial color="red" />
-      </mesh>
-
-      {/* Main grid */}
-      <mesh
-        ref={gridRef}
-        geometry={geometry}
-        material={material}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.001, 0]} // Slightly below y=0 to avoid z-fighting
-      />
-
-      {/* Fallback simple grid using basic material */}
+      {/* Invisible interaction plane for click detection */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, 0]}
+        visible={false}
       >
-        <planeGeometry args={[50, 50]} />
-        <meshBasicMaterial 
-          color="#888888" 
-          transparent 
-          opacity={0.2} 
-          wireframe={true}
+        <planeGeometry
+          args={[
+            gridConfig.size * gridConfig.cellSize,
+            gridConfig.size * gridConfig.cellSize,
+          ]}
         />
+        <meshBasicMaterial />
       </mesh>
 
       {/* Snap indicator */}
