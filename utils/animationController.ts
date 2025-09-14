@@ -67,7 +67,7 @@ export interface StateTransition {
 
 /**
  * Enhanced action-to-animation mapping using available GLB files
- * Based on the available animation files in public/animation_GLB/
+ * Based on the available animation files in public/animations/
  */
 export const ENHANCED_ANIMATION_MAPPING: Record<AnimationState, AnimationMapping> = {
   idle: {

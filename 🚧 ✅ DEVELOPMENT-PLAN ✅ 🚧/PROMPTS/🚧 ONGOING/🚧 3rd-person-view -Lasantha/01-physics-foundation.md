@@ -226,7 +226,7 @@ Use existing utilities: `import { devLog, devWarn } from '@/utils/devLogger'`
    - `<CapsuleCollider args={[PLAYER_CAPSULE.halfHeight, PLAYER_CAPSULE.radius]} friction={0.2} restitution={0} />`
    - Wrap `<PlayerAvatarContainer bodyRef={rigidBodyRef} />`
 7. Implement `PlayerAvatarContainer.tsx`
-   - `useGLTF('/models/player_ReadyPlayerMe.glb')`
+   - `useGLTF('/models/player-ready-player-me.glb')`
    - Wrap scene in `<group ref={avatarGroupRef} scale={[PLAYER_SCALE,PLAYER_SCALE,PLAYER_SCALE]} />`
    - Apply vertical offset for feet
    - Optional: update WorldStore if empty

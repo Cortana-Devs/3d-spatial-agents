@@ -258,7 +258,7 @@ interface EnhancedRPMSimulantProps {
 // Enhanced component with external animation support
 function EnhancedReadyPlayerMeSimulant(props: EnhancedRPMSimulantProps) {
   // Asset loading
-  const avatarGLTF = useGLTF(props.modelPath || '/models/player_ReadyPlayerMe.glb')
+  const avatarGLTF = useGLTF(props.modelPath || '/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations(props.animationPaths || DEFAULT_ANIMATION_PATHS)
   
   // Animation management
@@ -647,7 +647,7 @@ const QUALITY_PRESETS = {
 describe('AnimationLoader', () => {
   test('loads avatar GLB successfully', async () => {
     const loader = new AnimationLoader()
-    const gltf = await loader.loadAvatarGLTF('/models/player_ReadyPlayerMe.glb')
+    const gltf = await loader.loadAvatarGLTF('/models/player-ready-player-me.glb')
     
     expect(gltf).toBeDefined()
     expect(gltf.scene).toBeDefined()
@@ -706,7 +706,7 @@ describe('EnhancedReadyPlayerMeSimulant', () => {
       <Canvas>
         <EnhancedReadyPlayerMeSimulant
           simulant={simulant}
-          animationPaths={['/animation_GLB/M_Walk_001.glb']}
+          animationPaths={['/animations/M_Walk_001.glb']}
         />
       </Canvas>
     )

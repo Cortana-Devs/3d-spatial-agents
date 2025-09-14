@@ -17,13 +17,13 @@ function BasicAnimationExample() {
   const groupRef = useRef<Group>(null)
   
   // Load the Ready Player Me avatar
-  const gltf = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const gltf = useGLTF('/models/player-ready-player-me.glb')
   
   // Load external animation clips
   const externalClips = useExternalAnimations([
-    '/animation_GLB/M_Walk_001.glb',
-    '/animation_GLB/M_Run_001.glb',
-    '/animation_GLB/F_Standing_Idle_Variations_001.glb'
+    '/animations/M_Walk_001.glb',
+    '/animations/M_Run_001.glb',
+    '/animations/F_Standing_Idle_Variations_001.glb'
   ])
   
   // Create the enhanced animation manager
@@ -77,7 +77,7 @@ function AdvancedAnimationExample({ simulant }: AdvancedAnimationExampleProps) {
   const groupRef = useRef<Group>(null)
   
   // Load avatar and animations
-  const gltf = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const gltf = useGLTF('/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations()
   
   // Enhanced animation manager with performance optimization
@@ -167,7 +167,7 @@ function AdvancedAnimationExample({ simulant }: AdvancedAnimationExampleProps) {
  * Example of manual animation controls for testing
  */
 function AnimationControlsExample() {
-  const gltf = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const gltf = useGLTF('/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations()
   
   const animationManager = useRPMAnimations(gltf, externalClips.clips, {
@@ -236,7 +236,7 @@ function AnimationControlsExample() {
  * Example showing performance monitoring and adaptation
  */
 function PerformanceOptimizedExample() {
-  const gltf = useGLTF('/models/player_ReadyPlayerMe.glb')
+  const gltf = useGLTF('/models/player-ready-player-me.glb')
   const externalClips = useExternalAnimations()
   const frameRateRef = useRef<number[]>([])
   

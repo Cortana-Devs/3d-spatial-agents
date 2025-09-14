@@ -22,13 +22,13 @@ const createExampleSimulant = (id: string, position: { x: number; y: number; z: 
 
 // Custom animation paths for demonstration
 const CUSTOM_ANIMATION_PATHS = [
-  '/animation_GLB/F_Standing_Idle_Variations_001.glb',
-  '/animation_GLB/F_Standing_Idle_Variations_002.glb',
-  '/animation_GLB/M_Walk_001.glb',
-  '/animation_GLB/M_Run_001.glb',
-  '/animation_GLB/M_Walk_Jump_002.glb',
-  '/animation_GLB/F_Dances_007.glb',
-  '/animation_GLB/M_Talking_Variations_005.glb',
+  '/animations/F_Standing_Idle_Variations_001.glb',
+  '/animations/F_Standing_Idle_Variations_002.glb',
+  '/animations/M_Walk_001.glb',
+  '/animations/M_Run_001.glb',
+  '/animations/M_Walk_Jump_002.glb',
+  '/animations/F_Dances_007.glb',
+  '/animations/M_Talking_Variations_005.glb',
 ]
 
 export default function EnhancedRPMSimulantExample() {

@@ -13,11 +13,11 @@ export default function BasicAnimationTest() {
   const groupRef = useRef<Group>(null);
 
   // Load the Ready Player Me model
-  const avatarGLTF = useGLTF("/models/player_ReadyPlayerMe.glb");
+  const avatarGLTF = useGLTF("/models/player-ready-player-me.glb");
 
   // Load a single animation file directly
-  const walkGLTF = useGLTF("/animation_GLB/M_Walk_001.glb");
-  const tposeGLTF = useGLTF("/animation_GLB/Masculine_TPose.glb");
+  const walkGLTF = useGLTF("/animations/M_Walk_001.glb");
+  const tposeGLTF = useGLTF("/animations/Masculine_TPose.glb");
 
   // Get animations from both files
   const allAnimations = [
@@ -68,6 +68,6 @@ export default function BasicAnimationTest() {
 }
 
 // Preload the assets
-useGLTF.preload("/models/player_ReadyPlayerMe.glb");
-useGLTF.preload("/animation_GLB/M_Walk_001.glb");
-useGLTF.preload("/animation_GLB/Masculine_TPose.glb");
+useGLTF.preload("/models/player-ready-player-me.glb");
+useGLTF.preload("/animations/M_Walk_001.glb");
+useGLTF.preload("/animations/Masculine_TPose.glb");

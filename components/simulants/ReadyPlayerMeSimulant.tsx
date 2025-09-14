@@ -67,7 +67,7 @@ const RPM_CONFIG = {
 
 export default function ReadyPlayerMeSimulant({
   simulant,
-  modelPath = "/models/player_ReadyPlayerMe.glb",
+  modelPath = "/models/player-ready-player-me.glb",
   animationPaths,
   scale = RPM_CONFIG.defaultScale,
   enableGridSnap = true,
@@ -386,7 +386,7 @@ export function disposeReadyPlayerMeSimulant() {
   // Placeholder for any manual dispose helpers, if necessary
 }
 
-useGLTF.preload("/models/player_ReadyPlayerMe.glb");
+useGLTF.preload("/models/player-ready-player-me.glb");
 
 export type { ReadyPlayerMeSimulantProps };
 export { RPM_CONFIG };

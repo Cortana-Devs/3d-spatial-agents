@@ -228,7 +228,7 @@ Composite component orchestrating:
 ```
 <PlayerPhysicsBody config={...}>
   <PlayerVisualAttachment>
-    <PlayerAvatarContainer modelUrl="/models/player_ReadyPlayerMe.glb" />
+    <PlayerAvatarContainer modelUrl="/models/player-ready-player-me.glb" />
   </PlayerVisualAttachment>
 </PlayerPhysicsBody>
 ```

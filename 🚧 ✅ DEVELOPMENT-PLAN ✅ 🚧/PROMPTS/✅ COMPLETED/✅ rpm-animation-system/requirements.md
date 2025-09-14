@@ -12,7 +12,7 @@ The Ready Player Me Animation System enhances the Descendants metaverse by repla
 
 #### Acceptance Criteria
 
-1. WHEN the system initializes an RPM simulant THEN it SHALL load the avatar GLB from `public/models/player_ReadyPlayerMe.glb` using React Three Fiber's useGLTF hook
+1. WHEN the system initializes an RPM simulant THEN it SHALL load the avatar GLB from `public/models/player-ready-player-me.glb` using React Three Fiber's useGLTF hook
 2. WHEN the avatar GLB loads successfully THEN the system SHALL extract the skinned mesh and skeleton for animation binding
 3. WHEN the avatar GLB fails to load THEN the system SHALL fallback to a default geometric representation and log the error
 4. WHEN multiple simulants use the same avatar THEN the system SHALL cache the GLB data to avoid redundant loading
@@ -24,7 +24,7 @@ The Ready Player Me Animation System enhances the Descendants metaverse by repla
 
 #### Acceptance Criteria
 
-1. WHEN the system initializes THEN it SHALL load animation GLB files from `public/animation_GLB/` directory including walk, run, jump, and idle animations
+1. WHEN the system initializes THEN it SHALL load animation GLB files from `public/animations/` directory including walk, run, jump, and idle animations
 2. WHEN an animation GLB loads THEN the system SHALL extract the AnimationClip data and cache it for reuse
 3. WHEN animation files are missing THEN the system SHALL log warnings and continue with available animations
 4. WHEN animation clips are incompatible with the RPM skeleton THEN the system SHALL skip invalid clips and notify the developer
