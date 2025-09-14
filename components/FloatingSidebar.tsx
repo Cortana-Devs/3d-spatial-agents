@@ -39,6 +39,7 @@ import { quickFloorUtils } from "../utils/floorManager";
 import { useWorldStore } from "../store/worldStore";
 import { CAMERA_PRESETS } from "./world/CameraController";
 import { SimulantUtils } from "./simulants/SimulantManager";
+import SimulantPanel from "./simulants/SimulantPanel";
 import type { AISimulant, CameraMode } from "../types";
 import type { AnimationState } from "../utils/animationController";
 import { useSafeCameraMode } from "../hooks/useSafeCameraMode";
@@ -126,7 +127,7 @@ export default function FloatingSidebar() {
   });
 
   const [activeTab, setActiveTab] = React.useState<TabKey>("animation");
-  const [selectedPreset, setSelectedPreset] = React.useState(0);
+
   // Removed unused state for floor panel
   // Debounce for quick floor actions to avoid duplicate operations
   const floorActionLockRef = React.useRef(false);
@@ -286,22 +287,6 @@ export default function FloatingSidebar() {
     };
   }, [isDragging, dragStart]);
 
-  // Simulant stats for display
-  const simulantStats = React.useMemo(() => {
-    const stats = {
-      total: simulants.size,
-      active: 0,
-      idle: 0,
-      disconnected: 0,
-    };
-    simulants.forEach((s) => {
-      if (s.status === "active") stats.active++;
-      else if (s.status === "idle") stats.idle++;
-      else stats.disconnected++;
-    });
-    return stats;
-  }, [simulants]);
-
   // Animation handlers
   const handlePlayAnimation = React.useCallback(
     (animationState: AnimationState) => {
@@ -349,91 +334,6 @@ export default function FloatingSidebar() {
   const handleToggleIdleCycling = React.useCallback(() => {
     setEnableIdleCycling(!enableIdleCycling);
   }, [enableIdleCycling]);
-
-  // Simulant management handlers
-  const handleAddTestSimulant = React.useCallback(() => {
-    const position = {
-      x: Math.random() * 10,
-      y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
-      z: Math.random() * 10,
-    };
-
-    const simulantId = `test-simulant-${Date.now()}`;
-    const newSimulant: AISimulant = {
-      id: simulantId,
-      name: `Test Simulant ${simulants.size + 1}`,
-      position,
-      status: "idle",
-      lastAction: "Standing idle",
-      conversationHistory: [],
-      geminiSessionId: `session-${simulantId}`,
-    };
-    addSimulant(newSimulant);
-  }, []);
-
-  const handleAddPresetSimulant = React.useCallback(() => {
-    const presets = [
-      { name: "Builder", action: "Looking for the perfect spot to build" },
-      { name: "Explorer", action: "Exploring the voxel landscape" },
-      { name: "Thinker", action: "Analyzing the world structure" },
-      { name: "Social", action: "Looking for someone to chat with" },
-    ];
-
-    const preset = presets[selectedPreset % presets.length];
-    const position = {
-      x: Math.random() * 10,
-      y: Y_LEVEL_CONSTANTS.PLAYER_GROUND_LEVEL,
-      z: Math.random() * 10,
-    };
-
-    const simulantId = `preset-simulant-${Date.now()}`;
-    const newSimulant: AISimulant = {
-      id: simulantId,
-      name: `${preset.name} ${simulants.size + 1}`,
-      position,
-      status: "active",
-      lastAction: preset.action,
-      conversationHistory: [],
-      geminiSessionId: `session-${simulantId}`,
-    };
-    addSimulant(newSimulant);
-    setSelectedPreset((prev) => (prev + 1) % presets.length);
-  }, [selectedPreset]);
-
-  const handleRemoveLastSimulant = React.useCallback(() => {
-    const arr = Array.from(simulants.values());
-    const last = arr[arr.length - 1];
-    if (last) removeSimulant(last.id);
-  }, [simulants, removeSimulant]);
-
-  const handleToggleAllSimulants = React.useCallback(() => {
-    const hasActive = Array.from(simulants.values()).some(
-      (s) => s.status === "active",
-    );
-    const newStatus = hasActive ? "idle" : "active";
-    simulants.forEach((s) => updateSimulant(s.id, { status: newStatus }));
-  }, [simulants, updateSimulant]);
-
-  const handleRandomActions = React.useCallback(() => {
-    const actions = [
-      "Building a tower",
-      "Exploring the area",
-      "Thinking about life",
-      "Looking for friends",
-      "Analyzing patterns",
-      "Creating art",
-      "Resting peacefully",
-      "Planning next move",
-    ];
-    simulants.forEach((s) => {
-      const randomAction = actions[Math.floor(Math.random() * actions.length)];
-      updateSimulant(s.id, { lastAction: randomAction });
-    });
-  }, [simulants, updateSimulant]);
-
-  const handleClearSimulants = React.useCallback(() => {
-    simulants.forEach((s) => removeSimulant(s.id));
-  }, [simulants, removeSimulant]);
 
   // Camera tab actions with safe mode management
   const handleChangeCameraMode = (mode: CameraMode) => {
@@ -522,18 +422,6 @@ export default function FloatingSidebar() {
               label="Animation Controls"
               value={`Simulants: ${simulants.size}`}
             />
-
-            {/* Add Simulant */}
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-1"
-                onClick={handleAddTestSimulant}
-              >
-                <Plus size={12} className="mr-1" /> Add Simulant
-              </Button>
-            </div>
 
             <FloatingPanelDivider />
 
@@ -673,80 +561,7 @@ export default function FloatingSidebar() {
           </div>
         )}
 
-        {activeTab === "simulants" && (
-          <div className="space-y-2">
-            <FloatingPanelSection title="Manage Simulants">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAddPresetSimulant}
-                  disabled={false}
-                  className="w-full text-axiom-success-600 dark:text-axiom-success-400 hover:bg-axiom-success-500/20"
-                >
-                  <Plus size={12} className="mr-1" /> Add
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRemoveLastSimulant}
-                  disabled={simulants.size === 0}
-                  className="w-full text-axiom-error-600 dark:text-axiom-error-400 hover:bg-axiom-error-500/20"
-                >
-                  <Minus size={12} className="mr-1" /> Remove
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleToggleAllSimulants}
-                  disabled={simulants.size === 0}
-                  className="w-full text-axiom-primary-600 dark:text-axiom-primary-400 hover:bg-axiom-primary-500/20 col-span-2"
-                >
-                  {simulantStats.active > 0 ? (
-                    <>
-                      <Pause size={12} className="mr-1" /> Pause All
-                    </>
-                  ) : (
-                    <>
-                      <Play size={12} className="mr-1" /> Activate All
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRandomActions}
-                  disabled={simulants.size === 0}
-                  className="w-full text-axiom-warning-600 dark:text-axiom-warning-400 hover:bg-axiom-warning-500/20 col-span-2"
-                >
-                  <RotateCcw size={12} className="mr-1" /> Random Actions
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearSimulants}
-                  disabled={simulants.size === 0}
-                  className="w-full text-axiom-error-600 dark:text-axiom-error-400 hover:bg-axiom-error-500/20 col-span-2"
-                >
-                  Clear All
-                </Button>
-              </div>
-            </FloatingPanelSection>
-
-            <FloatingPanelDivider />
-
-            <FloatingPanelItem
-              label="Total Simulants"
-              value={simulantStats.total}
-            />
-            <FloatingPanelItem label="Active" value={simulantStats.active} />
-            <FloatingPanelItem label="Idle" value={simulantStats.idle} />
-            <FloatingPanelItem
-              label="Offline"
-              value={simulantStats.disconnected || 0}
-            />
-          </div>
-        )}
+        {activeTab === "simulants" && <SimulantPanel />}
 
         {activeTab === "camera" && (
           <div className="space-y-2">

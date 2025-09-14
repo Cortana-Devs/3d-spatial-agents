@@ -131,6 +131,10 @@ Generate the following subordinate prompt folders & individual prompt files:
   - PROMPT_TEST_PLAN.md
 10-integration-hooks/
   - PROMPT_INTEGRATION_HOOKS.md
+11-ui-integration-test/
+  - PROMPT_UI_INTEGRATION_TEST.md
+12-engine-integration-test/
+  - PROMPT_ENGINE_INTEGRATION_TEST.md
 
 Each subordinate prompt MUST:
 - Reuse the MASTER TEMPLATE (Section 11).
@@ -283,7 +287,7 @@ Procedure:
 6. After generation, produce an index file summarizing all sub-prompts (INDEX.md)
 
 Output Validation for Generation Process:
-- COUNT(sub-prompts) = 10
+- COUNT(sub-prompts) = 12
 - All sub-prompts mention Feature ID
 - No empty Objective fields
 - No missing Validation section
