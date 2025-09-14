@@ -4,9 +4,9 @@ import { OrbitControls, Environment, Stats, Sky, ContactShadows } from '@react-t
 import * as THREE from 'three'
 import { BlockFactory } from '../utils/blockFactory'
 import { BlockType } from '../types/blocks'
-import BlockRenderer from '../components/world/BlockRenderer'
-import { useFloorSystem } from '../systems/integration/FloorSystemIntegrator'
-import { FloorControlPanel } from '../components/ui/FloorControlPanel'
+import BlockRenderer from '@components/world/BlockRenderer'
+import { useFloorSystem } from '@systems/integration/FloorSystemIntegrator'
+import { FloorControlPanel } from '@components/ui/FloorControlPanel'
 
 export const FrostedGlassAndNumber4Demo: React.FC = () => {
   const [blocks, setBlocks] = useState<any[]>([])

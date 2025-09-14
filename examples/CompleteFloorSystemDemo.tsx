@@ -7,8 +7,8 @@ import {
   Sky,
   ContactShadows,
 } from "@react-three/drei";
-import { useFloorSystem } from "../systems/integration/FloorSystemIntegrator";
-import { FloorControlPanel } from "../components/ui/FloorControlPanel";
+import { useFloorSystem } from "@systems/integration/FloorSystemIntegrator";
+import { FloorControlPanel } from "@components/ui/FloorControlPanel";
 import { FloorFactory } from "../utils/floorFactory";
 import * as THREE from "three";
 

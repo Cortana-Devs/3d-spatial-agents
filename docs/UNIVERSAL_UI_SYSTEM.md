@@ -28,7 +28,7 @@ We've created a universal, beautiful UI system that makes the glassmorphism floa
 
 ### 90% of cases - Use FloatingStats:
 ```tsx
-import { FloatingStats } from "../components/ui/FloatingPanel";
+import { FloatingStats } from "@components/ui/FloatingPanel";
 
 <FloatingStats
   title="World Stats"
@@ -42,7 +42,7 @@ import { FloatingStats } from "../components/ui/FloatingPanel";
 
 ### Help panels:
 ```tsx
-import { FloatingHelp } from "../components/ui/FloatingPanel";
+import { FloatingHelp } from "@components/ui/FloatingPanel";
 
 <FloatingHelp
   instructions={[
@@ -60,7 +60,7 @@ import {
   FloatingPanelHeader,
   FloatingPanelItem,
   FloatingPanelDivider,
-} from "../components/ui/FloatingPanel";
+} from "@components/ui/FloatingPanel";
 
 <FloatingPanel>
   <FloatingPanelHeader>Custom Panel</FloatingPanelHeader>

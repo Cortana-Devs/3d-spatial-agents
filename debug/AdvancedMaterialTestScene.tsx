@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
-import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
+import { FrostedGlassFloor } from '@components/floors/FrostedGlassFloor'
 import { FloorFactory } from '../utils/floorFactory'
 import { MATERIAL_PRESETS } from '../presets/MaterialPresets'
 import { CausticLight, useCausticSystem } from '../effects/CausticSystem'

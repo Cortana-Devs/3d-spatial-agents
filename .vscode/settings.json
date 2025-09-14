@@ -1,2 +1,22 @@
 {
+	"explorer.excludeGitIgnore": true,
+	"files.exclude": {
+		"**/node_modules": true,
+		"**/.next": true,
+		"**/out": true,
+		"**/.turbo": true
+	},
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/.next": true,
+		"**/out": true,
+		"**/.turbo": true
+	},
+	"explorer.fileNesting.enabled": true,
+	"explorer.fileNesting.patterns": {
+		"package.json": "package-lock.json;pnpm-lock.yaml;pnpm-workspace.yaml;tsconfig.json;tsconfig.*.json;vitest.config.*;jest.config.*;next.config.*;postcss.config.*;tailwind.config.*;eslint.config.*;*.config.*;*.rc;*.rc.*",
+		"tsconfig.json": "tsconfig.*.json",
+		"README.md": "README.*.md;docs/**",
+		".env": ".env.*"
+	}
 }

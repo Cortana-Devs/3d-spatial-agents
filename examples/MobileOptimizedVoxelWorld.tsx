@@ -13,13 +13,13 @@ import { BoxGeometry, MeshStandardMaterial, Vector3, Color, Fog } from "three";
 import * as THREE from "three";
 
 // Import our mobile optimization components
-import { MobileOptimizedRenderer } from "../components/optimization/MobileOptimizedRenderer";
+import { MobileOptimizedRenderer } from "@components/optimization/MobileOptimizedRenderer";
 import {
   MobileShaderProvider,
   useMobileShaders,
-} from "../components/optimization/MobileShaderManager";
-import { MobilePerformanceMonitor } from "../components/optimization/MobilePerformanceMonitor";
-import { MobileInstanceManager } from "../components/optimization/MobileInstanceManager";
+} from "@components/optimization/MobileShaderManager";
+import { MobilePerformanceMonitor } from "@components/optimization/MobilePerformanceMonitor";
+import { MobileInstanceManager } from "@components/optimization/MobileInstanceManager";
 import { useMobileOptimization } from "../hooks/optimization/useMobileOptimization";
 
 // Voxel block types optimized for mobile

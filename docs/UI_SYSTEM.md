@@ -16,7 +16,7 @@ The FloatingPanel system provides a glassmorphism design with automatic light/da
 ### Basic Panel
 
 ```tsx
-import { FloatingPanel, FloatingPanelHeader } from "../components/ui/FloatingPanel";
+import { FloatingPanel, FloatingPanelHeader } from "@components/ui/FloatingPanel";
 
 <FloatingPanel>
   <FloatingPanelHeader>My Panel</FloatingPanelHeader>
@@ -27,7 +27,7 @@ import { FloatingPanel, FloatingPanelHeader } from "../components/ui/FloatingPan
 ### Stats Panel (Most Common)
 
 ```tsx
-import { FloatingStats } from "../components/ui/FloatingPanel";
+import { FloatingStats } from "@components/ui/FloatingPanel";
 
 <FloatingStats
   title="World Stats"
@@ -42,7 +42,7 @@ import { FloatingStats } from "../components/ui/FloatingPanel";
 ### Help Panel
 
 ```tsx
-import { FloatingHelp } from "../components/ui/FloatingPanel";
+import { FloatingHelp } from "@components/ui/FloatingPanel";
 
 <FloatingHelp
   instructions={[
@@ -157,7 +157,7 @@ Use these for consistent typography within panels.
 ### Text
 
 ```tsx
-import { Text } from "../components/ui/Text";
+import { Text } from "@components/ui/Text";
 
 <Text variant="body">Regular body text</Text>
 <Text variant="secondary">Secondary/muted text</Text>
@@ -168,7 +168,7 @@ import { Text } from "../components/ui/Text";
 ### Heading
 
 ```tsx
-import { Heading } from "../components/ui/Text";
+import { Heading } from "@components/ui/Text";
 
 <Heading level={1}>Large heading</Heading>
 <Heading level={2}>Medium heading</Heading>
@@ -179,7 +179,7 @@ import { Heading } from "../components/ui/Text";
 ### Mono
 
 ```tsx
-import { Mono } from "../components/ui/Text";
+import { Mono } from "@components/ui/Text";
 
 <Mono variant="primary">123.45</Mono>
 <Mono variant="secondary">debug-info</Mono>
@@ -188,7 +188,7 @@ import { Mono } from "../components/ui/Text";
 ### Accent
 
 ```tsx
-import { Accent } from "../components/ui/Text";
+import { Accent } from "@components/ui/Text";
 
 <Accent color="primary">Important note</Accent>
 <Accent color="success">Success message</Accent>
@@ -277,7 +277,7 @@ All colors automatically adapt to light/dark themes using Tailwind's `dark:` var
 
 ```tsx
 // For pre-built variants (recommended)
-import { FloatingStats, FloatingHelp, FloatingCard } from "../components/ui/FloatingPanel";
+import { FloatingStats, FloatingHelp, FloatingCard } from "@components/ui/FloatingPanel";
 
 // For custom layouts
 import {
@@ -286,10 +286,10 @@ import {
   FloatingPanelItem,
   FloatingPanelSection,
   FloatingPanelDivider,
-} from "../components/ui/FloatingPanel";
+} from "@components/ui/FloatingPanel";
 
 // For consistent text
-import { Text, Heading, Mono, Accent } from "../components/ui/Text";
+import { Text, Heading, Mono, Accent } from "@components/ui/Text";
 ```
 
 ### Step 2: Replace Existing Panels

@@ -11,6 +11,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "."),
+      "@components": resolve(__dirname, "components"),
+      "@systems": resolve(__dirname, "systems"),
+      "@floor-ai": resolve(__dirname, "src/components/floors/ai"),
     },
   },
   test: {

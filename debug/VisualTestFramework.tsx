@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, Stats, Grid } from '@react-three/drei'
-import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
+import { FrostedGlassFloor } from '@components/floors/FrostedGlassFloor'
 import { FloorFactory } from '../utils/floorFactory'
 import { MATERIAL_PRESETS } from '../presets/MaterialPresets'
 import { usePerformanceMonitor } from '../systems/PerformanceMonitor'
@@ -15,7 +15,7 @@ import {
   InteractionTest,
   AINavigationTest,
   FullIntegrationTest
-} from '../components/test/TestComponents'
+} from '@components/test/TestComponents'
 
 interface VisualTest {
   id: string

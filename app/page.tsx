@@ -2,15 +2,15 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import BlockSelector from "../components/world/BlockSelector";
-import WorldInfo from "../components/world/WorldInfo";
-import FloatingSidebar from "../components/FloatingSidebar";
-import { FloatingHelp } from "../components/ui/FloatingPanel";
+import BlockSelector from "@components/world/BlockSelector";
+import WorldInfo from "@components/world/WorldInfo";
+import FloatingSidebar from "@components/FloatingSidebar";
+import { FloatingHelp } from "@components/ui/FloatingPanel";
 
-import { ArchipelagoTest } from "../components/debug/ArchipelagoTest";
+import { ArchipelagoTest } from "@components/debug/ArchipelagoTest";
 
 // Dynamically import VoxelCanvas to avoid SSR issues with Three.js
-const VoxelCanvas = dynamic(() => import("../components/world/VoxelCanvas"), {
+const VoxelCanvas = dynamic(() => import("@components/world/VoxelCanvas"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-axiom-neutral-100 dark:bg-axiom-neutral-800">

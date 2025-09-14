@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from "vitest";
-import { FloorNavigationAnalyzer } from "../src/components/floors/ai/FloorNavigationProperties";
-import { TransparentSurfacePerception } from "../src/components/floors/ai/TransparentSurfacePerception";
-import { TransparentNavMeshGenerator } from "../src/components/floors/ai/TransparentNavMeshGenerator";
-import { TransparentPathfinder } from "../src/components/floors/ai/TransparentPathfinder";
+import { FloorNavigationAnalyzer } from "@floor-ai/FloorNavigationProperties";
+import { TransparentSurfacePerception } from "@floor-ai/TransparentSurfacePerception";
+import { TransparentNavMeshGenerator } from "@floor-ai/TransparentNavMeshGenerator";
+import { TransparentPathfinder } from "@floor-ai/TransparentPathfinder";
 import { FloorFactory } from "../utils/floorFactory";
 import * as THREE from "three";
 

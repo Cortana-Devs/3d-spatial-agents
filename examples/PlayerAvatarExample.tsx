@@ -5,11 +5,11 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, Grid, Stats } from "@react-three/drei";
 import { Vector3 } from "three";
 import { useWorldStore } from "../store/worldStore";
-import PlayerAvatarManager from "../components/modules/PlayerAvatarManager";
-import EnhancedPlayerControlModule from "../components/modules/EnhancedPlayerControlModule";
-import IsolatedAnimationManager from "../components/animations/IsolatedAnimationManager";
-import { ModuleManager } from "../components/modules/ModuleManager";
-import RestoreBlocksButton from "../components/debug/RestoreBlocksButton";
+import PlayerAvatarManager from "@components/modules/PlayerAvatarManager";
+import EnhancedPlayerControlModule from "@components/modules/EnhancedPlayerControlModule";
+import IsolatedAnimationManager from "@components/animations/IsolatedAnimationManager";
+import { ModuleManager } from "@components/modules/ModuleManager";
+import RestoreBlocksButton from "@components/debug/RestoreBlocksButton";
 
 /**
  * PlayerAvatarExample - Comprehensive demonstration of the Player Avatar Integration System

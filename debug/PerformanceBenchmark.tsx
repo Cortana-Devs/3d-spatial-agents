@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { FrostedGlassFloor } from "../components/floors/FrostedGlassFloor";
+import { FrostedGlassFloor } from "@components/floors/FrostedGlassFloor";
 import { FloorFactory } from "../utils/floorFactory";
-import { usePerformanceMonitor } from "../systems/PerformanceMonitor";
-import { FloorLODManager } from "../systems/FloorLODManager";
-import { TransparencyBatcher } from "../systems/TransparencyBatcher";
+import { usePerformanceMonitor } from "@systems/PerformanceMonitor";
+import { FloorLODManager } from "@systems/FloorLODManager";
+import { TransparencyBatcher } from "@systems/TransparencyBatcher";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import {

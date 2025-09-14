@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { FrostedGlassFloor } from "../../components/floors/FrostedGlassFloor";
+import { FrostedGlassFloor } from "@components/floors/FrostedGlassFloor";
 import { FloorLODManager } from "../FloorLODManager";
 import { TransparencyBatcher } from "../TransparencyBatcher";
 import { PerformanceMonitor } from "../PerformanceMonitor";
 import { AdaptiveQualityManager } from "../AdaptiveQuality";
-import { TransparentNavMeshGenerator } from "../../src/components/floors/ai/TransparentNavMeshGenerator";
-import { TransparentPathfinder } from "../../src/components/floors/ai/TransparentPathfinder";
+import { TransparentNavMeshGenerator } from "@floor-ai/TransparentNavMeshGenerator";
+import { TransparentPathfinder } from "@floor-ai/TransparentPathfinder";
 import { useReflectionSystem } from "../LightReflectionSystem";
-import { useCausticSystem } from "../../effects/CausticSystem";
-import { FrostedGlassMaterial } from "../../materials/FrostedGlassMaterial";
+import { useCausticSystem } from "@/effects/CausticSystem";
+import { FrostedGlassMaterial } from "@/materials/FrostedGlassMaterial";
 import * as THREE from "three";
 import { devWarn } from "@/utils/devLogger";
 

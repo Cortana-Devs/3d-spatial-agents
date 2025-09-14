@@ -1,9 +1,9 @@
 import React from 'react';
 import { Mesh, BoxGeometry, MeshStandardMaterial, Vector3 } from 'three';
 import { useFrame } from '@react-three/fiber';
-import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor';
+import { FrostedGlassFloor } from '@components/floors/FrostedGlassFloor';
 import { FloorFactory } from '../utils/floorFactory';
-import { usePerformanceMonitor } from '../systems/PerformanceMonitor';
+import { usePerformanceMonitor } from '@systems/PerformanceMonitor';
 
 export const BasicMaterialTest: React.FC = () => {
   const floors = [

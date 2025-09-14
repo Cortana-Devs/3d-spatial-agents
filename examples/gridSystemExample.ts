@@ -6,7 +6,7 @@
  */
 
 import { Vector3 } from "three";
-import { GridUtils } from "../components/world/GridSystem";
+import { GridUtils } from "@components/world/GridSystem";
 
 // Example 1: Basic Grid Operations
 console.log("=== Grid System Example ===\n");

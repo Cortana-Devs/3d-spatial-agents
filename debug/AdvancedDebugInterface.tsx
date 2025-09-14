@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, Stats, Html } from '@react-three/drei'
-import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
+import { FrostedGlassFloor } from '@components/floors/FrostedGlassFloor'
 import { FloorFactory } from '../utils/floorFactory'
 import { FloorNavigationAnalyzer } from '../ai/FloorNavigationProperties'
-import { usePerformanceMonitor } from '../systems/PerformanceMonitor'
+import { usePerformanceMonitor } from '@systems/PerformanceMonitor'
 import {
   FloorInspectorPanel,
   PerformanceMonitorPanel,

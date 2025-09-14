@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react'
 import { Canvas } from '@react-three/fiber'
 import { Vector3 } from 'three'
-import { FrostedGlassFloor } from '../components/floors/FrostedGlassFloor'
+import { FrostedGlassFloor } from '@components/floors/FrostedGlassFloor'
 import { FloorFactory } from '../utils/floorFactory'
 import '@testing-library/jest-dom'
 
