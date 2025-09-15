@@ -298,6 +298,30 @@ export function useAvatarAnimator(
   // Initialize mixer when scene is available
   useEffect(() => {
     if (avatarScene && !mixerRef.current) {
+      if (config.enableLogging) {
+        devLog(`🎭 Initializing avatar animator for ${gender} avatar`);
+        devLog(`   Avatar scene:`, avatarScene);
+        devLog(`   Model URL:`, modelUrl);
+        devLog(`   Avatar ID:`, avatarId);
+      }
+
+      // Check avatar scene structure
+      let hasSkinnedMesh = false;
+      avatarScene.traverse((child) => {
+        if (child.type === "SkinnedMesh") {
+          hasSkinnedMesh = true;
+          if (config.enableLogging) {
+            devLog(`   Found SkinnedMesh: ${child.name}`);
+          }
+        }
+      });
+
+      if (!hasSkinnedMesh) {
+        devWarn(
+          `⚠️ No SkinnedMesh found in ${gender} avatar scene - animations may not work`,
+        );
+      }
+
       mixerRef.current = new AnimationMixer(avatarScene);
 
       // Initialize animation layers
@@ -342,7 +366,7 @@ export function useAvatarAnimator(
       });
 
       if (config.enableLogging) {
-        devLog(`🎭 Avatar animator initialized for ${gender} avatar`);
+        devLog(`✅ Avatar animator initialized for ${gender} avatar`);
       }
     }
 
@@ -352,7 +376,7 @@ export function useAvatarAnimator(
         mixerRef.current = null;
       }
     };
-  }, [avatarScene, gender]);
+  }, [avatarScene, gender, config.enableLogging, modelUrl, avatarId]);
 
   /**
    * Preload animations based on priority
@@ -462,10 +486,69 @@ export function useAvatarAnimator(
 
       try {
         // Load animation clip
+        if (config.enableLogging) {
+          devLog(`🎬 Loading animation: ${semanticKey} for ${gender} avatar`);
+        }
+
         const clip = await animationLoader.loadAnimation(semanticKey, gender);
         if (!clip) {
-          devWarn(`Failed to load animation: ${semanticKey}`);
+          devWarn(`❌ Failed to load animation: ${semanticKey} for ${gender}`);
+
+          // Try fallback to opposite gender
+          const fallbackGender: AvatarGender =
+            gender === "feminine" ? "masculine" : "feminine";
+          if (config.enableLogging) {
+            devLog(
+              `🔄 Trying fallback gender: ${fallbackGender} for ${semanticKey}`,
+            );
+          }
+
+          const fallbackClip = await animationLoader.loadAnimation(
+            semanticKey,
+            fallbackGender,
+          );
+          if (!fallbackClip) {
+            devWarn(`❌ Fallback also failed for: ${semanticKey}`);
+            return;
+          }
+
+          if (config.enableLogging) {
+            devLog(
+              `✅ Fallback successful: ${semanticKey} using ${fallbackGender} animation`,
+            );
+          }
+
+          // Use fallback clip
+          const fallbackAction = mixerRef.current.clipAction(fallbackClip);
+          fallbackAction.setLoop(loop ? 2201 : 2200, loop ? Infinity : 1);
+          fallbackAction.weight = weight;
+          fallbackAction.clampWhenFinished = !loop;
+
+          // Handle layer switching
+          const layerInfo = layersRef.current.get(layer);
+          if (layerInfo) {
+            if (layerInfo.action && layerInfo.action !== fallbackAction) {
+              layerInfo.action.fadeOut(crossFade);
+            }
+
+            fallbackAction.reset();
+            fallbackAction.fadeIn(crossFade);
+            fallbackAction.play();
+
+            layerInfo.action = fallbackAction;
+            currentActionsRef.current.set(semanticKey, fallbackAction);
+
+            if (config.enableLogging) {
+              devLog(`🎬 Playing ${semanticKey} (fallback) on ${layer} layer`);
+            }
+          }
           return;
+        }
+
+        if (config.enableLogging) {
+          devLog(
+            `✅ Successfully loaded animation: ${semanticKey} for ${gender}`,
+          );
         }
 
         // Create action
@@ -473,6 +556,12 @@ export function useAvatarAnimator(
         action.setLoop(loop ? 2201 : 2200, loop ? Infinity : 1); // LoopRepeat : LoopOnce
         action.weight = weight;
         action.clampWhenFinished = !loop;
+
+        // Verify the action was created successfully
+        if (!action) {
+          devWarn(`❌ Failed to create action for: ${semanticKey}`);
+          return;
+        }
 
         // Handle layer switching
         const layerInfo = layersRef.current.get(layer);
@@ -495,9 +584,24 @@ export function useAvatarAnimator(
               `🎬 Playing ${semanticKey} on ${layer} layer (crossFade: ${crossFade}s)`,
             );
           }
+        } else {
+          devWarn(`❌ No layer found: ${layer} for animation ${semanticKey}`);
         }
       } catch (error) {
-        devWarn(`Error playing animation ${semanticKey}:`, error);
+        devError(
+          `❌ Error playing animation ${semanticKey} for ${gender}:`,
+          error,
+        );
+
+        // Log additional debug information
+        if (config.enableLogging) {
+          devLog(`Debug info for failed animation:`);
+          devLog(`  Semantic key: ${semanticKey}`);
+          devLog(`  Gender: ${gender}`);
+          devLog(`  Layer: ${layer}`);
+          devLog(`  Mixer exists: ${!!mixerRef.current}`);
+          devLog(`  Avatar scene exists: ${!!avatarScene}`);
+        }
       }
     },
     [gender, animationLoader, config.enableLogging],
@@ -528,6 +632,12 @@ export function useAvatarAnimator(
     (newState: LocomotionState) => {
       if (state.locomotion === newState) return;
 
+      if (config.enableLogging) {
+        devLog(
+          `🎬 setLocomotionState: ${state.locomotion} → ${newState} (${gender})`,
+        );
+      }
+
       let animationKey: string;
 
       switch (newState) {
@@ -556,10 +666,20 @@ export function useAvatarAnimator(
           animationKey = SemanticKeys.LOCOMOTION_IDLE_PRIMARY;
       }
 
+      if (config.enableLogging) {
+        devLog(`🎭 Playing animation: ${animationKey} for ${gender} avatar`);
+      }
+
       void playAnimation(animationKey, { layer: "locomotion" });
       setState((prev) => ({ ...prev, locomotion: newState }));
     },
-    [state.locomotion, state.currentIdle, playAnimation],
+    [
+      state.locomotion,
+      state.currentIdle,
+      playAnimation,
+      config.enableLogging,
+      gender,
+    ],
   );
 
   /**
@@ -684,14 +804,32 @@ export function useAvatarAnimator(
     (intensity = 0.5) => {
       if (state.isTalking) return;
 
+      if (config.enableLogging) {
+        devLog(
+          `🗣️ Starting talking for ${gender} avatar (intensity: ${intensity})`,
+        );
+      }
+
       // Select talking variant based on intensity
       const variants = getTalkingVariants(config.customRegistry);
+
+      if (variants.length === 0) {
+        devWarn(`❌ No talking variants found for ${gender} avatar`);
+        return;
+      }
+
       const variantIndex = Math.min(
         Math.floor(intensity * variants.length),
         variants.length - 1,
       );
       const talkingKey =
         variants[variantIndex] || SemanticKeys.EXPRESSION_TALK_VARIANT_1;
+
+      if (config.enableLogging) {
+        devLog(
+          `🎭 Selected talking animation: ${talkingKey} (variant ${variantIndex + 1}/${variants.length})`,
+        );
+      }
 
       void playAnimation(talkingKey, {
         layer: "expression",
@@ -702,11 +840,16 @@ export function useAvatarAnimator(
       setState((prev) => ({
         ...prev,
         isTalking: true,
-        expression: "talking",
         currentTalk: talkingKey,
       }));
     },
-    [state.isTalking, playAnimation, config.customRegistry],
+    [
+      state.isTalking,
+      config.customRegistry,
+      playAnimation,
+      config.enableLogging,
+      gender,
+    ],
   );
 
   /**

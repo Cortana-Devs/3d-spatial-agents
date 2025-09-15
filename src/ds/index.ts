@@ -15,6 +15,12 @@ export { TimeWheelScheduler, createTimeWheelScheduler } from './timing/TimeWheel
 export { TokenBucketMap, createTokenBucketMap } from './rate/TokenBucketMap';
 export type { TokenBucketConfig, TokenBucketMapOptions } from './rate/TokenBucketMap';
 
+// Step 4: Spatial indices (COMPLETED)
+export * from './spatial';
+
+// Step 5: Vector indices (COMPLETED)
+export * from './vector';
+
 // Re-export common interfaces for convenience
 export type { 
   TimeWheelConfig,
@@ -27,7 +33,7 @@ export type {
 
 // Version and metadata
 export const DS_VERSION = '1.0.0';
-export const DS_STEP_COMPLETED = 3; // Steps 1-3 completed
+export const DS_STEP_COMPLETED = 5; // Steps 1-5 completed
 
 /**
  * Create a basic event emitter for data structure events

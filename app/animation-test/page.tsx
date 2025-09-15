@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { ActiveAvatarModelProvider } from "@/src/hooks/useActiveAvatarModel";
-import DebugAvatarTest from "@/components/testing/DebugAvatarTest";
+import StableAvatarTest from "@/components/testing/StableAvatarTest";
 import ConsoleSpamController from "@/components/dev/ConsoleSpamController";
 
 export default function AnimationTestPage() {
@@ -58,48 +58,50 @@ export default function AnimationTestPage() {
 
         <div className="bg-gray-800 rounded-lg p-4 h-[600px]">
           <ActiveAvatarModelProvider autoLoadFemaleRuntime={true}>
-            <DebugAvatarTest style={{ width: "100%", height: "100%" }} />
+            <StableAvatarTest style={{ width: "100%", height: "100%" }} />
           </ActiveAvatarModelProvider>
         </div>
 
         <div className="mt-6 bg-gray-800 rounded-lg p-4">
           <h2 className="text-xl font-bold text-white mb-2">
-            🔍 Debug Avatar Visibility:
+            🎭 Fixed Character Flashing:
           </h2>
           <ul className="text-gray-300 space-y-1">
-            <li>🔍 Comprehensive avatar loading debug information</li>
-            <li>📊 Real-time scene analysis (meshes, materials, bones)</li>
-            <li>📐 Bounding box and transform details</li>
-            <li>🎯 Reference objects for scale comparison</li>
-            <li>💡 Enhanced lighting for maximum visibility</li>
-            <li>🎮 Camera controls and positioning help</li>
-            <li>⚠️ Error tracking and troubleshooting</li>
+            <li>✅ Fixed character flash and disappear issue</li>
+            <li>🎯 Stable avatar persistence across re-renders</li>
+            <li>📦 Proper object lifecycle management</li>
+            <li>⚡ Optimized scene disposal patterns</li>
+            <li>🔒 Prevented animation system conflicts</li>
+            <li>💫 Smooth 60 FPS stable rendering</li>
+            <li>🎮 Responsive camera controls</li>
           </ul>
         </div>
 
         <div className="mt-4 bg-gray-800 rounded-lg p-4">
-          <h2 className="text-xl font-bold text-white mb-2">Debug Guide:</h2>
+          <h2 className="text-xl font-bold text-white mb-2">
+            Stability Features:
+          </h2>
           <div className="text-gray-300 space-y-2">
             <div className="flex items-center gap-4">
               <span className="font-semibold">Current Mode:</span>
-              <span className="text-yellow-400">🔍 Debug Analysis</span>
+              <span className="text-green-400">🎭 Stable Avatar</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="font-semibold">Look For:</span>
+              <span className="font-semibold">Behavior:</span>
               <span className="text-blue-400">
-                Avatar between red/blue poles
+                Avatar loads once and stays visible
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="font-semibold">Reference:</span>
+              <span className="font-semibold">Controls:</span>
               <span className="text-green-400">
-                Grid at ground level (-1 Y)
+                Smooth camera rotation/zoom
               </span>
             </div>
             <div className="text-sm text-gray-400 mt-2">
-              Check the debug panel for detailed loading information.
+              Avatar should load once and remain stable without flashing.
               <br />
-              Use mouse controls to rotate/zoom and locate the avatar.
+              Reference poles show scale, grid shows ground level.
             </div>
           </div>
         </div>

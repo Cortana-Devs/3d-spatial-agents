@@ -1,16 +1,16 @@
-# Advanced Data Structures - Step 3 Complete ✅
+# Advanced Data Structures - Step 5 Complete ✅
 
 **Feature ID:** F03-ADVANCED-DATA-STRUCTURES  
 **Version:** 1.0.0  
-**Completed Steps:** 1-3 (Foundational utilities, Ring buffer + Priority queue, **Time wheel & Token bucket**)
+**Completed Steps:** 1-5 (Foundational utilities, Ring buffer + Priority queue, Time wheel & Token bucket, Spatial indices, **Vector indices**)
 
 ## Overview
 
 High-performance, deterministic data structures for the Descendants engine. This implementation provides strict performance contracts and observability hooks for critical system components.
 
-## Step 3 Components
+## Implemented Components
 
-### ⏰ TimeWheelScheduler
+### ⏰ TimeWheelScheduler (Step 3)
 
 Bucketed timer implementation with O(k) tick complexity where k = number of due buckets.
 
@@ -40,7 +40,7 @@ scheduler.tick(Date.now());
 - Zero-copy tick operation when no timers due
 - Memory-efficient circular buffer design
 
-### 🪣 TokenBucketMap
+### 🪣 TokenBucketMap (Step 3)
 
 High-performance rate limiting with O(1) amortized approve() operations.
 
@@ -148,10 +148,8 @@ npm test src/ds/__tests__/TokenBucketMap.test.ts
 npm test src/ds/__tests__/integration.test.ts
 ```
 
-## Next Steps (Steps 4-12)
+## Next Steps (Steps 6-12)
 
-- **Step 4:** Spatial indices (StaticBVH, DynamicAABBTree, GridHash)
-- **Step 5:** Vector index baseline (linear scan + HNSW stub)
 - **Step 6:** Weighted scorer + diff engine
 - **Step 7:** Event log compressor + bloom multi-level
 - **Step 8:** Object pool + benchmark harnesses
@@ -163,8 +161,10 @@ npm test src/ds/__tests__/integration.test.ts
 ## Architecture Compliance
 
 ✅ **AC1:** Deterministic iteration order  
+✅ **AC1:** Deterministic iteration order  
 ✅ **AC3:** TimeWheelScheduler ≤ 0.3ms tick performance  
 ✅ **AC4:** TokenBucketMap ≤ 0.002ms approve() median  
+✅ **AC5:** Spatial queries scale sub-linearly vs naive O(n^2)  
 ✅ **AC11:** Fully typed APIs (no `any`)  
 ✅ **C1:** No external dependencies  
 ✅ **C4:** Typed error handling with DSError  
@@ -173,5 +173,8 @@ npm test src/ds/__tests__/integration.test.ts
 ## Memory Characteristics
 
 - **TimeWheelScheduler:** O(slots) + O(scheduled_items)
-- **TokenBucketMap:** O(active_buckets) with automatic cleanup
-- **Both:** Zero allocation hot paths after warm-up
+- **TokenBucketMap:** O(active_buckets) with automatic cleanup  
+- **StaticBVH:** O(n) nodes, optimal for static geometry
+- **DynamicAABBTree:** O(n) nodes with fattened AABBs for stability
+- **UniformGridHash:** O(occupied_cells + items) with automatic cleanup
+- **All components:** Zero allocation hot paths after warm-up

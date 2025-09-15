@@ -41,39 +41,82 @@ export default function SimpleAnimatedAvatar({
     enableIdleCycling: true,
     enableMicroExpressions: false, // Disable for performance on multiple simulants
     performanceMode: "performance", // Use performance mode for simulants
-    enableLogging: false,
+    enableLogging: true, // Enable logging for debugging female animations
   });
+
+  // Debug: Log avatar gender and animation state changes
+  useEffect(() => {
+    console.log(`🎭 SimpleAnimatedAvatar initialized:`, {
+      simulantId: simulant.id,
+      isFemale,
+      modelUrl,
+      animatorReady: animator.state.isReady,
+      isPreloading: animator.state.isPreloading,
+      locomotionState: animator.state.locomotion,
+    });
+  }, [
+    simulant.id,
+    isFemale,
+    modelUrl,
+    animator.state.isReady,
+    animator.state.isPreloading,
+    animator.state.locomotion,
+  ]);
 
   // Initialize with idle state when animator is ready
   useEffect(() => {
     if (animator.state.isReady && !animator.state.isPreloading) {
+      console.log(
+        `🎬 Setting initial idle state for ${isFemale ? "female" : "male"} simulant ${simulant.id}`,
+      );
       animator.setLocomotionState("idle");
     }
-  }, [animator.state.isReady, animator.state.isPreloading]);
+  }, [
+    animator.state.isReady,
+    animator.state.isPreloading,
+    isFemale,
+    simulant.id,
+  ]);
 
   // Map simulant actions to animation states
   useEffect(() => {
-    if (!animator.state.isReady) return;
+    if (!animator.state.isReady) {
+      console.log(
+        `⏳ Animator not ready yet for ${isFemale ? "female" : "male"} simulant ${simulant.id}`,
+      );
+      return;
+    }
 
     const action = simulant.lastAction.toLowerCase();
+    const gender = isFemale ? "female" : "male";
+
+    console.log(
+      `🎬 Mapping action "${action}" for ${gender} simulant ${simulant.id}`,
+    );
 
     if (action.includes("walk") || action.includes("moving")) {
+      console.log(`  → Setting walking state for ${gender}`);
       animator.setLocomotionState("walking");
     } else if (action.includes("run")) {
+      console.log(`  → Setting running state for ${gender}`);
       animator.setLocomotionState("running");
     } else if (action.includes("crouch")) {
+      console.log(`  → Setting crouching state for ${gender}`);
       animator.setLocomotionState("crouching");
     } else if (action.includes("talk") || action.includes("speak")) {
+      console.log(`  → Starting talking for ${gender}`);
       animator.startTalking(0.5);
     } else if (action.includes("dance") || action.includes("celebrat")) {
+      console.log(`  → Triggering dance emote for ${gender}`);
       animator.triggerEmote("dance-casual");
     } else {
+      console.log(`  → Setting idle state for ${gender}`);
       animator.setLocomotionState("idle");
       if (animator.state.isTalking) {
         animator.stopTalking();
       }
     }
-  }, [simulant.lastAction, animator]);
+  }, [simulant.lastAction, animator, isFemale, simulant.id]);
 
   // Debug log Y positioning when simulant position changes
   useEffect(() => {

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Loading Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background-color: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #1a4a1a;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            background-color: #4a1a1a;
+            border-left: 4px solid #f44336;
+        }
+        .info {
+            background-color: #1a3a4a;
+            border-left: 4px solid #2196F3;
+        }
+        .warning {
+            background-color: #4a3a1a;
+            border-left: 4px solid #FF9800;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        #results {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Female Animation Loading Test</h1>
+        <p>This test verifies that female animations can be loaded correctly from the animation library.</p>
+
+        <div class="test-section">
+            <h2>Quick Tests</h2>
+            <button onclick="testSingleAnimation()">Test Single Animation</button>
+            <button onclick="testFemaleAnimations()">Test Female Animations</button>
+            <button onclick="testMaleAnimations()">Test Male Animations</button>
+            <button onclick="testBothGenders()">Test Both Genders</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Progress</h2>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+            </div>
+            <p id="progressText">Ready to test...</p>
+        </div>
+
+        <div class="test-section">
+            <h2>Results</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Three.js from CDN
+        import * as THREE from 'https://cdn.skypack.dev/three@0.157.0';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.157.0/examples/jsm/loaders/GLTFLoader.js';
+
+        const loader = new GLTFLoader();
+        const resultsDiv = document.getElementById('results');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        // Test animations
+        const testAnimations = {
+            female: {
+                idle: '/animations/animation-library-master/feminine/glb/idle/F_Standing_Idle_001.glb',
+                walk: '/animations/animation-library-master/feminine/glb/locomotion/F_Walk_002.glb',
+                run: '/animations/animation-library-master/feminine/glb/locomotion/F_Run_001.glb',
+                talk: '/animations/animation-library-master/feminine/glb/expression/F_Talking_Variations_001.glb',
+                dance: '/animations/animation-library-master/feminine/glb/dance/F_Dances_001.glb'
+            },
+            male: {
+                idle: '/animations/animation-library-master/masculine/glb/idle/M_Standing_Idle_001.glb',
+                walk: '/animations/animation-library-master/masculine/glb/locomotion/M_Walk_002.glb',
+                run: '/animations/animation-library-master/masculine/glb/locomotion/M_Run_001.glb',
+                talk: '/animations/animation-library-master/masculine/glb/expression/M_Talking_Variations_001.glb',
+                dance: '/animations/animation-library-master/masculine/glb/dance/M_Dances_001.glb'
+            }
+        };
+
+        function logResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function updateProgress(current, total, text = '') {
+            const percent = total > 0 ? (current / total) * 100 : 0;
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = text || `${current}/${total} complete`;
+        }
+
+        async function loadAnimation(path, name, gender) {
+            const startTime = Date.now();
+
+            try {
+                logResult(`🔄 Loading ${gender} ${name}: ${path}`, 'info');
+
+                const gltf = await new Promise((resolve, reject) => {
+                    loader.load(path, resolve, undefined, reject);
+                });
+
+                const loadTime = Date.now() - startTime;
+                const animationCount = gltf.animations ? gltf.animations.length : 0;
+
+                if (animationCount === 0) {
+                    logResult(`⚠️ ${gender} ${name}: No animations found in file`, 'warning');
+                    return { success: false, error: 'No animations found' };
+                }
+
+                logResult(`✅ ${gender} ${name}: Loaded successfully (${animationCount} animations, ${loadTime}ms)`, 'success');
+
+                // Log animation details
+                if (gltf.animations.length > 0) {
+                    const firstAnim = gltf.animations[0];
+                    logResult(`   📝 First animation: "${firstAnim.name || 'unnamed'}" (${firstAnim.duration.toFixed(2)}s, ${firstAnim.tracks.length} tracks)`, 'info');
+                }
+
+                return {
+                    success: true,
+                    animationCount,
+                    loadTime,
+                    animations: gltf.animations
+                };
+
+            } catch (error) {
+                const loadTime = Date.now() - startTime;
+                logResult(`❌ ${gender} ${name}: Failed to load - ${error.message} (${loadTime}ms)`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        window.testSingleAnimation = async function() {
+            logResult('🎯 Testing single female idle animation...', 'info');
+            await loadAnimation(testAnimations.female.idle, 'idle', 'Female');
+        };
+
+        window.testFemaleAnimations = async function() {
+            logResult('🚺 Testing all female animations...', 'info');
+
+            const animations = Object.entries(testAnimations.female);
+            let successful = 0;
+
+            for (let i = 0; i < animations.length; i++) {
+                const [name, path] = animations[i];
+                updateProgress(i, animations.length, `Testing female ${name}...`);
+
+                const result = await loadAnimation(path, name, 'Female');
+                if (result.success) successful++;
+
+                // Small delay to prevent overwhelming the browser
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            updateProgress(animations.length, animations.length, 'Female tests complete');
+            logResult(`📊 Female animations: ${successful}/${animations.length} successful`, successful === animations.length ? 'success' : 'warning');
+        };
+
+        window.testMaleAnimations = async function() {
+            logResult('🚹 Testing all male animations...', 'info');
+
+            const animations = Object.entries(testAnimations.male);
+            let successful = 0;
+
+            for (let i = 0; i < animations.length; i++) {
+                const [name, path] = animations[i];
+                updateProgress(i, animations.length, `Testing male ${name}...`);
+
+                const result = await loadAnimation(path, name, 'Male');
+                if (result.success) successful++;
+
+                // Small delay to prevent overwhelming the browser
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            updateProgress(animations.length, animations.length, 'Male tests complete');
+            logResult(`📊 Male animations: ${successful}/${animations.length} successful`, successful === animations.length ? 'success' : 'warning');
+        };
+
+        window.testBothGenders = async function() {
+            logResult('⚖️ Testing both genders comprehensive...', 'info');
+
+            const allTests = [
+                ...Object.entries(testAnimations.female).map(([name, path]) => ({ name, path, gender: 'Female' })),
+                ...Object.entries(testAnimations.male).map(([name, path]) => ({ name, path, gender: 'Male' }))
+            ];
+
+            let successful = 0;
+            let femaleSuccess = 0;
+            let maleSuccess = 0;
+
+            for (let i = 0; i < allTests.length; i++) {
+                const { name, path, gender } = allTests[i];
+                updateProgress(i, allTests.length, `Testing ${gender.toLowerCase()} ${name}...`);
+
+                const result = await loadAnimation(path, name, gender);
+                if (result.success) {
+                    successful++;
+                    if (gender === 'Female') femaleSuccess++;
+                    else maleSuccess++;
+                }
+
+                // Small delay
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            updateProgress(allTests.length, allTests.length, 'All tests complete');
+
+            logResult(`📊 Overall results: ${successful}/${allTests.length} successful`, 'info');
+            logResult(`   🚺 Female: ${femaleSuccess}/${Object.keys(testAnimations.female).length}`, femaleSuccess === Object.keys(testAnimations.female).length ? 'success' : 'error');
+            logResult(`   🚹 Male: ${maleSuccess}/${Object.keys(testAnimations.male).length}`, maleSuccess === Object.keys(testAnimations.male).length ? 'success' : 'error');
+
+            if (femaleSuccess === 0) {
+                logResult('🚨 CRITICAL: No female animations loaded successfully!', 'error');
+            } else if (femaleSuccess < Object.keys(testAnimations.female).length) {
+                logResult('⚠️ Some female animations failed to load', 'warning');
+            } else {
+                logResult('✅ All female animations loaded successfully!', 'success');
+            }
+        };
+
+        window.clearResults = function() {
+            resultsDiv.innerHTML = '';
+            updateProgress(0, 1, 'Ready to test...');
+        };
+
+        // Initial message
+        logResult('🎭 Animation Loading Test initialized. Click a button to start testing.', 'info');
+        logResult('This test will attempt to load animation files directly using Three.js GLTFLoader.', 'info');
+    </script>
+</body>
+</html>

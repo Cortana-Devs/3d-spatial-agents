@@ -10,19 +10,19 @@
  * - Integration with existing Three.js animation system
  */
 
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { AnimationClip, Cache } from 'three';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { AnimationClip, Cache } from "three";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import {
   AnimationRegistry,
   AvatarGender,
   AnimationResolutionOptions,
   resolveAnimationPath,
   getAnimationsByPriority,
-  PRIORITY_TIERS
-} from '../types/animationRegistry';
-import { ANIMATION_REGISTRY } from '../data/animationRegistry';
-import { devLog, devWarn, devError } from '../utils/devLogger';
+  PRIORITY_TIERS,
+} from "../types/animationRegistry";
+import { ANIMATION_REGISTRY } from "../data/animationRegistry";
+import { devLog, devWarn, devError } from "../utils/devLogger";
 
 // Enable Three.js caching
 Cache.enabled = true;
@@ -86,7 +86,7 @@ export class AnimationLoaderService {
     total: 0,
     loaded: 0,
     failed: 0,
-    errors: []
+    errors: [],
   };
 
   // Progress callbacks
@@ -96,7 +96,7 @@ export class AnimationLoaderService {
 
   constructor(
     registry: AnimationRegistry = ANIMATION_REGISTRY,
-    cacheConfig: Partial<CacheConfig> = {}
+    cacheConfig: Partial<CacheConfig> = {},
   ) {
     this.loader = new GLTFLoader();
     this.registry = registry;
@@ -105,7 +105,7 @@ export class AnimationLoaderService {
       maxMemoryMB: 50,
       maxAge: 5 * 60 * 1000, // 5 minutes
       cleanupInterval: 60 * 1000, // 1 minute
-      ...cacheConfig
+      ...cacheConfig,
     };
 
     this.startCleanupTimer();
@@ -117,7 +117,7 @@ export class AnimationLoaderService {
   async loadAnimation(
     semanticKey: string,
     gender: AvatarGender,
-    options: AnimationResolutionOptions = {}
+    options: AnimationResolutionOptions = {},
   ): Promise<AnimationClip | null> {
     const cacheKey = this.getCacheKey(semanticKey, gender);
 
@@ -135,15 +135,29 @@ export class AnimationLoaderService {
     }
 
     // Resolve animation path
-    const path = resolveAnimationPath(this.registry, semanticKey, gender, options);
+    const path = resolveAnimationPath(
+      this.registry,
+      semanticKey,
+      gender,
+      options,
+    );
     if (!path) {
-      const error = `No animation path found for key: ${semanticKey} (gender: ${gender})`;
+      const registryEntry = this.registry[semanticKey];
+      const error = `No animation path found for key: ${semanticKey} (gender: ${gender}). Registry entry: ${JSON.stringify(registryEntry, null, 2)}`;
+      devError(error);
       this.onError?.(error, semanticKey);
       return null;
     }
 
+    devLog(`🔍 Resolved path for ${semanticKey} (${gender}): ${path}`);
+
     // Create loading promise
-    const promise = this.loadAnimationFromPath(path, semanticKey, gender, cacheKey);
+    const promise = this.loadAnimationFromPath(
+      path,
+      semanticKey,
+      gender,
+      cacheKey,
+    );
     this.loadingPromises.set(cacheKey, promise);
 
     try {
@@ -161,31 +175,55 @@ export class AnimationLoaderService {
     path: string,
     semanticKey: string,
     gender: AvatarGender,
-    cacheKey: string
+    cacheKey: string,
   ): Promise<AnimationClip> {
     const startTime = performance.now();
 
     try {
-      devLog(`🎬 Loading animation: ${semanticKey} from ${path}`);
+      devLog(`🎬 Loading animation: ${semanticKey} for ${gender} from ${path}`);
 
       const gltf: GLTF = await new Promise((resolve, reject) => {
         this.loader.load(
           path,
-          resolve,
-          undefined, // onProgress
-          reject
+          (loadedGltf) => {
+            devLog(`✅ GLTF loaded successfully: ${path}`);
+            resolve(loadedGltf);
+          },
+          (progress) => {
+            // Optional progress logging for debugging
+            if (progress.total > 0) {
+              const percent = Math.round(
+                (progress.loaded / progress.total) * 100,
+              );
+              devLog(`📥 Loading ${semanticKey}: ${percent}%`);
+            }
+          },
+          (error) => {
+            devError(`❌ Failed to load GLTF: ${path}`, error);
+            reject(error);
+          },
         );
       });
 
       if (!gltf.animations || gltf.animations.length === 0) {
-        throw new Error(`No animations found in GLTF: ${path}`);
+        const errorMsg = `No animations found in GLTF: ${path}. GLTF contains: ${Object.keys(gltf).join(", ")}`;
+        devError(errorMsg);
+        throw new Error(errorMsg);
       }
+
+      devLog(`🎭 Found ${gltf.animations.length} animations in ${path}`);
 
       // Use the first animation clip
       const clip = gltf.animations[0];
       if (!clip) {
-        throw new Error(`Animation clip is null: ${path}`);
+        const errorMsg = `Animation clip is null: ${path}`;
+        devError(errorMsg);
+        throw new Error(errorMsg);
       }
+
+      devLog(
+        `🎵 Animation clip loaded: ${clip.name || "unnamed"} (${clip.duration.toFixed(2)}s)`,
+      );
 
       // Estimate memory usage (rough calculation)
       const estimatedSize = this.estimateClipSize(clip);
@@ -199,15 +237,16 @@ export class AnimationLoaderService {
         loadTime,
         lastAccessed: Date.now(),
         size: estimatedSize,
-        gender
+        gender,
       };
 
       this.cache.set(cacheKey, cachedAnimation);
 
-      devLog(`✅ Loaded animation: ${semanticKey} (${loadTime.toFixed(2)}ms, ~${(estimatedSize/1024).toFixed(1)}KB)`);
+      devLog(
+        `✅ Loaded animation: ${semanticKey} (${loadTime.toFixed(2)}ms, ~${(estimatedSize / 1024).toFixed(1)}KB)`,
+      );
 
       return clip;
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       devError(`❌ Failed to load animation: ${semanticKey} - ${errorMsg}`);
@@ -222,11 +261,18 @@ export class AnimationLoaderService {
   async preloadAnimations(config: Partial<PreloadConfig> = {}): Promise<void> {
     const {
       maxPriority = PRIORITY_TIERS.MEDIUM,
-      gender = 'masculine',
+      gender = "masculine",
       concurrency = 4,
       retryAttempts = 2,
-      retryDelay = 1000
-    }: PreloadConfig = { maxPriority: PRIORITY_TIERS.MEDIUM, gender: 'masculine', concurrency: 4, retryAttempts: 2, retryDelay: 1000, ...config };
+      retryDelay = 1000,
+    }: PreloadConfig = {
+      maxPriority: PRIORITY_TIERS.MEDIUM,
+      gender: "masculine",
+      concurrency: 4,
+      retryAttempts: 2,
+      retryDelay: 1000,
+      ...config,
+    };
 
     const animations = getAnimationsByPriority(this.registry, maxPriority);
 
@@ -234,23 +280,27 @@ export class AnimationLoaderService {
       total: animations.length,
       loaded: 0,
       failed: 0,
-      errors: []
+      errors: [],
     };
 
-    devLog(`🚀 Starting preload of ${animations.length} animations (priority ≤ ${maxPriority}, gender: ${gender})`);
+    devLog(
+      `🚀 Starting preload of ${animations.length} animations (priority ≤ ${maxPriority}, gender: ${gender})`,
+    );
 
     // Process animations in chunks
     const chunks = this.chunkArray(animations, concurrency);
 
     for (const chunk of chunks) {
       const promises = chunk.map(({ key }) =>
-        this.loadWithRetry(key, gender, retryAttempts, retryDelay)
+        this.loadWithRetry(key, gender, retryAttempts, retryDelay),
       );
 
       await Promise.allSettled(promises);
     }
 
-    devLog(`🎯 Preload complete: ${this.loadingState.loaded}/${this.loadingState.total} loaded, ${this.loadingState.failed} failed`);
+    devLog(
+      `🎯 Preload complete: ${this.loadingState.loaded}/${this.loadingState.total} loaded, ${this.loadingState.failed} failed`,
+    );
     this.onComplete?.();
   }
 
@@ -261,7 +311,7 @@ export class AnimationLoaderService {
     semanticKey: string,
     gender: AvatarGender,
     retryAttempts: number,
-    retryDelay: number
+    retryDelay: number,
   ): Promise<void> {
     this.loadingState.currentItem = semanticKey;
 
@@ -278,10 +328,14 @@ export class AnimationLoaderService {
           // Final attempt failed
           this.loadingState.failed++;
           this.loadingState.errors.push({ path: semanticKey, error: errorMsg });
-          devWarn(`⚠️ Failed to load ${semanticKey} after ${retryAttempts + 1} attempts: ${errorMsg}`);
+          devWarn(
+            `⚠️ Failed to load ${semanticKey} after ${retryAttempts + 1} attempts: ${errorMsg}`,
+          );
         } else {
           // Retry after delay
-          devWarn(`⏳ Retrying ${semanticKey} (attempt ${attempt + 2}/${retryAttempts + 1})`);
+          devWarn(
+            `⏳ Retrying ${semanticKey} (attempt ${attempt + 2}/${retryAttempts + 1})`,
+          );
           await this.delay(retryDelay);
         }
       }
@@ -293,7 +347,10 @@ export class AnimationLoaderService {
   /**
    * Get cached animation
    */
-  getCachedAnimation(semanticKey: string, gender: AvatarGender): AnimationClip | null {
+  getCachedAnimation(
+    semanticKey: string,
+    gender: AvatarGender,
+  ): AnimationClip | null {
     const cacheKey = this.getCacheKey(semanticKey, gender);
     const cached = this.cache.get(cacheKey);
 
@@ -317,7 +374,10 @@ export class AnimationLoaderService {
    * Get cache statistics
    */
   getCacheStats() {
-    const totalSize = Array.from(this.cache.values()).reduce((sum, item) => sum + item.size, 0);
+    const totalSize = Array.from(this.cache.values()).reduce(
+      (sum, item) => sum + item.size,
+      0,
+    );
     const memoryMB = totalSize / (1024 * 1024);
 
     return {
@@ -326,7 +386,7 @@ export class AnimationLoaderService {
       maxSize: this.cacheConfig.maxSize,
       maxMemoryMB: this.cacheConfig.maxMemoryMB,
       utilizationPercent: (this.cache.size / this.cacheConfig.maxSize) * 100,
-      memoryUtilizationPercent: (memoryMB / this.cacheConfig.maxMemoryMB) * 100
+      memoryUtilizationPercent: (memoryMB / this.cacheConfig.maxMemoryMB) * 100,
     };
   }
 
@@ -422,7 +482,7 @@ export class AnimationLoaderService {
    */
   clearCache(): void {
     this.cache.clear();
-    devLog('🧹 Animation cache cleared');
+    devLog("🧹 Animation cache cleared");
   }
 
   /**
@@ -437,7 +497,7 @@ export class AnimationLoaderService {
       this.cleanupTimer = undefined;
     }
 
-    devLog('🗑️ Animation loader service disposed');
+    devLog("🗑️ Animation loader service disposed");
   }
 
   // ========================================================================
@@ -471,7 +531,7 @@ export class AnimationLoaderService {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private startCleanupTimer(): void {
@@ -501,7 +561,7 @@ export function getAnimationLoader(): AnimationLoaderService {
  */
 export function initializeAnimationLoader(
   registry?: AnimationRegistry,
-  cacheConfig?: Partial<CacheConfig>
+  cacheConfig?: Partial<CacheConfig>,
 ): AnimationLoaderService {
   if (animationLoaderInstance) {
     animationLoaderInstance.dispose();
@@ -522,9 +582,4 @@ export function disposeAnimationLoader(): void {
 }
 
 // Export types
-export type {
-  CachedAnimation,
-  LoadingState,
-  PreloadConfig,
-  CacheConfig
-};
+export type { CachedAnimation, LoadingState, PreloadConfig, CacheConfig };

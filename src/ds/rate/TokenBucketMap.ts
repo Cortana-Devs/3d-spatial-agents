@@ -152,12 +152,12 @@ export class TokenBucketMap implements ITokenBucketMap {
   public snapshot(): Record<string, { tokens: number; capacity: number }> {
     const result: Record<string, { tokens: number; capacity: number }> = {};
     
-    for (const [key, bucket] of this.buckets) {
+    this.buckets.forEach((bucket, key) => {
       result[key] = {
         tokens: bucket.tokens,
         capacity: bucket.capacity
       };
-    }
+    });
     
     return result;
   }
@@ -169,7 +169,7 @@ export class TokenBucketMap implements ITokenBucketMap {
   public refillAll(nowMs: number): void {
     let refilled = 0;
     
-    for (const [key, bucket] of this.buckets) {
+    this.buckets.forEach((bucket, key) => {
       const elapsedMs = nowMs - bucket.lastRefillMs;
       if (elapsedMs > 0) {
         const tokensToAdd = (elapsedMs / 1000) * bucket.refillRatePerSec;
@@ -178,7 +178,7 @@ export class TokenBucketMap implements ITokenBucketMap {
         bucket.lastAccessMs = nowMs;
         refilled++;
       }
-    }
+    });
 
     if (refilled > 0) {
       this.eventEmitter?.({
@@ -197,7 +197,7 @@ export class TokenBucketMap implements ITokenBucketMap {
     let totalFillRatio = 0;
     let activeBuckets = 0;
 
-    for (const [key, bucket] of this.buckets) {
+    this.buckets.forEach((bucket, key) => {
       if (bucket.isActive) {
         const fillRatio = bucket.tokens / bucket.capacity;
         totalFillRatio += fillRatio;
@@ -207,7 +207,7 @@ export class TokenBucketMap implements ITokenBucketMap {
           saturated.push(key);
         }
       }
-    }
+    });
 
     const avgFillRatio = activeBuckets > 0 ? totalFillRatio / activeBuckets : 0;
 
@@ -265,14 +265,22 @@ export class TokenBucketMap implements ITokenBucketMap {
       return;
     }
 
-    for (const [key, bucket] of this.buckets) {
+    // First pass: mark inactive and collect candidates for removal
+    const bucketsToRemove: string[] = [];
+    
+    this.buckets.forEach((bucket, key) => {
       if (bucket.lastAccessMs < inactiveThreshold) {
-        this.buckets.delete(key);
-        removedCount++;
+        bucketsToRemove.push(key);
       } else {
         bucket.isActive = bucket.lastAccessMs >= inactiveThreshold;
       }
-    }
+    });
+
+    // Remove inactive buckets
+    bucketsToRemove.forEach(key => {
+      this.buckets.delete(key);
+      removedCount++;
+    });
 
     // If still over capacity after cleanup, remove oldest buckets
     if (this.buckets.size > this.options.maxBuckets) {
