@@ -1,8 +1,8 @@
-# Advanced Data Structures - Step 5 Complete ✅
+# Advanced Data Structures - Step 6 Complete ✅
 
 **Feature ID:** F03-ADVANCED-DATA-STRUCTURES  
 **Version:** 1.0.0  
-**Completed Steps:** 1-5 (Foundational utilities, Ring buffer + Priority queue, Time wheel & Token bucket, Spatial indices, **Vector indices**)
+**Completed Steps:** 1-6 (Foundational utilities, Ring buffer + Priority queue, Time wheel & Token bucket, Spatial indices, Vector indices, **Weighted scorer + Diff engine**)
 
 ## Overview
 

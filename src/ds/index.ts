@@ -21,6 +21,9 @@ export * from './spatial';
 // Step 5: Vector indices (COMPLETED)
 export * from './vector';
 
+// Step 6: Weighted scorer + diff engine (COMPLETED)
+export * from './scoring';
+
 // Re-export common interfaces for convenience
 export type { 
   TimeWheelConfig,
@@ -33,7 +36,7 @@ export type {
 
 // Version and metadata
 export const DS_VERSION = '1.0.0';
-export const DS_STEP_COMPLETED = 5; // Steps 1-5 completed
+export const DS_STEP_COMPLETED = 6; // Steps 1-6 completed
 
 /**
  * Create a basic event emitter for data structure events
