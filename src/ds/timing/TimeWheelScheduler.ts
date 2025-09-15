@@ -63,7 +63,7 @@ export class TimeWheelScheduler implements ITimeWheelScheduler {
       throw new DSError('DS_SCHED_DUPLICATE_ID', `Timer ID already exists: ${id}`, { id });
     }
 
-    // Calculate target slot
+    // Calculate target slot - when this timer should execute
     const slotsFromNow = Math.max(1, Math.ceil(delayMs / this.config.slotDurationMs));
     const targetSlot = (this.currentSlot + slotsFromNow) % this.config.slots;
 
@@ -98,7 +98,7 @@ export class TimeWheelScheduler implements ITimeWheelScheduler {
     const targetSlot = Math.floor(elapsedMs / this.config.slotDurationMs) % this.config.slots;
     
     // Check for excessive drift
-    const expectedTime = this.wheelStartTime + (targetSlot * this.config.slotDurationMs);
+    const expectedTime = this.wheelStartTime + (Math.floor(elapsedMs / this.config.slotDurationMs) * this.config.slotDurationMs);
     const drift = Math.abs(nowMs - expectedTime);
     
     if (drift > this.config.maxDriftMs) {
@@ -109,14 +109,15 @@ export class TimeWheelScheduler implements ITimeWheelScheduler {
       });
     }
 
-    // Process all slots from current to target (handle wrapping)
+    // Process slots up to and including the target slot
     let slotsProcessed = 0;
     while (this.currentSlot !== targetSlot && slotsProcessed < this.config.slots) {
+      // Advance to next slot
       this.currentSlot = (this.currentSlot + 1) % this.config.slots;
       slotsProcessed++;
 
       const slotItems = this.slots[this.currentSlot];
-      if (slotItems.size > 0) {
+      if (slotItems && slotItems.size > 0) {
         // Execute callbacks in deterministic order (by insertion order)
         const sortedItems = Array.from(slotItems.values())
           .sort((a, b) => a.insertionOrder - b.insertionOrder);
@@ -157,7 +158,7 @@ export class TimeWheelScheduler implements ITimeWheelScheduler {
    */
   public debug(): { scheduled: number; wheelTime: number; slots: number } {
     const scheduled = this.slots.reduce((total, slot) => total + slot.size, 0);
-    const wheelTime = Date.now() - this.wheelStartTime;
+    const wheelTime = Math.max(0, Date.now() - this.wheelStartTime);
     
     return {
       scheduled,
