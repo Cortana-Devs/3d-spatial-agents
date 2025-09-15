@@ -22,6 +22,15 @@ export interface TokenBucketMapOptions {
   maxBuckets?: number;
   cleanupIntervalMs?: number;
   inactiveThresholdMs?: number;
+  /**
+   * Sampling rate for approve/deny/refill events (0..1). Defaults to 1.0
+   */
+  eventSampleRate?: number;
+  /**
+   * Maximum buckets to remove per cleanup cycle to avoid long pauses.
+   * Defaults to 1000.
+   */
+  maxRemovalsPerCleanup?: number;
 }
 
 interface BucketState extends TokenBucket {
@@ -57,7 +66,9 @@ export class TokenBucketMap implements ITokenBucketMap {
       defaultConfig: options.defaultConfig,
       maxBuckets: options.maxBuckets ?? 10000,
       cleanupIntervalMs: options.cleanupIntervalMs ?? 300000, // 5 minutes
-      inactiveThresholdMs: options.inactiveThresholdMs ?? 600000 // 10 minutes
+      inactiveThresholdMs: options.inactiveThresholdMs ?? 600000, // 10 minutes
+      eventSampleRate: options.eventSampleRate ?? 1.0,
+      maxRemovalsPerCleanup: options.maxRemovalsPerCleanup ?? 1000
     };
 
     this.eventEmitter = eventEmitter;
@@ -92,11 +103,14 @@ export class TokenBucketMap implements ITokenBucketMap {
         bucket.tokens = Math.min(bucket.capacity, bucket.tokens + tokensToAdd);
         bucket.lastRefillMs = currentTime;
         
-        this.eventEmitter?.({
-          type: 'ds:bucket:refill',
-          timestamp: currentTime,
-          payload: { key, tokens: bucket.tokens, added: tokensToAdd }
-        });
+        // Sample refill events
+        if (this.shouldEmitEvent()) {
+          this.eventEmitter?.({
+            type: 'ds:bucket:refill',
+            timestamp: currentTime,
+            payload: { key, tokens: bucket.tokens, added: tokensToAdd }
+          });
+        }
       }
 
       // Update access tracking
@@ -107,19 +121,23 @@ export class TokenBucketMap implements ITokenBucketMap {
       if (bucket.tokens >= cost) {
         bucket.tokens -= cost;
         
-        this.eventEmitter?.({
-          type: 'ds:bucket:approve',
-          timestamp: currentTime,
-          payload: { key, cost, remainingTokens: bucket.tokens }
-        });
+        if (this.shouldEmitEvent()) {
+          this.eventEmitter?.({
+            type: 'ds:bucket:approve',
+            timestamp: currentTime,
+            payload: { key, cost, remainingTokens: bucket.tokens }
+          });
+        }
         
         return true;
       } else {
-        this.eventEmitter?.({
-          type: 'ds:bucket:deny',
-          timestamp: currentTime,
-          payload: { key, cost, availableTokens: bucket.tokens }
-        });
+        if (this.shouldEmitEvent()) {
+          this.eventEmitter?.({
+            type: 'ds:bucket:deny',
+            timestamp: currentTime,
+            payload: { key, cost, availableTokens: bucket.tokens }
+          });
+        }
         
         return false;
       }
@@ -276,18 +294,22 @@ export class TokenBucketMap implements ITokenBucketMap {
       }
     });
 
-    // Remove inactive buckets
-    bucketsToRemove.forEach(key => {
-      this.buckets.delete(key);
+    // Remove inactive buckets with bound to avoid long pauses
+    const maxRemovals = this.options.maxRemovalsPerCleanup;
+    for (let i = 0; i < bucketsToRemove.length && i < maxRemovals; i++) {
+      this.buckets.delete(bucketsToRemove[i]);
       removedCount++;
-    });
+    }
 
     // If still over capacity after cleanup, remove oldest buckets
     if (this.buckets.size > this.options.maxBuckets) {
       const sortedBuckets = Array.from(this.buckets.entries())
         .sort(([, a], [, b]) => a.lastAccessMs - b.lastAccessMs);
       
-      const toRemove = this.buckets.size - this.options.maxBuckets;
+      const toRemove = Math.min(
+        this.buckets.size - this.options.maxBuckets,
+        this.options.maxRemovalsPerCleanup
+      );
       for (let i = 0; i < toRemove; i++) {
         this.buckets.delete(sortedBuckets[i][0]);
         removedCount++;
@@ -297,11 +319,13 @@ export class TokenBucketMap implements ITokenBucketMap {
     this.lastCleanupMs = nowMs;
 
     if (removedCount > 0) {
-      this.eventEmitter?.({
-        type: 'ds:bucket:refill', // Reusing event type for cleanup
-        timestamp: nowMs,
-        payload: { type: 'cleanup', bucketsRemoved: removedCount }
-      });
+      if (this.shouldEmitEvent()) {
+        this.eventEmitter?.({
+          type: 'ds:bucket:refill', // Reusing event type for cleanup
+          timestamp: nowMs,
+          payload: { type: 'cleanup', bucketsRemoved: removedCount }
+        });
+      }
     }
   }
 
@@ -330,6 +354,11 @@ export class TokenBucketMap implements ITokenBucketMap {
     }
     this.buckets.clear();
     this.approveStats = { count: 0, totalTimeMs: 0, maxTimeMs: 0 };
+  }
+
+  private shouldEmitEvent(): boolean {
+    const rate = this.options.eventSampleRate ?? 1.0;
+    return rate >= 1.0 || Math.random() < rate;
   }
 }
 

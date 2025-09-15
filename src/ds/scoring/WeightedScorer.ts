@@ -155,12 +155,12 @@ export class WeightedScorer {
       {
         name: 'importance',
         weight: config.weights.importance,
-        calculate: (item: any) => item.record.importance
+        calculate: (item: { id: string; record: MemoryRecordScoring }) => item.record.importance
       },
       {
         name: 'recency',
         weight: config.weights.recency,
-        calculate: (item: any) => {
+        calculate: (item: { id: string; record: MemoryRecordScoring }) => {
           const ageMs = Date.now() - (item.record.recencyScore * config.decayHalfLifeMs);
           return Math.exp(-ageMs / config.decayHalfLifeMs);
         }
@@ -168,7 +168,7 @@ export class WeightedScorer {
       {
         name: 'layer',
         weight: config.weights.layer,
-        calculate: (item: any) => item.record.layerWeight
+        calculate: (item: { id: string; record: MemoryRecordScoring }) => item.record.layerWeight
       }
     ];
 
@@ -177,7 +177,7 @@ export class WeightedScorer {
       criteria.push({
         name: 'semantic',
         weight: config.weights.semantic,
-        calculate: (item: any) => item.record.semanticSimilarity
+        calculate: (item: { id: string; record: MemoryRecordScoring }) => item.record.semanticSimilarity
       });
     }
 
@@ -186,7 +186,7 @@ export class WeightedScorer {
       criteria.push({
         name: 'social',
         weight: config.weights.social,
-        calculate: (item: any) => item.record.socialRelevance ?? 0
+        calculate: (item: { id: string; record: MemoryRecordScoring }) => item.record.socialRelevance ?? 0
       });
     }
 
@@ -195,7 +195,7 @@ export class WeightedScorer {
       criteria.push({
         name: 'spatial',
         weight: config.weights.spatial,
-        calculate: (item: any) => item.record.spatialProximity ?? 0
+        calculate: (item: { id: string; record: MemoryRecordScoring }) => item.record.spatialProximity ?? 0
       });
     }
 
@@ -219,32 +219,32 @@ export class WeightedScorer {
       {
         name: 'feasibility',
         weight: config.weights.feasibility,
-        calculate: (item: any) => item.action.feasibility
+        calculate: (item: { id: string; action: ActionScoringData }) => item.action.feasibility
       },
       {
         name: 'urgency',
         weight: config.weights.urgency,
-        calculate: (item: any) => item.action.urgency
+        calculate: (item: { id: string; action: ActionScoringData }) => item.action.urgency
       },
       {
         name: 'impact',
         weight: config.weights.impact,
-        calculate: (item: any) => item.action.impact
+        calculate: (item: { id: string; action: ActionScoringData }) => item.action.impact
       },
       {
         name: 'cost',
         weight: config.weights.cost,
-        calculate: (item: any) => 1.0 - item.action.cost // Invert cost (lower is better)
+        calculate: (item: { id: string; action: ActionScoringData }) => 1.0 - item.action.cost // Invert cost (lower is better)
       },
       {
         name: 'safety',
         weight: config.weights.safety,
-        calculate: (item: any) => item.action.safety
+        calculate: (item: { id: string; action: ActionScoringData }) => item.action.safety
       },
       {
         name: 'alignment',
         weight: config.weights.alignment,
-        calculate: (item: any) => item.action.alignment
+        calculate: (item: { id: string; action: ActionScoringData }) => item.action.alignment
       }
     ];
 
@@ -285,22 +285,22 @@ export class WeightedScorer {
       {
         name: 'availability',
         weight: 0.3,
-        calculate: (item: any) => item.resource.availability
+        calculate: (item: { id: string; resource: { availability: number; cost: number; priority: number; utilization: number } }) => item.resource.availability
       },
       {
         name: 'cost_efficiency', 
         weight: 0.25,
-        calculate: (item: any) => 1.0 - (item.resource.cost * context.budgetPressure)
+        calculate: (item: { id: string; resource: { availability: number; cost: number; priority: number; utilization: number } }) => 1.0 - (item.resource.cost * context.budgetPressure)
       },
       {
         name: 'priority',
         weight: 0.25,
-        calculate: (item: any) => item.resource.priority
+        calculate: (item: { id: string; resource: { availability: number; cost: number; priority: number; utilization: number } }) => item.resource.priority
       },
       {
         name: 'utilization_optimal',
         weight: 0.2,
-        calculate: (item: any) => 1.0 - Math.abs(item.resource.utilization - context.performanceTarget)
+        calculate: (item: { id: string; resource: { availability: number; cost: number; priority: number; utilization: number } }) => 1.0 - Math.abs(item.resource.utilization - context.performanceTarget)
       }
     ];
 

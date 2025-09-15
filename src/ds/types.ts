@@ -46,6 +46,11 @@ export interface TimeWheelConfig {
   slots: number;
   slotDurationMs: number;
   maxDriftMs?: number;
+  /**
+   * Optional sampling rate for 'ds:scheduler:due' event emissions (0..1).
+   * Defaults to 1.0 (emit all). Use to reduce observability overhead under load.
+   */
+  eventSampleRate?: number;
 }
 
 export interface TimeWheelScheduler {

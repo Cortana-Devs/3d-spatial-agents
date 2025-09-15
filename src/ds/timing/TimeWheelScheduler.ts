@@ -118,21 +118,33 @@ export class TimeWheelScheduler implements ITimeWheelScheduler {
 
       const slotItems = this.slots[this.currentSlot];
       if (slotItems && slotItems.size > 0) {
-        // Execute callbacks in deterministic order (by insertion order)
-        const sortedItems = Array.from(slotItems.values())
-          .sort((a, b) => a.insertionOrder - b.insertionOrder);
+        // Execute callbacks in insertion order without sorting by walking insertionOrder incrementally
+        // Maintain deterministic order using the monotonic insertionOrder
+        const itemsInOrder = Array.from(slotItems.values());
+        let nextOrder = Math.min(...itemsInOrder.map(i => i.insertionOrder));
+        const maxOrder = Math.max(...itemsInOrder.map(i => i.insertionOrder));
 
-        for (const item of sortedItems) {
+        // Build a simple map from insertionOrder to item to avoid n^2 scan
+        const orderMap = new Map<number, ScheduledItem>();
+        for (const it of itemsInOrder) orderMap.set(it.insertionOrder, it);
+
+        for (; nextOrder <= maxOrder; nextOrder++) {
+          const item = orderMap.get(nextOrder);
+          if (!item) continue;
           try {
             const startTime = performance.now();
             item.callback();
             const latencyMs = performance.now() - startTime;
 
-            this.eventEmitter?.({
-              type: 'ds:scheduler:due',
-              timestamp: nowMs,
-              payload: { id: item.id, latencyMs }
-            });
+            // Event sampling to limit telemetry volume under load
+            const sampleRate = this.config.eventSampleRate ?? 1.0;
+            if (sampleRate >= 1.0 || Math.random() < sampleRate) {
+              this.eventEmitter?.({
+                type: 'ds:scheduler:due',
+                timestamp: nowMs,
+                payload: { id: item.id, latencyMs }
+              });
+            }
           } catch (error) {
             // Callback errors shouldn't crash the scheduler
             this.eventEmitter?.({
