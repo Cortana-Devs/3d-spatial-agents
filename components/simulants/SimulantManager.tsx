@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { useGLTF } from "@react-three/drei";
+import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { useWorldStore } from "../../store/worldStore";
 import ReadyPlayerMeSimulant from "./ReadyPlayerMeSimulant";
 import SimpleAnimatedAvatar from "./SimpleAnimatedAvatar";
@@ -9,6 +11,7 @@ import ExternalAnimationTest from "./ExternalAnimationTest";
 import { AISimulant } from "../../types";
 import { debugSimulantYPositioning } from "../../utils/debugLogger";
 import { Y_LEVEL_CONSTANTS } from "../../config/yLevelConstants";
+import { useActiveAvatarModel } from "@/src/hooks/useActiveAvatarModel";
 
 // Simulant manager configuration
 interface SimulantManagerProps {
@@ -34,12 +37,47 @@ const PERFORMANCE_CONFIG = {
   },
 } as const;
 
+/* -------------------------------------------------------------------------- */
+/*                       Lightweight Female Avatar Renderer                   */
+/* -------------------------------------------------------------------------- */
+const FemaleStaticAvatar: React.FC<{
+  simulant: AISimulant;
+  scale?: number;
+}> = ({ simulant, scale = 0.8 }) => {
+  // Load & clone female model once per component instance to avoid skeleton conflicts
+  const gltf = useGLTF("/models/c-girl.glb");
+  const cloned = React.useMemo(
+    () => SkeletonUtils.clone(gltf.scene),
+    [gltf.scene],
+  );
+
+  return (
+    <group
+      position={[simulant.position.x, simulant.position.y, simulant.position.z]}
+    >
+      <primitive object={cloned} scale={[scale, scale, scale]} />
+    </group>
+  );
+};
+
+// Preload female model (safe no-op on SSR)
+if (typeof window !== "undefined") {
+  try {
+    // @ts-ignore preload side-effect only
+    useGLTF.preload("/models/c-girl.glb");
+  } catch {
+    /* ignore */
+  }
+}
+
 export default function SimulantManager({
   enableAnimations = true,
   enableGridSnap = true,
   maxSimulants = PERFORMANCE_CONFIG.maxSimulants,
 }: SimulantManagerProps) {
   const { simulants, updateSimulant } = useWorldStore();
+  // Active avatar model state (switches GLB path when female selected)
+  const { isFemale } = useActiveAvatarModel();
 
   // Convert Map to Array and apply performance limits
   const activeSimulants = useMemo(() => {
@@ -124,14 +162,22 @@ export default function SimulantManager({
         </>
       )}
 
-      {/* Render active simulants with working animation system */}
-      {activeSimulants.map((simulant) => (
-        <SimpleAnimatedAvatar
-          key={`simulant-${simulant.id}`}
-          simulant={simulant}
-          scale={0.8}
-        />
-      ))}
+      {/* Render active simulants - dynamic avatar based on global selection */}
+      {activeSimulants.map((simulant) =>
+        isFemale ? (
+          <FemaleStaticAvatar
+            key={`simulant-${simulant.id}`}
+            simulant={simulant}
+            scale={0.8}
+          />
+        ) : (
+          <SimpleAnimatedAvatar
+            key={`simulant-${simulant.id}`}
+            simulant={simulant}
+            scale={0.8}
+          />
+        ),
+      )}
 
       {/* Performance warning indicator (development only) */}
       {process.env.NODE_ENV === "development" &&

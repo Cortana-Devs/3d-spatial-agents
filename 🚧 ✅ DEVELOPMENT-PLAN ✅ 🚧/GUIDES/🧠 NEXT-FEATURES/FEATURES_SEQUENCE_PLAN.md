@@ -9,20 +9,31 @@ Goal Horizon: Enable living simulant avatars (female + existing male) driven by 
 
 Parallel Work Lanes (so teams / threads can proceed simultaneously):
 - Lane A (Assets & Presentation): Feature 1
-- Lane B (Core Architecture): Feature 2
-- Lane C (LLM Infra + Runtime Adapters): Feature 3
-- Lane D (Governance & Scaling): Feature 4
-- Lane E (Behavior & Future Extensibility): Feature 5
+- Lane B (Core Architecture): Features 2-3
+- Lane C (Observability & World Simulation): Features 4-6
+- Lane D (Cognition & Memory): Feature 7
+- Lane E (LLM Integration & Governance): Features 8-9
+- Lane F (Behavior Orchestration): Feature 10
 
 Critical Path Dependencies:
-1 ➜ (Assets exist for testing) feeds 3 & 5 (need avatar handles)
-2 ➜ Blocks 3 (integration surfaces), 4 (rate governance inside Engine), 5 (agent loop plug-in points)
+1 ➜ (Assets exist for testing) feeds all subsequent features
+2 ➜ Blocks all other features (central authority)
+3 ➜ Provides primitives for 4,7,9 (data structures)
+4 ➜ Enables early feedback for 5-10 (observability)
+5 ➜ Enables 6,7 (world simulation foundation)
+6 ➜ Feeds 7,10 (collision events for memory & behavior)
+7 ➜ Enables 8,10 (memory context for LLM & behavior)
+8 ➜ Enables 9,10 (LLM calls need rate governance & behavior orchestration)
 
 Run Strategy:
 - Start Feature 2 skeleton first (Day 0) while Feature 1 asset wiring proceeds (Day 0–1)
-- Begin Feature 3 as soon as Engine API façade stubs exist (Day 1)
-- Feature 4 scaffolds right after first Gemini test call succeeds (Day 2)
-- Feature 5 begins once Engine publishes minimal agent lifecycle events (Day 2–3)
+- Begin Feature 3 data structures as soon as Engine events exist (Day 1)
+- Feature 4 UI starts when Engine events flow (Day 1-2)
+- Features 5-6 physics/collision start when data structures ready (Day 2)
+- Feature 7 memory begins when collision events available (Day 3)
+- Feature 8 Gemini integration starts when memory context ready (Day 3-4)
+- Feature 9 rate governor integrates with LLM calls (Day 4)
+- Feature 10 behavior orchestrator synthesizes all systems (Day 5)
 
 ---
 
@@ -30,9 +41,14 @@ Run Strategy:
 
 1. Integrate Female Model & Animation Set + UI Placement Toggle
 2. Implement Central Engine (Authority Core) & Mediation Protocol
-3. Gemini 2.5 Flash Integration (env-based, dual active AI avatars)
-4. Adaptive Rate / Quota & Awareness Layer (LLM Budget Governor)
-5. Multi-LLM Agent Runtime & Behavior Orchestrator (Future GPT-5 Ready)
+3. Advanced Data Structures & Algorithmic Optimization Layer
+4. Advanced UI / UX Enhancements & Interactive Control Layer
+5. Real‑Time Physics & Collision Integration Layer
+6. Collision System (Advanced Contact, Sensors & Predictive Avoidance)
+7. Memory System (Multi-Layer Cognitive Architecture)
+8. Gemini 2.5 Flash Integration (env-based, dual active AI avatars)
+9. Adaptive Rate / Quota & Awareness Layer (LLM Budget Governor)
+10. Multi-LLM Agent Runtime & Behavior Orchestrator (Future GPT-5 Ready)
 
 ---
 
