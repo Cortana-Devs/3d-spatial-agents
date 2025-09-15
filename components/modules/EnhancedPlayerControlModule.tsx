@@ -438,13 +438,23 @@ export function EnhancedPlayerControlModule({
 
   const handleClick = useCallback(() => {
     if (!isControlsLocked && enableMouseLook) {
-      gl.domElement.requestPointerLock()
+      try {
+        if (document.pointerLockElement !== gl.domElement) {
+          gl.domElement.requestPointerLock()
+        }
+      } catch (err) {
+        console.warn('[EnhancedPlayerControl] Error requesting pointer lock', err)
+      }
     }
   }, [isControlsLocked, enableMouseLook, gl])
 
   const handlePointerLockChange = useCallback(() => {
     setIsControlsLocked(document.pointerLockElement === gl.domElement)
   }, [gl])
+
+  const handlePointerLockError = useCallback(() => {
+    console.warn('[EnhancedPlayerControl] Pointer lock request failed or was interrupted')
+  }, [])
 
   // Register update loop
   React.useEffect(() => {
@@ -458,6 +468,7 @@ export function EnhancedPlayerControlModule({
     document.addEventListener('keydown', handleKeyDown)
     document.addEventListener('keyup', handleKeyUp)
     document.addEventListener('pointerlockchange', handlePointerLockChange)
+    document.addEventListener('pointerlockerror', handlePointerLockError)
 
     if (enableMouseLook) {
       document.addEventListener('mousemove', handleMouseMove)
@@ -468,6 +479,7 @@ export function EnhancedPlayerControlModule({
       document.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('keyup', handleKeyUp)
       document.removeEventListener('pointerlockchange', handlePointerLockChange)
+      document.removeEventListener('pointerlockerror', handlePointerLockError)
 
       if (enableMouseLook) {
         document.removeEventListener('mousemove', handleMouseMove)
@@ -482,6 +494,7 @@ export function EnhancedPlayerControlModule({
     handleMouseMove,
     handleClick,
     handlePointerLockChange,
+    handlePointerLockError,
     gl,
   ])
 

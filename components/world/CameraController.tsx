@@ -263,9 +263,20 @@ export default function CameraController({
     flyControls.current.mouseMovement.y = 0;
   }, [gl.domElement]);
 
+  const handlePointerLockError = useCallback(() => {
+    devWarn("Pointer lock request failed or was interrupted");
+  }, []);
+
   const requestPointerLock = useCallback(() => {
     if (mode === "fly" && !flyControls.current.isPointerLocked) {
-      gl.domElement.requestPointerLock();
+      try {
+        // Some browsers may require a user gesture; this is only called on click
+        if (document.pointerLockElement !== gl.domElement) {
+          gl.domElement.requestPointerLock();
+        }
+      } catch (err) {
+        devWarn("Error requesting pointer lock:", err as unknown);
+      }
     }
   }, [mode, gl.domElement]);
 
@@ -577,6 +588,7 @@ export default function CameraController({
 
     // Pointer lock events
     document.addEventListener("pointerlockchange", handlePointerLockChange);
+    document.addEventListener("pointerlockerror", handlePointerLockError);
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
@@ -588,6 +600,7 @@ export default function CameraController({
         "pointerlockchange",
         handlePointerLockChange,
       );
+      document.removeEventListener("pointerlockerror", handlePointerLockError);
     };
   }, [
     gl.domElement,
@@ -597,6 +610,7 @@ export default function CameraController({
     requestPointerLock,
     handleDoubleClick,
     handlePointerLockChange,
+    handlePointerLockError,
     mode,
     enableDoubleClickFocus,
     safeCameraMode,
