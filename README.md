@@ -35,36 +35,117 @@ https://github.com/user-attachments/assets/24555977-755b-4709-9be6-14a33849e212
 - **Presence Awareness**: Live tracking of users and AI simulants
 - **Cross-Platform**: Seamless experience across desktop and mobile
 
-## 🏗️ Architecture Overview
+## 🏗️ Modular Monolith Architecture
 
-### 📁 **Core System Structure**
+**Descendants** follows a **Modular Monolith** architecture pattern, providing the organizational benefits of microservices while maintaining the simplicity and performance of a single deployable unit. This approach ensures clean separation of concerns, independent module development, and seamless integration.
+
+### 🧩 **Core Architecture Principles**
+
+#### **📦 Module Boundaries**
+Each module is self-contained with:
+- **Clear interfaces** for inter-module communication
+- **Independent state management** with well-defined APIs
+- **Isolated dependencies** and minimal coupling
+- **Domain-specific logic** encapsulated within module boundaries
+
+#### **🔄 Integration Patterns**
+- **Event-driven communication** between modules
+- **Shared state** through Zustand stores with module-specific slices
+- **Type-safe interfaces** ensuring contract compliance
+- **Performance isolation** with independent optimization strategies
+
+### 📁 **Modular System Structure**
+
 ```
-├── app/                    # Next.js 15 App Router with SSR optimization
-├── components/             # Modular React components
-│   ├── world/             # 3D world engine (VoxelCanvas, CameraController)
-│   ├── simulants/         # AI avatar system (RPM integration, animations)
-│   ├── skybox/            # Dynamic environment system
-│   ├── ui/                # Axiom Design System components
-│   └── debug/             # Development tools and performance monitoring
-├── systems/               # High-level system orchestration
-│   ├── integration/       # Cross-system integration layers  
-│   └── performance/       # Advanced optimization systems
-├── utils/                 # Core business logic and utilities
-│   ├── generation/        # Procedural world generation
-│   ├── performance/       # GPU optimization and monitoring
-│   └── logging/           # Advanced debugging and analytics
-├── store/                 # Zustand state management (worldStore, skyboxStore)
-├── types/                 # Comprehensive TypeScript definitions
-├── hooks/                 # Custom React hooks for 3D interactions
-├── config/                # World configuration and constants
-└── examples/              # Implementation demos and usage patterns
+├── app/                    # 🎯 APPLICATION LAYER
+│   └── Next.js 15 App Router with SSR optimization
+│
+├── components/             # 🧩 PRESENTATION MODULES
+│   ├── world/             # 🌍 3D World Rendering Module
+│   │   ├── VoxelCanvas.tsx        # Core 3D scene orchestration
+│   │   ├── BlockRenderer.tsx      # Optimized block rendering system
+│   │   └── CameraController.tsx   # Multi-mode camera system
+│   ├── simulants/         # 🤖 AI Avatar Module
+│   │   ├── SimulantManager.tsx    # AI lifecycle management
+│   │   └── ReadyPlayerMeSimulant.tsx # 3D avatar integration
+│   ├── skybox/            # 🌅 Environment Module
+│   │   └── SkyboxManager.tsx      # Dynamic environment system
+│   ├── ui/                # 🎨 Design System Module
+│   │   └── Axiom Design System components
+│   └── debug/             # 🔧 Development Tools Module
+│       └── UnifiedDebugPanel.tsx  # Comprehensive debugging interface
+│
+├── systems/               # ⚡ SYSTEM ORCHESTRATION LAYER
+│   ├── integration/       # 🔗 Cross-Module Integration
+│   │   └── FloorSystemIntegrator.tsx
+│   └── performance/       # 📊 Performance Management
+│       ├── PerformanceMonitor.tsx
+│       ├── AdaptiveQuality.tsx
+│       └── TransparencyBatcher.tsx
+│
+├── utils/                 # 🛠️ SHARED UTILITY MODULES
+│   ├── generation/        # 🏝️ Procedural Generation Module
+│   ├── performance/       # ⚡ GPU Optimization Module
+│   └── logging/           # 📋 Advanced Analytics Module
+│
+├── store/                 # 💾 STATE MANAGEMENT LAYER
+│   ├── worldStore.ts      # World state with real-time sync
+│   ├── skyboxStore.ts     # Environment state management
+│   └── Module-specific Zustand stores
+│
+├── types/                 # 🏷️ SHARED TYPE DEFINITIONS
+│   └── Module interfaces and contracts
+│
+├── hooks/                 # 🔄 SHARED REACT HOOKS
+│   └── 3D interaction and state hooks
+│
+├── config/                # ⚙️ CONFIGURATION MODULE
+│   └── World and system configuration
+│
+└── examples/              # 📚 INTEGRATION EXAMPLES
+    └── Module usage patterns and demos
 ```
 
-### 🔗 **Key Integration Points**
-- **Entry Point**: `app/page.tsx` → `VoxelCanvas.tsx` (main 3D scene)
-- **State Management**: `store/worldStore.ts` (real-time collaboration)
-- **Type Definitions**: `types/index.ts` (system-wide interfaces)
-- **Performance**: `systems/PerformanceMonitor.tsx` (real-time optimization)
+### 🔗 **Module Integration Architecture**
+
+#### **🎯 Entry Point Flow**
+```
+app/page.tsx → VoxelCanvas.tsx → Module Orchestration
+     ↓              ↓                    ↓
+State Stores → Integration Layer → Individual Modules
+```
+
+#### **📡 Inter-Module Communication**
+- **State Events**: Zustand stores with module-specific slices
+- **Type Contracts**: Shared interfaces in `/types/` ensure compatibility
+- **Integration Layer**: `/systems/integration/` manages cross-module concerns
+- **Performance Coordination**: Unified monitoring across all modules
+
+#### **🔄 Data Flow Patterns**
+1. **World Module** ← → **Simulants Module** (avatar positioning)
+2. **Performance Module** → **All Modules** (optimization signals)
+3. **Debug Module** ← **All Modules** (telemetry and diagnostics)
+4. **Generation Module** → **World Module** (procedural content)
+
+### 🎯 **Module Development Benefits**
+
+#### **🚀 Independent Development**
+- Teams can work on modules independently
+- Clear boundaries prevent merge conflicts
+- Module-specific testing and optimization
+- Incremental feature deployment
+
+#### **📈 Scalability Patterns**
+- **Performance Isolation**: Each module can be optimized independently
+- **Load Distribution**: Critical paths can be prioritized separately
+- **Feature Flags**: Modules can be enabled/disabled dynamically
+- **A/B Testing**: Module-level experimentation support
+
+#### **🔧 Maintenance Advantages**
+- **Focused Debugging**: Issues isolated to specific modules
+- **Selective Updates**: Deploy changes to individual modules
+- **Technology Evolution**: Upgrade module dependencies independently
+- **Team Ownership**: Clear responsibility boundaries
 
 ## 🚀 Quick Start
 
