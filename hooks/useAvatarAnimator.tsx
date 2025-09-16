@@ -588,7 +588,7 @@ export function useAvatarAnimator(
           devWarn(`❌ No layer found: ${layer} for animation ${semanticKey}`);
         }
       } catch (error) {
-        devError(
+        devWarn(
           `❌ Error playing animation ${semanticKey} for ${gender}:`,
           error,
         );
