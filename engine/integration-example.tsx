@@ -258,9 +258,13 @@ export function EngineWorldIntegration({ engine }: { engine: Engine | null }) {
   return (
     <div className="p-4 border rounded-lg">
       <h3 className="text-lg font-semibold mb-2">World Integration</h3>
-      <div className="text-sm text-gray-600 mb-4">
+      <p
+        className="text-sm text-gray-600 mb-4"
+        aria-live="polite"
+        aria-label={`Number of registered entities: ${entities.length}`}
+      >
         Registered entities: {entities.length}
-      </div>
+      </p>
       
       <button
         onClick={() => handleBlockPlace([Math.floor(Math.random() * 20), 0, Math.floor(Math.random() * 20)], 'stone')}
