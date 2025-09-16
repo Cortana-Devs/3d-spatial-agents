@@ -13,6 +13,7 @@
     "test": "vitest --environment=jsdom",
     "test:run": "vitest run --environment=jsdom",
     "test:ui": "vitest --ui --environment=jsdom",
+    "test:module": "vitest --environment=jsdom --config vitest.module.config.mts",
     "validate:y-levels": "node scripts/validateYLevelAlignment.js",
     "adjust:floor-depth": "node scripts/adjustFloorDepth.js",
     "debug:status": "node scripts/debug-status.js",
@@ -26,7 +27,10 @@
     "verify:logging": "node scripts/verify-logging-system.js",
     "fix:imports": "node scripts/fix-imports.js",
     "fix:imports:apply": "node scripts/fix-imports.js --apply",
-    "supabase:types": "supabase gen types typescript --project-id YOUR_PROJECT_ID > types/supabase.ts"
+    "supabase:types": "supabase gen types typescript --project-id YOUR_PROJECT_ID > types/supabase.ts",
+    "module:analyze": "node scripts/analyze-module-dependencies.js",
+    "module:validate": "node scripts/validate-module-boundaries.js",
+    "architecture:diagram": "node scripts/generate-architecture-diagram.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
