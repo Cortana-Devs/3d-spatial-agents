@@ -1,0 +1,227 @@
+/* Avatar Selector Compact Styling */
+.avatar-selector-compact {
+  transform: scale(0.85);
+  transform-origin: left center;
+}
+
+.avatar-selector-compact .avatar-selector {
+  gap: 0.25rem;
+}
+
+.avatar-selector-compact button {
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.75rem !important;
+  height: auto !important;
+  min-height: 1.75rem;
+}
+
+/* Character Card Styling */
+.character-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.character-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.character-card.selected {
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Character Icon Styling */
+.character-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.character-icon-wrapper svg {
+  transition: all 0.2s ease-in-out;
+}
+
+.character-card:hover .character-icon-wrapper svg {
+  transform: scale(1.1);
+}
+
+/* Simulant List Item Styling */
+.simulant-list-item {
+  transition: all 0.2s ease-in-out;
+}
+
+.simulant-list-item:hover {
+  background-color: rgba(var(--axiom-neutral-200), 0.7);
+}
+
+.dark .simulant-list-item:hover {
+  background-color: rgba(var(--axiom-neutral-700), 0.7);
+}
+
+/* Status Indicator Animation */
+.status-indicator {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-indicator.active {
+  animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-indicator.idle {
+  animation: pulse-yellow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-indicator.disconnected {
+  animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes pulse-yellow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes pulse-red {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Statistics Grid Styling */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.stats-card {
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.stats-card:hover {
+  transform: translateY(-1px);
+}
+
+.stats-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stats-label {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Expansion Animation */
+.expand-enter {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+
+.expand-enter-active {
+  opacity: 1;
+  max-height: 200px;
+  transition: opacity 0.2s ease-in-out, max-height 0.3s ease-in-out;
+}
+
+.expand-exit {
+  opacity: 1;
+  max-height: 200px;
+}
+
+.expand-exit-active {
+  opacity: 0;
+  max-height: 0;
+  transition: opacity 0.2s ease-in-out, max-height 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .avatar-selector-compact {
+    transform: scale(0.75);
+  }
+
+  .character-card {
+    padding: 0.75rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.25rem;
+  }
+
+  .stats-card {
+    padding: 0.375rem;
+  }
+
+  .stats-value {
+    font-size: 1rem;
+  }
+
+  .stats-label {
+    font-size: 0.6875rem;
+  }
+}
+
+/* Dark mode specific adjustments */
+.dark .character-card {
+  border-color: rgba(var(--axiom-neutral-700), 1);
+}
+
+.dark .character-card:hover {
+  background-color: rgba(var(--axiom-neutral-700), 0.5);
+}
+
+.dark .character-card.selected {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Accessibility improvements */
+.character-card:focus-within {
+  outline: 2px solid rgba(var(--axiom-primary-500), 0.5);
+  outline-offset: 2px;
+}
+
+.simulant-list-item:focus-within {
+  outline: 2px solid rgba(var(--axiom-primary-500), 0.5);
+  outline-offset: 2px;
+}
+
+/* Loading state */
+.loading-skeleton {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

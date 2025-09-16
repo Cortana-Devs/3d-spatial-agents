@@ -266,18 +266,31 @@ export class GPUMemoryManager {
 
   // Performance monitoring
   private startMemoryMonitoring(): void {
-    setInterval(() => {
-      this.checkMemoryPressure();
-
-      if (process.env.NODE_ENV === "development") {
-        devLog("💾 Memory Manager Stats:", {
-          memoryUsage: this.memoryUsage,
-          metrics: this.metrics,
-          resourceCount: this.resources.size,
-          memoryPressure: `${(this.metrics.memoryPressure * 100).toFixed(1)}%`,
-        });
+    // Avoid creating multiple intervals during HMR/React strict-mode re-mounts
+    const win = typeof window !== "undefined" ? (window as any) : undefined;
+    if (win) {
+      if (win.__GPU_MEMORY_MONITOR_INTERVAL__) {
+        // Already running
+        return;
       }
-    }, 10000); // Every 10 seconds
+      win.__GPU_MEMORY_MONITOR_INTERVAL__ = setInterval(() => {
+        this.checkMemoryPressure();
+
+        if (process.env.NODE_ENV === "development") {
+          devLog("💾 Memory Manager Stats:", {
+            memoryUsage: this.memoryUsage,
+            metrics: this.metrics,
+            resourceCount: this.resources.size,
+            memoryPressure: `${(this.metrics.memoryPressure * 100).toFixed(1)}%`,
+          });
+        }
+      }, 10000);
+    } else {
+      // Fallback for non-browser environments (tests)
+      setInterval(() => {
+        this.checkMemoryPressure();
+      }, 10000);
+    }
   }
 
   // Public API
