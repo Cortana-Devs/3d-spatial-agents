@@ -1,13 +1,31 @@
 /* eslint-disable react-hooks/immutability */
 import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { useAIController } from './useAIController';
+import { useYukaAI } from './useYukaAI';
 import { createMaterials } from '../Systems/Materials';
 import { Joints } from './useRobotController';
 
-export default function AIRobot({ playerRef }: { playerRef: React.RefObject<THREE.Group | null> }) {
+export default function AIRobot({
+    playerRef,
+    initialPosition = [10, 5, -330]
+}: {
+    playerRef: React.RefObject<THREE.Group | null>,
+    initialPosition?: [number, number, number]
+}) {
     const groupRef = useRef<THREE.Group>(null);
-    const { joints } = useAIController(groupRef, playerRef);
+    // We need to access joints for animation. 
+    // Ideally useYukaAI should return joints or we separate animation logic.
+    // For now, let's keep the visual structure but we need to re-bind joints.
+    const joints = useRef<any>({});
+    // Use the new Yuka-powered brain with animation support
+    const { vehicle } = useYukaAI(groupRef, playerRef, joints);
+
+    // ... (Rest of the component needs to be updated to handle animation if useYukaAI doesn't return joints)
+    // Wait, useYukaAI currently returns { vehicle }. It doesn't handle animation yet.
+    // We should probably port the animation logic to useYukaAI or a separate useRobotAnimation hook.
+    // For this step, let's just swap the controller and see if it moves.
+    // We will lose animations temporarily (he will slide), which is expected for Phase 1.
+
 
     const { bodyMat, jointMat, glowMat } = useMemo(() => {
         const mats = createMaterials();
@@ -17,7 +35,7 @@ export default function AIRobot({ playerRef }: { playerRef: React.RefObject<THRE
     }, []);
 
     return (
-        <group ref={groupRef} position={[10, 5, -330]}>
+        <group ref={groupRef} position={initialPosition}>
             <group ref={(el) => { if (el && joints.current) joints.current.hips = el; }} position={[0, 3.5, 0]}>
                 <mesh material={bodyMat} castShadow receiveShadow>
                     <boxGeometry args={[1.5, 0.5, 1]} />

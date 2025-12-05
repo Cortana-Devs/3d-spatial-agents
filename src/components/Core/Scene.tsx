@@ -10,6 +10,11 @@ import Bridge from '../World/Bridge';
 import SocialWorkHub from '../World/SocialWorkHub';
 import Robot from '../Entities/Robot';
 import AIRobot from '../Entities/AIRobot';
+import YukaSystem from '../Systems/YukaSystem';
+import TimeSystem from '../Systems/TimeSystem';
+import StreetLamp from '../World/StreetLamp';
+import GroundLight from '../World/GroundLight';
+import LevelBoundaries from '../Systems/LevelBoundaries';
 import ZoneController from '../Systems/ZoneController';
 import { useGameStore } from '@/store/gameStore';
 import { createWaterNormalMap } from '../Systems/Utilities';
@@ -132,39 +137,32 @@ export default function Scene() {
                 <AdaptiveDpr pixelated />
                 <AdaptiveEvents />
                 <fog attach="fog" args={[0xd6eaf8, 0.0015]} />
-                <ambientLight intensity={0.7} color="#ffeebb" />
-                <hemisphereLight intensity={0.6} groundColor="#665544" color="#ffffee" />
-                <directionalLight
-                    position={[100, 120, 100]} // Higher sun for visibility, but still angled
-                    color="#fff5e6" // Subtle warm tint
-                    intensity={1.2} // Slightly softer direct light
-                    castShadow
-                    shadow-mapSize={[1024, 1024]} // Optimized Shadow Map
-                    shadow-camera-left={-300}
-                    shadow-camera-right={300}
-                    shadow-camera-top={300}
-                    shadow-camera-bottom={-300}
-                    shadow-bias={-0.0005}
-                    shadow-normalBias={0.05}
-                />
-                <Environment preset="city" background={false} />
-                <Sky
-                    distance={450000}
-                    sunPosition={[100, 120, 100]} // Matches directional light
-                    inclination={0}
-                    azimuth={0.25}
-                    turbidity={0.1}
-                    rayleigh={0.5}
-                    mieCoefficient={0.005}
-                    mieDirectionalG={0.7}
-                />
+                <TimeSystem />
                 <WaterComponent />
 
                 <Terrain />
                 <Bridge />
                 <SocialWorkHub />
+
+                {/* Street Lamps */}
+                <StreetLamp position={[5, 0, -320]} />
+                <StreetLamp position={[-5, 0, -320]} />
+                <StreetLamp position={[5, 0, -340]} />
+                <StreetLamp position={[-5, 0, -340]} />
+
+                {/* Ground Lights (Path to Bridge) */}
+                <GroundLight position={[2, 0.05, -310]} />
+                <GroundLight position={[-2, 0.05, -310]} />
+                <GroundLight position={[2, 0.05, -300]} />
+                <GroundLight position={[-2, 0.05, -300]} />
+                <GroundLight position={[2, 0.05, -290]} />
+                <GroundLight position={[-2, 0.05, -290]} />
+
                 <Robot groupRef={robotRef} />
-                <AIRobot playerRef={robotRef} />
+                <AIRobot playerRef={robotRef} initialPosition={[10, 5, -330]} />
+                <AIRobot playerRef={robotRef} initialPosition={[15, 5, -330]} />
+                <YukaSystem />
+                <LevelBoundaries />
                 <ZoneController robotRef={robotRef} />
                 <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
 
