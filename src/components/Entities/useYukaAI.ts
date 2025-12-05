@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import AIManager from '../Systems/AIManager';
 import { useGameStore } from '@/store/gameStore';
+import { ClientBrain } from '../Systems/ClientBrain';
+import { NearbyEntity } from '@/app/actions';
 
 export function useYukaAI(
     groupRef: React.RefObject<THREE.Group | null>,
@@ -30,7 +32,11 @@ export function useYukaAI(
     const lookAheadRef = useRef(new THREE.Vector3());
     const sensorPosRef = useRef(new THREE.Vector3());
     const safetyTargetRef = useRef(new THREE.Vector3(0, 0, -330));
+
     const toSafetyRef = useRef(new THREE.Vector3());
+
+    // AI Brain
+    const brainRef = useRef(new ClientBrain());
 
     useEffect(() => {
         if (!groupRef.current) return;
@@ -269,15 +275,114 @@ export function useYukaAI(
             }
         }
 
+        // --- BRAIN UPDATE (Autopilot) ---
+        // Run every ~1 second (assuming 60fps) to check cognitive state
+        const brain = brainRef.current;
+        if (frameRef.current % 60 === 0) {
+            let currentBehavior = "IDLE";
+            if (vehicle.steering.behaviors[2].active) currentBehavior = "SEEKING";
+            else if (vehicle.steering.behaviors[1].active) currentBehavior = "WANDERING";
+
+            // Fire and forget (async)
+            // Construct Perception Data
+            const nearbyEntities: NearbyEntity[] = []; // Explicit type
+
+            // 1. Perceive Player
+            if (playerRef.current) {
+                const distToPlayer = vehicle.position.distanceTo(playerRef.current.position as unknown as YUKA.Vector3);
+                if (distToPlayer < 30) {
+                    nearbyEntities.push({
+                        type: 'PLAYER',
+                        id: 'player-01',
+                        distance: parseFloat(distToPlayer.toFixed(1)),
+                        status: 'Active'
+                    });
+                }
+            }
+
+            // 2. Perceive Other Agents
+            const otherAgents = AIManager.getInstance().vehicles
+                .filter(v => v !== vehicle)
+                .map(v => ({
+                    entity: v,
+                    distance: v.position.distanceTo(vehicle.position)
+                }))
+                .filter(e => e.distance < 20);
+
+            otherAgents.forEach(agent => {
+                nearbyEntities.push({
+                    type: 'AGENT',
+                    id: String((agent.entity as any).id || (agent.entity as any).uuid || 'unknown'),
+                    distance: parseFloat(agent.distance.toFixed(1)),
+                    status: 'Idle'
+                });
+            });
+
+            // Always update brain, even if alone, so it can decide to Wander
+            if (nearbyEntities.length >= 0) { // Condition actually redundant but keeps structure
+                brain.update(
+                    vehicle.position as unknown as THREE.Vector3,
+                    nearbyEntities,
+                    currentBehavior
+                ).then(decision => {
+                    if (decision) {
+                        // console.log("Brain Decision:", decision); // Optional logging
+
+                        // Decision Logic
+                        const seek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior;
+                        const wander = vehicle.steering.behaviors[1] as YUKA.WanderBehavior;
+
+                        if (decision.action === 'FOLLOW' && decision.targetId) {
+                            // High Priority: Follow specific entity
+                            const targetEntity = nearbyEntities.find(e => e.id === decision.targetId);
+                            // Also check actual Yuka entities to get position
+                            let targetPos: THREE.Vector3 | null = null;
+
+                            if (decision.targetId === 'player-01' && playerRef.current) {
+                                targetPos = playerRef.current.position;
+                            } else {
+                                const agent = AIManager.getInstance().vehicles.find(v => String((v as any).id) === decision.targetId);
+                                if (agent) targetPos = agent.position as unknown as THREE.Vector3;
+                            }
+
+                            if (targetPos) {
+                                seek.active = true;
+                                wander.active = false;
+                                seek.target.copy(targetPos as unknown as YUKA.Vector3);
+                            }
+                        } else if (decision.action === 'MOVE_TO' && decision.target) {
+                            seek.active = true;
+                            wander.active = false;
+                            seek.target.set(decision.target.x, decision.target.y, decision.target.z);
+                        } else if (decision.action === 'WANDER') {
+                            seek.active = false;
+                            wander.active = true;
+                        } else if (decision.action === 'WAIT') {
+                            seek.active = false;
+                            wander.active = false;
+                            vehicle.velocity.multiplyScalar(0.5); // Slow down
+                        }
+                    }
+                });
+            }
+        }
+
         // --- LOGIC UPDATE ---
+        // Removed hardcoded "Auto-Follow" logic to respect Brain decisions.
+        // Keeping only physical interactions and state machines that shouldn't wait for LLM (like Greetings)
+
         if (playerRef && playerRef.current) {
             const playerPos = playerRef.current.position;
             const dist = vehicle.position.distanceTo(playerPos as unknown as YUKA.Vector3);
 
+            // Note: We REMOVED the "if (dist < 40) seek.active = true" block.
+            // Now the Brain MUST set seek.active via 'FOLLOW' action.
+
+            // Ensure seek and wander are defined for the entire playerRef block
             const seek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior;
             const wander = vehicle.steering.behaviors[1] as YUKA.WanderBehavior;
 
-            // Social State Machine
+            // Social State Machine (Keep this as "Reflexes")
             if (socialState.current === 'CHATTING') {
                 // Stop and Chat
                 seek.active = false;
@@ -298,28 +403,10 @@ export function useYukaAI(
                 if (socialTimer.current > 15.0) {
                     socialState.current = 'NONE';
                 }
-
-                // Normal Logic (Wander/Follow)
-                if (dist < 40 && dist > 8) {
-                    seek.active = true;
-                    wander.active = false;
-                    seek.target.copy(playerPos as unknown as YUKA.Vector3);
-                } else if (dist <= 8) {
-                    seek.active = false;
-                    vehicle.velocity.multiplyScalar(0.95);
-                } else {
-                    seek.active = false;
-                    wander.active = true;
-                }
             } else {
-                // Normal Logic (Greeting or Wander)
-                // Reset Greeting if far away
-                if (dist > 100) {
-                    greetingState.current = 'NONE';
-                }
-
-                // Trigger Greeting
-                if (greetingState.current === 'NONE' && dist < 60 && dist > 40) {
+                // Greet Reflex (Can override movement momentarily)
+                if (dist > 100) greetingState.current = 'NONE';
+                if (greetingState.current === 'NONE' && dist < 15 && dist > 5) { // Closer range for greeting
                     greetingState.current = 'LOOKING';
                     greetingTimer.current = 0;
                 }
@@ -349,33 +436,10 @@ export function useYukaAI(
                 } else if (greetingState.current === 'DONE') {
                     // Mind own business (Patrol/Wander)
                     // Unless very close (Follow logic overrides)
-                    if (dist < 40 && dist > 8) {
-                        seek.active = true;
-                        wander.active = false;
-                        seek.target.copy(playerPos as unknown as YUKA.Vector3);
-                    } else if (dist <= 8) {
-                        seek.active = false;
-                        vehicle.velocity.multiplyScalar(0.95);
-                    } else {
-                        seek.active = false;
-                        wander.active = true;
-                    }
+                    // No specific action here, brain will decide.
                 } else {
                     // Normal Logic (Before Greeting or if logic falls through)
-                    if (dist < 40 && dist > 8) {
-                        // FOLLOW MODE
-                        seek.active = true;
-                        wander.active = false;
-                        seek.target.copy(playerPos as unknown as YUKA.Vector3);
-                    } else if (dist <= 8) {
-                        // IDLE MODE (Close enough)
-                        seek.active = false;
-                        vehicle.velocity.multiplyScalar(0.95); // Brake
-                    } else {
-                        // PATROL/WANDER MODE
-                        seek.active = false;
-                        wander.active = true;
-                    }
+                    // No specific action here, brain will decide.
                 }
             }
         }
