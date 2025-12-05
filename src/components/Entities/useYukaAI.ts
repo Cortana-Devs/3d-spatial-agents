@@ -27,6 +27,10 @@ export function useYukaAI(
     const rayOriginRef = useRef(new THREE.Vector3());
     const rayDirRef = useRef(new THREE.Vector3(0, -1, 0));
     const frameRef = useRef(0);
+    const lookAheadRef = useRef(new THREE.Vector3());
+    const sensorPosRef = useRef(new THREE.Vector3());
+    const safetyTargetRef = useRef(new THREE.Vector3(0, 0, -330));
+    const toSafetyRef = useRef(new THREE.Vector3());
 
     useEffect(() => {
         if (!groupRef.current) return;
@@ -204,12 +208,15 @@ export function useYukaAI(
         // Optimization: Run sensor check every 3 frames
         if (collidableMeshes.length > 0 && vehicle.velocity.length() > 0.1 && frameRef.current % 3 === 0) {
             const raycaster = raycasterRef.current;
+            const lookAhead = lookAheadRef.current;
+            const sensorPos = sensorPosRef.current;
 
-            // Yuka Vector3 methods
-            const lookAhead = vehicle.velocity.clone().normalize().multiplyScalar(2.0);
-            const sensorPos = new THREE.Vector3(vehicle.position.x, vehicle.position.y, vehicle.position.z).add(
-                new THREE.Vector3(lookAhead.x, lookAhead.y, lookAhead.z)
-            );
+            // Zero GC Vector Math
+            // lookAhead = vehicle.velocity.clone().normalize().multiplyScalar(2.0);
+            lookAhead.set(vehicle.velocity.x, vehicle.velocity.y, vehicle.velocity.z).normalize().multiplyScalar(2.0);
+
+            // sensorPos = vehicle.position + lookAhead
+            sensorPos.set(vehicle.position.x, vehicle.position.y, vehicle.position.z).add(lookAhead);
             sensorPos.y += 5.0;
 
             raycaster.set(sensorPos, rayDirRef.current);
@@ -231,8 +238,11 @@ export function useYukaAI(
                 vehicle.velocity.multiplyScalar(0.5);
 
                 // 2. Steer towards Safety (Center/Spawn)
-                const safetyTarget = new THREE.Vector3(0, 0, -330); // Back to hub
-                const toSafety = new THREE.Vector3().subVectors(safetyTarget, vehicle.position as unknown as THREE.Vector3).normalize();
+                const safetyTarget = safetyTargetRef.current;
+                const toSafety = toSafetyRef.current;
+
+                // toSafety = (safetyTarget - vehicle.position).normalize()
+                toSafety.subVectors(safetyTarget, vehicle.position as unknown as THREE.Vector3).normalize();
 
                 // Apply strong force towards safety
                 vehicle.velocity.x += toSafety.x * 20.0 * dt;

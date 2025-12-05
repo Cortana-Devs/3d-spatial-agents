@@ -13,6 +13,8 @@ interface GameState {
     setViewMode: (mode: 'third') => void;
     isCameraLocked: boolean;
     setCameraLocked: (locked: boolean) => void;
+    isNight: boolean;
+    setIsNight: (isNight: boolean) => void;
     collidableMeshes: THREE.Object3D[];
     addCollidableMesh: (mesh: THREE.Object3D) => void;
     removeCollidableMesh: (uuid: string) => void;
@@ -37,6 +39,8 @@ export const useGameStore = create<GameState>((set) => ({
     setViewMode: (mode) => set({ viewMode: mode }),
     isCameraLocked: false,
     setCameraLocked: (locked) => set({ isCameraLocked: locked }),
+    isNight: false,
+    setIsNight: (isNight) => set({ isNight }),
 
     collidableMeshes: [],
     addCollidableMesh: (mesh) => set((state) => ({ collidableMeshes: [...state.collidableMeshes, mesh] })),

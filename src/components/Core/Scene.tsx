@@ -133,7 +133,7 @@ export default function Scene() {
 
     return (
         <div style={{ width: '100vw', height: '100vh' }}>
-            <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 10, -20], fov: 60 }} gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.5 }}>
+            <Canvas shadows dpr={[1, 1.5]} performance={{ min: 0.5 }} camera={{ position: [0, 10, -20], fov: 60 }} gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.5 }}>
                 <AdaptiveDpr pixelated />
                 <AdaptiveEvents />
                 <fog attach="fog" args={[0xd6eaf8, 0.0015]} />
@@ -145,18 +145,27 @@ export default function Scene() {
                 <SocialWorkHub />
 
                 {/* Street Lamps */}
-                <StreetLamp position={[5, 0, -320]} />
-                <StreetLamp position={[-5, 0, -320]} />
-                <StreetLamp position={[5, 0, -340]} />
-                <StreetLamp position={[-5, 0, -340]} />
+                {/* Street Lamps (8 Total - 4 Outer, 4 Inner) */}
+                {/* Outer Corners */}
+                <StreetLamp position={[120, 2, -495]} />
+                <StreetLamp position={[-120, 2, -495]} />
+                <StreetLamp position={[120, 2, -255]} />
+                <StreetLamp position={[-120, 2, -255]} />
 
-                {/* Ground Lights (Path to Bridge) */}
-                <GroundLight position={[2, 0.05, -310]} />
-                <GroundLight position={[-2, 0.05, -310]} />
-                <GroundLight position={[2, 0.05, -300]} />
-                <GroundLight position={[-2, 0.05, -300]} />
-                <GroundLight position={[2, 0.05, -290]} />
-                <GroundLight position={[-2, 0.05, -290]} />
+                {/* Inner Ring */}
+                <StreetLamp position={[50, 2, -425]} />
+                <StreetLamp position={[-50, 2, -425]} />
+                <StreetLamp position={[50, 2, -325]} />
+                <StreetLamp position={[-50, 2, -325]} />
+
+                {/* Ground Lights (Social Hub Corners) */}
+                <GroundLight position={[-115, 2.05, -490]} />
+                <GroundLight position={[115, 2.05, -490]} />
+                <GroundLight position={[-115, 2.05, -260]} />
+                <GroundLight position={[115, 2.05, -260]} />
+
+                {/* Spawn Area Ground Light */}
+                <GroundLight position={[-5, 0.05, -40]} />
 
                 <Robot groupRef={robotRef} />
                 <AIRobot playerRef={robotRef} initialPosition={[10, 5, -330]} />

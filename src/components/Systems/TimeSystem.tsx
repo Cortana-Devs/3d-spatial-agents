@@ -17,6 +17,9 @@ export default function TimeSystem() {
     // Configuration
     const dayDuration = 120; // Seconds for a full 24h cycle
 
+    const setIsNight = useGameStore((state) => state.setIsNight);
+    const prevIsNight = useRef(false);
+
     useFrame((state, delta) => {
         // Advance time
         timeRef.current += (delta / dayDuration) * 24;
@@ -45,6 +48,12 @@ export default function TimeSystem() {
         const isDay = time > 6 && time < 18;
         const isNight = !isDay;
 
+        // Update Global State only on change
+        if (isNight !== prevIsNight.current) {
+            prevIsNight.current = isNight;
+            setIsNight(isNight);
+        }
+
         // Colors
         const daySky = new THREE.Color('#87CEEB');
         const nightSky = new THREE.Color('#000011');
@@ -52,8 +61,11 @@ export default function TimeSystem() {
         const dayGround = new THREE.Color('#665544');
         const nightGround = new THREE.Color('#050505');
 
+        // Smart Ambience: Boost night visibility to compensate for lack of point lights
+        const nightHemiSky = new THREE.Color('#303080'); // Much Brighter Blue-Purple
+        const nightHemiGround = new THREE.Color('#2a2a40'); // Stronger street light bounce
+
         let skyColor = daySky;
-        let groundColor = dayGround;
         let sunIntensity = 1.5;
         let ambientIntensity = 0.5;
         let fogColor = new THREE.Color('#d6eaf8');
@@ -71,7 +83,7 @@ export default function TimeSystem() {
             skyColor = nightSky;
             fogColor = new THREE.Color('#000011');
             sunIntensity = 0.0; // Sun is gone
-            ambientIntensity = 0.1; // Dark
+            ambientIntensity = 0.7; // High Visibility Night (was 0.4)
         }
 
         // Directional Light: Sun vs Moon
@@ -85,7 +97,7 @@ export default function TimeSystem() {
             } else {
                 // Moon is dominant
                 directionalLightRef.current.position.copy(moonPosition);
-                directionalLightRef.current.intensity = THREE.MathUtils.lerp(directionalLightRef.current.intensity, 0.3, 0.05); // Dim Moon
+                directionalLightRef.current.intensity = THREE.MathUtils.lerp(directionalLightRef.current.intensity, 0.8, 0.05); // Bright Moon (was 0.6)
                 directionalLightRef.current.color.setHSL(0.6, 0.5, 0.9); // Cool Moon
                 directionalLightRef.current.castShadow = true; // Moon shadows!
             }
@@ -96,8 +108,12 @@ export default function TimeSystem() {
             ambientLightRef.current.intensity = THREE.MathUtils.lerp(ambientLightRef.current.intensity, ambientIntensity, 0.05);
         }
         if (hemiLightRef.current) {
-            hemiLightRef.current.color.lerp(isNight ? new THREE.Color('#000044') : new THREE.Color('#ffffee'), 0.05);
-            hemiLightRef.current.groundColor.lerp(isNight ? nightGround : dayGround, 0.05);
+            // Smart Hemi Color Transition
+            const targetSky = isNight ? nightHemiSky : new THREE.Color('#ffffee');
+            const targetGround = isNight ? nightHemiGround : dayGround;
+
+            hemiLightRef.current.color.lerp(targetSky, 0.05);
+            hemiLightRef.current.groundColor.lerp(targetGround, 0.05);
             hemiLightRef.current.intensity = THREE.MathUtils.lerp(hemiLightRef.current.intensity, ambientIntensity, 0.05);
         }
 
