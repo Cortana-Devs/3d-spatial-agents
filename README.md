@@ -12,6 +12,14 @@
 
 This project represents the foundation of **CortanaOS**—a future operating system for spatial computing and agentic collaboration.
 
+
+https://github.com/user-attachments/assets/a619eb77-a34e-43e9-a3e2-fb284629706d
+
+
+
+https://github.com/user-attachments/assets/bca866cb-1f78-441b-82df-b9ead7e1ffa1
+
+
 ## 🚀 Vision & Future
 
 Our roadmap is driven by the convergence of Spatial Intelligence and Generative AI.
