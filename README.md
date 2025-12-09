@@ -1,4 +1,4 @@
-# Descendants 🌌
+# Descendants (Core)
 
 > **A Next-Generation Agentic AI Simulation Platform**  
 > *Powered by Cortana Research & Development Center*
