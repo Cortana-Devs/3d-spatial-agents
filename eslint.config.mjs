@@ -1,136 +1,18 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-  {
-    ignores: [
-      "node_modules/**",
-      ".next/**",
-      "out/**",
-      "build/**",
-      "next-env.d.ts",
-      "debug/**",
-      "src/debug/**",
-      "examples/**",
-    ],
-  },
-  {
-    rules: {
-      "no-console": ["error", { allow: ["warn", "error"] }],
-      "@typescript-eslint/no-explicit-any": "warn",
-      // Prefer alias paths over brittle relative imports to improve maintainability
-      "no-restricted-syntax": [
-        "warn",
-        {
-          selector: "ImportDeclaration[source.value=/^\\.\\.\\//]",
-          message: "Use path aliases like @components, @systems, @floor-ai instead of relative up-level imports",
-        },
-      ],
-    },
-  },
-  {
-    files: [
-      "examples/**/*.{ts,tsx,js,jsx}",
-      "debug/**/*.{ts,tsx,js,jsx}",
-      "components/debug/**/*.{ts,tsx,js,jsx}",
-    ],
-    rules: {
-      "no-console": "off",
-      "react/no-unescaped-entities": "off",
-    },
-  },
-  {
-    files: [
-      "**/__tests__/**/*.{ts,tsx,js,jsx}",
-      "**/*.{test,spec}.{ts,tsx,js,jsx}",
-    ],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
-      ],
-      "@typescript-eslint/no-require-imports": "off",
-      "@next/next/no-assign-module-variable": "off",
-      "react/no-unescaped-entities": "off",
-      "no-console": "off",
-    },
-    languageOptions: {
-      globals: {
-        vi: "readonly",
-        describe: "readonly",
-        it: "readonly",
-        test: "readonly",
-        expect: "readonly",
-        beforeEach: "readonly",
-        afterEach: "readonly",
-        beforeAll: "readonly",
-        afterAll: "readonly",
-      },
-    },
-  },
-  {
-    files: [
-      "scripts/**/*.{js,ts}",
-    ],
-    rules: {
-      "no-console": "off",
-      "@typescript-eslint/no-require-imports": "off",
-    },
-  },
-  {
-    files: [
-      "effects/**/*.{ts,tsx}",
-    ],
-    rules: {
-      "@typescript-eslint/no-namespace": "off",
-      "@typescript-eslint/no-empty-object-type": "off",
-      "@typescript-eslint/no-explicit-any": "warn",
-    },
-  },
-  {
-    files: [
-      "components/**/*.{ts,tsx}",
-    ],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-    },
-  },
-  {
-    files: [
-      "types/**/*.{ts,tsx}",
-    ],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  },
-  {
-    files: [
-      "utils/**/*.{ts,tsx}",
-      "systems/**/*.{ts,tsx}",
-      "store/**/*.{ts,tsx}",
-    ],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-    },
-  },
-  {
-    files: [
-      "utils/debugLogger.ts",
-    ],
-    rules: {
-      "no-console": "off",
-    },
-  },
-];
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
 
 export default eslintConfig;
