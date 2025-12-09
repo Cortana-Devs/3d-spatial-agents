@@ -3,7 +3,8 @@
 > **A Next-Generation Agentic AI Simulation Platform**  
 > *Powered by Cortana Research & Development Center*
 
-![Project Vision](https://raw.githubusercontent.com/Cortana-Devs/Descendants/main/public/file.svg)
+![Cortana Descendants Large](https://github.com/user-attachments/assets/ccf630db-ff2b-4ad2-9f2d-5cf5262c6eff)
+
 
 ## 📖 Overview
 
