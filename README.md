@@ -39,24 +39,24 @@ The current codebase establishes the **Core/Spatial** and **Intelligence** layer
 ### 🎮 World Engine (Spatial Layer)
 *   **Rendering**: `React Three Fiber` (R3F) & `Three.js` for high-performance WebGL graphics.
 *   **Physics & Environment**:
-    *   Dynamic **Time System** (Day/Night cycles).
-    *   Procedural Terrain & Water shaders.
-    *   Collision detection and Ground/Water physics (Buoyancy, Drag).
-    *   **Zone Controller** for managing level boundaries and audio zones.
+    *   Dynamic **Time System** (Day/Night cycles) with accurate Sun/Moon positioning.
+    *   Procedural Terrain generation using FBM noise & Instanced foliage.
+    *   **Atmospheric Zone Controller** for smooth Fog/Lighting transitions between biomes.
+    *   Collision detection with Raycasting and Height-field physics.
 
 ### 🤖 AI System (Intelligence Layer)
-*   **Brain**: Integrated with **Google Gemini** for high-level decision making.
-    *   *Perception*: Agents "see" nearby entities (Players, other Agents, Obstacles).
-    *   *Reasoning*: Agents decide to Follow, Wander, Chat, or Wait based on context.
-*   **Motor Control**: Powered by **Yuka AI** for steering behaviors.
+*   **Brain**: Integrated with **Google Gemini 2.5 Flash** for high-level decision making.
+    *   *Perception*: Agents "see" nearby entities (Players, Agents, Obstacles) and their status.
+    *   *Reasoning*: Agents autonomously decide to Follow, Wander, Chat, or Wait based on visual context.
+*   **Motor Control**: Powered by **Yuka AI** for autonomous steering behaviors.
     *   `Seek`, `Wander`, `Separation`, `ObstacleAvoidance`.
-    *   Smooth navigation mesh integration.
+    *   Smooth navigation and separation logic for crowd dynamics.
 *   **Social**:
     *   Agent-to-Agent interactions (Greeting, Chatting states).
-    *   Agent-to-Player interactions (Waving, Following).
+    *   Agent-to-Player interactions (Look-at, Waving, Following).
 
 ### 🛠 Tech Stack
-*   **Framework**: Next.js 15 (React 19)
+*   **Framework**: Next.js 16 (React 19)
 *   **Language**: TypeScript
 *   **State Management**: Zustand
 *   **AI/ML**: Google GenAI SDK (Gemini), Yuka GameAI
@@ -102,8 +102,8 @@ The current codebase establishes the **Core/Spatial** and **Intelligence** layer
 
 | Phase | Status | Feature |
 |-------|:------:|---------|
-| **Phase 1: Foundation** | ✅ | Core 3D Engine, Basic Physics, Day/Night Cycle |
-| **Phase 2: Intelligence** | ✅ | Gemini Integration, Yuka Steering, Basic Agent Behaviors |
+| **Phase 1: Foundation** | ✅ | Core 3D Engine, Procedural Terrain, Day/Night Cycle |
+| **Phase 2: Intelligence** | ✅ | Gemini 2.5 Integration, Yuka Steering, Basic Agent Behaviors |
 | **Phase 3: Social** | 🚧 | Multi-Agent Chat, Group Dynamics, "Simulacra" Personality Engine |
 | **Phase 4: Expansion** | ⏳ | Infinite Terrain, MCP Integration, RealityLink Prototype |
 | **Phase 5: CortanaOS** | 🔮 | Full Operating System Logic, Async Priority Queues, Deep Memory |
