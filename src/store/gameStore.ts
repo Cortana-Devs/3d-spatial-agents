@@ -30,6 +30,9 @@ interface GameState {
     // Robot State
     isSitting: boolean;
     setSitting: (sitting: boolean) => void;
+
+    isTeleporting: boolean;
+    setTeleporting: (teleporting: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -58,4 +61,6 @@ export const useGameStore = create<GameState>((set) => ({
 
     isSitting: false,
     setSitting: (sitting) => set({ isSitting: sitting }),
+    isTeleporting: false,
+    setTeleporting: (teleporting) => set({ isTeleporting: teleporting }),
 }));

@@ -8,6 +8,7 @@ import { Water } from 'three/examples/jsm/objects/Water.js';
 import Terrain from '../World/Terrain';
 import Bridge from '../World/Bridge';
 import SocialWorkHub from '../World/SocialWorkHub';
+import OfficeHub from '../World/OfficeHub';
 import Robot from '../Entities/Robot';
 import AIRobot from '../Entities/AIRobot';
 import YukaSystem from '../Systems/YukaSystem';
@@ -16,6 +17,7 @@ import StreetLamp from '../World/StreetLamp';
 import GroundLight from '../World/GroundLight';
 import LevelBoundaries from '../Systems/LevelBoundaries';
 import ZoneController from '../Systems/ZoneController';
+import Portal from '../World/Portal';
 import { useGameStore } from '@/store/gameStore';
 import { createWaterNormalMap } from '../Systems/Utilities';
 
@@ -133,16 +135,27 @@ export default function Scene() {
 
     return (
         <div style={{ width: '100vw', height: '100vh' }}>
-            <Canvas shadows dpr={[1, 1.5]} performance={{ min: 0.5 }} camera={{ position: [0, 10, -20], fov: 60 }} gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.5 }}>
-                <AdaptiveDpr pixelated />
+            <Canvas shadows dpr={[1, 1.5]} performance={{ min: 0.5 }} camera={{ position: [0, 10, -20], fov: 60 }} gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.8 }}>
+                {/* <AdaptiveDpr pixelated /> */}
                 <AdaptiveEvents />
                 <fog attach="fog" args={[0xd6eaf8, 0.0015]} />
                 <TimeSystem />
                 <WaterComponent />
 
                 <Terrain />
-                <Bridge />
+
+                {/* --- Bridges (Triangle Network) --- */}
+                {/* 1. Main: Island -> Social Hub */}
+                <Bridge start={[0, 5, -120]} end={[0, 4, -300]} />
+
+                {/* 2. Island -> Office Hub (East) */}
+                <Bridge start={[20, 5, -120]} end={[350, 4, -200]} />
+
+                {/* 3. Social Hub -> Office Hub */}
+                <Bridge start={[50, 4, -350]} end={[350, 4, -300]} />
+
                 <SocialWorkHub />
+                <OfficeHub />
 
                 {/* Street Lamps */}
                 {/* Street Lamps (8 Total - 4 Outer, 4 Inner) */}
@@ -166,6 +179,38 @@ export default function Scene() {
 
                 {/* Spawn Area Ground Light */}
                 <GroundLight position={[-5, 0.05, -40]} />
+
+                {/* Portal - Beach Area (Near Spawn) */}
+                <Portal
+                    position={[-20, 2, -50]}
+                    rotation={[0, 0.5, 0]}
+                    playerRef={robotRef}
+                    onTeleport={() => {
+                        // Teleport Logic
+                        if (robotRef.current) {
+                            // 1. Trigger Fade Out
+                            useGameStore.getState().setTeleporting(true);
+
+                            // 2. Wait for Fade (500ms)
+                            setTimeout(() => {
+                                if (robotRef.current) {
+                                    // 3. Move Robot (Entrance of OFFICE Hub)
+                                    // New Office X = 350. Entrance near Z=-200 or -250?
+                                    // Let's target the entrance side near Bridge 2.
+                                    robotRef.current.position.set(350, 5, -220);
+
+                                    // 4. Force Rotation (Face South/Inward)
+                                    robotRef.current.rotation.set(0, Math.PI, 0);
+
+                                    // 5. Trigger Fade In after short delay
+                                    setTimeout(() => {
+                                        useGameStore.getState().setTeleporting(false);
+                                    }, 500);
+                                }
+                            }, 500);
+                        }
+                    }}
+                />
 
                 <Robot groupRef={robotRef} />
                 <AIRobot playerRef={robotRef} initialPosition={[10, 5, -330]} />

@@ -37,6 +37,8 @@ export function useYukaAI(
 
     // AI Brain
     const brainRef = useRef(new ClientBrain());
+    // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
+    const brainIntervalRef = useRef(300 + Math.floor(Math.random() * 100));
 
     useEffect(() => {
         if (!groupRef.current) return;
@@ -276,9 +278,10 @@ export function useYukaAI(
         }
 
         // --- BRAIN UPDATE (Autopilot) ---
-        // Run every ~1 second (assuming 60fps) to check cognitive state
+        // Optimization: Run every ~5-7 seconds (custom per agent)
         const brain = brainRef.current;
-        if (frameRef.current % 60 === 0) {
+
+        if (frameRef.current % brainIntervalRef.current === 0) {
             let currentBehavior = "IDLE";
             if (vehicle.steering.behaviors[2].active) currentBehavior = "SEEKING";
             else if (vehicle.steering.behaviors[1].active) currentBehavior = "WANDERING";

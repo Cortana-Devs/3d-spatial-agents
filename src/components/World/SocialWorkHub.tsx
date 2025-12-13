@@ -20,7 +20,7 @@ export default function SocialWorkHub() {
     const sofaArmRef = useRef<THREE.InstancedMesh>(null);
     const tableRef = useRef<THREE.InstancedMesh>(null);
 
-    const hubCenter = new THREE.Vector3(0, 2, -375); // Moved closer to bridge end (-300) and raised
+    const hubCenter = new THREE.Vector3(0, 4, -375); // Raised to Y=4 to clear water level (Y=0)
     const hubSize = 250;
 
     const { materials } = useMemo(() => {
