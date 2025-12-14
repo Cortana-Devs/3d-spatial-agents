@@ -33,6 +33,31 @@ interface GameState {
 
     isTeleporting: boolean;
     setTeleporting: (teleporting: boolean) => void;
+
+    // Settings
+    invertedMouse: boolean;
+    setInvertedMouse: (inverted: boolean) => void;
+    sensitivity: number;
+    setSensitivity: (sensitivity: number) => void;
+    volume: number;
+    setVolume: (volume: number) => void;
+
+    // Menu State
+    isMenuOpen: boolean;
+    setMenuOpen: (isOpen: boolean) => void;
+
+    // Key Bindings
+    keyBindings: {
+        forward: string;
+        backward: string;
+        left: string;
+        right: string;
+        jump: string;
+        sprint: string;
+        interact: string;
+        menu: string;
+    };
+    setKeyBinding: (action: string, key: string) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -63,4 +88,31 @@ export const useGameStore = create<GameState>((set) => ({
     setSitting: (sitting) => set({ isSitting: sitting }),
     isTeleporting: false,
     setTeleporting: (teleporting) => set({ isTeleporting: teleporting }),
+
+    // Settings
+    invertedMouse: false,
+    setInvertedMouse: (inverted) => set({ invertedMouse: inverted }),
+    sensitivity: 1.0,
+    setSensitivity: (sensitivity) => set({ sensitivity }),
+    volume: 0.5,
+    setVolume: (volume) => set({ volume }),
+
+    // Menu State
+    isMenuOpen: false,
+    setMenuOpen: (isOpen) => set({ isMenuOpen: isOpen }),
+
+    // Key Bindings
+    keyBindings: {
+        forward: 'KeyW',
+        backward: 'KeyS',
+        left: 'KeyA',
+        right: 'KeyD',
+        jump: 'Space',
+        sprint: 'ShiftLeft',
+        interact: 'KeyE',
+        menu: 'Escape'
+    },
+    setKeyBinding: (action, key) => set((state) => ({
+        keyBindings: { ...state.keyBindings, [action]: key }
+    })),
 }));

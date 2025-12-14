@@ -1,11 +1,32 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
+import GameMenu from './GameMenu';
 
 export default function Overlay() {
     const debugText = useGameStore((state) => state.debugText);
     const isTeleporting = useGameStore((state) => state.isTeleporting);
+    const isMenuOpen = useGameStore((state) => state.isMenuOpen);
+    const setMenuOpen = useGameStore((state) => state.setMenuOpen);
+    const keyBindings = useGameStore((state) => state.keyBindings);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === keyBindings.menu) {
+                setMenuOpen(!isMenuOpen);
+                if (!isMenuOpen) {
+                    document.exitPointerLock();
+                } else {
+                    // Optional: Re-lock pointer when closing menu? 
+                    // Usually better to let user click to resume.
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isMenuOpen, setMenuOpen, keyBindings]);
 
     return (
         <>
@@ -42,6 +63,29 @@ export default function Overlay() {
             }}>
                 {debugText}
             </div>
+
+            {/* Settings Button (Optional, can keep or remove since ESC works) */}
+            <button
+                onClick={() => setMenuOpen(true)}
+                style={{
+                    position: 'absolute',
+                    top: '20px',
+                    right: '20px',
+                    padding: '10px',
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    zIndex: 10,
+                    pointerEvents: 'auto'
+                }}
+            >
+                Menu ({keyBindings.menu.replace('Key', '')})
+            </button>
+
+            {/* Game Menu */}
+            {isMenuOpen && <GameMenu />}
         </>
     );
 }

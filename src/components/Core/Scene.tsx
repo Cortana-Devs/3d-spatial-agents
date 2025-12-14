@@ -66,13 +66,24 @@ function CameraRig({ target }: { target: React.RefObject<THREE.Group | null> }) 
     const setCameraLocked = useGameStore((state) => state.setCameraLocked);
     const setDebugText = useGameStore((state) => state.setDebugText);
 
+    const invertedMouse = useGameStore((state) => state.invertedMouse);
+    const sensitivity = useGameStore((state) => state.sensitivity);
+
     const cameraState = useRef({ yaw: 0, pitch: 0 });
 
     useEffect(() => {
         const onMouseMove = (event: MouseEvent) => {
             if (!document.pointerLockElement) return;
-            cameraState.current.yaw -= event.movementX * 0.002;
-            cameraState.current.pitch -= event.movementY * 0.002;
+            
+            // Apply sensitivity (base multiplier 0.002)
+            const multiplier = 0.002 * sensitivity;
+            
+            cameraState.current.yaw -= event.movementX * multiplier;
+            
+            // Apply inverted mouse
+            const pitchDelta = event.movementY * multiplier;
+            cameraState.current.pitch -= invertedMouse ? -pitchDelta : pitchDelta;
+            
             const limit = Math.PI / 2 - 0.1;
             cameraState.current.pitch = Math.max(-limit, Math.min(limit, cameraState.current.pitch));
         };
@@ -106,7 +117,7 @@ function CameraRig({ target }: { target: React.RefObject<THREE.Group | null> }) 
             document.removeEventListener('pointerlockchange', onPointerLockChange);
             gl.domElement.removeEventListener('click', onClick);
         };
-    }, [gl, setCameraLocked, setDebugText]);
+    }, [gl, setCameraLocked, setDebugText, invertedMouse, sensitivity]);
 
     useFrame(() => {
         if (!target.current) return;

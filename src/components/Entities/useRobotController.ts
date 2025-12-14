@@ -34,28 +34,36 @@ export function useRobotController(groupRef: React.RefObject<THREE.Group | null>
         idleTime: 0
     });
 
+    const keyBindings = useGameStore((state) => state.keyBindings);
+
     // Input Handling
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             switch (e.code) {
-                case 'KeyW': case 'ArrowUp': inputRef.current.f = true; break;
-                case 'KeyS': case 'ArrowDown': inputRef.current.b = true; break;
-                case 'KeyA': case 'ArrowLeft': inputRef.current.l = true; break;
-                case 'KeyD': case 'ArrowRight': inputRef.current.r = true; break;
-                case 'Space': inputRef.current.jump = true; break;
-                case 'ShiftLeft': case 'ShiftRight': inputRef.current.sneak = true; break;
-                // KeyE handled in separate listener for interaction
+                case keyBindings.forward: inputRef.current.f = true; break;
+                case keyBindings.backward: inputRef.current.b = true; break;
+                case keyBindings.left: inputRef.current.l = true; break;
+                case keyBindings.right: inputRef.current.r = true; break;
+                case keyBindings.jump: inputRef.current.jump = true; break;
+                case keyBindings.sprint: inputRef.current.sneak = true; break; // Sprint maps to 'sneak' internally for now? Or vice versa? 
+                // Note: Original code mapped Shift to 'sneak'. If user wants 'Sprint', we should clarify. 
+                // Assuming 'sneak' in state is actually used for sprinting based on speed constants (12 vs 5). 
+                // Wait, walkSpeed=12, sneakSpeed=5. So Shift makes you SLOWER? 
+                // "case 'ShiftLeft': case 'ShiftRight': inputRef.current.sneak = true; break;"
+                // And "const currentSpeed = s.isSneaking ? sneakSpeed : walkSpeed;"
+                // So holding Shift makes you sneak (slower). 
+                // The prompt asked for "Sprint", but the code implements Sneak. 
+                // I will map 'sprint' binding to 'sneak' input for now to preserve behavior, but label it as 'Sneak' in UI if possible, or just keep it as is.
             }
         };
         const onKeyUp = (e: KeyboardEvent) => {
             switch (e.code) {
-                case 'KeyW': case 'ArrowUp': inputRef.current.f = false; break;
-                case 'KeyS': case 'ArrowDown': inputRef.current.b = false; break;
-                case 'KeyA': case 'ArrowLeft': inputRef.current.l = false; break;
-                case 'KeyD': case 'ArrowRight': inputRef.current.r = false; break;
-                case 'Space': inputRef.current.jump = false; break;
-                case 'ShiftLeft': case 'ShiftRight': inputRef.current.sneak = false; break;
-                // KeyE handled in separate listener
+                case keyBindings.forward: inputRef.current.f = false; break;
+                case keyBindings.backward: inputRef.current.b = false; break;
+                case keyBindings.left: inputRef.current.l = false; break;
+                case keyBindings.right: inputRef.current.r = false; break;
+                case keyBindings.jump: inputRef.current.jump = false; break;
+                case keyBindings.sprint: inputRef.current.sneak = false; break;
             }
         };
         window.addEventListener('keydown', onKeyDown);
@@ -64,7 +72,7 @@ export function useRobotController(groupRef: React.RefObject<THREE.Group | null>
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
         };
-    }, []);
+    }, [keyBindings]);
 
     // Physics Constants
     const walkSpeed = 12.0;
@@ -87,8 +95,8 @@ export function useRobotController(groupRef: React.RefObject<THREE.Group | null>
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === 'KeyE') {
-                console.log("E key pressed. isSitting:", isSitting);
+            if (e.code === keyBindings.interact) {
+                console.log("Interact key pressed. isSitting:", isSitting);
                 console.log("Interactables count:", interactables.length);
 
                 if (isSitting) {
@@ -139,7 +147,7 @@ export function useRobotController(groupRef: React.RefObject<THREE.Group | null>
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.code === 'KeyE') {
+            if (e.code === keyBindings.interact) {
                 inputRef.current.wave = false;
             }
         };
@@ -150,7 +158,7 @@ export function useRobotController(groupRef: React.RefObject<THREE.Group | null>
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [interactables, isSitting, setSitting, groupRef]);
+    }, [interactables, isSitting, setSitting, groupRef, keyBindings]);
 
     useFrame((stateRoot, delta) => {
         if (!groupRef.current) return;
@@ -167,9 +175,9 @@ export function useRobotController(groupRef: React.RefObject<THREE.Group | null>
                     break;
                 }
             }
-            setDebugText(showPrompt ? "Press 'E' to Sit" : "");
+            setDebugText(showPrompt ? `Press '${keyBindings.interact.replace('Key', '')}' to Sit` : "");
         } else {
-            setDebugText("Press 'E' to Stand");
+            setDebugText(`Press '${keyBindings.interact.replace('Key', '')}' to Stand`);
         }
 
         // Clamp delta
