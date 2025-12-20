@@ -1,10 +1,4 @@
-import React, {
-  useMemo,
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-} from "react";
+import React, { useMemo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { createMaterials } from "../Systems/Materials";
@@ -26,27 +20,31 @@ export default function OfficeHub() {
   const removeObstacles = useGameStore((state) => state.removeObstacles);
 
   const groundRef = useRef<THREE.Mesh>(null);
-  const deskRef = useRef<THREE.InstancedMesh>(null);
-  const chairRef = useRef<THREE.InstancedMesh>(null);
+  const buildingRef = useRef<THREE.Group>(null);
 
   // Position: Center of the World
   const hubCenter = new THREE.Vector3(0, 4, 0);
-  const hubSize = 250;
+  const hubSize = 400; // Large Island
+
+  // Building Specs
+  const bWidth = 200;
+  const bDepth = 150;
+  const bHeight = 30;
 
   // --- WORKER SYSTEM STATE ---
   const [looseBoxes, setLooseBoxes] = useState<Box[]>([]);
   const [placedBoxes, setPlacedBoxes] = useState<THREE.Vector3[]>([]);
 
-  // Initialize Scattered Boxes
+  // Initialize Scattered Boxes -> Outside Plaza (Far from building)
   useEffect(() => {
     const boxes: Box[] = [];
     for (let i = 0; i < 20; i++) {
       boxes.push({
         id: `box-${i}`,
         position: new THREE.Vector3(
-          hubCenter.x + (Math.random() - 0.5) * 100,
-          hubCenter.y + 1, // On floor
-          hubCenter.z + (Math.random() - 0.5) * 100
+          hubCenter.x + 150 + (Math.random() - 0.5) * 60, // East Plaza Far
+          hubCenter.y + 1,
+          hubCenter.z + (Math.random() - 0.5) * 60
         ),
       });
     }
@@ -57,42 +55,70 @@ export default function OfficeHub() {
   const system = useMemo(
     () => ({
       findAvailableBox: (agentPos: any) => {
-        // Find closest unclaimed box
+        const agentVec = new THREE.Vector3(agentPos.x, agentPos.y, agentPos.z);
         let closest: Box | null = null;
-        let minStartDist = Infinity;
-
-        // Access current state via closure? No, stale state issue.
-        // Ideally use a Ref for mutable system state to avoid re-renders or passing stale logic.
-        // Let's use a Ref-based manager for the "Logic" part, and sync to State for render.
-        return null; // Implemented below
+        let minDist = Infinity;
+        stateRef.current.looseBoxes.forEach((box) => {
+          if (!box.claimedBy) {
+            const d = agentVec.distanceTo(box.position);
+            if (d < minDist) {
+              minDist = d;
+              closest = box;
+            }
+          }
+        });
+        return closest;
       },
-      claimBox: (boxId: string, agentId: string) => {},
-      pickUpBox: (boxId: string, agentId: string) => {},
-      getNextConstructionSlot: () => new THREE.Vector3(), // Placeholder
-      placeBox: (pos: THREE.Vector3) => {},
+      claimBox: (boxId: string, agentId: string) => {
+        const box = stateRef.current.looseBoxes.find((b) => b.id === boxId);
+        if (box) box.claimedBy = agentId;
+      },
+      pickUpBox: (boxId: string, agentId: string) => {
+        stateRef.current.looseBoxes = stateRef.current.looseBoxes.filter(
+          (b) => b.id !== boxId
+        );
+        setLooseBoxes([...stateRef.current.looseBoxes]);
+      },
+      getNextConstructionSlot: () => {
+        // Construction Zone in Plaza (South East)
+        const idx = stateRef.current.nextSlotIndex;
+        stateRef.current.nextSlotIndex++;
+        const row = Math.floor(idx / 6);
+        const col = idx % 6;
+
+        const startX = hubCenter.x + 120;
+        const startZ = hubCenter.z + 80;
+
+        return new THREE.Vector3(
+          startX + col * 3.0,
+          hubCenter.y + 1,
+          startZ + row * 3.0
+        );
+      },
+      placeBox: (pos: THREE.Vector3) => {
+        stateRef.current.placedBoxes.push(pos);
+        setPlacedBoxes([...stateRef.current.placedBoxes]);
+      },
     }),
     []
   );
 
-  // Mutable System State (Ref Pattern for High Frequency AI)
+  // Mutable System State
   const stateRef = useRef({
     looseBoxes: [] as Box[],
     placedBoxes: [] as THREE.Vector3[],
     nextSlotIndex: 0,
   });
 
-  // Sync State -> Ref (Initial)
   useEffect(() => {
     stateRef.current.looseBoxes = looseBoxes;
-  }, [looseBoxes.length === 0]); // Only allow initial sync to not overwrite logic updates? No..
-  // Actually, let's purely control finding/claiming via Ref methods to avoid loops.
+  }, [looseBoxes.length === 0]);
 
   // Re-bind methods
   system.findAvailableBox = (agentPos: any) => {
     const agentVec = new THREE.Vector3(agentPos.x, agentPos.y, agentPos.z);
     let closest: Box | null = null;
     let minDist = Infinity;
-
     stateRef.current.looseBoxes.forEach((box) => {
       if (!box.claimedBy) {
         const d = agentVec.distanceTo(box.position);
@@ -104,40 +130,30 @@ export default function OfficeHub() {
     });
     return closest;
   };
-
   system.claimBox = (boxId: string, agentId: string) => {
     const box = stateRef.current.looseBoxes.find((b) => b.id === boxId);
     if (box) box.claimedBy = agentId;
   };
-
   system.pickUpBox = (boxId: string, agentId: string) => {
-    // Remove from loose
     stateRef.current.looseBoxes = stateRef.current.looseBoxes.filter(
       (b) => b.id !== boxId
     );
-    // Force Render Update
     setLooseBoxes([...stateRef.current.looseBoxes]);
   };
-
   system.getNextConstructionSlot = () => {
-    // Simple Wall Builder
     const idx = stateRef.current.nextSlotIndex;
     stateRef.current.nextSlotIndex++;
-
-    const row = Math.floor(idx / 10);
-    const col = idx % 10;
-
-    // Build a wall at relative offset
-    const startX = hubCenter.x + 50;
-    const startZ = hubCenter.z - 50;
-
+    const row = Math.floor(idx / 6);
+    const col = idx % 6;
+    // Storage Zone (Outside)
+    const startX = hubCenter.x + 130;
+    const startZ = hubCenter.z + 80;
     return new THREE.Vector3(
-      startX + col * 2.5,
-      hubCenter.y + 1 + row * 2.5,
-      startZ
+      startX + col * 3.0,
+      hubCenter.y + 1,
+      startZ + row * 3.0
     );
   };
-
   system.placeBox = (pos: THREE.Vector3) => {
     stateRef.current.placedBoxes.push(pos);
     setPlacedBoxes([...stateRef.current.placedBoxes]);
@@ -148,68 +164,115 @@ export default function OfficeHub() {
     return { materials: mats };
   }, []);
 
-  // Generate Layout (Simplified Office Layout)
-  const { deskMatrices, chairMatrices, obstacles } = useMemo(() => {
-    const desks: THREE.Matrix4[] = [];
-    const chairs: THREE.Matrix4[] = [];
-    const obs: { position: THREE.Vector3; radius: number }[] = [];
+  // --- BUILDING GENERATION ---
+  const { walls, floors, obstacles } = useMemo(() => {
+    const buildingObstacles: { position: THREE.Vector3; radius: number }[] = [];
+    const wallGeoms: {
+      pos: [number, number, number];
+      args: [number, number, number];
+    }[] = [];
+    const floorGeoms: {
+      pos: [number, number, number];
+      args: [number, number, number];
+    }[] = [];
 
-    // Grid of Desks
-    const rows = 4;
-    const cols = 6;
-    const spacingX = 20;
-    const spacingZ = 15;
+    // Floor Plate
+    floorGeoms.push({
+      pos: [hubCenter.x, hubCenter.y - 0.2, hubCenter.z],
+      args: [bWidth, 0.4, bDepth],
+    });
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const x = hubCenter.x - (cols * spacingX) / 2 + c * spacingX;
-        const z = hubCenter.z - (rows * spacingZ) / 2 + r * spacingZ;
+    // --- WALL GENERATION HELPER ---
+    // Generates visual wall and collision spheres
+    const createWall = (
+      x1: number,
+      z1: number,
+      x2: number,
+      z2: number,
+      thickness: number = 1.0
+    ) => {
+      const len = Math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2);
+      const ang = Math.atan2(z2 - z1, x2 - x1);
+      const mx = (x1 + x2) / 2;
+      const mz = (z1 + z2) / 2;
 
-        const pos = new THREE.Vector3(x, hubCenter.y, z);
+      // Visual
+      wallGeoms.push({
+        pos: [mx, hubCenter.y + bHeight / 2, mz],
+        args: [len, bHeight, thickness],
+        rot: -ang,
+      }); // We need rotation logic in rendering loop
 
-        // Desk
-        const deskMatrix = new THREE.Matrix4();
-        deskMatrix.compose(
-          pos.clone().add(new THREE.Vector3(0, 1, 0)),
-          new THREE.Quaternion(),
-          new THREE.Vector3(6, 0.2, 4)
-        );
-        desks.push(deskMatrix);
-        obs.push({ position: pos, radius: 4 });
+      // Collision (Spheres along the line)
+      // Use sphere radius ~2. Spacing ~1.5 to overlap and prevent passing.
+      const sphereRadius = 2.0;
+      const step = 1.5;
+      const steps = Math.ceil(len / step);
 
-        // Chair
-        const chairMatrix = new THREE.Matrix4();
-        chairMatrix.compose(
-          pos.clone().add(new THREE.Vector3(0, 1, 3)),
-          new THREE.Quaternion(),
-          new THREE.Vector3(2, 2, 2)
-        );
-        chairs.push(chairMatrix);
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const wx = x1 + (x2 - x1) * t;
+        const wz = z1 + (z2 - z1) * t;
+        buildingObstacles.push({
+          position: new THREE.Vector3(wx, hubCenter.y, wz),
+          radius: sphereRadius,
+        });
       }
-    }
+    };
 
-    return { deskMatrices: desks, chairMatrices: chairs, obstacles: obs };
-  }, [hubCenter]);
+    // Coordinates relative to center
+    const left = hubCenter.x - bWidth / 2;
+    const right = hubCenter.x + bWidth / 2;
+    const front = hubCenter.z + bDepth / 2;
+    const back = hubCenter.z - bDepth / 2;
 
-  // Update Instances
-  React.useLayoutEffect(() => {
-    if (deskRef.current) {
-      deskMatrices.forEach((m, i) => deskRef.current!.setMatrixAt(i, m));
-      deskRef.current.instanceMatrix.needsUpdate = true;
-    }
-    if (chairRef.current) {
-      chairMatrices.forEach((m, i) => chairRef.current!.setMatrixAt(i, m));
-      chairRef.current.instanceMatrix.needsUpdate = true;
-    }
-  }, [deskMatrices, chairMatrices]);
+    // 1. Outer Shell
+    // North Wall
+    createWall(left, back, right, back);
+    // East Wall
+    createWall(right, back, right, front);
+    // West Wall
+    createWall(left, front, left, back);
+
+    // South Wall (With Entrance)
+    // Split into Left and Right segments
+    // Midpoint X = hubCenter.x. Gap width = 30.
+    // Entrance: x: -15 to +15.
+    // Left Segment: Left -> x=-15
+    createWall(left, front, hubCenter.x - 15, front);
+    // Right Segment: x=+15 -> Right
+    createWall(hubCenter.x + 15, front, right, front);
+
+    // 2. Internal Partitions
+    // Lobby Partition (Z = +30) with central door gap (Width 30 -> -15 to +15)
+    const lobbyZ = hubCenter.z + 30;
+    createWall(left, lobbyZ, hubCenter.x - 15, lobbyZ, 0.5);
+    createWall(hubCenter.x + 15, lobbyZ, right, lobbyZ, 0.5);
+
+    // North Partition (Z = -30) with 2 doors
+    // Doors at (-55 to -45) and (+45 to +55)
+    const northZ = hubCenter.z - 30;
+    // Segment 1 (Far Left to Door 1)
+    createWall(left, northZ, hubCenter.x - 55, northZ, 0.5);
+    // Segment 2 (Door 1 to Door 2)
+    createWall(hubCenter.x - 45, northZ, hubCenter.x + 45, northZ, 0.5);
+    // Segment 3 (Door 2 to Far Right)
+    createWall(hubCenter.x + 55, northZ, right, northZ, 0.5);
+
+    // Center Vertical Split (North Zone) (X = 0, Z from -30 to Back)
+    createWall(hubCenter.x, northZ, hubCenter.x, back, 0.5);
+
+    return {
+      walls: wallGeoms,
+      floors: floorGeoms,
+      obstacles: buildingObstacles,
+    };
+  }, []);
 
   // Register Colliders
   useEffect(() => {
-    if (groundRef.current) {
-      addCollidableMesh(groundRef.current);
-    }
+    if (groundRef.current) addCollidableMesh(groundRef.current);
     addObstacles(obstacles);
-
     return () => {
       if (groundRef.current) removeCollidableMesh(groundRef.current.uuid);
       removeObstacles(obstacles);
@@ -224,105 +287,133 @@ export default function OfficeHub() {
 
   return (
     <group>
-      {/* Wooden Floor */}
+      {/* Main Island Ground (Plaza) */}
       <mesh
         ref={groundRef}
         position={[hubCenter.x, hubCenter.y - 1, hubCenter.z]}
         receiveShadow
       >
-        <boxGeometry args={[hubSize, 2, hubSize]} />
+        <boxGeometry args={[hubSize, 5, hubSize]} />
         <primitive object={materials.wood} attach="material" />
       </mesh>
 
-      {/* Desks */}
-      <instancedMesh
-        ref={deskRef}
-        args={[undefined, undefined, deskMatrices.length]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#333" roughness={0.5} />
-      </instancedMesh>
-
-      {/* Chairs */}
-      <instancedMesh
-        ref={chairRef}
-        args={[undefined, undefined, chairMatrices.length]}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#666" roughness={0.7} />
-      </instancedMesh>
+      {/* Building Structure */}
+      <group ref={buildingRef}>
+        {floors.map((f, i) => (
+          <mesh
+            key={`floor-${i}`}
+            position={new THREE.Vector3(...f.pos)}
+            receiveShadow
+          >
+            <boxGeometry args={f.args} />
+            <meshStandardMaterial color="#8899aa" roughness={0.5} />
+          </mesh>
+        ))}
+        {walls.map((w, i) => (
+          <mesh
+            key={`wall-${i}`}
+            position={new THREE.Vector3(...w.pos)}
+            rotation={[0, w.rot || 0, 0]} // Apply calculated rotation
+            receiveShadow
+            castShadow
+          >
+            {/* Note: In createWall, args includes length. BoxGeometry needs width(X), height(Y), depth(Z). 
+                            We used length as X. So rotation is needed.
+                        */}
+            <boxGeometry args={[w.args[0], w.args[1], w.args[2]]} />
+            <meshPhysicalMaterial
+              color="#e0f7ff"
+              transmission={0.6}
+              opacity={0.4}
+              transparent
+              roughness={0.1}
+              metalness={0.1}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
+      </group>
 
       {/* Signage */}
-      <group position={[hubCenter.x, hubCenter.y + 15, hubCenter.z - 50]}>
-        <Text fontSize={10} color="#00ffff" anchorX="center" anchorY="middle">
-          OFFICE HUB
+      <group
+        position={[
+          hubCenter.x,
+          hubCenter.y + bHeight + 10,
+          hubCenter.z + bDepth / 2,
+        ]}
+      >
+        <Text
+          fontSize={15}
+          color="#00aaff"
+          anchorX="center"
+          anchorY="middle"
+          rotation={[0, Math.PI, 0]}
+        >
+          OFFICE HQ
         </Text>
       </group>
 
       {/* --- LIGHTING --- */}
+      <hemisphereLight intensity={0.4} groundColor="#444" skyColor="#fff" />
 
-      {/* General Overhead Ambiance (Soft, Cool Office Light) */}
-      <hemisphereLight intensity={0.5} groundColor="#444" skyColor="#fff" />
-
-      {/* Key Construction Area Light */}
-      <spotLight
-        position={[hubCenter.x + 30, hubCenter.y + 40, hubCenter.z - 30]}
-        target-position={[hubCenter.x + 50, hubCenter.y, hubCenter.z - 50]}
-        intensity={4}
-        angle={0.5}
-        penumbra={0.5}
-        castShadow
-        shadow-bias={-0.0001}
-      />
-
-      {/* Desk Lamps (Simulated Points) */}
+      {/* Zone Lights */}
       <pointLight
-        position={[hubCenter.x, hubCenter.y + 8, hubCenter.z]}
-        intensity={1.5}
-        distance={30}
-        color="#ffaa00"
+        position={[hubCenter.x, hubCenter.y + 20, hubCenter.z + 50]}
+        intensity={0.8}
+        distance={60}
+        color="#fff0dd"
       />
       <pointLight
-        position={[hubCenter.x + 40, hubCenter.y + 8, hubCenter.z - 20]}
-        intensity={1.5}
-        distance={30}
-        color="#00aaff"
+        position={[hubCenter.x, hubCenter.y + 20, hubCenter.z]}
+        intensity={1.0}
+        distance={80}
+        color="#fff"
       />
       <pointLight
-        position={[hubCenter.x - 40, hubCenter.y + 8, hubCenter.z + 20]}
-        intensity={1.5}
-        distance={30}
-        color="#ffaa00"
+        position={[hubCenter.x - 50, hubCenter.y + 20, hubCenter.z - 50]}
+        intensity={0.8}
+        distance={60}
+        color="#ffd"
+      />
+      <pointLight
+        position={[hubCenter.x + 50, hubCenter.y + 20, hubCenter.z - 50]}
+        intensity={0.8}
+        distance={60}
+        color="#ddf"
       />
 
       {/* --- WORKER SYSTEM --- */}
-
-      {/* Robots */}
+      {/* Move Baymax agents outside to plaza */}
       <BaymaxRobot
         id="baymax-1"
         system={system}
-        initialPosition={[hubCenter.x, hubCenter.y + 2, hubCenter.z + 10]}
+        initialPosition={[
+          hubCenter.x - 120,
+          hubCenter.y + 2,
+          hubCenter.z + 100,
+        ]}
       />
       <BaymaxRobot
         id="baymax-2"
         system={system}
-        initialPosition={[hubCenter.x + 10, hubCenter.y + 2, hubCenter.z + 10]}
+        initialPosition={[
+          hubCenter.x + 120,
+          hubCenter.y + 2,
+          hubCenter.z + 100,
+        ]}
       />
       <BaymaxRobot
         id="baymax-3"
         system={system}
-        initialPosition={[hubCenter.x - 10, hubCenter.y + 2, hubCenter.z + 10]}
+        initialPosition={[hubCenter.x, hubCenter.y + 2, hubCenter.z + 150]}
       />
 
-      {/* Loose Boxes */}
+      {/* Loose Boxes / Files */}
       {looseBoxes.map((box) => (
         <mesh key={box.id} position={box.position} castShadow>
           <boxGeometry args={[2, 2, 2]} />
-          <meshStandardMaterial color="orange" />
+          <meshStandardMaterial color="#f0a050" />
         </mesh>
       ))}
 
