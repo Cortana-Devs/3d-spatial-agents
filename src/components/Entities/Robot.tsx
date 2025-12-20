@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/immutability */
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useRobotController, Joints } from "./useRobotController";
 import { createMaterials } from "../Systems/Materials";
@@ -17,6 +17,12 @@ export default function Robot({
   const groupRef = externalRef || internalRef;
   const { joints } = controller(groupRef);
 
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(...initialPosition);
+    }
+  }, []); // Only apply initial position on mount
+
   const { bodyMat, jointMat, glowMat } = useMemo(() => {
     const mats = createMaterials();
     return {
@@ -27,7 +33,7 @@ export default function Robot({
   }, []);
 
   return (
-    <group ref={groupRef} position={new THREE.Vector3(...initialPosition)}>
+    <group ref={groupRef}>
       <group
         ref={(el) => {
           if (el && joints.current) joints.current.hips = el;
