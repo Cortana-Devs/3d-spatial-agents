@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { createMaterials } from "../Systems/Materials";
 import { Text } from "@react-three/drei";
-import BaymaxRobot from "../Entities/BaymaxRobot";
+
 import {
   OfficeChair,
   OfficeDesk,
@@ -700,21 +700,6 @@ export default function OfficeHub() {
 
       {/* --- WORKER SYSTEM --- */}
       {/* Move Baymax agents outside to plaza */}
-      <BaymaxRobot
-        id="baymax-1"
-        system={system}
-        initialPosition={[hubCenter.x + 60, hubCenter.y + 2, hubCenter.z]}
-      />
-      <BaymaxRobot
-        id="baymax-2"
-        system={system}
-        initialPosition={[hubCenter.x - 60, hubCenter.y + 2, hubCenter.z]}
-      />
-      <BaymaxRobot
-        id="baymax-3"
-        system={system}
-        initialPosition={[hubCenter.x, hubCenter.y + 2, hubCenter.z + 150]}
-      />
 
       {/* Loose Boxes / Files */}
       {looseBoxes.map((box) => (
