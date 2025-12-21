@@ -23,12 +23,30 @@ export default function Robot({
     }
   }, []); // Only apply initial position on mount
 
-  const { bodyMat, jointMat, glowMat } = useMemo(() => {
-    const mats = createMaterials();
+  const { suitMat, shirtMat, tieMat, skinMat } = useMemo(() => {
+    // Office professional appearance
+    const darkSuit = new THREE.MeshStandardMaterial({
+      color: 0x1a1a2e,
+      roughness: 0.3,
+      metalness: 0.2,
+    });
+    const whiteShirt = new THREE.MeshStandardMaterial({
+      color: 0xf0f0f0,
+      roughness: 0.6,
+    });
+    const blueTie = new THREE.MeshStandardMaterial({
+      color: 0x0f4c81,
+      roughness: 0.5,
+    });
+    const beigeSkin = new THREE.MeshStandardMaterial({
+      color: 0xf5d5c0,
+      roughness: 0.8,
+    });
     return {
-      bodyMat: mats.robotBody,
-      jointMat: mats.robotJoint,
-      glowMat: mats.robotGlow,
+      suitMat: darkSuit,
+      shirtMat: whiteShirt,
+      tieMat: blueTie,
+      skinMat: beigeSkin,
     };
   }, []);
 
@@ -40,8 +58,14 @@ export default function Robot({
         }}
         position={[0, 3.5, 0]}
       >
-        <mesh material={bodyMat} castShadow receiveShadow>
-          <boxGeometry args={[1.5, 0.5, 1]} />
+        {/* Pelvis/Hips - Rounded suit pants */}
+        <mesh
+          material={suitMat}
+          castShadow
+          receiveShadow
+          rotation={[0, 0, Math.PI / 2]}
+        >
+          <capsuleGeometry args={[0.45, 0.8, 12, 16]} />
         </mesh>
 
         <group
@@ -50,46 +74,71 @@ export default function Robot({
           }}
           position={[0, 0.25, 0]}
         >
+          {/* Waist/Lower torso - Rounded suit jacket bottom */}
           <mesh
-            position={[0, 0.75, 0]}
-            material={jointMat}
+            position={[0, 0.65, 0]}
+            material={suitMat}
             castShadow
             receiveShadow
           >
-            <cylinderGeometry args={[0.4, 0.5, 1.5, 8]} />
-          </mesh>
-          <mesh
-            position={[0, 1.8, 0]}
-            material={bodyMat}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[2, 1.5, 1.2]} />
-          </mesh>
-          <mesh
-            position={[0, 1.8, 0.61]}
-            rotation={[Math.PI / 2, 0, 0]}
-            material={glowMat}
-          >
-            <cylinderGeometry args={[0.3, 0.3, 0.2, 16]} />
+            <cylinderGeometry args={[0.5, 0.6, 1.3, 16]} />
           </mesh>
 
+          {/* Upper torso - Rounded suit jacket */}
+          <mesh
+            position={[0, 1.8, 0]}
+            material={suitMat}
+            castShadow
+            receiveShadow
+            scale={[1.8, 1.6, 1.0]}
+          >
+            <sphereGeometry args={[0.6, 16, 16]} />
+          </mesh>
+
+          {/* Shirt collar/front - rounded */}
+          <mesh
+            position={[0, 2.3, 0.56]}
+            material={shirtMat}
+            castShadow
+            scale={[0.7, 0.8, 0.15]}
+          >
+            <sphereGeometry args={[0.5, 12, 12]} />
+          </mesh>
+
+          {/* Tie - slightly rounded */}
+          <mesh position={[0, 1.9, 0.61]} material={tieMat} castShadow>
+            <capsuleGeometry args={[0.08, 0.9, 8, 12]} />
+          </mesh>
+
+          {/* Neck/Head */}
           <group
             ref={(el) => {
               if (el && joints.current) joints.current.neck = el;
             }}
             position={[0, 2.6, 0]}
           >
+            {/* Head - rounded professional appearance */}
             <mesh
               position={[0, 0.45, 0]}
-              material={bodyMat}
+              material={skinMat}
               castShadow
               receiveShadow
+              scale={[0.9, 1.0, 0.95]}
             >
-              <boxGeometry args={[0.8, 0.9, 0.9]} />
+              <sphereGeometry args={[0.45, 16, 16]} />
             </mesh>
-            <mesh position={[0, 0.5, 0.46]} material={glowMat}>
-              <boxGeometry args={[0.7, 0.15, 0.1]} />
+            {/* Visor/Eyes - rounded business professional */}
+            <mesh
+              position={[0, 0.5, 0.43]}
+              material={
+                new THREE.MeshStandardMaterial({
+                  color: 0x333333,
+                  metalness: 0.5,
+                })
+              }
+              scale={[1.3, 1, 0.3]}
+            >
+              <sphereGeometry args={[0.25, 12, 8]} />
             </mesh>
           </group>
 
@@ -97,30 +146,20 @@ export default function Robot({
           <Arm
             side="left"
             joints={joints}
-            bodyMat={bodyMat}
-            jointMat={jointMat}
+            suitMat={suitMat}
+            shirtMat={shirtMat}
           />
           <Arm
             side="right"
             joints={joints}
-            bodyMat={bodyMat}
-            jointMat={jointMat}
+            suitMat={suitMat}
+            shirtMat={shirtMat}
           />
         </group>
 
         {/* Legs */}
-        <Leg
-          side="left"
-          joints={joints}
-          bodyMat={bodyMat}
-          jointMat={jointMat}
-        />
-        <Leg
-          side="right"
-          joints={joints}
-          bodyMat={bodyMat}
-          jointMat={jointMat}
-        />
+        <Leg side="left" joints={joints} suitMat={suitMat} skinMat={skinMat} />
+        <Leg side="right" joints={joints} suitMat={suitMat} skinMat={skinMat} />
       </group>
     </group>
   );
@@ -129,13 +168,13 @@ export default function Robot({
 function Arm({
   side,
   joints,
-  bodyMat,
-  jointMat,
+  suitMat,
+  shirtMat,
 }: {
   side: "left" | "right";
   joints: React.MutableRefObject<Joints>;
-  bodyMat: THREE.Material;
-  jointMat: THREE.Material;
+  suitMat: THREE.Material;
+  shirtMat: THREE.Material;
 }) {
   const dir = side === "left" ? 1 : -1;
   return (
@@ -146,13 +185,15 @@ function Arm({
           joints.current[`${side}Arm`] = {} as any;
         joints.current[`${side}Arm`]!.shoulder = el!;
       }}
-      position={[dir * 1.2, 2.2, 0]}
+      position={[dir * 1.0, 2.2, 0]}
     >
-      <mesh material={jointMat} castShadow receiveShadow>
-        <sphereGeometry args={[0.5]} />
+      {/* Shoulder - suit jacket */}
+      <mesh material={suitMat} castShadow receiveShadow>
+        <sphereGeometry args={[0.35, 12, 12]} />
       </mesh>
-      <mesh position={[0, -0.8, 0]} material={bodyMat} castShadow receiveShadow>
-        <boxGeometry args={[0.4, 1.2, 0.4]} />
+      {/* Upper arm - suit sleeve */}
+      <mesh position={[0, -0.7, 0]} material={suitMat} castShadow receiveShadow>
+        <cylinderGeometry args={[0.25, 0.3, 1.3, 10]} />
       </mesh>
       <group
         ref={(el) => {
@@ -161,23 +202,29 @@ function Arm({
             joints.current[`${side}Arm`] = {} as any;
           joints.current[`${side}Arm`]!.elbow = el!;
         }}
-        position={[0, -1.5, 0]}
+        position={[0, -1.4, 0]}
       >
-        <mesh
-          rotation={[0, 0, Math.PI / 2]}
-          material={bodyMat}
-          castShadow
-          receiveShadow
-        >
-          <cylinderGeometry args={[0.3, 0.3, 0.5, 8]} />
+        {/* Elbow joint */}
+        <mesh material={suitMat} castShadow receiveShadow>
+          <sphereGeometry args={[0.28, 10, 10]} />
         </mesh>
+        {/* Forearm - suit sleeve */}
         <mesh
-          position={[0, -0.7, 0]}
-          material={bodyMat}
+          position={[0, -0.6, 0]}
+          material={suitMat}
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[0.35, 1.2, 0.35]} />
+          <cylinderGeometry args={[0.22, 0.25, 1.2, 10]} />
+        </mesh>
+        {/* Hand - rounded shirt cuff visible */}
+        <mesh
+          position={[0, -1.3, 0]}
+          material={shirtMat}
+          castShadow
+          rotation={[Math.PI / 2, 0, 0]}
+        >
+          <capsuleGeometry args={[0.12, 0.15, 8, 8]} />
         </mesh>
       </group>
     </group>
@@ -187,49 +234,64 @@ function Arm({
 function Leg({
   side,
   joints,
-  bodyMat,
-  jointMat,
+  suitMat,
+  skinMat,
 }: {
   side: "left" | "right";
   joints: React.MutableRefObject<Joints>;
-  bodyMat: THREE.Material;
-  jointMat: THREE.Material;
+  suitMat: THREE.Material;
+  skinMat: THREE.Material;
 }) {
   const dir = side === "left" ? 1 : -1;
+  const shoeMat = new THREE.MeshStandardMaterial({
+    color: 0x222222,
+    roughness: 0.4,
+    metalness: 0.3,
+  });
   return (
     <group
       ref={(el) => {
         if (el && joints.current) joints.current[`${side}Hip`] = el;
       }}
-      position={[dir * 0.5, 0, 0]}
+      position={[dir * 0.45, 0, 0]}
     >
-      <mesh position={[0, -0.8, 0]} material={bodyMat} castShadow receiveShadow>
-        <boxGeometry args={[0.5, 1.5, 0.6]} />
+      {/* Thigh - suit pants */}
+      <mesh
+        position={[0, -0.75, 0]}
+        material={suitMat}
+        castShadow
+        receiveShadow
+      >
+        <cylinderGeometry args={[0.3, 0.35, 1.5, 10]} />
       </mesh>
       <group
         ref={(el) => {
           if (el && joints.current) joints.current[`${side}Knee`] = el;
         }}
-        position={[0, -1.6, 0]}
+        position={[0, -1.5, 0]}
       >
-        <mesh material={jointMat} castShadow receiveShadow>
-          <sphereGeometry args={[0.4]} />
+        {/* Knee joint */}
+        <mesh material={suitMat} castShadow receiveShadow>
+          <sphereGeometry args={[0.32, 10, 10]} />
         </mesh>
+        {/* Lower leg - suit pants */}
         <mesh
-          position={[0, -0.8, 0]}
-          material={bodyMat}
+          position={[0, -0.75, 0]}
+          material={suitMat}
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[0.4, 1.5, 0.5]} />
+          <cylinderGeometry args={[0.25, 0.28, 1.5, 10]} />
         </mesh>
+        {/* Professional shoes - rounded */}
         <mesh
-          position={[0, -1.7, 0.2]}
-          material={bodyMat}
+          position={[0, -1.6, 0.15]}
+          material={shoeMat}
           castShadow
           receiveShadow
+          scale={[1, 0.7, 1.6]}
         >
-          <boxGeometry args={[0.6, 0.3, 1.0]} />
+          <sphereGeometry args={[0.3, 12, 12]} />
         </mesh>
       </group>
     </group>
