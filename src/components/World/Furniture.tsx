@@ -320,6 +320,57 @@ export function OfficeDesk({
   );
 }
 
+// --- STORAGE SHELF (3-Tier) ---
+export function StorageShelf({
+  position,
+  rotation = 0,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+}) {
+  const w = 80;
+  const h = 12; // Total height
+  const d = 5; // Depth
+  const rackThickness = 0.5;
+
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+    >
+      {/* 4 Corner Legs */}
+      {[
+        [-w / 2 + 0.5, -d / 2 + 0.5],
+        [w / 2 - 0.5, -d / 2 + 0.5],
+        [-w / 2 + 0.5, d / 2 - 0.5],
+        [w / 2 - 0.5, d / 2 - 0.5],
+      ].map(([x, z], i) => (
+        <mesh
+          key={i}
+          position={[x, h / 2, z]}
+          castShadow
+          material={metalMaterial}
+        >
+          <boxGeometry args={[1, h, 1]} />
+        </mesh>
+      ))}
+
+      {/* 3 Racks (Planes) */}
+      {[2, 7, 12].map((y, i) => (
+        <mesh
+          key={`rack-${i}`}
+          position={[0, y - rackThickness / 2, 0]}
+          castShadow
+          receiveShadow
+          material={metalMaterial}
+        >
+          <boxGeometry args={[w, rackThickness, d]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 // --- OFFICE DOOR (Futuristic Vertical Slide) ---
 export function OfficeDoor({
   position,

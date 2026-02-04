@@ -11,6 +11,7 @@ import {
   ConferenceTable,
   CeilingLight,
   WallSwitch,
+  StorageShelf,
 } from "./Furniture";
 
 interface Box {
@@ -40,7 +41,6 @@ export default function OfficeHub() {
   const bHeight = 30;
 
   // --- WORKER SYSTEM STATE ---
-  const [looseBoxes, setLooseBoxes] = useState<Box[]>([]);
   const [placedBoxes, setPlacedBoxes] = useState<THREE.Vector3[]>([]);
 
   // --- LIGHTING STATE ---
@@ -55,61 +55,19 @@ export default function OfficeHub() {
     setLights((prev) => ({ ...prev, [zone]: !prev[zone] }));
   };
 
-  // Initialize Scattered Boxes -> Storage Room (North-West)
-  useEffect(() => {
-    const boxes: Box[] = [];
-    for (let i = 0; i < 20; i++) {
-      // Storage Room is roughly: X: [-90, -10], Z: [-70, -30]
-      boxes.push({
-        id: `box-${i}`,
-        position: new THREE.Vector3(
-          hubCenter.x - 50 + (Math.random() - 0.5) * 40,
-          hubCenter.y + 1,
-          hubCenter.z - 50 + (Math.random() - 0.5) * 30,
-        ),
-      });
-    }
-    setLooseBoxes(boxes);
-  }, []);
-
   // System Interface for Robots
   const system = useMemo(
     () => ({
-      findAvailableBox: (agentPos: any) => {
-        const agentVec = new THREE.Vector3(agentPos.x, agentPos.y, agentPos.z);
-        let closest: Box | null = null;
-        let minDist = Infinity;
-        stateRef.current.looseBoxes.forEach((box) => {
-          if (!box.claimedBy) {
-            const d = agentVec.distanceTo(box.position);
-            if (d < minDist) {
-              minDist = d;
-              closest = box;
-            }
-          }
-        });
-        return closest;
-      },
-      claimBox: (boxId: string, agentId: string) => {
-        const box = stateRef.current.looseBoxes.find((b) => b.id === boxId);
-        if (box) box.claimedBy = agentId;
-      },
-      pickUpBox: (boxId: string, agentId: string) => {
-        stateRef.current.looseBoxes = stateRef.current.looseBoxes.filter(
-          (b) => b.id !== boxId,
-        );
-        setLooseBoxes([...stateRef.current.looseBoxes]);
-      },
+      findAvailableBox: (agentPos: any) => null, // Box collection disabled
+      claimBox: (boxId: string, agentId: string) => {},
+      pickUpBox: (boxId: string, agentId: string) => {},
       getNextConstructionSlot: () => {
-        // Construction Zone in Plaza (South East)
         const idx = stateRef.current.nextSlotIndex;
         stateRef.current.nextSlotIndex++;
         const row = Math.floor(idx / 6);
         const col = idx % 6;
-
-        const startX = hubCenter.x + 120;
+        const startX = hubCenter.x + 130;
         const startZ = hubCenter.z + 80;
-
         return new THREE.Vector3(
           startX + col * 3.0,
           hubCenter.y + 1,
@@ -126,59 +84,9 @@ export default function OfficeHub() {
 
   // Mutable System State
   const stateRef = useRef({
-    looseBoxes: [] as Box[],
     placedBoxes: [] as THREE.Vector3[],
     nextSlotIndex: 0,
   });
-
-  useEffect(() => {
-    stateRef.current.looseBoxes = looseBoxes;
-  }, [looseBoxes.length === 0]);
-
-  // Re-bind methods
-  system.findAvailableBox = (agentPos: any) => {
-    const agentVec = new THREE.Vector3(agentPos.x, agentPos.y, agentPos.z);
-    let closest: Box | null = null;
-    let minDist = Infinity;
-    stateRef.current.looseBoxes.forEach((box) => {
-      if (!box.claimedBy) {
-        const d = agentVec.distanceTo(box.position);
-        if (d < minDist) {
-          minDist = d;
-          closest = box;
-        }
-      }
-    });
-    return closest;
-  };
-  system.claimBox = (boxId: string, agentId: string) => {
-    const box = stateRef.current.looseBoxes.find((b) => b.id === boxId);
-    if (box) box.claimedBy = agentId;
-  };
-  system.pickUpBox = (boxId: string, agentId: string) => {
-    stateRef.current.looseBoxes = stateRef.current.looseBoxes.filter(
-      (b) => b.id !== boxId,
-    );
-    setLooseBoxes([...stateRef.current.looseBoxes]);
-  };
-  system.getNextConstructionSlot = () => {
-    const idx = stateRef.current.nextSlotIndex;
-    stateRef.current.nextSlotIndex++;
-    const row = Math.floor(idx / 6);
-    const col = idx % 6;
-    // Storage Zone (Outside)
-    const startX = hubCenter.x + 130;
-    const startZ = hubCenter.z + 80;
-    return new THREE.Vector3(
-      startX + col * 3.0,
-      hubCenter.y + 1,
-      startZ + row * 3.0,
-    );
-  };
-  system.placeBox = (pos: THREE.Vector3) => {
-    stateRef.current.placedBoxes.push(pos);
-    setPlacedBoxes([...stateRef.current.placedBoxes]);
-  };
 
   const { materials } = useMemo(() => {
     const mats = createMaterials();
@@ -354,32 +262,32 @@ export default function OfficeHub() {
 
     // A. Back Rooms Divider (Z = -20)
     // We need gaps for the Central Corridor (-5 to 5) AND the Doors (approx -50 and 50)
-    // Storage Side (Left): Gap centered at -50, width ~14 -> -57 to -43
+    // Storage Side (Left): Gap centered at -50, width 18 -> -59 to -41
     createWall(
       left,
       roomDividerZ,
-      hubCenter.x - 57,
+      hubCenter.x - 59,
       roomDividerZ,
       "Wall-Divide-Storage-Left",
     ); // Far Left Wall
     createWall(
-      hubCenter.x - 43,
+      hubCenter.x - 41,
       roomDividerZ,
-      hubCenter.x - 5,
+      hubCenter.x - 1.0, // Fixed: Extend to touch Pillar (Width 2 -> Edge at 1.0)
       roomDividerZ,
       "Wall-Divide-Storage-Right",
     ); // Mid Left Wall
 
-    // Conference Side (Right): Gap centered at 50, width ~14 -> 43 to 57
+    // Conference Side (Right): Gap centered at 50, width 18 -> 41 to 59
     createWall(
-      hubCenter.x + 5,
+      hubCenter.x + 1.0, // Fixed: Extend to touch Pillar
       roomDividerZ,
-      hubCenter.x + 43,
+      hubCenter.x + 41,
       roomDividerZ,
       "Wall-Divide-Conf-Left",
     ); // Mid Right Wall
     createWall(
-      hubCenter.x + 57,
+      hubCenter.x + 59,
       roomDividerZ,
       right,
       roomDividerZ,
@@ -396,18 +304,30 @@ export default function OfficeHub() {
       "Wall-Divide-Center-Back",
     );
 
+    // Fixed: End-Cap Pillar for Spine Wall
+    buildingObstacles.push({
+      position: new THREE.Vector3(hubCenter.x, hubCenter.y, roomDividerZ),
+      radius: 1.5,
+    });
+    // We need a visual pillar
+    wallGeoms.push({
+      pos: [hubCenter.x, hubCenter.y + bHeight / 2, roomDividerZ],
+      args: [2, bHeight, 2],
+      name: "Pillar-Center-Spine",
+    });
+
     // B. Lobby Divider
     // Wall across X with wide entrance
     createWall(
       left,
       lobbyDividerZ,
-      hubCenter.x - 15,
+      hubCenter.x - 9, // Fixed: narrowed from -15 to match 18-unit door
       lobbyDividerZ,
       "Wall-Lobby-Left",
       0.5,
     );
     createWall(
-      hubCenter.x + 15,
+      hubCenter.x + 9, // Fixed: narrowed from 15 to match 18-unit door
       lobbyDividerZ,
       right,
       lobbyDividerZ,
@@ -466,14 +386,9 @@ export default function OfficeHub() {
     }
 
     // B. Storage Room (North-West: X < 0, Z < -20)
-    // Rows of Shelves
-    // X range [-100, 0]
-    for (let i = 0; i < 3; i++) {
-      // Shelf Row i
-      const zPos = hubCenter.z - 65 + i * 15;
-      // Long box
-      createFurniture(hubCenter.x - 50, zPos, 80, 12, 4, "#667788");
-    }
+    // Refactored Shelves (2 Units) matching <StorageShelf>
+    createFurniture(hubCenter.x - 50, hubCenter.z - 60, 80, 12, 5, "#667788");
+    createFurniture(hubCenter.x - 50, hubCenter.z - 40, 80, 12, 5, "#667788");
 
     // C. Open Office (Center: Z [-20, 40])
     // Desks in grid
@@ -681,24 +596,13 @@ export default function OfficeHub() {
         )),
       )}
 
-      {/* 3. Storage Room Shelves (Still simple boxes or upgrade?) */}
-      {/* Leaving as simple boxes via createFurniture collision, but we need visual meshes since we removed 'furniture' map loop */}
-      {/* Re-implementing visual shelves manually */}
-      {[0, 1, 2].map((i) => (
-        <mesh
-          key={`shelf-${i}`}
-          position={[
-            hubCenter.x - 50,
-            hubCenter.y + 6,
-            hubCenter.z - 65 + i * 15,
-          ]}
-          castShadow
-          receiveShadow
-        >
-          <boxGeometry args={[80, 12, 4]} />
-          <meshStandardMaterial color="#667788" />
-        </mesh>
-      ))}
+      {/* 3. Storage Room Shelves (Refactored) */}
+      <StorageShelf
+        position={[hubCenter.x - 50, hubCenter.y, hubCenter.z - 60]}
+      />
+      <StorageShelf
+        position={[hubCenter.x - 50, hubCenter.y, hubCenter.z - 40]}
+      />
 
       {/* 4. Reception Info Desk (Lobby) - Centered */}
       <mesh
@@ -787,17 +691,6 @@ export default function OfficeHub() {
         intensity={800}
         distance={60}
       />
-
-      {/* --- WORKER SYSTEM --- */}
-      {/* Move Baymax agents outside to plaza */}
-
-      {/* Loose Boxes / Files */}
-      {looseBoxes.map((box) => (
-        <mesh key={box.id} position={box.position} castShadow>
-          <boxGeometry args={[2, 2, 2]} />
-          <meshStandardMaterial color="#f0a050" />
-        </mesh>
-      ))}
 
       {/* Placed Boxes (Construction) */}
       {placedBoxes.map((pos, i) => (

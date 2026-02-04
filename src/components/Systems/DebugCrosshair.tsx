@@ -116,17 +116,36 @@ export default function DebugCrosshair() {
         userData={{ isDebug: true }}
       />
 
-      {/* 3D Target Marker (Sphere at hit point) */}
+      {/* 3D Target Marker (Sphere at hit point & Tooltip) */}
       {hitPoint && (
-        <mesh position={hitPoint} userData={{ isDebug: true }}>
-          <sphereGeometry args={[0.5, 16, 16]} />
-          <meshBasicMaterial
-            color="#00ff00"
-            depthTest={false}
-            transparent
-            opacity={0.8}
-          />
-        </mesh>
+        <group position={hitPoint} userData={{ isDebug: true }}>
+          <mesh>
+            <sphereGeometry args={[0.2, 16, 16]} />
+            <meshBasicMaterial
+              color="#00ff00"
+              depthTest={false}
+              transparent
+              opacity={0.8}
+            />
+          </mesh>
+          <Html position={[0, 0.5, 0]} center style={{ pointerEvents: "none" }}>
+            <div
+              style={{
+                background: "rgba(0, 0, 0, 0.85)",
+                color: "#00ff00",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                fontSize: "12px",
+                fontFamily: "monospace",
+                whiteSpace: "nowrap",
+                border: "1px solid #00ff00",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.5)",
+              }}
+            >
+              {debugInfo?.pos}
+            </div>
+          </Html>
+        </group>
       )}
 
       {/* Central Crosshair Visualization */}
@@ -168,30 +187,8 @@ export default function DebugCrosshair() {
           }}
         />
 
-        {/* Info Panel */}
-        {debugInfo && (
-          <div
-            style={{
-              position: "absolute",
-              top: "52%",
-              left: "52%",
-              backgroundColor: "rgba(0, 0, 0, 0.85)",
-              color: "#0f0",
-              padding: "10px",
-              fontFamily: "monospace",
-              fontSize: "12px",
-              borderRadius: "4px",
-              border: "1px solid #0f0",
-              boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
-              whiteSpace: "pre",
-              textAlign: "left",
-            }}
-          >
-            <div>OPEN: {debugInfo.name}</div>
-            <div style={{ color: "#fff" }}>POS: {debugInfo.pos}</div>
-            <div style={{ color: "#aaa" }}>DIM: {debugInfo.dims}</div>
-          </div>
-        )}
+        {/* Info Panel - Removed in favor of 3D Tooltip */}
+        {/* Only keeping crosshair visuals */}
       </Html>
     </>
   );
