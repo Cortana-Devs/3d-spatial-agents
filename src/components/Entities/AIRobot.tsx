@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { useYukaAI } from "./useYukaAI";
 import { createMaterials } from "../Systems/Materials";
 import { Joints } from "./useRobotController";
+import { ThoughtBubble } from "../UI/ThoughtBubble";
 
 export default function AIRobot({
   playerRef,
@@ -18,7 +19,7 @@ export default function AIRobot({
   // For now, let's keep the visual structure but we need to re-bind joints.
   const joints = useRef<any>({});
   // Use the new Yuka-powered brain with animation support
-  const { vehicle } = useYukaAI(groupRef, playerRef, joints);
+  const { vehicle, brain } = useYukaAI(groupRef, playerRef, joints);
 
   // ... (Rest of the component needs to be updated to handle animation if useYukaAI doesn't return joints)
   // Wait, useYukaAI currently returns { vehicle }. It doesn't handle animation yet.
@@ -61,6 +62,9 @@ export default function AIRobot({
         }}
         position={[0, 3.5, 0]}
       >
+        {/* Thought Bubble Visualization */}
+        <ThoughtBubble brain={brain} />
+
         {/* Pelvis/Hips - Rounded gray suit pants */}
         <mesh
           material={suitMat}

@@ -569,5 +569,5 @@ export function useYukaAI(
         }
     });
 
-    return { vehicle: vehicleRef.current };
+    return { vehicle: vehicleRef.current, brain: brainRef.current };
 }
