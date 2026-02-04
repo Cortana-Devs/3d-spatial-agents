@@ -1,0 +1,1049 @@
+timestamp,session_id,conversation_id,request_id,agent_type,request_type,request_content,response_content,response_status,processing_time_ms,input_tokens,output_tokens,model_version,tools_used,error_code,error_message,user_id
+2026-02-04T13:43:53.615Z,session-0ca78658-fa19-41e9-83c0-56b2f1c29f35,,7899df32-9c17-4f93-b217-4c5b8a91095b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 76.1, y: 5.5, z: 44.8}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+- [6:58:44 PM] My brain hurts (API Error).
+- [6:58:43 PM] My brain hurts (API Error).
+- [6:58:30 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,2335,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:43:53.894Z,session-0ca78658-fa19-41e9-83c0-56b2f1c29f35,,7899df32-9c17-4f93-b217-4c5b8a91095b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 76.1, y: 5.5, z: 44.8}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+- [6:58:44 PM] My brain hurts (API Error).
+- [6:58:43 PM] My brain hurts (API Error).
+- [6:58:30 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,265,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:43:54.231Z,session-0ca78658-fa19-41e9-83c0-56b2f1c29f35,,7899df32-9c17-4f93-b217-4c5b8a91095b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 76.1, y: 5.5, z: 44.8}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+- [6:58:44 PM] My brain hurts (API Error).
+- [6:58:43 PM] My brain hurts (API Error).
+- [6:58:30 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,326,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:43:54.822Z,session-58da926f-d377-4822-8c85-494f3fc1a363,,924dc6d7-5ab3-475b-86d2-051576c76843,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -40.7, y: 5.5, z: 198.3}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+- [6:58:44 PM] My brain hurts (API Error).
+- [6:58:43 PM] My brain hurts (API Error).
+- [6:58:30 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,394,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:43:55.307Z,session-58da926f-d377-4822-8c85-494f3fc1a363,,924dc6d7-5ab3-475b-86d2-051576c76843,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -40.7, y: 5.5, z: 198.3}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+- [6:58:44 PM] My brain hurts (API Error).
+- [6:58:43 PM] My brain hurts (API Error).
+- [6:58:30 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,480,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:43:55.534Z,session-58da926f-d377-4822-8c85-494f3fc1a363,,924dc6d7-5ab3-475b-86d2-051576c76843,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -40.7, y: 5.5, z: 198.3}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+- [6:58:44 PM] My brain hurts (API Error).
+- [6:58:43 PM] My brain hurts (API Error).
+- [6:58:30 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,223,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:44:05.013Z,session-0ca78658-fa19-41e9-83c0-56b2f1c29f35,,78fd2ad3-f904-4a5a-add6-0a30b1e9e88b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 14.5, y: 5.5, z: 58.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 4.1m | Active |
+
+    ## Memory (Past Interactions)
+    No relevant past memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,1071,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:44:05.339Z,session-0ca78658-fa19-41e9-83c0-56b2f1c29f35,,78fd2ad3-f904-4a5a-add6-0a30b1e9e88b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 14.5, y: 5.5, z: 58.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 4.1m | Active |
+
+    ## Memory (Past Interactions)
+    No relevant past memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,321,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:44:06.245Z,session-0ca78658-fa19-41e9-83c0-56b2f1c29f35,,78fd2ad3-f904-4a5a-add6-0a30b1e9e88b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 14.5, y: 5.5, z: 58.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 4.1m | Active |
+
+    ## Memory (Past Interactions)
+    No relevant past memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,902,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:44:10.456Z,session-58da926f-d377-4822-8c85-494f3fc1a363,,83cacda9-ee1f-4670-a67f-1c5ccddb0ec1,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -86.7, y: 5.5, z: 107.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:14:06 PM] My brain hurts (API Error).
+- [7:13:55 PM] My brain hurts (API Error).
+- [7:13:54 PM] My brain hurts (API Error).
+- [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,239,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:44:10.827Z,session-58da926f-d377-4822-8c85-494f3fc1a363,,83cacda9-ee1f-4670-a67f-1c5ccddb0ec1,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -86.7, y: 5.5, z: 107.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:14:06 PM] My brain hurts (API Error).
+- [7:13:55 PM] My brain hurts (API Error).
+- [7:13:54 PM] My brain hurts (API Error).
+- [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,364,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:44:11.653Z,session-58da926f-d377-4822-8c85-494f3fc1a363,,83cacda9-ee1f-4670-a67f-1c5ccddb0ec1,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -86.7, y: 5.5, z: 107.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:14:06 PM] My brain hurts (API Error).
+- [7:13:55 PM] My brain hurts (API Error).
+- [7:13:54 PM] My brain hurts (API Error).
+- [7:02:01 PM] My brain hurts (API Error).
+- [7:01:59 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,817,,,llama-3.3-70b-versatile,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-04T13:57:11.998Z,session-bba4d772-423f-4e51-822c-c2490dc483af,,02dde2b3-e982-4ce1-8b21-423ac765f5c4,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -64.0, y: 5.5, z: 48.8}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+- [7:22:46 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{ 
+  ""action"": ""WANDER"", 
+  ""target"": { ""x"": -60.0, ""y"": 5.5, ""z"": 50.8 }, 
+  ""thought"": ""No entities nearby, continuing to wander and explore the environment.""
+}
+```",success,60968,339,65,llama-3.3-70b-versatile,,,,
+2026-02-04T13:57:12.280Z,session-e949d2a5-c57a-4238-bee6-9734b311959a,,f6f10f42-5540-45ca-a0e1-8e8bc449e205,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -242.0, y: -19.5, z: -82.5}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:26:08 PM] My brain hurts (API Error).
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,177,,,llama-3.3-70b-versatile,,429,"429 {""error"":{""message"":""Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kgm942eee3x867mzrhvhn9rc` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 100000, Requested 339. Please try again in 4m52.895999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"",""type"":""tokens"",""code"":""rate_limit_exceeded""}}",
+2026-02-04T13:57:13.463Z,session-e949d2a5-c57a-4238-bee6-9734b311959a,,f6f10f42-5540-45ca-a0e1-8e8bc449e205,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -242.0, y: -19.5, z: -82.5}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:26:08 PM] My brain hurts (API Error).
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,165,,,llama-3.3-70b-versatile,,429,"429 {""error"":{""message"":""Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kgm942eee3x867mzrhvhn9rc` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99999, Requested 339. Please try again in 4m52.032s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"",""type"":""tokens"",""code"":""rate_limit_exceeded""}}",
+2026-02-04T13:57:14.864Z,session-e949d2a5-c57a-4238-bee6-9734b311959a,,f6f10f42-5540-45ca-a0e1-8e8bc449e205,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -242.0, y: -19.5, z: -82.5}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:26:08 PM] My brain hurts (API Error).
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,382,,,llama-3.3-70b-versatile,,429,"429 {""error"":{""message"":""Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kgm942eee3x867mzrhvhn9rc` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99997, Requested 339. Please try again in 4m50.304s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"",""type"":""tokens"",""code"":""rate_limit_exceeded""}}",
+2026-02-04T13:58:18.445Z,session-bba4d772-423f-4e51-822c-c2490dc483af,,0b508288-4632-4fa0-81e5-8e85e9b98fb8,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -469.5, y: -14.4, z: -417.5}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:27:15 PM] My brain hurts (API Error).
+- [7:27:12 PM] No entities nearby, continuing to wander and explore the environment.
+- [7:26:08 PM] My brain hurts (API Error).
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,739,,,llama-3.3-70b-versatile,,429,"429 {""error"":{""message"":""Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kgm942eee3x867mzrhvhn9rc` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99923, Requested 345. Please try again in 3m51.552s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"",""type"":""tokens"",""code"":""rate_limit_exceeded""}}",
+2026-02-04T13:58:19.678Z,session-bba4d772-423f-4e51-822c-c2490dc483af,,0b508288-4632-4fa0-81e5-8e85e9b98fb8,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -469.5, y: -14.4, z: -417.5}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:27:15 PM] My brain hurts (API Error).
+- [7:27:12 PM] No entities nearby, continuing to wander and explore the environment.
+- [7:26:08 PM] My brain hurts (API Error).
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,219,,,llama-3.3-70b-versatile,,429,"429 {""error"":{""message"":""Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kgm942eee3x867mzrhvhn9rc` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99922, Requested 345. Please try again in 3m50.688s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"",""type"":""tokens"",""code"":""rate_limit_exceeded""}}",
+2026-02-04T13:58:21.254Z,session-bba4d772-423f-4e51-822c-c2490dc483af,,0b508288-4632-4fa0-81e5-8e85e9b98fb8,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -469.5, y: -14.4, z: -417.5}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:27:15 PM] My brain hurts (API Error).
+- [7:27:12 PM] No entities nearby, continuing to wander and explore the environment.
+- [7:26:08 PM] My brain hurts (API Error).
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,564,,,llama-3.3-70b-versatile,,429,"429 {""error"":{""message"":""Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kgm942eee3x867mzrhvhn9rc` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99921, Requested 345. Please try again in 3m49.824s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"",""type"":""tokens"",""code"":""rate_limit_exceeded""}}",
+2026-02-04T13:59:41.274Z,session-e45beba7-ee1f-4953-82b3-995489c5244a,,ac976783-fd04-4e78-a8c5-17c531247694,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -0.3, y: -7.6, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| AGENT | 0D2B1AE3-F3D4-457C-8D5A-2E4A0A874B44 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WAIT"",
+  ""thought"": ""I see another agent, but it's not a player and I don't have any specific goal, so I'll wait for now""
+}
+```",success,1239,379,46,llama-3.3-70b-versatile,,,,
+2026-02-04T13:59:42.109Z,session-2d2ff094-03e4-4eac-b98a-e36dec8b4340,,ef98db9b-1b14-40c4-9d40-b72522c3a11d,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 1.6, y: -9.0, z: -328.7}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| AGENT | 60CBBCFE-DF7F-42C4-87F8-82CA324B549A | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+```
+
+The current perception only shows an AGENT with the type not being 'PLAYER', and the memory indicates past API errors but does not influence the decision based on the given rules. Since there's no 'PLAYER' within the specified range to follow, the AI decides to continue wandering.",success,689,374,91,llama-3.3-70b-versatile,,,,
+2026-02-04T13:59:51.294Z,session-e45beba7-ee1f-4953-82b3-995489c5244a,,a26c250e-f5db-4f1d-8a9c-4dccc3290e93,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.2, y: -8.3, z: -329.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| AGENT | 0D2B1AE3-F3D4-457C-8D5A-2E4A0A874B44 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:29:42 PM] {
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+
+
+The current perception only shows an AGENT with the type not being 'PLAYER', and the memory indicates past API errors but does not influence the decision based on the given rules. Since there's no 'PLAYER' within the specified range to follow, the AI decides to continue wandering.
+- [7:29:41 PM] I see another agent, but it's not a player and I don't have any specific goal, so I'll wait for now
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+```",success,1052,493,34,llama-3.3-70b-versatile,,,,
+2026-02-04T13:59:52.029Z,session-2d2ff094-03e4-4eac-b98a-e36dec8b4340,,dfa528f1-2ca7-47b4-a9bf-41447ada2bca,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.7, y: -10.3, z: -330.6}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| AGENT | 60CBBCFE-DF7F-42C4-87F8-82CA324B549A | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:29:42 PM] {
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+
+
+The current perception only shows an AGENT with the type not being 'PLAYER', and the memory indicates past API errors but does not influence the decision based on the given rules. Since there's no 'PLAYER' within the specified range to follow, the AI decides to continue wandering.
+- [7:29:41 PM] I see another agent, but it's not a player and I don't have any specific goal, so I'll wait for now
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+```",success,682,487,34,llama-3.3-70b-versatile,,,,
+2026-02-04T14:00:16.466Z,session-f5c290e6-08a8-4066-a3d1-0a64fd64aeb1,,a7c4dda5-ebf2-4364-bb49-8885d3142e10,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 94.4, y: 5.5, z: -16.5}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:29:52 PM] No player in sight, continuing to wander and explore the environment
+- [7:29:51 PM] No player in sight, continuing to wander and explore the environment
+- [7:29:42 PM] {
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+
+
+The current perception only shows an AGENT with the type not being 'PLAYER', and the memory indicates past API errors but does not influence the decision based on the given rules. Since there's no 'PLAYER' within the specified range to follow, the AI decides to continue wandering.
+- [7:29:41 PM] I see another agent, but it's not a player and I don't have any specific goal, so I'll wait for now
+- [7:28:22 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{ 
+  ""action"": ""WANDER"", 
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+```",success,939,449,36,llama-3.3-70b-versatile,,,,
+2026-02-04T14:00:17.009Z,session-52a68fa2-a1ed-4d24-98e1-5247778a8199,,e411a962-17e4-48d9-81ef-a61fcc652469,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -13.0, y: 5.5, z: 20.5}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 21.8m | Active |
+
+    ## Memory (Past Interactions)
+    - [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+- [7:15:37 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see a player within 20m, I should follow them to say hello.""
+}
+```",success,436,368,47,llama-3.3-70b-versatile,,,,
+2026-02-04T14:00:28.480Z,session-f5c290e6-08a8-4066-a3d1-0a64fd64aeb1,,13155a65-b629-4d42-ac85-7d6b9ba77149,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 46.8, y: 5.5, z: 21.9}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:30:17 PM] I see a player within 20m, I should follow them to say hello.
+- [7:30:16 PM] No player in sight, continuing to wander and explore the environment
+- [7:29:52 PM] No player in sight, continuing to wander and explore the environment
+- [7:29:51 PM] No player in sight, continuing to wander and explore the environment
+- [7:29:42 PM] {
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+
+
+The current perception only shows an AGENT with the type not being 'PLAYER', and the memory indicates past API errors but does not influence the decision based on the given rules. Since there's no 'PLAYER' within the specified range to follow, the AI decides to continue wandering.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to wander and explore the environment""
+}
+```",success,818,445,34,llama-3.3-70b-versatile,,,,
+2026-02-04T14:00:29.181Z,session-52a68fa2-a1ed-4d24-98e1-5247778a8199,,bd334c78-f136-4194-93ec-4d9926d5190e,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -4.6, y: 5.5, z: 28.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 4.8m | Active |
+
+    ## Memory (Past Interactions)
+    - [7:30:17 PM] I see a player within 20m, I should follow them to say hello.
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+- [7:25:38 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see a player within 20m, following them to say hello""
+}
+```",success,386,377,45,llama-3.3-70b-versatile,,,,
+2026-02-04T14:00:40.371Z,session-f5c290e6-08a8-4066-a3d1-0a64fd64aeb1,,098d7c10-6932-478d-a6b1-12fe97c72cc1,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 56.5, y: 5.5, z: -26.2}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:30:29 PM] I see a player within 20m, following them to say hello
+- [7:30:28 PM] No player in sight, continuing to wander and explore the environment
+- [7:30:17 PM] I see a player within 20m, I should follow them to say hello.
+- [7:30:16 PM] No player in sight, continuing to wander and explore the environment
+- [7:29:52 PM] No player in sight, continuing to wander and explore the environment
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""No player in sight, continuing to explore the environment""
+}
+```",success,1472,375,32,llama-3.3-70b-versatile,,,,
+2026-02-04T14:00:41.351Z,session-52a68fa2-a1ed-4d24-98e1-5247778a8199,,12f4b25f-fdf4-4caa-af53-0ee59903d910,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.3, y: 5.5, z: 25.5}
+    **Behavior**: SEEKING
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 0.1m | Active |
+
+    ## Memory (Past Interactions)
+    - [7:30:29 PM] I see a player within 20m, following them to say hello
+- [7:30:17 PM] I see a player within 20m, I should follow them to say hello.
+- [7:25:58 PM] My brain hurts (API Error).
+- [7:25:54 PM] My brain hurts (API Error).
+- [7:25:42 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see a player within 0.1m, following them to say hello""
+}
+```",success,638,385,47,llama-3.3-70b-versatile,,,,
