@@ -1047,3 +1047,352 @@ The current perception only shows an AGENT with the type not being 'PLAYER', and
   ""thought"": ""I see a player within 0.1m, following them to say hello""
 }
 ```",success,638,385,47,llama-3.3-70b-versatile,,,,
+2026-02-04T14:06:42.786Z,session-24c3917f-2243-455e-9311-6c1bf63cb0b9,,319ccc14-0fc1-44fd-9e76-6b3225149a67,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 3.6, y: 5.5, z: 31.1}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 4.5m | Active |
+| AGENT | 04169130-B378-447E-90FA-A9062DFE2E5F | 6.2m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:30:41 PM] I see a player within 0.1m, following them to say hello
+- [7:30:29 PM] I see a player within 20m, following them to say hello
+- [7:30:17 PM] I see a player within 20m, I should follow them to say hello.
+- [7:29:52 PM] No player in sight, continuing to wander and explore the environment
+- [7:29:51 PM] No player in sight, continuing to wander and explore the environment
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see an active player within 20m, following to say hello""
+}
+```
+
+Reasoning:
+- A 'PLAYER' (active and with ID 'player-01') is seen at a distance of 4.5m. 
+- According to the rules, seeing a 'PLAYER' within 20m necessitates following them to say hello.",success,853,442,100,llama-3.1-8b-instant,,,,
+2026-02-04T14:06:44.336Z,session-f5d3c413-968c-4079-80c3-1d47eac2201d,,606625a3-6a7b-4e2b-a88d-f0ec8b9454b6,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 7.3, y: 5.5, z: 44.6}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 14.2m | Active |
+
+    ## Memory (Past Interactions)
+    - [7:36:42 PM] {
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see an active player within 20m, following to say hello""
+}
+
+
+Reasoning:
+- A 'PLAYER' (active and with ID 'player-01') is seen at a distance of 4.5m. 
+- According to the rules, seeing a 'PLAYER' within 20m necessitates following them to say hello.
+- [7:30:41 PM] I see a player within 0.1m, following them to say hello
+- [7:30:29 PM] I see a player within 20m, following them to say hello
+- [7:30:17 PM] I see a player within 20m, I should follow them to say hello.
+- [7:25:58 PM] My brain hurts (API Error).
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","    { 
+      ""action"": ""FOLLOW"", 
+      ""targetId"": ""player-01"", 
+      ""target"": {x: 7.3, y: 5.5, z: 44.6}, 
+      ""thought"": ""I see a 'PLAYER' with ID 'player-01' within 4.5m, following them to say hello"" 
+    }",success,387,483,85,llama-3.1-8b-instant,,,,
+2026-02-04T14:06:57.047Z,session-24c3917f-2243-455e-9311-6c1bf63cb0b9,,99f394df-88a8-4df9-8d6e-89b0ea915e1a,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -40.2, y: 5.5, z: -12.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 10.6m | Active |
+
+    ## Memory (Past Interactions)
+    - [7:36:44 PM] { 
+      ""action"": ""FOLLOW"", 
+      ""targetId"": ""player-01"", 
+      ""target"": {x: 7.3, y: 5.5, z: 44.6}, 
+      ""thought"": ""I see a 'PLAYER' with ID 'player-01' within 4.5m, following them to say hello"" 
+    }
+- [7:36:42 PM] {
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see an active player within 20m, following to say hello""
+}
+
+
+Reasoning:
+- A 'PLAYER' (active and with ID 'player-01') is seen at a distance of 4.5m. 
+- According to the rules, seeing a 'PLAYER' within 20m necessitates following them to say hello.
+- [7:30:41 PM] I see a player within 0.1m, following them to say hello
+- [7:30:29 PM] I see a player within 20m, following them to say hello
+- [7:30:17 PM] I see a player within 20m, I should follow them to say hello.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","## Decision
+
+Given the current situation, the 'PLAYER' (ID: 'player-01') is seen within 4.5m, which triggers the rule to follow them to say hello.
+
+```json
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""A 'PLAYER' with ID 'player-01' is seen within 4.5m, following them to say hello""
+}
+```
+
+Note: The position of the 'PLAYER' is not critical in this case as the distance is very small and the 'FOLLOW' action will likely keep me close to them.",success,1614,558,133,llama-3.1-8b-instant,,,,
+2026-02-04T14:06:57.982Z,session-f5d3c413-968c-4079-80c3-1d47eac2201d,,8fd6e068-c2da-46eb-8318-27425e3711a3,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 95.1, y: 5.5, z: 66.4}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:36:57 PM] ## Decision
+
+Given the current situation, the 'PLAYER' (ID: 'player-01') is seen within 4.5m, which triggers the rule to follow them to say hello.
+
+
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""A 'PLAYER' with ID 'player-01' is seen within 4.5m, following them to say hello""
+}
+
+
+Note: The position of the 'PLAYER' is not critical in this case as the distance is very small and the 'FOLLOW' action will likely keep me close to them.
+- [7:36:44 PM] { 
+      ""action"": ""FOLLOW"", 
+      ""targetId"": ""player-01"", 
+      ""target"": {x: 7.3, y: 5.5, z: 44.6}, 
+      ""thought"": ""I see a 'PLAYER' with ID 'player-01' within 4.5m, following them to say hello"" 
+    }
+- [7:36:42 PM] {
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see an active player within 20m, following to say hello""
+}
+
+
+Reasoning:
+- A 'PLAYER' (active and with ID 'player-01') is seen at a distance of 4.5m. 
+- According to the rules, seeing a 'PLAYER' within 20m necessitates following them to say hello.
+- [7:30:41 PM] I see a player within 0.1m, following them to say hello
+- [7:30:40 PM] No player in sight, continuing to explore the environment
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""FOLLOW"", 
+  ""targetId"": ""player-01"", 
+  ""thought"": ""A 'PLAYER' with ID 'player-01' is seen at a distance of 4.5m, following them to say hello""
+}",success,418,635,58,llama-3.1-8b-instant,,,,
+2026-02-04T14:07:09.772Z,session-24c3917f-2243-455e-9311-6c1bf63cb0b9,,8256afca-654d-4165-863f-395d20fa1404,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -85.8, y: 5.5, z: -9.6}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:36:58 PM] A 'PLAYER' with ID 'player-01' is seen at a distance of 4.5m, following them to say hello
+- [7:36:57 PM] ## Decision
+
+Given the current situation, the 'PLAYER' (ID: 'player-01') is seen within 4.5m, which triggers the rule to follow them to say hello.
+
+
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""A 'PLAYER' with ID 'player-01' is seen within 4.5m, following them to say hello""
+}
+
+
+Note: The position of the 'PLAYER' is not critical in this case as the distance is very small and the 'FOLLOW' action will likely keep me close to them.
+- [7:36:44 PM] { 
+      ""action"": ""FOLLOW"", 
+      ""targetId"": ""player-01"", 
+      ""target"": {x: 7.3, y: 5.5, z: 44.6}, 
+      ""thought"": ""I see a 'PLAYER' with ID 'player-01' within 4.5m, following them to say hello"" 
+    }
+- [7:36:42 PM] {
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see an active player within 20m, following to say hello""
+}
+
+
+Reasoning:
+- A 'PLAYER' (active and with ID 'player-01') is seen at a distance of 4.5m. 
+- According to the rules, seeing a 'PLAYER' within 20m necessitates following them to say hello.
+- [7:30:41 PM] I see a player within 0.1m, following them to say hello
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see a 'PLAYER' with ID 'player-01' within 4.5m, following them to say hello""
+}",success,558,653,52,llama-3.1-8b-instant,,,,
+2026-02-04T14:07:12.296Z,session-f5d3c413-968c-4079-80c3-1d47eac2201d,,13537092-dcd6-4eeb-bb34-7756d114281f,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -25.6, y: 5.5, z: 16.4}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | ID | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 9.5m | Active |
+
+    ## Memory (Past Interactions)
+    - [7:36:57 PM] ## Decision
+
+Given the current situation, the 'PLAYER' (ID: 'player-01') is seen within 4.5m, which triggers the rule to follow them to say hello.
+
+
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""A 'PLAYER' with ID 'player-01' is seen within 4.5m, following them to say hello""
+}
+
+
+Note: The position of the 'PLAYER' is not critical in this case as the distance is very small and the 'FOLLOW' action will likely keep me close to them.
+- [7:36:44 PM] { 
+      ""action"": ""FOLLOW"", 
+      ""targetId"": ""player-01"", 
+      ""target"": {x: 7.3, y: 5.5, z: 44.6}, 
+      ""thought"": ""I see a 'PLAYER' with ID 'player-01' within 4.5m, following them to say hello"" 
+    }
+- [7:36:42 PM] {
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""thought"": ""I see an active player within 20m, following to say hello""
+}
+
+
+Reasoning:
+- A 'PLAYER' (active and with ID 'player-01') is seen at a distance of 4.5m. 
+- According to the rules, seeing a 'PLAYER' within 20m necessitates following them to say hello.
+- [7:30:41 PM] I see a player within 0.1m, following them to say hello
+- [7:30:29 PM] I see a player within 20m, following them to say hello
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"", 
+      ""targetId""?: ""id_of_entity_to_follow"", 
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","## Decision
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""targetPosition"": {x: -25.6, y: 5.5, z: 16.4}, // My current position is same as the target for initial move
+  ""thought"": ""A 'PLAYER' with ID 'player-01' is seen within 9.5m, following them to say hello""
+}",success,369,668,95,llama-3.1-8b-instant,,,,
