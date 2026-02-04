@@ -9,15 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@google/genai": "^1.31.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@types/three": "^0.181.0",
+    "groq-sdk": "^0.37.0",
+    "idb": "^8.0.3",
     "next": "16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "scheduler": "^0.27.0",
     "three": "^0.181.2",
+    "uuid": "^13.0.0",
     "yuka": "^0.7.8",
     "zustand": "^5.0.9"
   },
@@ -25,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "typescript": "^5"

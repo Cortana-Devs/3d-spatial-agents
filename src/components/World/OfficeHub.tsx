@@ -172,7 +172,7 @@ export default function OfficeHub() {
   }, []);
 
   // --- BUILDING GENERATION ---
-  const { walls, floors, obstacles, furniture } = useMemo(() => {
+  const { walls, floors, obstacles } = useMemo(() => {
     const buildingObstacles: { position: THREE.Vector3; radius: number }[] = [];
     const wallGeoms: {
       pos: [number, number, number];
@@ -670,7 +670,7 @@ export default function OfficeHub() {
       </group>
 
       {/* --- LIGHTING --- */}
-      <hemisphereLight intensity={0.4} groundColor="#444" skyColor="#fff" />
+      <hemisphereLight intensity={0.4} groundColor="#444" color="#fff" />
 
       {/* Zone Lights */}
       <pointLight

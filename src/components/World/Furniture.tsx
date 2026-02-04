@@ -371,11 +371,11 @@ export function OfficeDoor({
         {/* Center Handle / Lock Interface */}
         <mesh
           position={[0, 15, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
           material={new THREE.MeshStandardMaterial({ color: "#222" })}
         >
           <cylinderGeometry
             args={[2, 2, 0.6, 32]}
-            rotation={[Math.PI / 2, 0, 0]}
           />
         </mesh>
         <mesh

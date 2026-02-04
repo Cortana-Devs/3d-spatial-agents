@@ -31,7 +31,7 @@ export function useWorkerAI(
         entityManager.add(vehicle);
 
         return () => {
-            entityManager.entities = []; // Manually clear
+            entityManager.remove(vehicle);
         };
     }, []);
 
