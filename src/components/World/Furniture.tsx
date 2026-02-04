@@ -25,6 +25,131 @@ const glassMaterial = new THREE.MeshPhysicalMaterial({
   transparent: true,
   roughness: 0.1,
 });
+const lightGlowMaterial = new THREE.MeshBasicMaterial({ color: "#ffffee" });
+const lightOffMaterial = new THREE.MeshStandardMaterial({ color: "#444444" });
+
+// --- CEILING LIGHT ---
+export interface CeilingLightProps {
+  position: [number, number, number];
+  isOn: boolean;
+  color?: string;
+  intensity?: number;
+  distance?: number;
+}
+
+export function CeilingLight({
+  position,
+  isOn,
+  color = "#ffffff",
+  intensity = 1.0,
+  distance = 60,
+}: CeilingLightProps) {
+  return (
+    <group position={new THREE.Vector3(...position)}>
+      {/* Fixture Base */}
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <cylinderGeometry args={[2, 2, 1, 16]} />
+        <meshStandardMaterial color="#333" />
+      </mesh>
+      {/* Bulb / Diffuser */}
+      <mesh position={[0, -0.5, 0]}>
+        <sphereGeometry args={[1.5, 16, 16]} />
+        <primitive
+          object={isOn ? lightGlowMaterial : lightOffMaterial}
+          attach="material"
+        />
+      </mesh>
+      {/* Actual Light Source */}
+      {isOn && (
+        <pointLight
+          position={[0, -2, 0]}
+          intensity={intensity}
+          distance={distance}
+          decay={2}
+          color={color}
+          castShadow
+          shadow-bias={-0.0001}
+        />
+      )}
+    </group>
+  );
+}
+
+// --- WALL SWITCH ---
+export interface WallSwitchProps {
+  position: [number, number, number];
+  rotation?: number; // Y-rotation
+  id: string;
+  isOn: boolean;
+  onToggle: () => void;
+}
+
+export function WallSwitch({
+  position,
+  rotation = 0,
+  id,
+  isOn,
+  onToggle,
+}: WallSwitchProps) {
+  const addInteractables = useGameStore((state) => state.addInteractables);
+  const removeInteractables = useGameStore(
+    (state) => state.removeInteractables,
+  );
+  const interactionTarget = useGameStore((state) => state.interactionTarget);
+  const setInteractionTarget = useGameStore(
+    (state) => state.setInteractionTarget,
+  );
+
+  const posVec = useMemo(
+    () => new THREE.Vector3(position[0], position[1], position[2]),
+    [position[0], position[1], position[2]],
+  );
+
+  // Register Interactable
+  useEffect(() => {
+    addInteractables([
+      {
+        id,
+        type: "switch",
+        position: posVec,
+        rotation: new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          rotation,
+        ),
+        label: isOn ? "Turn Off" : "Turn On", // Optional hint
+      },
+    ]);
+    return () => removeInteractables([id]);
+  }, [id, posVec, rotation, addInteractables, removeInteractables, isOn]);
+
+  // Handle Interaction
+  useEffect(() => {
+    if (interactionTarget === id) {
+      onToggle();
+      setInteractionTarget(null);
+    }
+  }, [interactionTarget, id, onToggle, setInteractionTarget]);
+
+  return (
+    <group position={posVec} rotation={[0, rotation, 0]}>
+      {/* Switch Plate */}
+      <mesh position={[0, 0, 0.05]} receiveShadow>
+        <boxGeometry args={[1.2, 2.0, 0.1]} />
+        <meshStandardMaterial color="#eeeeee" />
+      </mesh>
+      {/* Switch Toggle */}
+      <mesh position={[0, 0, 0.15]} rotation={[isOn ? -0.2 : 0.2, 0, 0]}>
+        <boxGeometry args={[0.5, 1.0, 0.2]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+      {/* Indicator Light */}
+      <mesh position={[0, 0.6, 0.1]}>
+        <circleGeometry args={[0.1, 16]} />
+        <meshBasicMaterial color={isOn ? "#00ff00" : "#ff0000"} />
+      </mesh>
+    </group>
+  );
+}
 
 // --- OFFICE CHAIR ---
 export function OfficeChair({
@@ -38,19 +163,19 @@ export function OfficeChair({
 }) {
   const addInteractables = useGameStore((state) => state.addInteractables);
   const removeInteractables = useGameStore(
-    (state) => state.removeInteractables
+    (state) => state.removeInteractables,
   );
 
   // FIX: Memoize vector to prevent effect re-running on every parent render
   const posVec = useMemo(
     () => new THREE.Vector3(position[0], position[1], position[2]),
-    [position[0], position[1], position[2]]
+    [position[0], position[1], position[2]],
   );
 
   useEffect(() => {
     const rotQuat = new THREE.Quaternion().setFromAxisAngle(
       new THREE.Vector3(0, 1, 0),
-      rotation
+      rotation,
     );
 
     addInteractables([
@@ -213,18 +338,18 @@ export function OfficeDoor({
 
   const interactionTarget = useGameStore((state) => state.interactionTarget);
   const setInteractionTarget = useGameStore(
-    (state) => state.setInteractionTarget
+    (state) => state.setInteractionTarget,
   );
   const addInteractables = useGameStore((state) => state.addInteractables);
   const removeInteractables = useGameStore(
-    (state) => state.removeInteractables
+    (state) => state.removeInteractables,
   );
   const addObstacles = useGameStore((state) => state.addObstacles);
   const removeObstacles = useGameStore((state) => state.removeObstacles);
 
   const posVec = useMemo(
     () => new THREE.Vector3(position[0], position[1], position[2]),
-    [position[0], position[1], position[2]]
+    [position[0], position[1], position[2]],
   );
 
   // Register Interactable
@@ -258,7 +383,7 @@ export function OfficeDoor({
     if (!isOpen) {
       const dir = new THREE.Vector3(1, 0, 0).applyAxisAngle(
         new THREE.Vector3(0, 1, 0),
-        rotation
+        rotation,
       );
       for (let i = 0; i < count; i++) {
         const t = i / (count - 1) - 0.5;
@@ -284,7 +409,7 @@ export function OfficeDoor({
       doorPanelRef.current.position.y = THREE.MathUtils.lerp(
         doorPanelRef.current.position.y,
         targetY,
-        delta * 5
+        delta * 5,
       );
     }
   });
@@ -374,9 +499,7 @@ export function OfficeDoor({
           rotation={[Math.PI / 2, 0, 0]}
           material={new THREE.MeshStandardMaterial({ color: "#222" })}
         >
-          <cylinderGeometry
-            args={[2, 2, 0.6, 32]}
-          />
+          <cylinderGeometry args={[2, 2, 0.6, 32]} />
         </mesh>
         <mesh
           position={[0, 15, 0.35]}

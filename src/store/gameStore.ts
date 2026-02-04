@@ -28,6 +28,7 @@ interface GameState {
     type: string;
     position: THREE.Vector3;
     rotation: THREE.Quaternion;
+    label?: string;
   }[];
   addInteractables: (
     items: {
@@ -35,7 +36,8 @@ interface GameState {
       type: string;
       position: THREE.Vector3;
       rotation: THREE.Quaternion;
-    }[]
+      label?: string;
+    }[],
   ) => void;
   removeInteractables: (ids: string[]) => void;
 
@@ -100,7 +102,7 @@ export const useGameStore = create<GameState>((set) => ({
   removeObstacles: (obsToRemove) =>
     set((state) => ({
       obstacles: state.obstacles.filter(
-        (o) => !obsToRemove.some((r) => r.position.equals(o.position))
+        (o) => !obsToRemove.some((r) => r.position.equals(o.position)),
       ),
     })),
 

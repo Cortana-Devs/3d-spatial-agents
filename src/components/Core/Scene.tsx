@@ -1,67 +1,16 @@
 "use client";
 
-import React, { useRef, useEffect, useMemo } from "react";
-import { Canvas, useFrame, useThree, extend } from "@react-three/fiber";
-import {
-  Sky,
-  Stats,
-  Environment,
-  AdaptiveDpr,
-  AdaptiveEvents,
-} from "@react-three/drei";
+import React, { useRef, useEffect } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Stats, AdaptiveEvents, Environment } from "@react-three/drei";
 import * as THREE from "three";
-import { Water } from "three/examples/jsm/objects/Water.js";
 import OfficeHub from "../World/OfficeHub";
 import Robot from "../Entities/Robot";
 import AIRobot from "../Entities/AIRobot";
 import YukaSystem from "../Systems/YukaSystem";
-import TimeSystem from "../Systems/TimeSystem";
+import DebugCrosshair from "../Systems/DebugCrosshair";
 
 import { useGameStore } from "@/store/gameStore";
-import { createWaterNormalMap } from "../Systems/Utilities";
-
-extend({ Water });
-
-declare module "@react-three/fiber" {
-  interface ThreeElements {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    water: any;
-  }
-}
-
-function WaterComponent() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ref = useRef<any>(null);
-  const waterNormals = useMemo(() => createWaterNormalMap(), []);
-
-  const config = useMemo(
-    () => ({
-      textureWidth: 512,
-      textureHeight: 512,
-      waterNormals: waterNormals || undefined,
-      sunDirection: new THREE.Vector3(),
-      sunColor: 0xffffff,
-      waterColor: 0x004455,
-      distortionScale: 3.7,
-      fog: true,
-    }),
-    [waterNormals]
-  );
-
-  useFrame((state, delta) => {
-    if (ref.current) {
-      ref.current.material.uniforms.time.value += delta;
-    }
-  });
-
-  return (
-    <water
-      ref={ref}
-      args={[new THREE.PlaneGeometry(10000, 10000), config]}
-      rotation-x={-Math.PI / 2}
-    />
-  );
-}
 
 function CameraRig({
   target,
@@ -93,7 +42,7 @@ function CameraRig({
       const limit = Math.PI / 2 - 0.1;
       cameraState.current.pitch = Math.max(
         -limit,
-        Math.min(limit, cameraState.current.pitch)
+        Math.min(limit, cameraState.current.pitch),
       );
     };
 
@@ -102,7 +51,7 @@ function CameraRig({
       setCameraLocked(locked);
       if (locked) {
         setDebugText(
-          "Locked! Controls: WASD/Space/Shift | Click: View | E: Sit/Stand"
+          "Locked! Controls: WASD/Space/Shift | Click: View | E: Sit/Stand",
         );
       } else {
         setDebugText("Click to Resume | WASD/Space/Shift | E: Sit/Stand");
@@ -166,26 +115,24 @@ export default function Scene() {
         camera={{ position: [0, 10, -20], fov: 60 }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 0.8,
+          toneMappingExposure: 1.2,
         }}
       >
-        {/* <AdaptiveDpr pixelated /> */}
         <AdaptiveEvents />
-        <fog attach="fog" args={[0xd6eaf8, 0.0015]} />
-        <TimeSystem />
-        <WaterComponent />
+        <color attach="background" args={["#202020"]} />
+
+        {/* Simple ambient light to prevent pitch black shadows before lights load or in corners */}
+        {/* <ambientLight intensity={0.2} /> */}
+        <Environment preset="city" />
 
         <OfficeHub />
 
-        {/* Street Lamps - Moving them closer to center if needed, or removing for now as OfficeHub has its own lights */}
-        {/* Keeping just a few decorative ones if they fit the theme, otherwise removing for clean slate */}
-
         <Robot groupRef={robotRef} initialPosition={[0, 5, 50]} />
-        {/* Relocate AI to OfficeHub (approx size 250x250 centered at 0,0) */}
         <AIRobot playerRef={robotRef} initialPosition={[10, 5, 10]} />
         <AIRobot playerRef={robotRef} initialPosition={[-10, 5, 20]} />
 
         <YukaSystem />
+        <DebugCrosshair />
 
         <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
 

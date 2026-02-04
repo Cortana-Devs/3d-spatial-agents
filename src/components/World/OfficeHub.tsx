@@ -9,6 +9,8 @@ import {
   OfficeDesk,
   OfficeDoor,
   ConferenceTable,
+  CeilingLight,
+  WallSwitch,
 } from "./Furniture";
 
 interface Box {
@@ -20,7 +22,7 @@ interface Box {
 export default function OfficeHub() {
   const addCollidableMesh = useGameStore((state) => state.addCollidableMesh);
   const removeCollidableMesh = useGameStore(
-    (state) => state.removeCollidableMesh
+    (state) => state.removeCollidableMesh,
   );
   const addObstacles = useGameStore((state) => state.addObstacles);
   const removeObstacles = useGameStore((state) => state.removeObstacles);
@@ -41,6 +43,18 @@ export default function OfficeHub() {
   const [looseBoxes, setLooseBoxes] = useState<Box[]>([]);
   const [placedBoxes, setPlacedBoxes] = useState<THREE.Vector3[]>([]);
 
+  // --- LIGHTING STATE ---
+  const [lights, setLights] = useState({
+    lobby: true,
+    office: true,
+    conf: true,
+    storage: false, // Storage starts dark for effect
+  });
+
+  const toggleLight = (zone: keyof typeof lights) => {
+    setLights((prev) => ({ ...prev, [zone]: !prev[zone] }));
+  };
+
   // Initialize Scattered Boxes -> Storage Room (North-West)
   useEffect(() => {
     const boxes: Box[] = [];
@@ -51,7 +65,7 @@ export default function OfficeHub() {
         position: new THREE.Vector3(
           hubCenter.x - 50 + (Math.random() - 0.5) * 40,
           hubCenter.y + 1,
-          hubCenter.z - 50 + (Math.random() - 0.5) * 30
+          hubCenter.z - 50 + (Math.random() - 0.5) * 30,
         ),
       });
     }
@@ -82,7 +96,7 @@ export default function OfficeHub() {
       },
       pickUpBox: (boxId: string, agentId: string) => {
         stateRef.current.looseBoxes = stateRef.current.looseBoxes.filter(
-          (b) => b.id !== boxId
+          (b) => b.id !== boxId,
         );
         setLooseBoxes([...stateRef.current.looseBoxes]);
       },
@@ -99,7 +113,7 @@ export default function OfficeHub() {
         return new THREE.Vector3(
           startX + col * 3.0,
           hubCenter.y + 1,
-          startZ + row * 3.0
+          startZ + row * 3.0,
         );
       },
       placeBox: (pos: THREE.Vector3) => {
@@ -107,7 +121,7 @@ export default function OfficeHub() {
         setPlacedBoxes([...stateRef.current.placedBoxes]);
       },
     }),
-    []
+    [],
   );
 
   // Mutable System State
@@ -143,7 +157,7 @@ export default function OfficeHub() {
   };
   system.pickUpBox = (boxId: string, agentId: string) => {
     stateRef.current.looseBoxes = stateRef.current.looseBoxes.filter(
-      (b) => b.id !== boxId
+      (b) => b.id !== boxId,
     );
     setLooseBoxes([...stateRef.current.looseBoxes]);
   };
@@ -158,7 +172,7 @@ export default function OfficeHub() {
     return new THREE.Vector3(
       startX + col * 3.0,
       hubCenter.y + 1,
-      startZ + row * 3.0
+      startZ + row * 3.0,
     );
   };
   system.placeBox = (pos: THREE.Vector3) => {
@@ -172,16 +186,18 @@ export default function OfficeHub() {
   }, []);
 
   // --- BUILDING GENERATION ---
-  const { walls, floors, obstacles } = useMemo(() => {
+  const { walls, floors, ceiling, obstacles } = useMemo(() => {
     const buildingObstacles: { position: THREE.Vector3; radius: number }[] = [];
     const wallGeoms: {
       pos: [number, number, number];
       args: [number, number, number];
       rot?: number;
+      name: string;
     }[] = [];
     const floorGeoms: {
       pos: [number, number, number];
       args: [number, number, number];
+      name: string;
     }[] = [];
     const furnitureGeoms: {
       pos: [number, number, number];
@@ -194,6 +210,7 @@ export default function OfficeHub() {
     floorGeoms.push({
       pos: [hubCenter.x, hubCenter.y - 0.2, hubCenter.z],
       args: [bWidth, 0.4, bDepth],
+      name: "Floor-Main-Slab",
     });
 
     // --- HELPER: Walls ---
@@ -202,8 +219,9 @@ export default function OfficeHub() {
       z1: number,
       x2: number,
       z2: number,
+      name: string,
       thickness: number = 1.0,
-      isWindow: boolean = false
+      isWindow: boolean = false,
     ) => {
       const len = Math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2);
       const ang = Math.atan2(z2 - z1, x2 - x1);
@@ -214,6 +232,7 @@ export default function OfficeHub() {
         pos: [mx, hubCenter.y + bHeight / 2, mz],
         args: [len, bHeight, thickness],
         rot: -ang,
+        name: name,
       });
 
       // Collision
@@ -226,11 +245,21 @@ export default function OfficeHub() {
           position: new THREE.Vector3(
             x1 + (x2 - x1) * t,
             hubCenter.y,
-            z1 + (z2 - z1) * t
+            z1 + (z2 - z1) * t,
           ),
           radius: sphereRadius,
         });
       }
+    };
+
+    // --- HELPER: Ceiling ---
+    const ceilingGeom = {
+      pos: [hubCenter.x, hubCenter.y + bHeight, hubCenter.z] as [
+        number,
+        number,
+        number,
+      ],
+      args: [bWidth, 1.0, bDepth] as [number, number, number],
     };
 
     // --- HELPER: Furniture ---
@@ -241,7 +270,7 @@ export default function OfficeHub() {
       h: number,
       d: number,
       color: string,
-      rot: number = 0
+      rot: number = 0,
     ) => {
       // Visual
       furnitureGeoms.push({
@@ -304,14 +333,15 @@ export default function OfficeHub() {
     const back = hubCenter.z - bDepth / 2;
 
     // --- 1. Outer Shell ---
-    createWall(left, back, right, back); // North
-    createWall(right, back, right, front); // East
-    createWall(left, front, left, back); // West
+    // --- 1. Outer Shell ---
+    createWall(left, back, right, back, "Wall-North"); // North
+    createWall(right, back, right, front, "Wall-East"); // East
+    createWall(left, front, left, back, "Wall-West"); // West
 
     // South Wall (Entrance)
     // Entrance: x: -15 to +15
-    createWall(left, front, hubCenter.x - 15, front);
-    createWall(hubCenter.x + 15, front, right, front);
+    createWall(left, front, hubCenter.x - 15, front, "Wall-South-Left");
+    createWall(hubCenter.x + 15, front, right, front, "Wall-South-Right");
 
     // --- 2. Zoning ---
     // Z-Zones:
@@ -325,21 +355,65 @@ export default function OfficeHub() {
     // A. Back Rooms Divider (Z = -20)
     // We need gaps for the Central Corridor (-5 to 5) AND the Doors (approx -50 and 50)
     // Storage Side (Left): Gap centered at -50, width ~14 -> -57 to -43
-    createWall(left, roomDividerZ, hubCenter.x - 57, roomDividerZ); // Far Left Wall
-    createWall(hubCenter.x - 43, roomDividerZ, hubCenter.x - 5, roomDividerZ); // Mid Left Wall
+    createWall(
+      left,
+      roomDividerZ,
+      hubCenter.x - 57,
+      roomDividerZ,
+      "Wall-Divide-Storage-Left",
+    ); // Far Left Wall
+    createWall(
+      hubCenter.x - 43,
+      roomDividerZ,
+      hubCenter.x - 5,
+      roomDividerZ,
+      "Wall-Divide-Storage-Right",
+    ); // Mid Left Wall
 
     // Conference Side (Right): Gap centered at 50, width ~14 -> 43 to 57
-    createWall(hubCenter.x + 5, roomDividerZ, hubCenter.x + 43, roomDividerZ); // Mid Right Wall
-    createWall(hubCenter.x + 57, roomDividerZ, right, roomDividerZ); // Far Right Wall
+    createWall(
+      hubCenter.x + 5,
+      roomDividerZ,
+      hubCenter.x + 43,
+      roomDividerZ,
+      "Wall-Divide-Conf-Left",
+    ); // Mid Right Wall
+    createWall(
+      hubCenter.x + 57,
+      roomDividerZ,
+      right,
+      roomDividerZ,
+      "Wall-Divide-Conf-Right",
+    ); // Far Right Wall
 
     // Split Back Zone into Left (Storage) and Right (Conference)
     // Wall along Z axis at X=0
-    createWall(hubCenter.x, roomDividerZ, hubCenter.x, back);
+    createWall(
+      hubCenter.x,
+      roomDividerZ,
+      hubCenter.x,
+      back,
+      "Wall-Divide-Center-Back",
+    );
 
     // B. Lobby Divider
     // Wall across X with wide entrance
-    createWall(left, lobbyDividerZ, hubCenter.x - 15, lobbyDividerZ, 0.5);
-    createWall(hubCenter.x + 15, lobbyDividerZ, right, lobbyDividerZ, 0.5);
+    createWall(
+      left,
+      lobbyDividerZ,
+      hubCenter.x - 15,
+      lobbyDividerZ,
+      "Wall-Lobby-Left",
+      0.5,
+    );
+    createWall(
+      hubCenter.x + 15,
+      lobbyDividerZ,
+      right,
+      lobbyDividerZ,
+      "Wall-Lobby-Right",
+      0.5,
+    );
 
     // --- 3. FURNITURE ---
     // ...
@@ -365,7 +439,7 @@ export default function OfficeHub() {
       40,
       4,
       20,
-      "#5a3a2a" // Brown Table
+      "#5a3a2a", // Brown Table
     );
     // Chairs (implied by obstacles or small boxes)
     // North side chairs
@@ -376,7 +450,7 @@ export default function OfficeHub() {
         4,
         4,
         4,
-        "#333"
+        "#333",
       );
     }
     // South side chairs
@@ -387,7 +461,7 @@ export default function OfficeHub() {
         4,
         4,
         4,
-        "#333"
+        "#333",
       );
     }
 
@@ -417,7 +491,7 @@ export default function OfficeHub() {
           12,
           3,
           6,
-          "#ffffff"
+          "#ffffff",
         );
         // Chair
         createFurniture(
@@ -426,7 +500,7 @@ export default function OfficeHub() {
           3,
           3,
           3,
-          "#222"
+          "#222",
         );
       }
     }
@@ -439,7 +513,7 @@ export default function OfficeHub() {
           12,
           3,
           6,
-          "#ffffff"
+          "#ffffff",
         );
         // Chair (Opposite side?)
         createFurniture(
@@ -448,7 +522,7 @@ export default function OfficeHub() {
           3,
           3,
           3,
-          "#222"
+          "#222",
         );
       }
     }
@@ -460,8 +534,8 @@ export default function OfficeHub() {
     return {
       walls: wallGeoms,
       floors: floorGeoms,
+      ceiling: ceilingGeom,
       obstacles: buildingObstacles,
-      // furniture: furnitureGeoms // No longer returning furniture geometries for manual rendering
     };
   }, []);
 
@@ -484,46 +558,52 @@ export default function OfficeHub() {
   return (
     <group>
       {/* Main Island Ground (Plaza) */}
+      {/* Main Ground (Base for the building) */}
       <mesh
         ref={groundRef}
         position={[hubCenter.x, hubCenter.y - 1, hubCenter.z]}
         receiveShadow
       >
-        <boxGeometry args={[hubSize, 5, hubSize]} />
-        <primitive object={materials.wood} attach="material" />
+        <boxGeometry args={[bWidth + 10, 5, bDepth + 10]} />
+        <meshStandardMaterial color="#222222" />
       </mesh>
 
-      {/* Building Structure */}
+      {/* Enclosed Building Structure */}
       <group ref={buildingRef}>
+        {/* Floor (Tile) */}
         {floors.map((f, i) => (
           <mesh
             key={`floor-${i}`}
+            name={f.name || `Floor-${i}`}
             position={new THREE.Vector3(...f.pos)}
             receiveShadow
           >
             <boxGeometry args={f.args} />
-            <meshStandardMaterial color="#8899aa" roughness={0.5} />
+            {/* @ts-ignore */}
+            <primitive object={materials.tile} attach="material" />
           </mesh>
         ))}
+
+        {/* Ceiling */}
+        <mesh position={new THREE.Vector3(...ceiling.pos)} name="Ceiling-Main">
+          <boxGeometry args={ceiling.args} />
+          {/* @ts-ignore */}
+          <primitive object={materials.concrete} attach="material" />
+        </mesh>
+
+        {/* Walls (Solid Opaque) */}
         {walls.map((w, i) => (
           <mesh
             key={`wall-${i}`}
+            name={w.name}
             position={new THREE.Vector3(...w.pos)}
             rotation={[0, w.rot || 0, 0]}
             receiveShadow
             castShadow
           >
             <boxGeometry args={[w.args[0], w.args[1], w.args[2]]} />
-            <meshPhysicalMaterial
-              color="#e0f7ff"
-              transmission={0.6}
-              opacity={0.4}
-              transparent
-              roughness={0.1}
-              metalness={0.1}
-              side={THREE.DoubleSide}
-              depthWrite={false}
-            />
+            {/* @ts-ignore */}
+            <primitive object={materials.concrete} attach="material" />
           </mesh>
         ))}
       </group>
@@ -575,7 +655,7 @@ export default function OfficeHub() {
               rotation={Math.PI}
             />
           </group>
-        ))
+        )),
       )}
       {/* Right Block */}
       {[0, 1].map((r) =>
@@ -598,7 +678,7 @@ export default function OfficeHub() {
               rotation={Math.PI} // Facing desk (North)
             />
           </group>
-        ))
+        )),
       )}
 
       {/* 3. Storage Room Shelves (Still simple boxes or upgrade?) */}
@@ -669,33 +749,43 @@ export default function OfficeHub() {
         </Text>
       </group>
 
-      {/* --- LIGHTING --- */}
-      <hemisphereLight intensity={0.4} groundColor="#444" color="#fff" />
+      {/* --- LIGHTING (Always On) --- */}
+      {/* <ambientLight intensity={0.2} color="#ffffff" /> handled by Scene Environment */}
 
-      {/* Zone Lights */}
-      <pointLight
-        position={[hubCenter.x, hubCenter.y + 20, hubCenter.z + 50]}
-        intensity={0.8}
-        distance={60}
-        color="#fff0dd"
-      />
-      <pointLight
-        position={[hubCenter.x, hubCenter.y + 20, hubCenter.z]}
-        intensity={1.0}
+      {/* 1. LOBBY */}
+      <CeilingLight
+        position={[hubCenter.x, hubCenter.y + 28, hubCenter.z + 55]}
+        isOn={true}
+        color="#ffeedd"
+        intensity={1000}
         distance={80}
-        color="#fff"
       />
-      <pointLight
-        position={[hubCenter.x - 50, hubCenter.y + 20, hubCenter.z - 50]}
-        intensity={0.8}
-        distance={60}
-        color="#ffd"
+
+      {/* 2. OPEN OFFICE */}
+      <CeilingLight
+        position={[hubCenter.x, hubCenter.y + 28, hubCenter.z + 10]}
+        isOn={true}
+        color="#ffffff"
+        intensity={1500}
+        distance={100}
       />
-      <pointLight
-        position={[hubCenter.x + 50, hubCenter.y + 20, hubCenter.z - 50]}
-        intensity={0.8}
+
+      {/* 3. CONFERENCE ROOM */}
+      <CeilingLight
+        position={[hubCenter.x + 50, hubCenter.y + 28, hubCenter.z - 45]}
+        isOn={true}
+        color="#fff0e0"
+        intensity={1200}
         distance={60}
-        color="#ddf"
+      />
+
+      {/* 4. STORAGE ROOM */}
+      <CeilingLight
+        position={[hubCenter.x - 50, hubCenter.y + 28, hubCenter.z - 50]}
+        isOn={true}
+        color="#e0e0ff"
+        intensity={800}
+        distance={60}
       />
 
       {/* --- WORKER SYSTEM --- */}
