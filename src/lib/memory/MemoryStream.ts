@@ -1,6 +1,7 @@
 import { MemoryObject, MemoryType, RetrievalContext, MemoryConfig } from './types';
 import { memoryStorage } from './idb-adapter';
-import { getGroqClient } from '../groq';
+// import { getGroqClient } from '../groq'; // Removed
+import { generateReflection } from '@/app/actions';
 import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_CONFIG: MemoryConfig = {
@@ -23,7 +24,7 @@ export class MemoryStream {
      * Add a new memory to the stream.
      * Heuristic importance is calculated here to avoid LLM calls.
      */
-    async add(type: MemoryType, content: string, tags: string[] = []): Promise<void> {
+    async add(type: MemoryType, content: string, tags: string[] = [], sessionId?: string): Promise<void> {
         const importance = this.calculateHeuristicImportance(type, tags);
         const memory: MemoryObject = {
             id: uuidv4(),
@@ -36,7 +37,7 @@ export class MemoryStream {
         };
 
         await memoryStorage.add(memory);
-        this.checkCompaction();
+        this.checkCompaction(sessionId);
     }
 
     /**
@@ -96,13 +97,13 @@ export class MemoryStream {
     /**
      * Checks if memory limit is reached and triggers compaction if needed.
      */
-    private async checkCompaction() {
+    private async checkCompaction(sessionId?: string) {
         if (this.isCompacting) return;
 
         const count = await this.count();
         if (count >= this.config.compactionThreshold) {
             console.log(`[MemoryStream] Compaction threshold reached (${count}/${this.config.maxMemories}). triggering reflection...`);
-            this.reflect().catch(err => console.error("[MemoryStream] Reflection failed:", err));
+            this.reflect(sessionId).catch(err => console.error("[MemoryStream] Reflection failed:", err));
         }
     }
 
@@ -113,7 +114,7 @@ export class MemoryStream {
      * 3. Delete the original 50.
      * 4. Add the Insight.
      */
-    async reflect() {
+    async reflect(sessionId?: string) {
         this.isCompacting = true;
         try {
             const batchSize = 50;
@@ -126,24 +127,7 @@ export class MemoryStream {
                 .map(m => `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.type}: ${m.content}`)
                 .join('\n');
 
-            const client = getGroqClient();
-            const completion = await client.chat.completions.create({
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are an agent's memory manager. Summarize the following events into a single, concise 'Insight' or 'Fact' that captures the key context. Ignore mundane details."
-                    },
-                    {
-                        role: "user",
-                        content: textToSummarize
-                    }
-                ],
-                model: "llama-3.3-70b-versatile",
-                temperature: 0.5,
-                max_completion_tokens: 200,
-            });
-
-            const summary = completion.choices[0]?.message?.content?.trim();
+            const summary = await generateReflection(textToSummarize, sessionId);
 
             if (summary) {
                 // Add Insight
