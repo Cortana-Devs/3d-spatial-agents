@@ -1,101 +1,179 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { ClientBrain } from '../Systems/ClientBrain';
 import * as THREE from 'three';
+import { Maximize2, Minimize2, Cpu, Activity, Clock } from 'lucide-react';
 
 interface ThoughtBubbleProps {
     brain: ClientBrain;
 }
 
-export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain }) => {
-    const [thought, setThought] = useState("");
-    const [isThinking, setIsThinking] = useState(false);
-    const [visible, setVisible] = useState(true);
+interface ThoughtLog {
+    id: string;
+    text: string;
+    timestamp: number;
+    type: 'THOUGHT' | 'ACTION';
+}
 
-    // Polling Optimization
-    // Only check every 10 frames to save React renders
+export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain }) => {
+    const [currentThought, setCurrentThought] = useState("");
+    const [isThinking, setIsThinking] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+
+    // Local History State
+    const [history, setHistory] = useState<ThoughtLog[]>([]);
+
+    // Optimization Refs
     const frameCount = useRef(0);
     const lastThoughtTime = useRef(0);
 
-    // LOD Logic
-    const bubbleRef = useRef<HTMLDivElement>(null);
-    const worldPos = useRef(new THREE.Vector3());
-
-    useFrame((state) => {
+    // Polling Logic
+    useFrame(() => {
         frameCount.current++;
-
-        // 1. Level of Detail (LOD) - Hide if far
-        if (frameCount.current % 30 === 0) {
-            // Check camera distance
-            // Note: We need a ref to the group to get world pos, but Html tracks parent.
-            // We can check the parent's distance if we had a ref, or just let Html occlude.
-            // For now, let's keep it simple. If we want true LOD, we need to pass a parent Ref.
-            // But Html has `occlude` prop which handles visibility behind attributes.
-            // Let's rely on `distanceFactor` and `zIndexRange` for basic scaling.
-        }
-
-        // 2. Poll Brain State
         if (frameCount.current % 10 === 0) {
+            // Update Thinking Status
             if (brain.state.isThinking !== isThinking) {
                 setIsThinking(brain.state.isThinking);
             }
 
+            // Update Thought Content
             if (brain.state.lastThoughtTime > lastThoughtTime.current) {
-                setThought(brain.state.thought);
+                const newText = brain.state.thought;
+                setCurrentThought(newText);
                 lastThoughtTime.current = brain.state.lastThoughtTime;
+
+                // Add to history
+                setHistory(prev => [
+                    {
+                        id: crypto.randomUUID(),
+                        text: newText,
+                        timestamp: Date.now(),
+                        type: 'THOUGHT'
+                    },
+                    ...prev.slice(0, 9) // Keep last 10
+                ]);
             }
         }
     });
 
     return (
         <Html
-            position={[0, 4.2, 0]} // Above head
+            position={[0, 4.5, 0]}
             center
-            distanceFactor={15}
+            distanceFactor={12}
             occlude
             style={{
-                pointerEvents: 'none',
+                pointerEvents: 'auto', // Enable interaction
                 userSelect: 'none',
-                opacity: visible ? 1 : 0,
-                transition: 'opacity 0.2s',
+                transition: 'all 0.3s ease-out',
+                transform: `scale(${expanded ? 1.0 : 0.9})`,
             }}
         >
-            <div className="flex flex-col items-center">
-
-                {/* Thinking Indicator */}
-                {isThinking && (
-                    <div className="mb-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 animate-pulse">
-                        <span className="text-[10px] text-cyan-300 font-mono tracking-widest font-bold">
-                            THINKING...
-                        </span>
-                    </div>
-                )}
-
-                {/* Thought Content */}
-                {!isThinking && thought && (
-                    <div className="
-                        relative
-                        bg-black/70 backdrop-blur-lg
+            <div
+                className={`
+                    flex flex-col
+                    transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
+                    ${expanded ? 'w-[320px]' : 'w-[200px]'}
+                `}
+            >
+                {/* --- MAIN WINDOW --- */}
+                <div
+                    className="
+                        group relative
+                        bg-black/80 backdrop-blur-xl
                         border border-white/10
-                        rounded-xl
-                        p-3 max-w-[200px]
-                        shadow-[0_0_15px_rgba(0,0,0,0.3)]
-                        transition-all duration-300
-                    ">
-                        {/* Tail */}
-                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-black/70 border-b border-r border-white/10 rotate-45 transform" />
+                        rounded-2xl
+                        shadow-[0_8px_32px_rgba(0,0,0,0.4)]
+                        overflow-hidden
+                    "
+                >
+                    {/* Feathered Glow Border (Pseudo-element via shadow or gradient) */}
+                    <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10 pointer-events-none" />
 
-                        {/* Text */}
-                        <p className="text-white/90 text-[11px] font-sans leading-relaxed text-center">
-                            {thought.length > 80 ? thought.substring(0, 80) + "..." : thought}
-                        </p>
+                    {/* Header / Status Bar */}
+                    <div
+                        className="
+                            flex items-center justify-between 
+                            px-3 py-2 
+                            bg-white/5 border-b border-white/5
+                            cursor-pointer
+                        "
+                        onClick={() => setExpanded(!expanded)}
+                    >
+                        <div className="flex items-center gap-2">
+                            {isThinking ? (
+                                <Activity className="w-3 h-3 text-cyan-400 animate-pulse" />
+                            ) : (
+                                <Cpu className="w-3 h-3 text-emerald-400" />
+                            )}
+                            <span className="text-[10px] font-mono font-medium tracking-wider text-white/60 uppercase">
+                                {isThinking ? 'PROCESSING' : 'NEURAL LINK'}
+                            </span>
+                        </div>
 
-                        {/* Decoration */}
-                        <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-cyan-500/50 rounded-tr-sm" />
-                        <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-cyan-500/50 rounded-bl-sm" />
+                        <div className="text-white/40 hover:text-white transition-colors">
+                            {expanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                        </div>
                     </div>
-                )}
+
+                    {/* Content Area */}
+                    <div className="p-4 relative">
+                        {/* Background Noise Texture */}
+                        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none" />
+
+                        {/* Current Thought (Always Visible) */}
+                        <div className="relative z-10">
+                            {isThinking ? (
+                                <div className="space-y-2">
+                                    <div className="h-2 w-3/4 bg-white/10 rounded animate-pulse" />
+                                    <div className="h-2 w-1/2 bg-white/10 rounded animate-pulse delay-75" />
+                                </div>
+                            ) : (
+                                <p className="text-[12px] leading-relaxed font-sans text-white/90">
+                                    "{currentThought || "System Idle"}"
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Expanded History */}
+                        <div className={`
+                            mt-4 space-y-3 
+                            transition-all duration-500 ease-in-out
+                            ${expanded ? 'opacity-100 max-h-[200px] overflow-y-auto custom-scrollbar' : 'opacity-0 max-h-0 overflow-hidden'}
+                        `}>
+                            <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+                            <div className="space-y-3">
+                                <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest pl-1">
+                                    Recent Logs
+                                </span>
+                                {history.map((log) => (
+                                    <div key={log.id} className="flex gap-2 group/item">
+                                        <div className="mt-1 w-1 h-1 rounded-full bg-cyan-500/50 group-hover/item:bg-cyan-400 transition-colors" />
+                                        <div className="flex-1">
+                                            <p className="text-[10px] text-white/60 leading-tight">
+                                                {log.text}
+                                            </p>
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <Clock size={8} className="text-white/20" />
+                                                <span className="text-[8px] text-white/20">
+                                                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Decorative Feathered Gradient at Bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-cyan-900/10 to-transparent pointer-events-none" />
+                </div>
+
+                {/* Connecting Line */}
+                <div className="self-center w-px h-8 bg-gradient-to-b from-white/10 to-transparent" />
             </div>
         </Html>
     );
