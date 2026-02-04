@@ -4,9 +4,9 @@ import { NearbyEntity, AgentContext, processAgentThought } from '@/lib/agent-cor
 
 export type { NearbyEntity, AgentContext };
 
-export async function generateAgentThought(context: AgentContext) {
+export async function generateAgentThought(context: AgentContext, memoryContext: string) {
     try {
-        const responseText = await processAgentThought(context);
+        const responseText = await processAgentThought(context, memoryContext);
         return responseText;
     } catch (error) {
         console.error("Gemini API Error:", error);

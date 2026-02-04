@@ -1,5 +1,4 @@
 import { getGroqClient, rotateGroqKey } from '@/lib/groq';
-import { memoryStream } from '@/lib/memory/MemoryStream';
 
 export interface NearbyEntity {
     type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE'
@@ -16,14 +15,7 @@ export interface AgentContext {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-let isMemoryInitialized = false;
-
-export async function processAgentThought(context: AgentContext): Promise<string> {
-    if (!isMemoryInitialized) {
-        await memoryStream.init();
-        isMemoryInitialized = true;
-    }
-
+export async function processAgentThought(context: AgentContext, memoryContext: string = ""): Promise<string> {
     const MAX_RETRIES = 3;
     let attempt = 0;
 
@@ -32,23 +24,6 @@ export async function processAgentThought(context: AgentContext): Promise<string
         ? `| Type | ID | Dist | Status |\n|---|---|---|---|\n` +
         context.nearbyEntities.map(e => `| ${e.type} | ${e.id || '-'} | ${e.distance}m | ${e.status || '-'} |`).join('\n')
         : "No entities nearby.";
-
-    // Retrieve Memories
-    // Extract tags from nearby entities (e.g. 'entity:PLAYER', 'id:123')
-    const contextTags = context.nearbyEntities.flatMap(e => {
-        const tags = [`entity:${e.type.toLowerCase()}`];
-        if (e.id) tags.push(`id:${e.id}`);
-        return tags;
-    });
-
-    const relevantMemories = await memoryStream.retrieve({
-        tags: contextTags,
-        limit: 5 // Keep it tight for tokens
-    });
-
-    const memoryContext = relevantMemories.length > 0
-        ? relevantMemories.map(m => `- [${new Date(m.timestamp).toLocaleTimeString()}] ${m.content}`).join('\n')
-        : "No relevant past memories.";
 
     const prompt = `
     You are an AI agent in a 3D world.
@@ -61,7 +36,7 @@ export async function processAgentThought(context: AgentContext): Promise<string
     ${entityTable}
 
     ## Memory (Past Interactions)
-    ${memoryContext}
+    ${memoryContext || "No relevant past memories."}
 
     ## Task
     Decide your next action based on perception and memory.
@@ -97,9 +72,6 @@ export async function processAgentThought(context: AgentContext): Promise<string
                 max_completion_tokens: 8192,
                 top_p: 1,
                 stream: false,
-                reasoning_effort: "medium", // Only for reasoning models, but harmless if ignored or remove if causes error. 
-                // llama-3.3-70b-versatile is not a reasoning model so `reasoning_effort` might cause error or be ignored. 
-                // To be safe, I will remove `reasoning_effort` for this model.
                 stop: null
             });
 
@@ -109,9 +81,6 @@ export async function processAgentThought(context: AgentContext): Promise<string
             if (!content) {
                 throw new Error("Empty response from Groq");
             }
-
-            // Memorize the action (Fire and Forget)
-            memoryStream.add('ACTION', content, contextTags).catch(console.error);
 
             return content;
 
@@ -128,13 +97,8 @@ export async function processAgentThought(context: AgentContext): Promise<string
             if (isRateLimit) {
                 console.warn("Rate limit hit. Rotating API key and retrying...");
                 rotateGroqKey();
-                // Wait a bit before retrying to prevent rapid-fire cycling if all keys are bad
                 await sleep(1000);
             } else {
-                // If it's not a rate limit, maybe we shouldn't retry? 
-                // Or retry anyway for transient network issues?
-                // Let's retry only on rate limits for now to be safe, or just throw.
-                // Actually, for demo stability, let's retry once more for network blips.
                 if (attempt === MAX_RETRIES - 1) throw error;
             }
 

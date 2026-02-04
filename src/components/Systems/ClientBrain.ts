@@ -16,10 +16,15 @@ export interface AgentDecision {
     thought: string;
 }
 
+import { memoryStream } from '@/lib/memory/MemoryStream';
+
+// ... (BrainState and RateLimiter imports remain)
+
 export class ClientBrain {
     public state: BrainState;
     private rateLimiter: RateLimiter;
     private id: string;
+    private memoryInitialized = false;
 
     constructor(id: string = 'agent-01') {
         this.id = id;
@@ -45,6 +50,11 @@ export class ClientBrain {
 
         this.state.isThinking = true;
 
+        if (!this.memoryInitialized) {
+            await memoryStream.init();
+            this.memoryInitialized = true;
+        }
+
         // Construct Context
         const context: AgentContext = {
             position: { x: position.x, y: position.y, z: position.z },
@@ -54,7 +64,25 @@ export class ClientBrain {
 
         try {
             console.log(`[ClientBrain:${this.id}] Thinking... (Tokens left: ${this.rateLimiter.getTokensRemaining()})`);
-            const responseText = await generateAgentThought(context);
+
+            // --- 1. RETRIEVE MEMORIES (Client Side) ---
+            const contextTags = nearbyEntities.flatMap(e => {
+                const tags = [`entity:${e.type.toLowerCase()}`];
+                if (e.id) tags.push(`id:${e.id}`);
+                return tags;
+            });
+
+            const relevantMemories = await memoryStream.retrieve({
+                tags: contextTags,
+                limit: 5
+            });
+
+            const memoryContextStr = relevantMemories.length > 0
+                ? relevantMemories.map(m => `- [${new Date(m.timestamp).toLocaleTimeString()}] ${m.content}`).join('\n')
+                : "No relevant past memories.";
+
+            // --- 2. THINK (Server Side) ---
+            const responseText = await generateAgentThought(context, memoryContextStr);
 
             // Clean the response (remove markdown code blocks if present)
             const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -75,6 +103,14 @@ export class ClientBrain {
             this.state.isThinking = false;
 
             console.log(`[ClientBrain:${this.id}] Decided:`, decision);
+
+            // --- 3. MEMORIZE (Client Side) ---
+            if (decision.thought) {
+                // Store the thought/action
+                memoryStream.add('ACTION', decision.thought, contextTags).catch(err =>
+                    console.error(`[ClientBrain:${this.id}] Memory add failed:`, err)
+                );
+            }
 
             return decision;
 

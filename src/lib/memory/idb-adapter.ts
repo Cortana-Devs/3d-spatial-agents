@@ -13,45 +13,54 @@ const DB_NAME = 'agent-memory-db';
 const STORE_NAME = 'memories';
 
 class IDBAdapter {
-    private dbPromise: Promise<IDBPDatabase<MemoryDB>>;
+    private dbPromise: Promise<IDBPDatabase<MemoryDB>> | null = null;
 
-    constructor() {
-        this.dbPromise = openDB<MemoryDB>(DB_NAME, 1, {
-            upgrade(db) {
-                const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                store.createIndex('by-timestamp', 'timestamp');
-            },
-        });
+    private getDb() {
+        if (typeof window === 'undefined') return null; // Server-side guard
+        if (!this.dbPromise) {
+            this.dbPromise = openDB<MemoryDB>(DB_NAME, 1, {
+                upgrade(db) {
+                    const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    store.createIndex('by-timestamp', 'timestamp');
+                },
+            });
+        }
+        return this.dbPromise;
     }
 
     async add(memory: MemoryObject): Promise<void> {
-        const db = await this.dbPromise;
-        await db.put(STORE_NAME, memory);
+        const db = this.getDb();
+        if (!db) return; // No-op on server
+        (await db).put(STORE_NAME, memory);
     }
 
     async getAll(): Promise<MemoryObject[]> {
-        const db = await this.dbPromise;
+        const db = this.getDb();
+        if (!db) return [];
         // Get all memories sorted by timestamp
-        return db.getAllFromIndex(STORE_NAME, 'by-timestamp');
+        return (await db).getAllFromIndex(STORE_NAME, 'by-timestamp');
     }
 
     async delete(ids: string[]): Promise<void> {
-        const db = await this.dbPromise;
-        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const db = this.getDb();
+        if (!db) return;
+        const tx = (await db).transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
         await Promise.all(ids.map(id => store.delete(id)));
         await tx.done;
     }
 
     async count(): Promise<number> {
-        const db = await this.dbPromise;
-        return db.count(STORE_NAME);
+        const db = this.getDb();
+        if (!db) return 0;
+        return (await db).count(STORE_NAME);
     }
 
     // Efficiently get oldest N memories for pruning
     async getOldest(count: number): Promise<MemoryObject[]> {
-        const db = await this.dbPromise;
-        const tx = db.transaction(STORE_NAME, 'readonly');
+        const db = this.getDb();
+        if (!db) return [];
+        const tx = (await db).transaction(STORE_NAME, 'readonly');
         const index = tx.objectStore(STORE_NAME).index('by-timestamp');
 
         let cursor = await index.openCursor(null, 'next'); // 'next' = ascending (oldest first)
