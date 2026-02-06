@@ -459,8 +459,8 @@ export default function OfficeHub() {
 
     // B. Storage Room (North-West: X < 0, Z < -20)
     // Refactored Shelves (2 Units) matching <StorageShelf>
-    createFurniture(hubCenter.x - 50, hubCenter.z - 60, 80, 12, 5, "#667788");
-    createFurniture(hubCenter.x - 50, hubCenter.z - 40, 80, 12, 5, "#667788");
+    createFurniture(hubCenter.x - 50, hubCenter.z - 60, 80, 8, 5, "#667788");
+    createFurniture(hubCenter.x - 50, hubCenter.z - 40, 80, 8, 5, "#667788");
 
     // C. Open Office (Center: Z [-20, 40])
     // Desks in grid
@@ -791,11 +791,11 @@ export default function OfficeHub() {
       {/* Fill Storage Shelves with Files (Generic and Blue/Red) */}
       {/* Rack 1: [-50, ..., -60] */}
       {
-        [2, 7, 12].map((y) =>
+        [2, 7].map((y) =>
           [-35, -20, -5, 10, 25].map((off, i) => (
             <FileFolder
               key={`file-s1-${y}-${i}`}
-              position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 60]}
+              position={[hubCenter.x - 50 + off, hubCenter.y + y + 0, hubCenter.z - 60]}
               color={i % 2 === 0 ? "blue" : (i % 3 === 0 ? "red" : "generic")}
               rotation={Math.random() * 0.5}
               label={(i + (y * 5) + 1).toString()} // Numbered Label
@@ -805,11 +805,11 @@ export default function OfficeHub() {
       }
       {/* Rack 2: [-50, ..., -40] */}
       {
-        [2, 7, 12].map((y) =>
+        [2, 7].map((y) =>
           [-30, -10, 5, 20, 30].map((off, i) => (
             <FileFolder
               key={`file-s2-${y}-${i}`}
-              position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 40]}
+              position={[hubCenter.x - 50 + off, hubCenter.y + y + 0, hubCenter.z - 40]}
               color={i % 3 === 0 ? "blue" : "generic"}
               rotation={Math.random() * 0.5}
               label={(i + (y * 5) + 100).toString()} // Numbered Label
