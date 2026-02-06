@@ -16,7 +16,7 @@ import {
   ManagersDesk,
 } from "./Furniture";
 import { Elevator } from "./Elevator";
-import { Printer, FireExtinguisher, FileFolder, Whiteboard, ProjectorScreen } from "./Props";
+import { Printer, FireExtinguisher, FileFolder, Whiteboard, ProjectorScreen, Laptop, PenDrive, SmallRack, FlowerPot, Sofa, TV, CoffeeMachine, CoffeeCup } from "./Props";
 
 interface Box {
   id: string;
@@ -637,60 +637,58 @@ export default function OfficeHub() {
                 ]}
                 rotation={Math.PI}
               />
-              <FileFolder
-                position={[dx - 3, hubCenter.y + 4.1, dz]}
-                color="red"
-                rotation={0.1}
-              />
-              <FileFolder
-                position={[dx - 3, hubCenter.y + 4.1, dz + 0.5]}
-                color="red"
-                rotation={-0.1}
-              />
+              {/* Only ONE computer table gets red file (e.g., Row 0, Col 0, Left Block) */}
+              {r === 0 && c === 0 && (
+                <FileFolder
+                  position={[dx - 3, hubCenter.y + 4.1, dz]}
+                  color="red"
+                  rotation={0.1}
+                />
+              )}
             </group>
           )
         })
       )}
       {/* Right Block */}
       {[0, 1].map((r) =>
-        [0, 1, 2].map((c) => (
-          <group key={`desk-r-${r}-${c}`}>
-            <OfficeDesk
-              position={[
-                hubCenter.x + 20 + c * 20,
-                hubCenter.y,
-                hubCenter.z + r * 30,
-              ]}
-            />
-            <OfficeChair
-              id={`chair-r-${r}-${c}`}
-              position={[
-                hubCenter.x + 20 + c * 20,
-                hubCenter.y,
-                hubCenter.z + r * 30 + 5,
-              ]}
-              rotation={Math.PI} // Facing desk (North)
-            />
-            {/* Add Red Files Left of Monitor (Monitor is at 0) */}
-            <FileFolder
-              position={[hubCenter.x + 20 + c * 20 - 3, hubCenter.y + 4.1, hubCenter.z + r * 30]}
-              color="red"
-              rotation={0.1}
-            />
-            <FileFolder
-              position={[hubCenter.x + 20 + c * 20 - 3, hubCenter.y + 4.1, hubCenter.z + r * 30 + 0.5]}
-              color="red"
-              rotation={-0.1}
-            />
-            {/* Printer on specific desk: Right Block, Row 0, Col 0 */}
-            {r === 0 && c === 0 && (
-              <Printer
-                position={[hubCenter.x + 20 + c * 20 + 3, hubCenter.y + 2.6, hubCenter.z + r * 30]}
-                rotation={Math.PI / 4}
+        [0, 1, 2].map((c) => {
+          // Check if desk falls into Break Room (X > 30, Z > 10)
+          // X: 20, 40, 60. Z: 0, 30.
+          // Desks at (40, 30) and (60, 30) are INSIDE Break Room.
+          const dx = hubCenter.x + 20 + c * 20;
+          const dz = hubCenter.z + r * 30;
+          if (dx > hubCenter.x + 30 && dz > hubCenter.z + 10) return null;
+
+          return (
+            <group key={`desk-r-${r}-${c}`}>
+              <OfficeDesk
+                position={[
+                  hubCenter.x + 20 + c * 20,
+                  hubCenter.y,
+                  hubCenter.z + r * 30,
+                ]}
               />
-            )}
-          </group>
-        )),
+              <OfficeChair
+                id={`chair-r-${r}-${c}`}
+                position={[
+                  hubCenter.x + 20 + c * 20,
+                  hubCenter.y,
+                  hubCenter.z + r * 30 + 5,
+                ]}
+                rotation={Math.PI} // Facing desk (North)
+              />
+              {/* Printer on specific desk: Right Block, Row 0, Col 0 */}
+              {r === 0 && c === 0 && (
+                <Printer
+                  position={[hubCenter.x + 20 + c * 20 + 3, hubCenter.y + 2.6, hubCenter.z + r * 30]}
+                  rotation={Math.PI / 4}
+                />
+              )}
+              {/* Remove Red Files from all other tables logic - user said "dont add all computer tables to red file only add file in one cumputer table" */}
+              {/* We added one in Left Block above. So none here. */}
+            </group>
+          )
+        })
       )}
 
       {/* 3. Storage Room Shelves (Refactored) */}
@@ -702,27 +700,33 @@ export default function OfficeHub() {
       />
       {/* Fill Storage Shelves with Files (Generic and Blue/Red) */}
       {/* Rack 1: [-50, ..., -60] */}
-      {[2, 7, 12].map((y) =>
-        [-35, -20, -5, 10, 25].map((off, i) => (
-          <FileFolder
-            key={`file-s1-${y}-${i}`}
-            position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 60]}
-            color={i % 2 === 0 ? "blue" : (i % 3 === 0 ? "red" : "generic")}
-            rotation={Math.random() * 0.5}
-          />
-        ))
-      )}
+      {
+        [2, 7, 12].map((y) =>
+          [-35, -20, -5, 10, 25].map((off, i) => (
+            <FileFolder
+              key={`file-s1-${y}-${i}`}
+              position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 60]}
+              color={i % 2 === 0 ? "blue" : (i % 3 === 0 ? "red" : "generic")}
+              rotation={Math.random() * 0.5}
+              label={(i + (y * 5) + 1).toString()} // Numbered Label
+            />
+          ))
+        )
+      }
       {/* Rack 2: [-50, ..., -40] */}
-      {[2, 7, 12].map((y) =>
-        [-30, -10, 5, 20, 30].map((off, i) => (
-          <FileFolder
-            key={`file-s2-${y}-${i}`}
-            position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 40]}
-            color={i % 3 === 0 ? "blue" : "generic"}
-            rotation={Math.random() * 0.5}
-          />
-        ))
-      )}
+      {
+        [2, 7, 12].map((y) =>
+          [-30, -10, 5, 20, 30].map((off, i) => (
+            <FileFolder
+              key={`file-s2-${y}-${i}`}
+              position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 40]}
+              color={i % 3 === 0 ? "blue" : "generic"}
+              rotation={Math.random() * 0.5}
+              label={(i + (y * 5) + 100).toString()} // Numbered Label
+            />
+          ))
+        )
+      }
 
       {/* 4. Reception Info Desk (Lobby) - Centered */}
       <ReceptionDesk
@@ -750,6 +754,35 @@ export default function OfficeHub() {
         color="blue"
         rotation={0.2}
       />
+      {/* Laptop & Pen Drive */}
+      {/* Laptop: rotation 0 is open towards +Z (South). Manager chair faces East (+X). Screen should face West (-X). 
+          If rotation is -Math.PI/2, screen faces West.
+      */}
+      <Laptop position={[hubCenter.x - 65, hubCenter.y + 3.8, hubCenter.z + 25]} rotation={-Math.PI / 2} />
+      {/* Pen Drive: Left side of desk. Desk center Z=25. Facing East => Left is North (Z < 25). */}
+      <PenDrive position={[hubCenter.x - 65, hubCenter.y + 3.8, hubCenter.z + 21]} rotation={Math.random()} />
+      {/* Small Rack with Rose Files & Flower Pot */}
+      <SmallRack position={[hubCenter.x - 75, hubCenter.y, hubCenter.z + 15]} rotation={Math.PI / 4} />
+      <FileFolder position={[hubCenter.x - 75, hubCenter.y + 3.1, hubCenter.z + 15]} color="red" rotation={0.1} />
+      <FileFolder position={[hubCenter.x - 75, hubCenter.y + 3.1, hubCenter.z + 15.5]} color="red" rotation={-0.1} />
+      <FlowerPot position={[hubCenter.x - 75, hubCenter.y + 4.2, hubCenter.z + 15]} />
+
+      {/* 6. Break Room (South-East) */}
+      {/* Two Sofas facing North (towards TV on North Wall) - Moved back to South Wall (Z=35) to clear door path */}
+      <Sofa position={[hubCenter.x + 60, hubCenter.y, hubCenter.z + 35]} rotation={Math.PI} />
+      <Sofa position={[hubCenter.x + 40, hubCenter.y, hubCenter.z + 35]} rotation={Math.PI} />
+
+      {/* TV on North Wall (Z=10) centered between sofas approx X=50 */}
+      <TV position={[hubCenter.x + 50, hubCenter.y + 2, hubCenter.z + 10.5]} rotation={0} />
+
+      {/* Coffee Station in Corner (South-East Corner: X approx 90, Z approx 35) */}
+      <group position={[hubCenter.x + 90, hubCenter.y, hubCenter.z + 35]}>
+        <mesh position={[0, 2, 0]} material={new THREE.MeshStandardMaterial({ color: "#333" })}>
+          <boxGeometry args={[6, 4, 3]} />
+        </mesh>
+        <CoffeeMachine position={[0, 4, 0]} />
+        <CoffeeCup position={[2, 4.1, 0.5]} />
+      </group>
 
       <FireExtinguisher
         position={[hubCenter.x + 8, hubCenter.y, hubCenter.z + 41]} // Near Lobby Door inside
@@ -859,12 +892,14 @@ export default function OfficeHub() {
       />
 
       {/* Placed Boxes (Construction) */}
-      {placedBoxes.map((pos, i) => (
-        <mesh key={i} position={pos} castShadow>
-          <boxGeometry args={[2, 2, 2]} />
-          <meshStandardMaterial color="#aa8800" />
-        </mesh>
-      ))}
+      {
+        placedBoxes.map((pos, i) => (
+          <mesh key={i} position={pos} castShadow>
+            <boxGeometry args={[2, 2, 2]} />
+            <meshStandardMaterial color="#aa8800" />
+          </mesh>
+        ))
+      }
 
       {/* ZONE LABELS REMOVED */}
     </group>

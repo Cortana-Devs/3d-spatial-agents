@@ -191,6 +191,33 @@ export function Whiteboard({
 
 
 
+
+// --- PROJECTOR SCREEN ---
+export function ProjectorScreen({
+    position,
+    rotation = 0,
+}: {
+    position: [number, number, number];
+    rotation?: number;
+}) {
+    return (
+        <group
+            position={new THREE.Vector3(...position)}
+            rotation={[0, rotation, 0]}
+        >
+            {/* Screen Canvas (White) */}
+            <mesh position={[0, 15, 0.2]} receiveShadow material={new THREE.MeshStandardMaterial({ color: "#fff", roughness: 0.5 })}>
+                <boxGeometry args={[20, 12, 0.1]} />
+            </mesh>
+            {/* Frame / Casing */}
+            <mesh position={[0, 21.5, 0]} material={new THREE.MeshStandardMaterial({ color: "#222" })}>
+                <boxGeometry args={[22, 1, 1]} />
+            </mesh>
+            {/* Mounting Pole? Or just wall mounted. Let's assume wall mounted casing */}
+        </group>
+    );
+}
+
 // --- LAPTOP ---
 export function Laptop({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
     return (
