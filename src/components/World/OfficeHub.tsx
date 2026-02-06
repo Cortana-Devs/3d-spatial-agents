@@ -699,14 +699,11 @@ export default function OfficeHub() {
               {/* Printer on specific desk: Right Block, Row 0, Col 0 */}
               {r === 0 && c === 0 && (
                 <Printer
-                  position={[hubCenter.x + 20 + c * 20 + 3, hubCenter.y + 2.6, hubCenter.z + r * 30]}
-                  rotation={Math.PI / 4}
+                  position={[hubCenter.x + 21.4 + c * 20 + 3, hubCenter.y + 4, hubCenter.z + r * 30]}
+                  rotation={Math.PI / 2}
                 />
               )}
-              {/* Pen Drive on Right Block, Row 0, Col 1 (Next to printer desk) or same desk */}
-              {r === 0 && c === 0 && (
-                <PenDrive position={[hubCenter.x + 20 + c * 20 - 3, hubCenter.y + 0.1, hubCenter.z + r * 30 + 2]} rotation={0.5} />
-              )}
+
               {/* Remove Red Files from all other tables logic - user said "dont add all computer tables to red file only add file in one cumputer table" */}
               {/* We added one in Left Block above. So none here. */}
             </group>
@@ -771,15 +768,15 @@ export default function OfficeHub() {
         rotation={Math.PI / 2}
       />
       <FileFolder
-        position={[hubCenter.x - 65, hubCenter.y + 4.1, hubCenter.z + 25]}
+        position={[hubCenter.x - 66, hubCenter.y + 4, hubCenter.z + 20]}
         color="blue"
-        rotation={0.2}
+        rotation={0}
       />
       {/* Laptop & Pen Drive */}
       {/* Laptop: rotation 0 is open towards +Z (South). Manager chair faces East (+X). Screen should face West (-X). 
           If rotation is -Math.PI/2, screen faces West.
       */}
-      <Laptop position={[hubCenter.x - 65, hubCenter.y + 3.8, hubCenter.z + 25]} rotation={-Math.PI / 2} />
+      <Laptop position={[hubCenter.x - 65, hubCenter.y + 4, hubCenter.z + 25]} rotation={-Math.PI / 2} />
       {/* Pen Drive: Left side of desk. Desk center Z=25. Facing East => Left is North (Z < 25). */}
 
       {/* Small Rack with Rose Files & Flower Pot */}
@@ -790,11 +787,11 @@ export default function OfficeHub() {
 
       {/* 6. Break Room (South-East) */}
       {/* Two Sofas facing North (towards TV on North Wall) - Moved back to South Wall (Z=35) to clear door path */}
-      <Sofa position={[hubCenter.x + 60, hubCenter.y, hubCenter.z + 35]} rotation={Math.PI} />
-      <Sofa position={[hubCenter.x + 40, hubCenter.y, hubCenter.z + 35]} rotation={Math.PI} />
+      <Sofa position={[hubCenter.x + 55, hubCenter.y, hubCenter.z + 35]} rotation={Math.PI} />
+      <Sofa position={[hubCenter.x + 45, hubCenter.y, hubCenter.z + 35]} rotation={Math.PI} />
 
       {/* TV on North Wall (Z=10) centered between sofas approx X=50 */}
-      <TV position={[hubCenter.x + 50, hubCenter.y + 2, hubCenter.z + 10.5]} rotation={0} />
+      <TV position={[hubCenter.x + 51, hubCenter.y + 2, hubCenter.z + 12.8]} rotation={0} />
 
       {/* Coffee Station in Corner (South-East Corner: X approx 90, Z approx 35) */}
       <group position={[hubCenter.x + 90, hubCenter.y, hubCenter.z + 35]}>
@@ -806,7 +803,7 @@ export default function OfficeHub() {
       </group>
 
       <FireExtinguisher
-        position={[hubCenter.x + 40, hubCenter.y + 2, hubCenter.z + 72]} // Near Window
+        position={[hubCenter.x + 39, hubCenter.y + 2, hubCenter.z + 73.5]} // Near Window
         rotation={0}
       />
       {/* Projector Screen on Right Wall (East) of Conference Room */}
