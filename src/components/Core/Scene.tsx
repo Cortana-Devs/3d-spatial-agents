@@ -17,7 +17,7 @@ function CameraRig({
 }: {
   target: React.RefObject<THREE.Group | null>;
 }) {
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const setCameraLocked = useGameStore((state) => state.setCameraLocked);
   const setDebugText = useGameStore((state) => state.setDebugText);
 
@@ -79,25 +79,69 @@ function CameraRig({
     };
   }, [gl, setCameraLocked, setDebugText, invertedMouse, sensitivity]);
 
+  const raycaster = useRef(new THREE.Raycaster());
+
   useFrame(() => {
     if (!target.current) return;
-    const robotPos = target.current.position
-      .clone()
-      .add(new THREE.Vector3(0, 6.0, 0)); // Head height approx
 
-    const camDist = 20;
-    const viewAngleOffset = 0; // Fixed to third person back view
+    // Head position (Target for camera lookAt and Ray origin)
+    const robotHead = target.current.position.clone().add(new THREE.Vector3(0, 6.0, 0));
 
-    const cx = camDist * Math.sin(cameraState.current.yaw + viewAngleOffset);
-    const cz = camDist * Math.cos(cameraState.current.yaw + viewAngleOffset);
-    const cy = camDist * Math.sin(cameraState.current.pitch);
+    const baseCamDist = 20;
+    const viewAngleOffset = 0;
 
-    camera.position.x = robotPos.x - cx * Math.cos(cameraState.current.pitch); // eslint-disable-line react-hooks/immutability
-    camera.position.z = robotPos.z - cz * Math.cos(cameraState.current.pitch); // eslint-disable-line react-hooks/immutability
-    camera.position.y = robotPos.y + cy; // eslint-disable-line react-hooks/immutability
-    if (camera.position.y < 2.0) camera.position.y = 2.0; // eslint-disable-line react-hooks/immutability
+    // Calculate Ideal Position relative to head
+    const cx = baseCamDist * Math.sin(cameraState.current.yaw + viewAngleOffset);
+    const cz = baseCamDist * Math.cos(cameraState.current.yaw + viewAngleOffset);
+    const cy = baseCamDist * Math.sin(cameraState.current.pitch);
 
-    camera.lookAt(robotPos);
+    const idealPos = new THREE.Vector3(
+      robotHead.x - cx * Math.cos(cameraState.current.pitch),
+      robotHead.y + cy,
+      robotHead.z - cz * Math.cos(cameraState.current.pitch)
+    );
+
+    // Apply minimum height clamp to ideal position
+    if (idealPos.y < 2.0) idealPos.y = 2.0;
+
+    // Collision Detection
+    const direction = idealPos.clone().sub(robotHead);
+    const distanceToIdeal = direction.length();
+    direction.normalize();
+
+    raycaster.current.set(robotHead, direction);
+    raycaster.current.far = distanceToIdeal;
+
+    // Intersect scene to find obstacles
+    const intersects = raycaster.current.intersectObjects(scene.children, true);
+
+    let finalDist = distanceToIdeal;
+
+    for (const hit of intersects) {
+      // Skip the player itself
+      let isPlayer = false;
+      let obj: THREE.Object3D | null = hit.object;
+      while (obj) {
+        if (obj === target.current) {
+          isPlayer = true;
+          break;
+        }
+        obj = obj.parent;
+      }
+
+      if (isPlayer) continue;
+
+      // Skip potential trigger volumes or non-physical items if identified (optional refinement)
+
+      // Found a valid obstacle (Wall, Floor, Furniture)
+      // Bring camera closer: hit.distance - cushion
+      finalDist = Math.max(0.2, hit.distance - 0.5);
+      break;
+    }
+
+    // Update Camera
+    camera.position.copy(robotHead).add(direction.multiplyScalar(finalDist));
+    camera.lookAt(robotHead);
   });
 
   return null;
