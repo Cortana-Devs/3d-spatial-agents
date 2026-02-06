@@ -377,15 +377,22 @@ export function OfficeDoor({
   rotation = 0,
   id,
   label,
+  width,
 }: {
   position: [number, number, number];
   rotation?: number;
   id: string;
   label?: string;
+  width?: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
   const doorPanelRef = useRef<THREE.Group>(null); // The sliding part
+
+  // Defaults
+  const doorWidth = width || 14;
+  const slideDistance = doorWidth * 0.9; // Slide enough to open
+  const panelHeight = 29;
 
   const interactionTarget = useGameStore((state) => state.interactionTarget);
   const setInteractionTarget = useGameStore(
@@ -427,9 +434,11 @@ export function OfficeDoor({
   // Manage Collision
   useEffect(() => {
     const obstacles: { position: THREE.Vector3; radius: number }[] = [];
-    // Door is approx 14 units wide
+
+    // Door width from props
+    const widthVal = doorWidth;
     const step = 2.0;
-    const count = Math.ceil(14 / step);
+    const count = Math.ceil(widthVal / step);
 
     if (!isOpen) {
       const dir = new THREE.Vector3(1, 0, 0).applyAxisAngle(
@@ -438,7 +447,7 @@ export function OfficeDoor({
       );
       for (let i = 0; i < count; i++) {
         const t = i / (count - 1) - 0.5;
-        const offset = dir.clone().multiplyScalar(t * 14);
+        const offset = dir.clone().multiplyScalar(t * widthVal);
         obstacles.push({
           position: posVec.clone().add(offset),
           radius: 1.5,
@@ -450,7 +459,7 @@ export function OfficeDoor({
     return () => {
       if (obstacles.length > 0) removeObstacles(obstacles);
     };
-  }, [isOpen, posVec, rotation, addObstacles, removeObstacles]);
+  }, [isOpen, posVec, rotation, addObstacles, removeObstacles, doorWidth]);
 
   // Animation (Vertical Slide)
   useFrame((state, delta) => {
@@ -577,6 +586,94 @@ export function OfficeDoor({
           </Text>
         )}
       </group>
+    </group>
+  );
+}
+
+// --- RECEPTION DESK ---
+export function ReceptionDesk({
+  position,
+  rotation = 0,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+}) {
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+    >
+      {/* L-Shape Main Section */}
+      <mesh
+        position={[0, 2, 0]}
+        castShadow
+        receiveShadow
+        material={new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })}
+      >
+        <boxGeometry args={[20, 4, 6]} />
+      </mesh>
+      {/* Side Return (L-shape) */}
+      <mesh
+        position={[8, 2, 6]}
+        castShadow
+        receiveShadow
+        material={new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })}
+      >
+        <boxGeometry args={[4, 4, 8]} />
+      </mesh>
+      {/* Counter Top */}
+      <mesh position={[0, 4.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#444" })}>
+        <boxGeometry args={[20, 0.2, 6]} />
+      </mesh>
+      <mesh position={[8, 4.1, 6]} material={new THREE.MeshStandardMaterial({ color: "#444" })}>
+        <boxGeometry args={[4, 0.2, 8]} />
+      </mesh>
+
+      {/* Front Panel Accents */}
+      <mesh position={[0, 2, 3.1]} material={lightGlowMaterial}>
+        <boxGeometry args={[18, 0.2, 0.1]} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- MANAGERS DESK ---
+export function ManagersDesk({
+  position,
+  rotation = 0,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+}) {
+  const darkWood = new THREE.MeshStandardMaterial({
+    color: "#3e2723",
+    roughness: 0.4,
+  });
+
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+    >
+      {/* Executive Desktop */}
+      <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[16, 0.5, 8]} />
+      </mesh>
+      {/* Massive Legs/Cabinets */}
+      <mesh position={[-6, 1.8, 0]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[3, 3.6, 6]} />
+      </mesh>
+      <mesh position={[6, 1.8, 0]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[3, 3.6, 6]} />
+      </mesh>
+      {/* Modesty Panel */}
+      <mesh position={[0, 2.5, -2]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[10, 3, 0.2]} />
+      </mesh>
+      {/* Leather Pad */}
+      <mesh position={[0, 4.06, 1]} material={new THREE.MeshStandardMaterial({ color: "#111" })}>
+        <boxGeometry args={[8, 0.02, 4]} />
+      </mesh>
     </group>
   );
 }

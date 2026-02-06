@@ -12,7 +12,11 @@ import {
   CeilingLight,
   WallSwitch,
   StorageShelf,
+  ReceptionDesk,
+  ManagersDesk,
 } from "./Furniture";
+import { Elevator } from "./Elevator";
+import { Printer, FireExtinguisher, FileFolder, Whiteboard, ProjectorScreen } from "./Props";
 
 interface Box {
   id: string;
@@ -59,8 +63,8 @@ export default function OfficeHub() {
   const system = useMemo(
     () => ({
       findAvailableBox: (agentPos: any) => null, // Box collection disabled
-      claimBox: (boxId: string, agentId: string) => {},
-      pickUpBox: (boxId: string, agentId: string) => {},
+      claimBox: (boxId: string, agentId: string) => { },
+      pickUpBox: (boxId: string, agentId: string) => { },
       getNextConstructionSlot: () => {
         const idx = stateRef.current.nextSlotIndex;
         stateRef.current.nextSlotIndex++;
@@ -335,6 +339,58 @@ export default function OfficeHub() {
       0.5,
     );
 
+    // C. Manager's Office (South-West Corner: X < -30, Z > 10)
+    // Wall-North at Z=10 from X=-100 to X=-30
+    createWall(
+      left,
+      hubCenter.z + 10,
+      hubCenter.x - 30,
+      hubCenter.z + 10,
+      "Wall-Manager-North"
+    );
+    // Wall-East at X=-30 from Z=10 to Z=40
+    // Door gap: Z=25 (width 12) -> Gap 19 to 31
+    createWall(
+      hubCenter.x - 30,
+      hubCenter.z + 10,
+      hubCenter.x - 30,
+      hubCenter.z + 19,
+      "Wall-Manager-East-1"
+    );
+    createWall(
+      hubCenter.x - 30,
+      hubCenter.z + 31,
+      hubCenter.x - 30,
+      lobbyDividerZ,
+      "Wall-Manager-East-2"
+    );
+
+    // D. Break Room (South-East Corner: X > 30, Z > 10)
+    // Wall-North at Z=10 from X=30 to X=100
+    createWall(
+      hubCenter.x + 30,
+      hubCenter.z + 10,
+      right,
+      hubCenter.z + 10,
+      "Wall-Break-North"
+    );
+    // Wall-West at X=30 from Z=10 to Z=40
+    // Narrow Door gap: Z=25 (width 8) -> Gap 21 to 29
+    createWall(
+      hubCenter.x + 30,
+      hubCenter.z + 10,
+      hubCenter.x + 30,
+      hubCenter.z + 21,
+      "Wall-Break-West-1"
+    );
+    createWall(
+      hubCenter.x + 30,
+      hubCenter.z + 29,
+      hubCenter.x + 30,
+      lobbyDividerZ,
+      "Wall-Break-West-2"
+    );
+
     // --- 3. FURNITURE ---
     // ...
     // (Existing furniture calls...)
@@ -400,9 +456,15 @@ export default function OfficeHub() {
       // 2 rows deep
       for (let c = 0; c < 3; c++) {
         // 3 desks wide
+        const dx = hubCenter.x - 20 - c * 20;
+        const dz = hubCenter.z + r * 30;
+
+        // Remove Manager's Office overlaps (X < -30 && Z > 10)
+        if (dx < hubCenter.x - 30 && dz > hubCenter.z + 10) continue;
+
         createFurniture(
-          hubCenter.x - 20 - c * 20,
-          hubCenter.z + r * 30,
+          dx,
+          dz,
           12,
           3,
           6,
@@ -551,26 +613,43 @@ export default function OfficeHub() {
       {/* 2. Workstations (Open Office) */}
       {/* Left Block */}
       {[0, 1].map((r) =>
-        [0, 1, 2].map((c) => (
-          <group key={`desk-l-${r}-${c}`}>
-            <OfficeDesk
-              position={[
-                hubCenter.x - 20 - c * 20,
-                hubCenter.y,
-                hubCenter.z + r * 30,
-              ]}
-            />
-            <OfficeChair
-              id={`chair-l-${r}-${c}`}
-              position={[
-                hubCenter.x - 20 - c * 20,
-                hubCenter.y,
-                hubCenter.z + r * 30 + 5,
-              ]}
-              rotation={Math.PI}
-            />
-          </group>
-        )),
+        [0, 1, 2].map((c) => {
+          const dx = hubCenter.x - 20 - c * 20;
+          const dz = hubCenter.z + r * 30;
+
+          if (dx < hubCenter.x - 30 && dz > hubCenter.z + 10) return null;
+
+          return (
+            <group key={`desk-l-${r}-${c}`}>
+              <OfficeDesk
+                position={[
+                  dx,
+                  hubCenter.y,
+                  dz,
+                ]}
+              />
+              <OfficeChair
+                id={`chair-l-${r}-${c}`}
+                position={[
+                  dx,
+                  hubCenter.y,
+                  dz + 5,
+                ]}
+                rotation={Math.PI}
+              />
+              <FileFolder
+                position={[dx - 3, hubCenter.y + 4.1, dz]}
+                color="red"
+                rotation={0.1}
+              />
+              <FileFolder
+                position={[dx - 3, hubCenter.y + 4.1, dz + 0.5]}
+                color="red"
+                rotation={-0.1}
+              />
+            </group>
+          )
+        })
       )}
       {/* Right Block */}
       {[0, 1].map((r) =>
@@ -592,6 +671,24 @@ export default function OfficeHub() {
               ]}
               rotation={Math.PI} // Facing desk (North)
             />
+            {/* Add Red Files Left of Monitor (Monitor is at 0) */}
+            <FileFolder
+              position={[hubCenter.x + 20 + c * 20 - 3, hubCenter.y + 4.1, hubCenter.z + r * 30]}
+              color="red"
+              rotation={0.1}
+            />
+            <FileFolder
+              position={[hubCenter.x + 20 + c * 20 - 3, hubCenter.y + 4.1, hubCenter.z + r * 30 + 0.5]}
+              color="red"
+              rotation={-0.1}
+            />
+            {/* Printer on specific desk: Right Block, Row 0, Col 0 */}
+            {r === 0 && c === 0 && (
+              <Printer
+                position={[hubCenter.x + 20 + c * 20 + 3, hubCenter.y + 2.6, hubCenter.z + r * 30]}
+                rotation={Math.PI / 4}
+              />
+            )}
           </group>
         )),
       )}
@@ -603,15 +700,68 @@ export default function OfficeHub() {
       <StorageShelf
         position={[hubCenter.x - 50, hubCenter.y, hubCenter.z - 40]}
       />
+      {/* Fill Storage Shelves with Files (Generic and Blue/Red) */}
+      {/* Rack 1: [-50, ..., -60] */}
+      {[2, 7, 12].map((y) =>
+        [-35, -20, -5, 10, 25].map((off, i) => (
+          <FileFolder
+            key={`file-s1-${y}-${i}`}
+            position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 60]}
+            color={i % 2 === 0 ? "blue" : (i % 3 === 0 ? "red" : "generic")}
+            rotation={Math.random() * 0.5}
+          />
+        ))
+      )}
+      {/* Rack 2: [-50, ..., -40] */}
+      {[2, 7, 12].map((y) =>
+        [-30, -10, 5, 20, 30].map((off, i) => (
+          <FileFolder
+            key={`file-s2-${y}-${i}`}
+            position={[hubCenter.x - 50 + off, hubCenter.y + y + 0.5, hubCenter.z - 40]}
+            color={i % 3 === 0 ? "blue" : "generic"}
+            rotation={Math.random() * 0.5}
+          />
+        ))
+      )}
 
       {/* 4. Reception Info Desk (Lobby) - Centered */}
-      <mesh
-        position={[hubCenter.x, hubCenter.y + 2, hubCenter.z + 55]}
-        castShadow
-      >
-        <boxGeometry args={[20, 4, 5]} />
-        <meshStandardMaterial color="#222" />
-      </mesh>
+      <ReceptionDesk
+        position={[hubCenter.x, hubCenter.y, hubCenter.z + 55]}
+        rotation={Math.PI} // Facing Entrance
+      />
+      {/* Elevator in Lobby (East Wall) */}
+      <Elevator
+        position={[hubCenter.x + 40, hubCenter.y, hubCenter.z + 55]}
+        rotation={-Math.PI / 2} // Facing West (into Lobby)
+      />
+
+      {/* 5. Manager's Office */}
+      <ManagersDesk
+        position={[hubCenter.x - 65, hubCenter.y, hubCenter.z + 25]}
+        rotation={Math.PI / 2} // Facing East (Door)
+      />
+      <OfficeChair
+        id="chair-manager"
+        position={[hubCenter.x - 75, hubCenter.y, hubCenter.z + 25]}
+        rotation={Math.PI / 2}
+      />
+      <FileFolder
+        position={[hubCenter.x - 65, hubCenter.y + 4.1, hubCenter.z + 25]}
+        color="blue"
+        rotation={0.2}
+      />
+
+      <FireExtinguisher
+        position={[hubCenter.x + 8, hubCenter.y, hubCenter.z + 41]} // Near Lobby Door inside
+        rotation={0}
+      />
+      {/* Projector Screen on Right Wall (East) of Conference Room */}
+      <ProjectorScreen
+        position={[hubCenter.x + 99, hubCenter.y, hubCenter.z - 47.5]}
+        rotation={Math.PI / 2} // Facing West (into room)
+      />
+      {/* Laptop on Conf Table */}
+      <FileFolder position={[hubCenter.x + 55, hubCenter.y + 4.5, hubCenter.z - 47.5]} />
 
       {/* DOORS */}
       {/* Lobby: Single Centered Door at Z=40 (Matches lobbyDividerZ) */}
@@ -619,6 +769,22 @@ export default function OfficeHub() {
         id="door-main"
         position={[hubCenter.x, hubCenter.y, hubCenter.z + 40]}
         label="Lobby"
+      />
+
+      {/* New Room Doors */}
+      <OfficeDoor
+        id="door-manager"
+        position={[hubCenter.x - 30, hubCenter.y, hubCenter.z + 25]}
+        rotation={Math.PI / 2}
+        label="Manager"
+        width={12}
+      />
+      <OfficeDoor
+        id="door-break"
+        position={[hubCenter.x + 30, hubCenter.y, hubCenter.z + 25]}
+        rotation={-Math.PI / 2}
+        label="Break"
+        width={8} // Narrow Passage
       />
 
       {/* Conference Room Door */}
@@ -699,6 +865,8 @@ export default function OfficeHub() {
           <meshStandardMaterial color="#aa8800" />
         </mesh>
       ))}
+
+      {/* ZONE LABELS REMOVED */}
     </group>
   );
 }
