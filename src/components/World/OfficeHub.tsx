@@ -105,6 +105,7 @@ export default function OfficeHub() {
       args: [number, number, number];
       rot?: number;
       name: string;
+      isWindow?: boolean;
     }[] = [];
     const floorGeoms: {
       pos: [number, number, number];
@@ -145,6 +146,7 @@ export default function OfficeHub() {
         args: [len, bHeight, thickness],
         rot: -ang,
         name: name,
+        isWindow: isWindow,
       });
 
       // Collision
@@ -253,7 +255,13 @@ export default function OfficeHub() {
     // South Wall (Entrance)
     // Entrance: x: -15 to +15
     createWall(left, front, hubCenter.x - 15, front, "Wall-South-Left");
-    createWall(hubCenter.x + 15, front, right, front, "Wall-South-Right");
+    // Split Right Wall for Window
+    // Wall 15 to 40
+    createWall(hubCenter.x + 15, front, hubCenter.x + 40, front, "Wall-South-Right-1");
+    // Window 40 to 80
+    createWall(hubCenter.x + 40, front, hubCenter.x + 80, front, "Window-Lobby", 0.2, true);
+    // Wall 80 to 100
+    createWall(hubCenter.x + 80, front, right, front, "Wall-South-Right-2");
 
     // --- 2. Zoning ---
     // Z-Zones:
@@ -580,7 +588,14 @@ export default function OfficeHub() {
           >
             <boxGeometry args={[w.args[0], w.args[1], w.args[2]]} />
             {/* @ts-ignore */}
-            <primitive object={materials.concrete} attach="material" />
+            <primitive object={w.isWindow ? new THREE.MeshPhysicalMaterial({
+              color: 0x88ccff,
+              metalness: 0,
+              roughness: 0,
+              transmission: 0.9,
+              transparent: true,
+              thickness: 0.5
+            }) : materials.concrete} attach="material" />
           </mesh>
         ))}
       </group>
@@ -791,7 +806,7 @@ export default function OfficeHub() {
       </group>
 
       <FireExtinguisher
-        position={[hubCenter.x + 8, hubCenter.y, hubCenter.z + 41]} // Near Lobby Door inside
+        position={[hubCenter.x + 40, hubCenter.y + 2, hubCenter.z + 72]} // Near Window
         rotation={0}
       />
       {/* Projector Screen on Right Wall (East) of Conference Room */}
