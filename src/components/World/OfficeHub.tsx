@@ -16,7 +16,7 @@ import {
   ManagersDesk,
 } from "./Furniture";
 import { Elevator } from "./Elevator";
-import { Printer, FireExtinguisher, FileFolder, Whiteboard, ProjectorScreen, Laptop, PenDrive, SmallRack, FlowerPot, Sofa, TV, CoffeeMachine, CoffeeCup } from "./Props";
+import { Printer, FireExtinguisher, FileFolder, Whiteboard, ProjectorScreen, Laptop, PenDrive, SmallRack, FlowerPot, Sofa, TV, CoffeeMachine, CoffeeCup, Telephone } from "./Props";
 
 interface Box {
   id: string;
@@ -662,6 +662,22 @@ export default function OfficeHub() {
                   rotation={0.1}
                 />
               )}
+              {/* Label Left Block: A (0,0), B (0,1), C (0,2)... */}
+              {/* Global Index Logic: Left Block first. 
+                   Row 0: 0, 1, 2 -> A, B, C
+                   Row 1: 0, 1, 2 -> D, E, F
+                   Index = r * 3 + c
+               */}
+              <Text
+                position={[dx - 5.5, hubCenter.y + 4.1, dz - 2.5]}
+                rotation={[-Math.PI / 2, 0, 0]} // Flat on table
+                fontSize={1}
+                color="black"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {String.fromCharCode(65 + r * 3 + c)}
+              </Text>
             </group>
           )
         })
@@ -706,6 +722,21 @@ export default function OfficeHub() {
 
               {/* Remove Red Files from all other tables logic - user said "dont add all computer tables to red file only add file in one cumputer table" */}
               {/* We added one in Left Block above. So none here. */}
+
+              {/* Label Right Block: continue from F? 
+                  Left had 6 (indices 0-5). Right starts at G (Index 6).
+                  Index = 6 + r * 3 + c
+              */}
+              <Text
+                position={[hubCenter.x + 20 + c * 20 - 5.5, hubCenter.y + 4.1, hubCenter.z + r * 30 - 2.5]}
+                rotation={[-Math.PI / 2, 0, 0]} // Flat on table
+                fontSize={1}
+                color="black"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {String.fromCharCode(65 + 6 + r * 3 + c)}
+              </Text>
             </group>
           )
         })
@@ -753,6 +784,27 @@ export default function OfficeHub() {
         position={[hubCenter.x, hubCenter.y, hubCenter.z + 55]}
         rotation={Math.PI} // Facing Entrance
       />
+      <OfficeChair
+        id="chair-reception"
+        position={[hubCenter.x, hubCenter.y, hubCenter.z + 50]} // Behind desk
+        rotation={0} // Facing South (towards desk/entrance)
+      />
+      <Laptop
+        position={[hubCenter.x, hubCenter.y + 4.1, hubCenter.z + 55]}
+        rotation={Math.PI} // Screen facing North (towards chair)
+      />
+      <Telephone
+        position={[hubCenter.x + 4, hubCenter.y + 4.1, hubCenter.z + 55]}
+        rotation={Math.PI}
+      />
+
+      {/* Lobby Sofas - 4 units aligned to walls */}
+      {/* West Wall (Left side of lobby) - Facing East */}
+      <Sofa position={[hubCenter.x - 80, hubCenter.y, hubCenter.z + 50]} rotation={Math.PI / 2} />
+      <Sofa position={[hubCenter.x - 80, hubCenter.y, hubCenter.z + 65]} rotation={Math.PI / 2} />
+      {/* East Wall (Right side of lobby) - Facing West */}
+      <Sofa position={[hubCenter.x + 80, hubCenter.y, hubCenter.z + 50]} rotation={-Math.PI / 2} />
+      <Sofa position={[hubCenter.x + 80, hubCenter.y, hubCenter.z + 65]} rotation={-Math.PI / 2} />
 
 
       {/* Elevator Removed */}
@@ -766,6 +818,17 @@ export default function OfficeHub() {
         id="chair-manager"
         position={[hubCenter.x - 75, hubCenter.y, hubCenter.z + 25]}
         rotation={Math.PI / 2}
+      />
+      {/* Two Visitor Chairs in front of Manager's Desk */}
+      <OfficeChair
+        id="chair-manager-visitor-1"
+        position={[hubCenter.x - 57, hubCenter.y, hubCenter.z + 21]} // Facing Manager (West)
+        rotation={-Math.PI / 2}
+      />
+      <OfficeChair
+        id="chair-manager-visitor-2"
+        position={[hubCenter.x - 57, hubCenter.y, hubCenter.z + 29]} // Facing Manager (West)
+        rotation={-Math.PI / 2}
       />
       <FileFolder
         position={[hubCenter.x - 66, hubCenter.y + 4, hubCenter.z + 20]}

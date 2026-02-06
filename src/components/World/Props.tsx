@@ -350,4 +350,26 @@ export function CoffeeCup({ position, rotation = 0 }: { position: [number, numbe
             </mesh>
         </group>
     );
+
+
+}
+
+// --- TELEPHONE ---
+export function Telephone({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+    return (
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+            {/* Base */}
+            <mesh position={[0, 0.2, 0]} material={new THREE.MeshStandardMaterial({ color: "#222" })}>
+                <boxGeometry args={[1.5, 0.4, 1.5]} />
+            </mesh>
+            {/* Handset */}
+            <mesh position={[0, 0.6, 0]} rotation={[0, 0, Math.PI / 2]} material={new THREE.MeshStandardMaterial({ color: "#222" })}>
+                <cylinderGeometry args={[0.2, 0.2, 2]} />
+            </mesh>
+            {/* Keypad area */}
+            <mesh position={[0, 0.41, 0.3]} rotation={[-0.2, 0, 0]} material={new THREE.MeshStandardMaterial({ color: "#555" })}>
+                <planeGeometry args={[0.8, 0.6]} />
+            </mesh>
+        </group>
+    );
 }
