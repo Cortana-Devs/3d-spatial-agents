@@ -150,7 +150,9 @@ export default function OfficeHub() {
       });
 
       // Collision
-      const sphereRadius = 2.0;
+      // Wall thickness is typically 1.0. Radius 2.0 adds 1.5 padding!
+      // Reduce to 0.7 for tighter fit (slightly larger than 0.5 half-thickness)
+      const sphereRadius = 0.7;
       const step = 1.5;
       const steps = Math.ceil(len / step);
       for (let i = 0; i <= steps; i++) {
@@ -210,27 +212,33 @@ export default function OfficeHub() {
       const maxDim = Math.max(effW, effD);
 
       // If generic small object or square-ish
+      // If generic small object or square-ish
       if (maxDim < minDim * 1.5) {
         buildingObstacles.push({
           position: new THREE.Vector3(x, hubCenter.y, z),
-          radius: maxDim / 1.5,
+          radius: maxDim / 2.5, // Even tighter: was 2.2
         });
       } else {
         // Long object - place spheres along longest axis
-        const sphereRadius = minDim * 0.7; // Tighter fit
-        const step = sphereRadius * 1.5;
-        const count = Math.ceil(maxDim / step);
+        const sphereRadius = minDim * 0.4; // Even tighter: was 0.45
+        // Constrain length so spheres don't poke out
+        const effectiveLength = Math.max(0, maxDim - 2 * sphereRadius);
+
+        const step = sphereRadius * 1.2; // Closer ratio for smoother walls
+        const count = effectiveLength <= 0 ? 0 : Math.ceil(effectiveLength / step);
 
         // Direction
         const dx = effW >= effD ? 1 : 0;
         const dz = effW < effD ? 1 : 0;
 
         for (let i = 0; i <= count; i++) {
-          // t from -0.5 to 0.5
-          const t = i / count - 0.5;
-          // position offset
-          const ox = dx * t * maxDim;
-          const oz = dz * t * maxDim;
+          // t from -0.5 to 0.5 mapped to effectiveLength
+          // if count 0, t=0
+          const fraction = count === 0 ? 0.5 : i / count;
+          const t = (fraction - 0.5);
+          // position offset based on effective length
+          const ox = dx * t * effectiveLength;
+          const oz = dz * t * effectiveLength;
 
           buildingObstacles.push({
             position: new THREE.Vector3(x + ox, hubCenter.y, z + oz),
@@ -514,7 +522,38 @@ export default function OfficeHub() {
 
     // D. Lobby
     // Reception Desk (Centered)
-    createFurniture(hubCenter.x, hubCenter.z + 55, 20, 4, 5, "#222");
+    createFurniture(hubCenter.x, hubCenter.z + 55, 20, 4, 5, "#222"); // Matches desk
+    // Reception Chair
+    createFurniture(hubCenter.x, hubCenter.z + 50, 3, 3, 3, "#222");
+
+    // E. Manager's Office (Manually added visuals, registering obstacles)
+    // Managers Desk
+    createFurniture(hubCenter.x - 65, hubCenter.z + 25, 20, 4, 10, "#443322", Math.PI / 2);
+    // Manager Chair
+    createFurniture(hubCenter.x - 75, hubCenter.z + 25, 3, 3, 3, "#222");
+    // Visitor Chairs - Moved to -48 to be CLEAR of the desk (Desk ends at -55)
+    createFurniture(hubCenter.x - 48, hubCenter.z + 21, 3, 3, 3, "#222");
+    createFurniture(hubCenter.x - 48, hubCenter.z + 29, 3, 3, 3, "#222");
+    // Small Rack
+    createFurniture(hubCenter.x - 75, hubCenter.z + 15, 6, 4, 2, "#554433", Math.PI / 4);
+
+    // F. Break Room
+    // Sofas (South Wall) - x4 (Wait, Break room has 2, Lobby has 4)
+    // Break Room Sofas (x2)
+    createFurniture(hubCenter.x + 55, hubCenter.z + 35, 8, 3, 4, "#333", Math.PI);
+    createFurniture(hubCenter.x + 45, hubCenter.z + 35, 8, 3, 4, "#333", Math.PI);
+    // TV (North Wall)
+    createFurniture(hubCenter.x + 51, hubCenter.z + 10.5, 6, 4, 0.5, "#333");
+    // Coffee Station
+    createFurniture(hubCenter.x + 90, hubCenter.z + 35, 6, 4, 3, "#333");
+
+    // G. Lobby Sofas (x4)
+    // West Wall
+    createFurniture(hubCenter.x - 80, hubCenter.z + 50, 8, 3, 4, "#333", Math.PI / 2);
+    createFurniture(hubCenter.x - 80, hubCenter.z + 65, 8, 3, 4, "#333", Math.PI / 2);
+    // East Wall
+    createFurniture(hubCenter.x + 80, hubCenter.z + 50, 8, 3, 4, "#333", -Math.PI / 2);
+    createFurniture(hubCenter.x + 80, hubCenter.z + 65, 8, 3, 4, "#333", -Math.PI / 2);
 
     return {
       walls: wallGeoms,
@@ -822,18 +861,17 @@ export default function OfficeHub() {
       {/* Two Visitor Chairs in front of Manager's Desk */}
       <OfficeChair
         id="chair-manager-visitor-1"
-        position={[hubCenter.x - 57, hubCenter.y, hubCenter.z + 21]} // Facing Manager (West)
+        position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 21]} // Facing Manager (West)
         rotation={-Math.PI / 2}
       />
       <OfficeChair
         id="chair-manager-visitor-2"
-        position={[hubCenter.x - 57, hubCenter.y, hubCenter.z + 29]} // Facing Manager (West)
+        position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 29]} // Facing Manager (West)
         rotation={-Math.PI / 2}
       />
       <FileFolder
         position={[hubCenter.x - 66, hubCenter.y + 4, hubCenter.z + 20]}
         color="blue"
-        rotation={0}
       />
       {/* Laptop & Pen Drive */}
       {/* Laptop: rotation 0 is open towards +Z (South). Manager chair faces East (+X). Screen should face West (-X). 
