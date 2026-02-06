@@ -618,6 +618,8 @@ export default function OfficeHub() {
           const dz = hubCenter.z + r * 30;
 
           if (dx < hubCenter.x - 30 && dz > hubCenter.z + 10) return null;
+          // Also remove desk blocking Manager's Door (Row 1, Col 0 -> X=-20, Z=30)
+          if (r === 1 && c === 0) return null;
 
           return (
             <group key={`desk-l-${r}-${c}`}>
@@ -658,6 +660,8 @@ export default function OfficeHub() {
           const dx = hubCenter.x + 20 + c * 20;
           const dz = hubCenter.z + r * 30;
           if (dx > hubCenter.x + 30 && dz > hubCenter.z + 10) return null;
+          // Also remove desk blocking Break Room Door (Row 1, Col 0 -> X=20, Z=30)
+          if (r === 1 && c === 0) return null;
 
           return (
             <group key={`desk-r-${r}-${c}`}>
@@ -683,6 +687,10 @@ export default function OfficeHub() {
                   position={[hubCenter.x + 20 + c * 20 + 3, hubCenter.y + 2.6, hubCenter.z + r * 30]}
                   rotation={Math.PI / 4}
                 />
+              )}
+              {/* Pen Drive on Right Block, Row 0, Col 1 (Next to printer desk) or same desk */}
+              {r === 0 && c === 0 && (
+                <PenDrive position={[hubCenter.x + 20 + c * 20 - 3, hubCenter.y + 0.1, hubCenter.z + r * 30 + 2]} rotation={0.5} />
               )}
               {/* Remove Red Files from all other tables logic - user said "dont add all computer tables to red file only add file in one cumputer table" */}
               {/* We added one in Left Block above. So none here. */}
@@ -733,11 +741,9 @@ export default function OfficeHub() {
         position={[hubCenter.x, hubCenter.y, hubCenter.z + 55]}
         rotation={Math.PI} // Facing Entrance
       />
-      {/* Elevator in Lobby (East Wall) */}
-      <Elevator
-        position={[hubCenter.x + 40, hubCenter.y, hubCenter.z + 55]}
-        rotation={-Math.PI / 2} // Facing West (into Lobby)
-      />
+
+
+      {/* Elevator Removed */}
 
       {/* 5. Manager's Office */}
       <ManagersDesk
@@ -760,7 +766,7 @@ export default function OfficeHub() {
       */}
       <Laptop position={[hubCenter.x - 65, hubCenter.y + 3.8, hubCenter.z + 25]} rotation={-Math.PI / 2} />
       {/* Pen Drive: Left side of desk. Desk center Z=25. Facing East => Left is North (Z < 25). */}
-      <PenDrive position={[hubCenter.x - 65, hubCenter.y + 3.8, hubCenter.z + 21]} rotation={Math.random()} />
+
       {/* Small Rack with Rose Files & Flower Pot */}
       <SmallRack position={[hubCenter.x - 75, hubCenter.y, hubCenter.z + 15]} rotation={Math.PI / 4} />
       <FileFolder position={[hubCenter.x - 75, hubCenter.y + 3.1, hubCenter.z + 15]} color="red" rotation={0.1} />

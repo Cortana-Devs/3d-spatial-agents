@@ -243,7 +243,7 @@ export function Laptop({ position, rotation = 0 }: { position: [number, number, 
 export function PenDrive({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
     return (
         <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
-            <mesh position={[0, 0.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#silver", metalness: 0.8 })}>
+            <mesh position={[0, 0.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#00ffff", metalness: 0.8 })}>
                 <boxGeometry args={[0.8, 0.2, 0.2]} />
             </mesh>
             <mesh position={[0.5, 0.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#111" })}>
