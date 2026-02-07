@@ -784,9 +784,11 @@ export default function OfficeHub() {
       {/* 3. Storage Room Shelves (Refactored) */}
       <StorageShelf
         position={[hubCenter.x - 50, hubCenter.y, hubCenter.z - 60]}
+        label="Rack 1"
       />
       <StorageShelf
         position={[hubCenter.x - 50, hubCenter.y, hubCenter.z - 40]}
+        label="Rack 2"
       />
       {/* Fill Storage Shelves with Files (Generic and Blue/Red) */}
       {/* Rack 1: [-50, ..., -60] */}

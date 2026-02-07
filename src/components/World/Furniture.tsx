@@ -324,20 +324,39 @@ export function OfficeDesk({
 export function StorageShelf({
   position,
   rotation = 0,
+  label,
 }: {
   position: [number, number, number];
   rotation?: number;
+  label?: string;
 }) {
   const w = 80;
   const h = 12; // Total height (was 7)
   const d = 5; // Depth
   const rackThickness = 0.5;
 
+  const levelLabels = ["Low", "Middle", "Top"];
+
   return (
     <group
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
     >
+      {/* Rack Name Label */}
+      {label && (
+        <Text
+          position={[0, h, 0]}
+          fontSize={0.8}
+          color="white"
+          anchorX="center"
+          anchorY="bottom"
+          outlineWidth={0.05}
+          outlineColor="#000000"
+        >
+          {label}
+        </Text>
+      )}
+
       {/* 4 Corner Legs */}
       {[
         [-w / 2 + 0.5, -d / 2 + 0.5],
@@ -357,15 +376,29 @@ export function StorageShelf({
 
       {/* 3 Racks (Planes) */}
       {[2, 7, 12].map((y, i) => (
-        <mesh
-          key={`rack-${i}`}
-          position={[0, y - rackThickness / 2, 0]}
-          castShadow
-          receiveShadow
-          material={metalMaterial}
-        >
-          <boxGeometry args={[w, rackThickness, d]} />
-        </mesh>
+        <group key={`rack-group-${i}`}>
+          <mesh
+            position={[0, y - rackThickness / 2, 0]}
+            castShadow
+            receiveShadow
+            material={metalMaterial}
+          >
+            <boxGeometry args={[w, rackThickness, d]} />
+          </mesh>
+          {/* Level Label */}
+          <Text
+            position={[-w / 2 + 2, y + rackThickness / 2 + 0.02, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            fontSize={0.6}
+            color="white"
+            anchorX="left"
+            anchorY="middle"
+            outlineWidth={0.03}
+            outlineColor="#000000"
+          >
+            {levelLabels[i]}
+          </Text>
+        </group>
       ))}
     </group>
   );
