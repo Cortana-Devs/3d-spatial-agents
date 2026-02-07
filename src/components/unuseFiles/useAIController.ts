@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useGameStore } from '@/store/gameStore';
 import { WAYPOINTS, PATROL_SPEED, CHASE_SPEED, IDLE_DURATION } from '../Systems/AIGoals';
-import { Joints } from './useRobotController';
+import { Joints } from '../Entities/useRobotController';
 
 export function useAIController(groupRef: React.RefObject<THREE.Group | null>, playerRef: React.RefObject<THREE.Group | null>) {
     const obstacles = useGameStore((state) => state.obstacles);
