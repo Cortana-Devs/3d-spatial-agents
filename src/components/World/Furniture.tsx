@@ -329,7 +329,7 @@ export function StorageShelf({
   rotation?: number;
 }) {
   const w = 80;
-  const h = 7; // Total height (was 12)
+  const h = 12; // Total height (was 7)
   const d = 5; // Depth
   const rackThickness = 0.5;
 
@@ -356,8 +356,7 @@ export function StorageShelf({
       ))}
 
       {/* 3 Racks (Planes) */}
-      {/* 2 Racks (Planes) - Removed top layer (12) */}
-      {[2, 7].map((y, i) => (
+      {[2, 7, 12].map((y, i) => (
         <mesh
           key={`rack-${i}`}
           position={[0, y - rackThickness / 2, 0]}

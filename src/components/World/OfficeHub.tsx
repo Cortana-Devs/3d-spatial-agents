@@ -791,7 +791,7 @@ export default function OfficeHub() {
       {/* Fill Storage Shelves with Files (Generic and Blue/Red) */}
       {/* Rack 1: [-50, ..., -60] */}
       {
-        [2, 7].map((y) =>
+        [2, 7, 12].map((y) =>
           [-35, -20, -5, 10, 25].map((off, i) => (
             <FileFolder
               key={`file-s1-${y}-${i}`}
@@ -805,7 +805,7 @@ export default function OfficeHub() {
       }
       {/* Rack 2: [-50, ..., -40] */}
       {
-        [2, 7].map((y) =>
+        [2, 7, 12].map((y) =>
           [-30, -10, 5, 20, 30].map((off, i) => (
             <FileFolder
               key={`file-s2-${y}-${i}`}
