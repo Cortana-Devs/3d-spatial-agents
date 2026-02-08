@@ -51,7 +51,7 @@ export default function Robot({
   }, []);
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} name="Robot">
       <group
         ref={(el) => {
           if (el && joints.current) joints.current.hips = el;

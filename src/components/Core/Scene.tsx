@@ -84,27 +84,30 @@ function CameraRig({
   useFrame(() => {
     if (!target.current) return;
 
-    // Head position (Target for camera lookAt and Ray origin)
-    const robotHead = target.current.position.clone().add(new THREE.Vector3(0, 6.0, 0));
+    // Head position (Pivot point)
+    const robotHead = target.current.position
+      .clone()
+      .add(new THREE.Vector3(0, 5.5, 0));
 
-    const baseCamDist = 20;
-    const viewAngleOffset = 0;
-
-    // Calculate Ideal Position relative to head
-    const cx = baseCamDist * Math.sin(cameraState.current.yaw + viewAngleOffset);
-    const cz = baseCamDist * Math.cos(cameraState.current.yaw + viewAngleOffset);
-    const cy = baseCamDist * Math.sin(cameraState.current.pitch);
-
-    const idealPos = new THREE.Vector3(
-      robotHead.x - cx * Math.cos(cameraState.current.pitch),
-      robotHead.y + cy,
-      robotHead.z - cz * Math.cos(cameraState.current.pitch)
+    // Calculate Rotation from Yaw/Pitch
+    // Z- is forward in standard Three.js camera space when rotation is 0,
+    // but our orbit controls usually treat Z+ or Z- as start.
+    // Let's assume standard Euler YXZ order for FPS/TPS cameras.
+    const quat = new THREE.Quaternion();
+    quat.setFromEuler(
+      new THREE.Euler(cameraState.current.pitch, cameraState.current.yaw, 0, "YXZ"),
     );
 
-    // Apply minimum height clamp to ideal position
-    if (idealPos.y < 2.0) idealPos.y = 2.0;
+    // Define Offset (Right 2.5, Up 0.5, Back 8.0)
+    // Adjust these values to tune the "Over-the-shoulder" feel
+    const offset = new THREE.Vector3(2.5, 0.5, 12.0);
+    offset.applyQuaternion(quat);
+
+    // Ideal Position
+    const idealPos = robotHead.clone().add(offset);
 
     // Collision Detection
+    // Raycast from head to idealPos to prevent clipping through walls
     const direction = idealPos.clone().sub(robotHead);
     const distanceToIdeal = direction.length();
     direction.normalize();
@@ -122,7 +125,7 @@ function CameraRig({
       let isPlayer = false;
       let obj: THREE.Object3D | null = hit.object;
       while (obj) {
-        if (obj === target.current) {
+        if (obj === target.current || obj.name === "Robot") {
           isPlayer = true;
           break;
         }
@@ -131,17 +134,21 @@ function CameraRig({
 
       if (isPlayer) continue;
 
-      // Skip potential trigger volumes or non-physical items if identified (optional refinement)
-
-      // Found a valid obstacle (Wall, Floor, Furniture)
+      // Found a valid obstacle
       // Bring camera closer: hit.distance - cushion
-      finalDist = Math.max(0.2, hit.distance - 0.5);
+      finalDist = Math.max(0.5, hit.distance - 0.5);
       break;
     }
 
-    // Update Camera
-    camera.position.copy(robotHead).add(direction.multiplyScalar(finalDist));
-    camera.lookAt(robotHead);
+    // Update Camera Position
+    camera.position
+      .copy(robotHead)
+      .add(direction.multiplyScalar(finalDist));
+
+    // Update Camera Rotation
+    // In standard TPS, camera looks parallel to the "forward" direction defined by yaw/pitch
+    // We can just set the quaternion we calculated earlier
+    camera.setRotationFromQuaternion(quat);
   });
 
   return null;

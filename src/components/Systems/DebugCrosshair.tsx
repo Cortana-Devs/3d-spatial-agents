@@ -61,19 +61,37 @@ export default function DebugCrosshair() {
     raycaster.current.setFromCamera(centerRef.current, camera);
     const intersects = raycaster.current.intersectObjects(scene.children, true);
 
-    // Filter out helpers, non-visible, and our own debug marker
-    const hit = intersects.find(
-      (i) =>
-        i.object instanceof THREE.Mesh &&
-        i.object.visible &&
-        !i.object.userData.isDebug,
-    );
+    // Filter out helpers, non-visible, our own debug marker, AND the player (Robot)
+    const hit = intersects.find((i) => {
+      // Basic checks
+      if (
+        !i.object ||
+        !(i.object instanceof THREE.Mesh) ||
+        !i.object.visible ||
+        i.object.userData.isDebug
+      ) {
+        return false;
+      }
+
+      // Check if this object belongs to the player (Robot)
+      // Traverse up to find if any parent is named "Robot"
+      let current: THREE.Object3D | null = i.object;
+      while (current) {
+        if (current.name === "Robot") return false;
+        current = current.parent;
+      }
+
+      return true;
+    });
 
     if (hit) {
       const mesh = hit.object as THREE.Mesh;
       const pos = hit.point;
 
-      setHitPoint(pos.clone());
+      // Only update if position has changed significantly to avoid jitter/re-renders
+      if (!hitPoint || hitPoint.distanceTo(pos) > 0.01) {
+        setHitPoint(pos.clone());
+      }
 
       // Calculate dims
       let dims = "N/A";
@@ -89,14 +107,24 @@ export default function DebugCrosshair() {
         }
       }
 
-      setDebugInfo({
+      const newInfo = {
         name: mesh.name || "Untitled Mesh",
         pos: `[${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}]`,
         dims: dims,
-      });
+      };
+
+      // Only update debug info if values changed
+      if (
+        !debugInfo ||
+        debugInfo.name !== newInfo.name ||
+        debugInfo.pos !== newInfo.pos ||
+        debugInfo.dims !== newInfo.dims
+      ) {
+        setDebugInfo(newInfo);
+      }
     } else {
-      setDebugInfo(null);
-      setHitPoint(null);
+      if (debugInfo) setDebugInfo(null);
+      if (hitPoint) setHitPoint(null);
     }
   });
 
@@ -118,17 +146,18 @@ export default function DebugCrosshair() {
 
       {/* 3D Target Marker (Sphere at hit point & Tooltip) */}
       {hitPoint && (
-        <group position={hitPoint} userData={{ isDebug: true }}>
-          <mesh>
+        <group position={hitPoint} userData={{ isDebug: true }} renderOrder={999}>
+          <mesh renderOrder={999} userData={{ isDebug: true }}>
             <sphereGeometry args={[0.2, 16, 16]} />
             <meshBasicMaterial
               color="#00ff00"
               depthTest={false}
+              depthWrite={false}
               transparent
               opacity={0.8}
             />
           </mesh>
-          <Html position={[0, 0.5, 0]} center style={{ pointerEvents: "none" }}>
+          <Html position={[0, 0.5, 0]} center style={{ pointerEvents: "none", zIndex: 10000 }}>
             <div
               style={{
                 background: "rgba(0, 0, 0, 0.85)",
