@@ -34,14 +34,17 @@ const paperRed = new THREE.MeshStandardMaterial({
 export function Printer({
     position,
     rotation = 0,
+    userData,
 }: {
     position: [number, number, number];
     rotation?: number;
+    userData?: any;
 }) {
     return (
         <group
             position={new THREE.Vector3(...position)}
             rotation={[0, rotation, 0]}
+            userData={userData}
         >
             {/* Main Body */}
             <mesh position={[0, 1.5, 0]} castShadow receiveShadow material={plasticWhite}>
@@ -77,14 +80,17 @@ export function Printer({
 export function FireExtinguisher({
     position,
     rotation = 0,
+    userData,
 }: {
     position: [number, number, number];
     rotation?: number;
+    userData?: any;
 }) {
     return (
         <group
             position={new THREE.Vector3(...position)}
             rotation={[0, rotation, 0]}
+            userData={userData}
         >
             {/* Tank */}
             <mesh position={[0, 1.5, 0]} castShadow material={metalRed}>
@@ -111,11 +117,13 @@ export function FileFolder({
     rotation = 0,
     color = "generic",
     label,
+    userData,
 }: {
     position: [number, number, number];
     rotation?: number;
     color?: "blue" | "generic" | "red";
     label?: string;
+    userData?: any;
 }) {
     const material = color === "blue" ? paperBlue : color === "red" ? paperRed : paperWhite;
 
@@ -123,6 +131,7 @@ export function FileFolder({
         <group
             position={new THREE.Vector3(...position)}
             rotation={[0, rotation, 0]}
+            userData={userData}
         >
             {/* Stack of files or single folder */}
             <mesh position={[0, 0.1, 0]} castShadow material={material}>
@@ -152,14 +161,17 @@ export function FileFolder({
 export function Whiteboard({
     position,
     rotation = 0,
+    userData,
 }: {
     position: [number, number, number];
     rotation?: number;
+    userData?: any;
 }) {
     return (
         <group
             position={new THREE.Vector3(...position)}
             rotation={[0, rotation, 0]}
+            userData={userData}
         >
             {/* Legs/Frame */}
             <mesh position={[-4, 3, 0]} material={plasticBlack}>
@@ -196,14 +208,17 @@ export function Whiteboard({
 export function ProjectorScreen({
     position,
     rotation = 0,
+    userData,
 }: {
     position: [number, number, number];
     rotation?: number;
+    userData?: any;
 }) {
     return (
         <group
             position={new THREE.Vector3(...position)}
             rotation={[0, rotation, 0]}
+            userData={userData}
         >
             {/* Screen Canvas (White) */}
             <mesh position={[0, 15, 0.2]} receiveShadow material={new THREE.MeshStandardMaterial({ color: "#fff", roughness: 0.5 })}>
@@ -219,9 +234,9 @@ export function ProjectorScreen({
 }
 
 // --- LAPTOP ---
-export function Laptop({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function Laptop({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             {/* Base */}
             <mesh position={[0, 0.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#333" })}>
                 <boxGeometry args={[2.5, 0.2, 1.8]} />
@@ -240,9 +255,9 @@ export function Laptop({ position, rotation = 0 }: { position: [number, number, 
 }
 
 // --- PEN DRIVE ---
-export function PenDrive({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function PenDrive({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             <mesh position={[0, 0.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#00ffff", metalness: 0.8 })}>
                 <boxGeometry args={[0.8, 0.2, 0.2]} />
             </mesh>
@@ -254,9 +269,9 @@ export function PenDrive({ position, rotation = 0 }: { position: [number, number
 }
 
 // --- SMALL RACK ---
-export function SmallRack({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function SmallRack({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             <mesh position={[0, 2, 0]} castShadow receiveShadow material={new THREE.MeshStandardMaterial({ color: "#554433" })}>
                 <boxGeometry args={[4, 4, 2]} />
             </mesh>
@@ -271,9 +286,9 @@ export function SmallRack({ position, rotation = 0 }: { position: [number, numbe
 }
 
 // --- FLOWER POT ---
-export function FlowerPot({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function FlowerPot({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             {/* Pot */}
             <mesh position={[0, 0.5, 0]} castShadow material={new THREE.MeshStandardMaterial({ color: "#cc5500" })}>
                 <cylinderGeometry args={[0.6, 0.4, 1.0, 16]} />
@@ -287,9 +302,9 @@ export function FlowerPot({ position, rotation = 0 }: { position: [number, numbe
 }
 
 // --- SOFA ---
-export function Sofa({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function Sofa({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             <mesh position={[0, 1.5, 0]} castShadow receiveShadow material={new THREE.MeshStandardMaterial({ color: "#334455" })}>
                 <boxGeometry args={[8, 1.5, 3]} />
             </mesh>
@@ -309,9 +324,9 @@ export function Sofa({ position, rotation = 0 }: { position: [number, number, nu
 }
 
 // --- TV ---
-export function TV({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function TV({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             {/* Screen */}
             <mesh position={[0, 4, 0]} castShadow material={new THREE.MeshStandardMaterial({ color: "#111" })}>
                 <boxGeometry args={[8, 4.5, 0.2]} />
@@ -328,9 +343,9 @@ export function TV({ position, rotation = 0 }: { position: [number, number, numb
 }
 
 // --- COFFEE MACHINE ---
-export function CoffeeMachine({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function CoffeeMachine({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             <mesh position={[0, 1.5, 0]} castShadow material={new THREE.MeshStandardMaterial({ color: "#111", metalness: 0.5 })}>
                 <boxGeometry args={[2, 3, 2]} />
             </mesh>
@@ -342,9 +357,9 @@ export function CoffeeMachine({ position, rotation = 0 }: { position: [number, n
 }
 
 // --- COFFEE CUP ---
-export function CoffeeCup({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function CoffeeCup({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             <mesh position={[0, 0.25, 0]} castShadow material={new THREE.MeshStandardMaterial({ color: "#fff" })}>
                 <cylinderGeometry args={[0.25, 0.2, 0.5]} />
             </mesh>
@@ -355,9 +370,9 @@ export function CoffeeCup({ position, rotation = 0 }: { position: [number, numbe
 }
 
 // --- TELEPHONE ---
-export function Telephone({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+export function Telephone({ position, rotation = 0, userData }: { position: [number, number, number]; rotation?: number; userData?: any }) {
     return (
-        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]}>
+        <group position={new THREE.Vector3(...position)} rotation={[0, rotation, 0]} userData={userData}>
             {/* Base */}
             <mesh position={[0, 0.2, 0]} material={new THREE.MeshStandardMaterial({ color: "#222" })}>
                 <boxGeometry args={[1.5, 0.4, 1.5]} />

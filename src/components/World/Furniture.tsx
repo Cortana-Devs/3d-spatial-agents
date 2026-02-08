@@ -43,9 +43,10 @@ export function CeilingLight({
   color = "#ffffff",
   intensity = 1.0,
   distance = 60,
-}: CeilingLightProps) {
+  userData,
+}: CeilingLightProps & { userData?: any }) {
   return (
-    <group position={new THREE.Vector3(...position)}>
+    <group position={new THREE.Vector3(...position)} userData={userData}>
       {/* Fixture Base */}
       <mesh position={[0, 0.5, 0]} castShadow>
         <cylinderGeometry args={[2, 2, 1, 16]} />
@@ -90,7 +91,8 @@ export function WallSwitch({
   id,
   isOn,
   onToggle,
-}: WallSwitchProps) {
+  userData,
+}: WallSwitchProps & { userData?: any }) {
   const addInteractables = useGameStore((state) => state.addInteractables);
   const removeInteractables = useGameStore(
     (state) => state.removeInteractables,
@@ -131,7 +133,7 @@ export function WallSwitch({
   }, [interactionTarget, id, onToggle, setInteractionTarget]);
 
   return (
-    <group position={posVec} rotation={[0, rotation, 0]}>
+    <group position={posVec} rotation={[0, rotation, 0]} userData={userData}>
       {/* Switch Plate */}
       <mesh position={[0, 0, 0.05]} receiveShadow>
         <boxGeometry args={[1.2, 2.0, 0.1]} />
@@ -156,10 +158,12 @@ export function OfficeChair({
   position,
   rotation = 0,
   id,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
   id: string;
+  userData?: any;
 }) {
   const addInteractables = useGameStore((state) => state.addInteractables);
   const removeInteractables = useGameStore(
@@ -191,7 +195,7 @@ export function OfficeChair({
   }, [id, posVec, rotation, addInteractables, removeInteractables]);
 
   return (
-    <group position={posVec} rotation={[0, rotation, 0]}>
+    <group position={posVec} rotation={[0, rotation, 0]} userData={userData}>
       {/* Seat */}
       <mesh
         position={[0, 2.2, 0]}
@@ -223,11 +227,13 @@ export function OfficeChair({
 
 export function ConferenceTable({
   position,
+  userData,
 }: {
   position: [number, number, number];
+  userData?: any;
 }) {
   return (
-    <group position={position}>
+    <group position={position} userData={userData}>
       {/* Main Rectangular Table Top */}
       <mesh position={[0, 4, 0]} castShadow receiveShadow>
         <boxGeometry args={[40, 0.8, 20]} />
@@ -255,14 +261,17 @@ export function ConferenceTable({
 export function OfficeDesk({
   position,
   rotation = 0,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
+  userData?: any;
 }) {
   return (
     <group
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
+      userData={userData}
     >
       {/* Table Top */}
       <mesh
@@ -301,7 +310,15 @@ export function OfficeDesk({
       </mesh>
 
       {/* Monitor */}
-      <group position={[0, 4.0, -1.5]}>
+      <group
+        position={[0, 4.0, -1.5]}
+        userData={userData ? {
+          type: 'Prop',
+          id: `${userData.id}-monitor`,
+          name: `${userData.name} - Monitor`,
+          parentID: userData.id
+        } : undefined}
+      >
         <mesh
           position={[0, 1.5, 0]}
           castShadow
@@ -325,10 +342,12 @@ export function StorageShelf({
   position,
   rotation = 0,
   label,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
   label?: string;
+  userData?: any;
 }) {
   const w = 80;
   const h = 12; // Total height (was 7)
@@ -341,6 +360,7 @@ export function StorageShelf({
     <group
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
+      userData={userData}
     >
       {/* Rack Name Label */}
       {label && (
@@ -375,31 +395,42 @@ export function StorageShelf({
       ))}
 
       {/* 3 Racks (Planes) */}
-      {[2, 7, 12].map((y, i) => (
-        <group key={`rack-group-${i}`}>
-          <mesh
-            position={[0, y - rackThickness / 2, 0]}
-            castShadow
-            receiveShadow
-            material={metalMaterial}
-          >
-            <boxGeometry args={[w, rackThickness, d]} />
-          </mesh>
-          {/* Level Label */}
-          <Text
-            position={[-w / 2 + 2, y + rackThickness / 2 + 0.02, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            fontSize={0.6}
-            color="white"
-            anchorX="left"
-            anchorY="middle"
-            outlineWidth={0.03}
-            outlineColor="#000000"
-          >
-            {levelLabels[i]}
-          </Text>
-        </group>
-      ))}
+      {[2, 7, 12].map((y, i) => {
+        const levelName = levelLabels[i];
+        const specificUserData = userData ? {
+          type: 'Furniture Part',
+          id: `${userData.id}-level-${i}`,
+          name: `${userData.name} - ${levelName} Level`,
+          parentID: userData.id
+        } : undefined;
+
+        return (
+          <group key={`rack-group-${i}`}>
+            <mesh
+              position={[0, y - rackThickness / 2, 0]}
+              castShadow
+              receiveShadow
+              material={metalMaterial}
+              userData={specificUserData}
+            >
+              <boxGeometry args={[w, rackThickness, d]} />
+            </mesh>
+            {/* Level Label */}
+            <Text
+              position={[-w / 2 + 2, y + rackThickness / 2 + 0.02, 0]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              fontSize={0.6}
+              color="white"
+              anchorX="left"
+              anchorY="middle"
+              outlineWidth={0.03}
+              outlineColor="#000000"
+            >
+              {levelLabels[i]}
+            </Text>
+          </group>
+        )
+      })}
     </group>
   );
 }
@@ -411,12 +442,14 @@ export function OfficeDoor({
   id,
   label,
   width,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
   id: string;
   label?: string;
   width?: number;
+  userData?: any;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
@@ -508,7 +541,7 @@ export function OfficeDoor({
   });
 
   return (
-    <group ref={groupRef} position={posVec} rotation={[0, rotation, 0]}>
+    <group ref={groupRef} position={posVec} rotation={[0, rotation, 0]} userData={userData}>
       {/* --- Futurustic Frame --- */}
       {/* Side Pillars with Neon */}
       <group position={[8, 15, 0]}>
@@ -627,14 +660,17 @@ export function OfficeDoor({
 export function ReceptionDesk({
   position,
   rotation = 0,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
+  userData?: any;
 }) {
   return (
     <group
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
+      userData={userData}
     >
       {/* L-Shape Main Section */}
       <mesh
@@ -674,9 +710,11 @@ export function ReceptionDesk({
 export function ManagersDesk({
   position,
   rotation = 0,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
+  userData?: any;
 }) {
   const darkWood = new THREE.MeshStandardMaterial({
     color: "#3e2723",
@@ -687,6 +725,7 @@ export function ManagersDesk({
     <group
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
+      userData={userData}
     >
       {/* Executive Desktop */}
       <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={darkWood}>
