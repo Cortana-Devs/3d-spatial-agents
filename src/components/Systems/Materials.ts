@@ -16,6 +16,8 @@ export const createMaterials = () => {
   return {
     tile: new THREE.MeshStandardMaterial({
       map: tileTex,
+      bumpMap: TextureGenerator.generateTexture("tileBump"),
+      bumpScale: 0.02, // Subtle depth for grout lines
       roughness: 0.2, // Shiny tiles
       metalness: 0.1,
       color: 0xffffff,

@@ -4,7 +4,7 @@ export class TextureGenerator {
   static createNoiseCanvas(
     width: number,
     height: number,
-    type: "sand" | "rock" | "metal" | "wood" | "concrete" | "fabric" | "tile",
+    type: "sand" | "rock" | "metal" | "wood" | "concrete" | "fabric" | "tile" | "tileBump",
   ) {
     if (typeof document === "undefined") return null; // Server-side guard
     const canvas = document.createElement("canvas");
@@ -92,7 +92,7 @@ export class TextureGenerator {
         r = base;
         g = base;
         b = base;
-      } else if (type === "tile") {
+      } else if (type === "tile" || type === "tileBump") {
         const checkSize = 32; // Pixels per tile
         const grout = 2; // Grout width
         const xMod = x % checkSize;
@@ -100,12 +100,15 @@ export class TextureGenerator {
         const isGrout = xMod < grout || yMod < grout;
 
         if (isGrout) {
-          r = 180;
-          g = 180;
-          b = 180;
+          // Grout is Gray in Diffuse, Black in Bump (Low)
+          const val = type === "tileBump" ? 0 : 180;
+          r = val;
+          g = val;
+          b = val;
         } else {
           const noise = Math.random() * 10;
-          const base = 230 + noise;
+          // Tile is White in Diffuse, White in Bump (High)
+          const base = type === "tileBump" ? 255 : (230 + noise);
           r = base;
           g = base;
           b = base;
@@ -123,7 +126,7 @@ export class TextureGenerator {
   }
 
   static generateTexture(
-    type: "sand" | "rock" | "metal" | "wood" | "concrete" | "fabric" | "tile",
+    type: "sand" | "rock" | "metal" | "wood" | "concrete" | "fabric" | "tile" | "tileBump",
   ) {
     // Reduced resolution for performance (prevent hanging)
     const size = type === "rock" || type === "sand" ? 512 : 256;
@@ -140,7 +143,7 @@ export class TextureGenerator {
     if (type === "wood") tex.repeat.set(1, 4);
     if (type === "concrete") tex.repeat.set(4, 4);
     if (type === "fabric") tex.repeat.set(8, 8);
-    if (type === "tile") tex.repeat.set(20, 20); // Adjust as needed for room size
+    if (type === "tile" || type === "tileBump") tex.repeat.set(20, 20); // Adjust as needed for room size
 
     return tex;
   }

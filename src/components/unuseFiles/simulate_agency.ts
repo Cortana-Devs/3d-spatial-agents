@@ -1,6 +1,6 @@
 
-import { processAgentThought, AgentContext } from '../src/lib/agent-core';
-import { RateLimiter } from '../src/lib/rateLimiter';
+import { processAgentThought, AgentContext } from '../../lib/agent-core';
+import { RateLimiter } from '../../lib/rateLimiter';
 import * as fs from 'fs';
 import * as path from 'path';
 

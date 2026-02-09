@@ -17,7 +17,7 @@ function CameraRig({
 }: {
   target: React.RefObject<THREE.Group | null>;
 }) {
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const setCameraLocked = useGameStore((state) => state.setCameraLocked);
   const setDebugText = useGameStore((state) => state.setDebugText);
 
@@ -79,25 +79,76 @@ function CameraRig({
     };
   }, [gl, setCameraLocked, setDebugText, invertedMouse, sensitivity]);
 
+  const raycaster = useRef(new THREE.Raycaster());
+
   useFrame(() => {
     if (!target.current) return;
-    const robotPos = target.current.position
+
+    // Head position (Pivot point)
+    const robotHead = target.current.position
       .clone()
-      .add(new THREE.Vector3(0, 6.0, 0)); // Head height approx
+      .add(new THREE.Vector3(0, 5.5, 0));
 
-    const camDist = 20;
-    const viewAngleOffset = 0; // Fixed to third person back view
+    // Calculate Rotation from Yaw/Pitch
+    // Z- is forward in standard Three.js camera space when rotation is 0,
+    // but our orbit controls usually treat Z+ or Z- as start.
+    // Let's assume standard Euler YXZ order for FPS/TPS cameras.
+    const quat = new THREE.Quaternion();
+    quat.setFromEuler(
+      new THREE.Euler(cameraState.current.pitch, cameraState.current.yaw, 0, "YXZ"),
+    );
 
-    const cx = camDist * Math.sin(cameraState.current.yaw + viewAngleOffset);
-    const cz = camDist * Math.cos(cameraState.current.yaw + viewAngleOffset);
-    const cy = camDist * Math.sin(cameraState.current.pitch);
+    // Define Offset (Right 2.5, Up 0.5, Back 8.0)
+    // Adjust these values to tune the "Over-the-shoulder" feel
+    const offset = new THREE.Vector3(2.5, 0.5, 12.0);
+    offset.applyQuaternion(quat);
 
-    camera.position.x = robotPos.x - cx * Math.cos(cameraState.current.pitch); // eslint-disable-line react-hooks/immutability
-    camera.position.z = robotPos.z - cz * Math.cos(cameraState.current.pitch); // eslint-disable-line react-hooks/immutability
-    camera.position.y = robotPos.y + cy; // eslint-disable-line react-hooks/immutability
-    if (camera.position.y < 2.0) camera.position.y = 2.0; // eslint-disable-line react-hooks/immutability
+    // Ideal Position
+    const idealPos = robotHead.clone().add(offset);
 
-    camera.lookAt(robotPos);
+    // Collision Detection
+    // Raycast from head to idealPos to prevent clipping through walls
+    const direction = idealPos.clone().sub(robotHead);
+    const distanceToIdeal = direction.length();
+    direction.normalize();
+
+    raycaster.current.set(robotHead, direction);
+    raycaster.current.far = distanceToIdeal;
+
+    // Intersect scene to find obstacles
+    const intersects = raycaster.current.intersectObjects(scene.children, true);
+
+    let finalDist = distanceToIdeal;
+
+    for (const hit of intersects) {
+      // Skip the player itself
+      let isPlayer = false;
+      let obj: THREE.Object3D | null = hit.object;
+      while (obj) {
+        if (obj === target.current || obj.name === "Robot") {
+          isPlayer = true;
+          break;
+        }
+        obj = obj.parent;
+      }
+
+      if (isPlayer) continue;
+
+      // Found a valid obstacle
+      // Bring camera closer: hit.distance - cushion
+      finalDist = Math.max(0.5, hit.distance - 0.5);
+      break;
+    }
+
+    // Update Camera Position
+    camera.position
+      .copy(robotHead)
+      .add(direction.multiplyScalar(finalDist));
+
+    // Update Camera Rotation
+    // In standard TPS, camera looks parallel to the "forward" direction defined by yaw/pitch
+    // We can just set the quaternion we calculated earlier
+    camera.setRotationFromQuaternion(quat);
   });
 
   return null;
@@ -127,7 +178,7 @@ export default function Scene() {
 
         <OfficeHub />
 
-        <Robot groupRef={robotRef} initialPosition={[0, 5, 50]} />
+        <Robot groupRef={robotRef} initialPosition={[0, 5, 65]} />
         <AIRobot playerRef={robotRef} initialPosition={[10, 5, 10]} />
         <AIRobot playerRef={robotRef} initialPosition={[-10, 5, 20]} />
 

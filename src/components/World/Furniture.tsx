@@ -43,9 +43,10 @@ export function CeilingLight({
   color = "#ffffff",
   intensity = 1.0,
   distance = 60,
-}: CeilingLightProps) {
+  userData,
+}: CeilingLightProps & { userData?: any }) {
   return (
-    <group position={new THREE.Vector3(...position)}>
+    <group position={new THREE.Vector3(...position)} userData={userData}>
       {/* Fixture Base */}
       <mesh position={[0, 0.5, 0]} castShadow>
         <cylinderGeometry args={[2, 2, 1, 16]} />
@@ -90,7 +91,8 @@ export function WallSwitch({
   id,
   isOn,
   onToggle,
-}: WallSwitchProps) {
+  userData,
+}: WallSwitchProps & { userData?: any }) {
   const addInteractables = useGameStore((state) => state.addInteractables);
   const removeInteractables = useGameStore(
     (state) => state.removeInteractables,
@@ -131,7 +133,7 @@ export function WallSwitch({
   }, [interactionTarget, id, onToggle, setInteractionTarget]);
 
   return (
-    <group position={posVec} rotation={[0, rotation, 0]}>
+    <group position={posVec} rotation={[0, rotation, 0]} userData={userData}>
       {/* Switch Plate */}
       <mesh position={[0, 0, 0.05]} receiveShadow>
         <boxGeometry args={[1.2, 2.0, 0.1]} />
@@ -156,10 +158,12 @@ export function OfficeChair({
   position,
   rotation = 0,
   id,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
   id: string;
+  userData?: any;
 }) {
   const addInteractables = useGameStore((state) => state.addInteractables);
   const removeInteractables = useGameStore(
@@ -191,7 +195,7 @@ export function OfficeChair({
   }, [id, posVec, rotation, addInteractables, removeInteractables]);
 
   return (
-    <group position={posVec} rotation={[0, rotation, 0]}>
+    <group position={posVec} rotation={[0, rotation, 0]} userData={userData}>
       {/* Seat */}
       <mesh
         position={[0, 2.2, 0]}
@@ -223,11 +227,13 @@ export function OfficeChair({
 
 export function ConferenceTable({
   position,
+  userData,
 }: {
   position: [number, number, number];
+  userData?: any;
 }) {
   return (
-    <group position={position}>
+    <group position={position} userData={userData}>
       {/* Main Rectangular Table Top */}
       <mesh position={[0, 4, 0]} castShadow receiveShadow>
         <boxGeometry args={[40, 0.8, 20]} />
@@ -255,14 +261,17 @@ export function ConferenceTable({
 export function OfficeDesk({
   position,
   rotation = 0,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
+  userData?: any;
 }) {
   return (
     <group
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
+      userData={userData}
     >
       {/* Table Top */}
       <mesh
@@ -301,7 +310,15 @@ export function OfficeDesk({
       </mesh>
 
       {/* Monitor */}
-      <group position={[0, 4.0, -1.5]}>
+      <group
+        position={[0, 4.0, -1.5]}
+        userData={userData ? {
+          type: 'Prop',
+          id: `${userData.id}-monitor`,
+          name: `${userData.name} - Monitor`,
+          parentID: userData.id
+        } : undefined}
+      >
         <mesh
           position={[0, 1.5, 0]}
           castShadow
@@ -324,20 +341,42 @@ export function OfficeDesk({
 export function StorageShelf({
   position,
   rotation = 0,
+  label,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
+  label?: string;
+  userData?: any;
 }) {
   const w = 80;
-  const h = 12; // Total height
+  const h = 12; // Total height (was 7)
   const d = 5; // Depth
   const rackThickness = 0.5;
+
+  const levelLabels = ["Low", "Middle", "Top"];
 
   return (
     <group
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
+      userData={userData}
     >
+      {/* Rack Name Label */}
+      {label && (
+        <Text
+          position={[0, h, 0]}
+          fontSize={0.8}
+          color="white"
+          anchorX="center"
+          anchorY="bottom"
+          outlineWidth={0.05}
+          outlineColor="#000000"
+        >
+          {label}
+        </Text>
+      )}
+
       {/* 4 Corner Legs */}
       {[
         [-w / 2 + 0.5, -d / 2 + 0.5],
@@ -356,17 +395,42 @@ export function StorageShelf({
       ))}
 
       {/* 3 Racks (Planes) */}
-      {[2, 7, 12].map((y, i) => (
-        <mesh
-          key={`rack-${i}`}
-          position={[0, y - rackThickness / 2, 0]}
-          castShadow
-          receiveShadow
-          material={metalMaterial}
-        >
-          <boxGeometry args={[w, rackThickness, d]} />
-        </mesh>
-      ))}
+      {[2, 7, 12].map((y, i) => {
+        const levelName = levelLabels[i];
+        const specificUserData = userData ? {
+          type: 'Furniture Part',
+          id: `${userData.id}-level-${i}`,
+          name: `${userData.name} - ${levelName} Level`,
+          parentID: userData.id
+        } : undefined;
+
+        return (
+          <group key={`rack-group-${i}`}>
+            <mesh
+              position={[0, y - rackThickness / 2, 0]}
+              castShadow
+              receiveShadow
+              material={metalMaterial}
+              userData={specificUserData}
+            >
+              <boxGeometry args={[w, rackThickness, d]} />
+            </mesh>
+            {/* Level Label */}
+            <Text
+              position={[-w / 2 + 2, y + rackThickness / 2 + 0.02, 0]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              fontSize={0.6}
+              color="white"
+              anchorX="left"
+              anchorY="middle"
+              outlineWidth={0.03}
+              outlineColor="#000000"
+            >
+              {levelLabels[i]}
+            </Text>
+          </group>
+        )
+      })}
     </group>
   );
 }
@@ -377,15 +441,24 @@ export function OfficeDoor({
   rotation = 0,
   id,
   label,
+  width,
+  userData,
 }: {
   position: [number, number, number];
   rotation?: number;
   id: string;
   label?: string;
+  width?: number;
+  userData?: any;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
   const doorPanelRef = useRef<THREE.Group>(null); // The sliding part
+
+  // Defaults
+  const doorWidth = width || 14;
+  const slideDistance = doorWidth * 0.9; // Slide enough to open
+  const panelHeight = 29;
 
   const interactionTarget = useGameStore((state) => state.interactionTarget);
   const setInteractionTarget = useGameStore(
@@ -427,9 +500,11 @@ export function OfficeDoor({
   // Manage Collision
   useEffect(() => {
     const obstacles: { position: THREE.Vector3; radius: number }[] = [];
-    // Door is approx 14 units wide
+
+    // Door width from props
+    const widthVal = doorWidth;
     const step = 2.0;
-    const count = Math.ceil(14 / step);
+    const count = Math.ceil(widthVal / step);
 
     if (!isOpen) {
       const dir = new THREE.Vector3(1, 0, 0).applyAxisAngle(
@@ -438,7 +513,7 @@ export function OfficeDoor({
       );
       for (let i = 0; i < count; i++) {
         const t = i / (count - 1) - 0.5;
-        const offset = dir.clone().multiplyScalar(t * 14);
+        const offset = dir.clone().multiplyScalar(t * widthVal);
         obstacles.push({
           position: posVec.clone().add(offset),
           radius: 1.5,
@@ -450,7 +525,7 @@ export function OfficeDoor({
     return () => {
       if (obstacles.length > 0) removeObstacles(obstacles);
     };
-  }, [isOpen, posVec, rotation, addObstacles, removeObstacles]);
+  }, [isOpen, posVec, rotation, addObstacles, removeObstacles, doorWidth]);
 
   // Animation (Vertical Slide)
   useFrame((state, delta) => {
@@ -466,7 +541,7 @@ export function OfficeDoor({
   });
 
   return (
-    <group ref={groupRef} position={posVec} rotation={[0, rotation, 0]}>
+    <group ref={groupRef} position={posVec} rotation={[0, rotation, 0]} userData={userData}>
       {/* --- Futurustic Frame --- */}
       {/* Side Pillars with Neon */}
       <group position={[8, 15, 0]}>
@@ -577,6 +652,100 @@ export function OfficeDoor({
           </Text>
         )}
       </group>
+    </group>
+  );
+}
+
+// --- RECEPTION DESK ---
+export function ReceptionDesk({
+  position,
+  rotation = 0,
+  userData,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  userData?: any;
+}) {
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
+      {/* L-Shape Main Section */}
+      <mesh
+        position={[0, 2, 0]}
+        castShadow
+        receiveShadow
+        material={new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })}
+      >
+        <boxGeometry args={[20, 4, 6]} />
+      </mesh>
+      {/* Side Return (L-shape) */}
+      <mesh
+        position={[8, 2, 6]}
+        castShadow
+        receiveShadow
+        material={new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })}
+      >
+        <boxGeometry args={[4, 4, 8]} />
+      </mesh>
+      {/* Counter Top */}
+      <mesh position={[0, 4.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#444" })}>
+        <boxGeometry args={[20, 0.2, 6]} />
+      </mesh>
+      <mesh position={[8, 4.1, 6]} material={new THREE.MeshStandardMaterial({ color: "#444" })}>
+        <boxGeometry args={[4, 0.2, 8]} />
+      </mesh>
+
+      {/* Front Panel Accents */}
+      <mesh position={[0, 2, 3.1]} material={lightGlowMaterial}>
+        <boxGeometry args={[18, 0.2, 0.1]} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- MANAGERS DESK ---
+export function ManagersDesk({
+  position,
+  rotation = 0,
+  userData,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  userData?: any;
+}) {
+  const darkWood = new THREE.MeshStandardMaterial({
+    color: "#3e2723",
+    roughness: 0.4,
+  });
+
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
+      {/* Executive Desktop */}
+      <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[16, 0.5, 8]} />
+      </mesh>
+      {/* Massive Legs/Cabinets */}
+      <mesh position={[-6, 1.8, 0]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[3, 3.6, 6]} />
+      </mesh>
+      <mesh position={[6, 1.8, 0]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[3, 3.6, 6]} />
+      </mesh>
+      {/* Modesty Panel */}
+      <mesh position={[0, 2.5, -2]} castShadow receiveShadow material={darkWood}>
+        <boxGeometry args={[10, 3, 0.2]} />
+      </mesh>
+      {/* Leather Pad */}
+      <mesh position={[0, 4.06, 1]} material={new THREE.MeshStandardMaterial({ color: "#111" })}>
+        <boxGeometry args={[8, 0.02, 4]} />
+      </mesh>
     </group>
   );
 }
