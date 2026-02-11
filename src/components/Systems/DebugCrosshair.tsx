@@ -3,18 +3,18 @@ import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html } from "@react-three/drei";
 
+import { useGameStore, DebugTargetInfo } from "@/store/gameStore";
+
 export default function DebugCrosshair() {
   const { camera, scene } = useThree();
   const [active, setActive] = useState(false);
   const [hitPoint, setHitPoint] = useState<THREE.Vector3 | null>(null);
-  const [debugInfo, setDebugInfo] = useState<{
-    name: string;
-    type?: string;
-    id?: string;
-    pos: string;
-    dims: string;
-    desc?: string;
-  } | null>(null);
+  
+  // Use store efficiently
+  const setDebugTarget = useGameStore((state) => state.setDebugTarget);
+  
+  // Local ref to track last sent info and avoid store spam
+  const lastDebugInfo = useRef<DebugTargetInfo | null>(null);
 
   const centerRef = useRef(new THREE.Vector2(0, 0));
   const raycaster = useRef(new THREE.Raycaster());
@@ -55,7 +55,10 @@ export default function DebugCrosshair() {
 
   useFrame(() => {
     if (!active) {
-      if (debugInfo) setDebugInfo(null);
+      if (lastDebugInfo.current) {
+         setDebugTarget(null);
+         lastDebugInfo.current = null;
+      }
       if (hitPoint) setHitPoint(null);
       return;
     }
@@ -123,7 +126,7 @@ export default function DebugCrosshair() {
         }
       }
 
-      const newInfo = {
+      const newInfo: DebugTargetInfo = {
         name: data.name || mesh.name || "Untitled Mesh",
         type: data.type,
         id: data.id,
@@ -134,15 +137,19 @@ export default function DebugCrosshair() {
 
       // Only update debug info if values changed
       if (
-        !debugInfo ||
-        debugInfo.name !== newInfo.name ||
-        debugInfo.pos !== newInfo.pos ||
-        debugInfo.id !== newInfo.id
+        !lastDebugInfo.current ||
+        lastDebugInfo.current.name !== newInfo.name ||
+        lastDebugInfo.current.pos !== newInfo.pos ||
+        lastDebugInfo.current.id !== newInfo.id
       ) {
-        setDebugInfo(newInfo);
+        setDebugTarget(newInfo);
+        lastDebugInfo.current = newInfo;
       }
     } else {
-      if (debugInfo) setDebugInfo(null);
+      if (lastDebugInfo.current) {
+        setDebugTarget(null);
+        lastDebugInfo.current = null;
+      }
       if (hitPoint) setHitPoint(null);
     }
   });
@@ -163,9 +170,13 @@ export default function DebugCrosshair() {
         userData={{ isDebug: true }}
       />
 
-      {/* 3D Target Marker (Sphere at hit point & Tooltip) */}
+      {/* 3D Target Marker (Sphere at hit point) */}
       {hitPoint && (
-        <group position={hitPoint} userData={{ isDebug: true }} renderOrder={999}>
+        <group
+          position={hitPoint}
+          userData={{ isDebug: true }}
+          renderOrder={999}
+        >
           <mesh renderOrder={999} userData={{ isDebug: true }}>
             <sphereGeometry args={[0.2, 16, 16]} />
             <meshBasicMaterial
@@ -176,32 +187,6 @@ export default function DebugCrosshair() {
               opacity={0.8}
             />
           </mesh>
-          <Html position={[0, 2, 0]} center style={{ pointerEvents: "none", zIndex: 10000 }}>
-            <div
-              style={{
-                background: "rgba(0, 0, 0, 0.85)",
-                color: "#00ff00",
-                padding: "8px",
-                borderRadius: "4px",
-                fontSize: "12px",
-                fontFamily: "monospace",
-                whiteSpace: "pre-wrap",
-                border: "1px solid #00ff00",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.5)",
-                minWidth: "220px",
-
-              }}
-            >
-              <div style={{ fontWeight: "bold", marginBottom: "4px" }}>{debugInfo?.name}</div>
-              {debugInfo?.type && <div style={{ color: "#aaa" }}>Type: {debugInfo.type}</div>}
-              {debugInfo?.id && <div style={{ color: "#aaa" }}>ID: {debugInfo.id}</div>}
-              {debugInfo?.desc && <div style={{ marginTop: "4px", fontStyle: "italic", color: "#ddd" }}>{debugInfo.desc}</div>}
-              <div style={{ marginTop: "4px", borderTop: "1px solid #333", paddingTop: "4px" }}>
-                Pos: {debugInfo?.pos}
-              </div>
-              <div style={{ color: "#888" }}>Dims: {debugInfo?.dims}</div>
-            </div>
-          </Html>
         </group>
       )}
 

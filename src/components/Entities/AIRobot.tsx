@@ -9,9 +9,11 @@ import { ThoughtBubble } from "../UI/ThoughtBubble";
 export default function AIRobot({
   playerRef,
   initialPosition = [10, 5, -330],
+  id = "agent-01",
 }: {
   playerRef: React.RefObject<THREE.Group | null>;
   initialPosition?: [number, number, number];
+  id?: string;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   // We need to access joints for animation.
@@ -19,7 +21,7 @@ export default function AIRobot({
   // For now, let's keep the visual structure but we need to re-bind joints.
   const joints = useRef<any>({});
   // Use the new Yuka-powered brain with animation support
-  const { vehicle, brain } = useYukaAI(groupRef, playerRef, joints);
+  const { vehicle, brain } = useYukaAI(id, groupRef, playerRef, joints);
 
   // ... (Rest of the component needs to be updated to handle animation if useYukaAI doesn't return joints)
   // Wait, useYukaAI currently returns { vehicle }. It doesn't handle animation yet.
@@ -55,7 +57,16 @@ export default function AIRobot({
   }, []);
 
   return (
-    <group ref={groupRef} position={initialPosition}>
+    <group
+      ref={groupRef}
+      position={initialPosition}
+      name="AIRobot"
+      userData={{
+        type: "AI Entity",
+        id: id,
+        description: "Autonomous Office Assistant",
+      }}
+    >
       <group
         ref={(el) => {
           if (el && joints.current) joints.current.hips = el;

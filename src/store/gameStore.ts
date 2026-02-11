@@ -6,6 +6,15 @@ export interface Obstacle {
   radius: number;
 }
 
+export interface DebugTargetInfo {
+  name: string;
+  type?: string;
+  id?: string;
+  pos: string;
+  dims: string;
+  desc?: string;
+}
+
 interface GameState {
   debugText: string;
   setDebugText: (text: string) => void;
@@ -76,6 +85,10 @@ interface GameState {
     menu: string;
   };
   setKeyBinding: (action: string, key: string) => void;
+
+  // Debug Info
+  debugTarget: DebugTargetInfo | null;
+  setDebugTarget: (target: DebugTargetInfo | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -149,4 +162,8 @@ export const useGameStore = create<GameState>((set) => ({
     set((state) => ({
       keyBindings: { ...state.keyBindings, [action]: key },
     })),
+
+  // Debug Info
+  debugTarget: null,
+  setDebugTarget: (target) => set({ debugTarget: target }),
 }));

@@ -95,7 +95,12 @@ function CameraRig({
     // Let's assume standard Euler YXZ order for FPS/TPS cameras.
     const quat = new THREE.Quaternion();
     quat.setFromEuler(
-      new THREE.Euler(cameraState.current.pitch, cameraState.current.yaw, 0, "YXZ"),
+      new THREE.Euler(
+        cameraState.current.pitch,
+        cameraState.current.yaw,
+        0,
+        "YXZ",
+      ),
     );
 
     // Define Offset (Right 2.5, Up 0.5, Back 8.0)
@@ -141,9 +146,7 @@ function CameraRig({
     }
 
     // Update Camera Position
-    camera.position
-      .copy(robotHead)
-      .add(direction.multiplyScalar(finalDist));
+    camera.position.copy(robotHead).add(direction.multiplyScalar(finalDist));
 
     // Update Camera Rotation
     // In standard TPS, camera looks parallel to the "forward" direction defined by yaw/pitch
