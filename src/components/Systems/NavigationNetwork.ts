@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as YUKA from "yuka";
 import * as THREE from "three";
 

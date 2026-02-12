@@ -30,6 +30,8 @@ export function useRobotController(
   const obstacles = useGameStore((state) => state.obstacles);
   // const setDebugText = useGameStore((state) => state.setDebugText);
   // const isLocked = useGameStore((state) => state.isLocked);
+  const isMenuOpen = useGameStore((state) => state.isMenuOpen);
+  const isMenuPanelOpen = useGameStore((state) => state.isMenuPanelOpen);
 
   const inputRef = useRef({
     f: false,
@@ -346,6 +348,7 @@ export function useRobotController(
   }, [groupRef, keyBindings]);
 
   useFrame((stateRoot, delta) => {
+    if (isMenuOpen || isMenuPanelOpen) return;
     if (!groupRef.current) return;
     const camera = stateRoot.camera;
     const mesh = groupRef.current;
