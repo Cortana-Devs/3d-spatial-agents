@@ -12,8 +12,44 @@ export default function GameMenu() {
         keyBindings, setKeyBinding
     } = useGameStore();
 
-    const [activeTab, setActiveTab] = useState<'map' | 'settings' | 'controls'>('map');
+    const [activeTab, setActiveTab] = useState<'map' | 'settings' | 'controls' | 'logs'>('map');
     const [listeningFor, setListeningFor] = useState<string | null>(null);
+
+    // Logs State
+    const [logs, setLogs] = useState<string>("");
+    const [logsLoading, setLogsLoading] = useState(false);
+    const [logsError, setLogsError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (activeTab === 'logs') {
+            setLogsLoading(true);
+            fetch("/api/logs/groq")
+                .then(async (res) => {
+                    if (!res.ok) throw new Error("Failed to load logs");
+                    return res.text();
+                })
+                .then((text) => {
+                    setLogs(text);
+                    setLogsLoading(false);
+                })
+                .catch((err) => {
+                    setLogsError(err.message);
+                    setLogsLoading(false);
+                });
+        }
+    }, [activeTab]);
+
+    const handleDownloadLogs = () => {
+        const blob = new Blob([logs], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "groq_interactions.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
 
     const handleClose = () => {
         if (setMenuPanelOpen) {
@@ -93,13 +129,13 @@ export default function GameMenu() {
                     display: 'flex',
                     gap: '8px',
                 }}>
-                    {['map', 'settings', 'controls'].map((tab) => (
+                    {['map', 'settings', 'controls', 'logs'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab as any)}
                             style={tabStyle(tab)}
                         >
-                            {tab === 'map' ? '🗺️' : tab === 'settings' ? '⚙️' : '🎮'}{' '}
+                            {tab === 'map' ? '🗺️' : tab === 'settings' ? '⚙️' : tab === 'controls' ? '🎮' : '📋'}{' '}
                             {tab}
                         </button>
                     ))}
@@ -275,6 +311,68 @@ export default function GameMenu() {
                             <ControlRow action="Sprint / Sneak" actionKey="sprint" currentKey={keyBindings.sprint} isListening={listeningFor === 'sprint'} onListen={() => setListeningFor('sprint')} />
                             <ControlRow action="Interact / Sit" actionKey="interact" currentKey={keyBindings.interact} isListening={listeningFor === 'interact'} onListen={() => setListeningFor('interact')} />
                             <ControlRow action="Toggle Menu" actionKey="menu" currentKey={keyBindings.menu} isListening={listeningFor === 'menu'} onListen={() => setListeningFor('menu')} />
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'logs' && (
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '16px'
+                        }}>
+                            <h3 style={{
+                                fontWeight: 500,
+                                fontSize: '16px',
+                                color: 'rgba(255,255,255,0.6)',
+                                margin: 0,
+                                letterSpacing: '0.5px',
+                            }}>
+                                System Logs
+                            </h3>
+                            <button
+                                onClick={handleDownloadLogs}
+                                disabled={logsLoading || !!logsError || !logs}
+                                style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#2563eb',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    opacity: logsLoading || !!logsError || !logs ? 0.5 : 1,
+                                    transition: 'background 0.2s',
+                                }}
+                            >
+                                Download CSV
+                            </button>
+                        </div>
+
+                        <div
+                            style={{
+                                flex: 1,
+                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                borderRadius: '8px',
+                                padding: '16px',
+                                overflow: 'auto',
+                                fontFamily: 'monospace',
+                                fontSize: '11px',
+                                whiteSpace: 'pre-wrap',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                color: '#ccc'
+                            }}
+                        >
+                            {logsLoading ? (
+                                <div style={{ color: "#888" }}>Loading logs...</div>
+                            ) : logsError ? (
+                                <div style={{ color: "#ff4444" }}>Error: {logsError}</div>
+                            ) : (
+                                logs || "Log file is empty."
+                            )}
                         </div>
                     </div>
                 )}
