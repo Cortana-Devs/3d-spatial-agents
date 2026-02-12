@@ -1,10 +1,17 @@
 /* eslint-disable react-hooks/immutability */
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { useYukaAI } from "./useYukaAI";
-import { createMaterials } from "../Systems/Materials";
-import { Joints } from "./useRobotController";
 import { ThoughtBubble } from "../UI/ThoughtBubble";
+import { useGLTF, useAnimations, Html } from "@react-three/drei";
+
+// Preload the model if it exists to avoid stutter
+// Note: If the file is missing, this might log a warning but won't crash until used
+try {
+  useGLTF.preload("/models/robot.glb");
+} catch (e) {
+  // Ignore preload errors
+}
 
 export default function AIRobot({
   playerRef,
@@ -16,45 +23,11 @@ export default function AIRobot({
   id?: string;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  // We need to access joints for animation.
-  // Ideally useYukaAI should return joints or we separate animation logic.
-  // For now, let's keep the visual structure but we need to re-bind joints.
+  // We pass a dummy joints ref because we are moving away from manual joint control
+  // But useYukaAI still expects it for now (we can refactor useYukaAI later to make it optional)
   const joints = useRef<any>({});
-  // Use the new Yuka-powered brain with animation support
-  const { vehicle, brain } = useYukaAI(id, groupRef, playerRef, joints);
 
-  // ... (Rest of the component needs to be updated to handle animation if useYukaAI doesn't return joints)
-  // Wait, useYukaAI currently returns { vehicle }. It doesn't handle animation yet.
-  // We should probably port the animation logic to useYukaAI or a separate useRobotAnimation hook.
-  // For this step, let's just swap the controller and see if it moves.
-  // We will lose animations temporarily (he will slide), which is expected for Phase 1.
-
-  const { suitMat, shirtMat, tieMat, skinMat } = useMemo(() => {
-    // Office AI assistant - lighter gray suit to differentiate from player
-    const graySuit = new THREE.MeshStandardMaterial({
-      color: 0x555555,
-      roughness: 0.3,
-      metalness: 0.2,
-    });
-    const lightShirt = new THREE.MeshStandardMaterial({
-      color: 0xe8e8e8,
-      roughness: 0.6,
-    });
-    const redTie = new THREE.MeshStandardMaterial({
-      color: 0x8b0000,
-      roughness: 0.5,
-    }); // Red tie for AI
-    const paleSkin = new THREE.MeshStandardMaterial({
-      color: 0xffd9c3,
-      roughness: 0.8,
-    });
-    return {
-      suitMat: graySuit,
-      shirtMat: lightShirt,
-      tieMat: redTie,
-      skinMat: paleSkin,
-    };
-  }, []);
+  const { vehicle, brain, animationState } = useYukaAI(id, groupRef, playerRef, joints);
 
   return (
     <group
@@ -67,243 +40,136 @@ export default function AIRobot({
         description: "Autonomous Office Assistant",
       }}
     >
-      <group
-        ref={(el) => {
-          if (el && joints.current) joints.current.hips = el;
-        }}
-        position={[0, 3.5, 0]}
-      >
-        {/* Thought Bubble Visualization */}
-        <ThoughtBubble brain={brain} />
-
-        {/* Pelvis/Hips - Rounded gray suit pants */}
-        <mesh
-          material={suitMat}
-          castShadow
-          receiveShadow
-          rotation={[0, 0, Math.PI / 2]}
-        >
-          <capsuleGeometry args={[0.45, 0.8, 12, 16]} />
-        </mesh>
-
-        <group
-          ref={(el) => {
-            if (el && joints.current) joints.current.torso = el;
-          }}
-          position={[0, 0.25, 0]}
-        >
-          {/* Waist - Rounded suit jacket bottom */}
-          <mesh
-            position={[0, 0.65, 0]}
-            material={suitMat}
-            castShadow
-            receiveShadow
-          >
-            <cylinderGeometry args={[0.5, 0.6, 1.3, 16]} />
-          </mesh>
-          {/* Upper torso - Rounded gray suit jacket */}
-          <mesh
-            position={[0, 1.8, 0]}
-            material={suitMat}
-            castShadow
-            receiveShadow
-            scale={[1.8, 1.6, 1.0]}
-          >
-            <sphereGeometry args={[0.6, 16, 16]} />
-          </mesh>
-          {/* Shirt front - rounded */}
-          <mesh
-            position={[0, 2.3, 0.56]}
-            material={shirtMat}
-            castShadow
-            scale={[0.7, 0.8, 0.15]}
-          >
-            <sphereGeometry args={[0.5, 12, 12]} />
-          </mesh>
-          {/* Red tie for AI identification - slightly rounded */}
-          <mesh position={[0, 1.9, 0.61]} material={tieMat} castShadow>
-            <capsuleGeometry args={[0.08, 0.9, 8, 12]} />
-          </mesh>
-
-          <group
-            ref={(el) => {
-              if (el && joints.current) joints.current.neck = el;
-            }}
-            position={[0, 2.6, 0]}
-          >
-            {/* Head - rounded */}
-            <mesh
-              position={[0, 0.45, 0]}
-              material={skinMat}
-              castShadow
-              receiveShadow
-              scale={[0.9, 1.0, 0.95]}
-            >
-              <sphereGeometry args={[0.45, 16, 16]} />
-            </mesh>
-            {/* Visor - darker rounded for AI */}
-            <mesh
-              position={[0, 0.5, 0.43]}
-              material={
-                new THREE.MeshStandardMaterial({
-                  color: 0x1a1a1a,
-                  metalness: 0.6,
-                  emissive: 0x440000,
-                  emissiveIntensity: 0.3,
-                })
-              }
-              scale={[1.3, 1, 0.3]}
-            >
-              <sphereGeometry args={[0.25, 12, 8]} />
-            </mesh>
-          </group>
-
-          {/* Arms */}
-          <Arm
-            side="left"
-            joints={joints}
-            suitMat={suitMat}
-            shirtMat={shirtMat}
-          />
-          <Arm
-            side="right"
-            joints={joints}
-            suitMat={suitMat}
-            shirtMat={shirtMat}
-          />
-        </group>
-
-        {/* Legs */}
-        <Leg side="left" joints={joints} suitMat={suitMat} skinMat={skinMat} />
-        <Leg side="right" joints={joints} suitMat={suitMat} skinMat={skinMat} />
-      </group>
+      <ThoughtBubble brain={brain} />
+      <Suspense fallback={<HighFiPlaceholderRobot state={animationState} />}>
+        <RobotModel animationState={animationState} />
+      </Suspense>
     </group>
   );
 }
 
-function Arm({
-  side,
-  joints,
-  suitMat,
-  shirtMat,
-}: {
-  side: "left" | "right";
-  joints: React.MutableRefObject<Joints>;
-  suitMat: THREE.Material;
-  shirtMat: THREE.Material;
-}) {
-  const dir = side === "left" ? 1 : -1;
+// ----------------------------------------------------------------------------
+// 1. GLTF Mode (If /models/robot.glb exists)
+// ----------------------------------------------------------------------------
+function RobotModel({ animationState }: { animationState: string }) {
+  const group = useRef<THREE.Group>(null);
+  const { scene, animations } = useGLTF("/models/robot.glb") as any;
+  const { actions } = useAnimations(animations, group);
+
+  useEffect(() => {
+    // Play Animation based on state
+    // We assume standard Mixamo naming conventions or similar
+    // Fallback: search for something containing "Idle", "Walk", "Run", "Wave"
+
+    const playAction = (name: string) => {
+      if (!actions) return;
+
+      // Find action that matches name (case insensitive partial match)
+      const actionName = Object.keys(actions).find(key => key.toLowerCase().includes(name.toLowerCase()));
+      const action = actions[actionName || ""];
+
+      if (action) {
+        action.reset().fadeIn(0.5).play();
+        return action;
+      }
+      // If no match, try "Idle" or first animation
+      if (name !== 'Idle') {
+        const idleName = Object.keys(actions).find(key => key.toLowerCase().includes("idle"));
+        const idle = actions[idleName || ""] || Object.values(actions)[0];
+        idle?.reset().fadeIn(0.5).play();
+        return idle;
+      }
+    };
+
+    // Fade out all current actions
+    Object.values(actions).forEach(action => action?.fadeOut(0.5));
+
+    playAction(animationState);
+
+  }, [animationState, actions]);
+
   return (
-    <group
-      ref={(el) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (!joints.current[`${side}Arm`])
-          joints.current[`${side}Arm`] = {} as any;
-        joints.current[`${side}Arm`]!.shoulder = el!;
-      }}
-      position={[dir * 1.0, 2.2, 0]}
-    >
-      {/* Shoulder */}
-      <mesh material={suitMat} castShadow receiveShadow>
-        <sphereGeometry args={[0.35, 12, 12]} />
-      </mesh>
-      {/* Upper arm */}
-      <mesh position={[0, -0.7, 0]} material={suitMat} castShadow receiveShadow>
-        <cylinderGeometry args={[0.25, 0.3, 1.3, 10]} />
-      </mesh>
-      <group
-        ref={(el) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if (!joints.current[`${side}Arm`])
-            joints.current[`${side}Arm`] = {} as any;
-          joints.current[`${side}Arm`]!.elbow = el!;
-        }}
-        position={[0, -1.4, 0]}
-      >
-        <mesh material={suitMat} castShadow receiveShadow>
-          <sphereGeometry args={[0.28, 10, 10]} />
-        </mesh>
-        <mesh
-          position={[0, -0.6, 0]}
-          material={suitMat}
-          castShadow
-          receiveShadow
-        >
-          <cylinderGeometry args={[0.22, 0.25, 1.2, 10]} />
-        </mesh>
-        <mesh
-          position={[0, -1.3, 0]}
-          material={shirtMat}
-          castShadow
-          rotation={[Math.PI / 2, 0, 0]}
-        >
-          <capsuleGeometry args={[0.12, 0.15, 8, 8]} />
-        </mesh>
-      </group>
+    <group ref={group} dispose={null}>
+      <primitive object={scene} scale={[1.5, 1.5, 1.5]} position={[0, 0, 0]} />
     </group>
   );
 }
 
-function Leg({
-  side,
-  joints,
-  suitMat,
-  skinMat,
-}: {
-  side: "left" | "right";
-  joints: React.MutableRefObject<Joints>;
-  suitMat: THREE.Material;
-  skinMat: THREE.Material;
-}) {
-  const dir = side === "left" ? 1 : -1;
-  const shoeMat = new THREE.MeshStandardMaterial({
+// ----------------------------------------------------------------------------
+// 2. High-Fidelity Placeholder (If model missing or loading)
+// ----------------------------------------------------------------------------
+function HighFiPlaceholderRobot({ state }: { state: string }) {
+  // A cleaner, more "Apple-like" or "Sci-Fi" robot representation
+  // Instead of capsules, we use sleek geometry with EnvMap materials
+
+  const bodyMat = useMemo(() => new THREE.MeshPhysicalMaterial({
+    color: 0xeeeeee,
+    metalness: 0.8,
+    roughness: 0.2,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.1,
+  }), []);
+
+  const jointMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: 0x333333,
-    roughness: 0.4,
-    metalness: 0.3,
-  });
+    metalness: 0.5,
+    roughness: 0.5,
+  }), []);
+
+  const glowMat = useMemo(() => new THREE.MeshBasicMaterial({
+    color: 0x00ffff,
+  }), []);
+
+  // Simple procedural animation for the placeholder
+  const group = useRef<THREE.Group>(null);
+
+  // We can use useFrame to animate the placeholder based on state locally 
+  // if we wanted, but for a placeholder, static or simple bobbing is fine.
+
   return (
-    <group
-      ref={(el) => {
-        if (el && joints.current) joints.current[`${side}Hip`] = el;
-      }}
-      position={[dir * 0.45, 0, 0]}
-    >
-      {/* Thigh */}
-      <mesh
-        position={[0, -0.75, 0]}
-        material={suitMat}
-        castShadow
-        receiveShadow
-      >
-        <cylinderGeometry args={[0.3, 0.35, 1.5, 10]} />
+    <group ref={group} position={[0, 0, 0]}>
+      {/* Head */}
+      <mesh material={bodyMat} position={[0, 3.8, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.4, 0.5]} />
       </mesh>
-      <group
-        ref={(el) => {
-          if (el && joints.current) joints.current[`${side}Knee`] = el;
-        }}
-        position={[0, -1.5, 0]}
-      >
-        <mesh material={suitMat} castShadow receiveShadow>
-          <sphereGeometry args={[0.32, 10, 10]} />
-        </mesh>
-        <mesh
-          position={[0, -0.75, 0]}
-          material={suitMat}
-          castShadow
-          receiveShadow
-        >
-          <cylinderGeometry args={[0.25, 0.28, 1.5, 10]} />
-        </mesh>
-        <mesh
-          position={[0, -1.6, 0.15]}
-          material={shoeMat}
-          castShadow
-          receiveShadow
-          scale={[1, 0.7, 1.6]}
-        >
-          <sphereGeometry args={[0.3, 12, 12]} />
-        </mesh>
-      </group>
+      {/* Visor */}
+      <mesh material={glowMat} position={[0, 3.8, 0.26]}>
+        <planeGeometry args={[0.4, 0.1]} />
+      </mesh>
+
+      {/* Neck */}
+      <mesh material={jointMat} position={[0, 3.5, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.2]} />
+      </mesh>
+
+      {/* Torso */}
+      <mesh material={bodyMat} position={[0, 2.8, 0]} castShadow>
+        <cylinderGeometry args={[0.4, 0.3, 1.2, 8]} />
+      </mesh>
+
+      {/* Arms (Static in placeholder, but stylized) */}
+      <mesh material={bodyMat} position={[-0.6, 2.8, 0]} rotation={[0, 0, 0.2]}>
+        <capsuleGeometry args={[0.12, 1.0]} />
+      </mesh>
+      <mesh material={bodyMat} position={[0.6, 2.8, 0]} rotation={[0, 0, -0.2]}>
+        <capsuleGeometry args={[0.12, 1.0]} />
+      </mesh>
+
+      {/* Legs */}
+      <mesh material={bodyMat} position={[-0.3, 1.0, 0]}>
+        <cylinderGeometry args={[0.15, 0.1, 2.0]} />
+      </mesh>
+      <mesh material={bodyMat} position={[0.3, 1.0, 0]}>
+        <cylinderGeometry args={[0.15, 0.1, 2.0]} />
+      </mesh>
+
+      {/* Status Text */}
+      <Html position={[0, 4.5, 0]} center>
+        <div style={{ color: 'white', background: 'rgba(0,0,0,0.5)', padding: '2px 5px', borderRadius: '4px', fontSize: '10px' }}>
+          Mode: {state} <br />
+          (No Model Found)
+        </div>
+      </Html>
     </group>
   );
 }

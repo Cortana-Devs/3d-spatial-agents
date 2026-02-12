@@ -37,17 +37,23 @@ export async function processAgentThought(
   const entityTable =
     context.nearbyEntities.length > 0
       ? `| Type | Name | Dist | Status |\n|---|---|---|---|\n` +
-        context.nearbyEntities
-          .map(
-            (e) =>
-              `| ${e.type} | ${e.name || e.objectType || e.id || "-"} | ${e.distance}m | ${e.status || "-"} |`,
-          )
-          .join("\n")
+      context.nearbyEntities
+        .map(
+          (e) =>
+            `| ${e.type} | ${e.name || e.objectType || e.id || "-"} | ${e.distance}m | ${e.status || "-"} |`,
+        )
+        .join("\n")
       : "No entities nearby.";
 
   const prompt = `
-    You are an AI agent in a 3D world.
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
     
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
     ## Context
     **Position**: {x: ${context.position.x.toFixed(1)}, y: ${context.position.y.toFixed(1)}, z: ${context.position.z.toFixed(1)}}
     **Behavior**: ${context.currentBehavior}
@@ -67,16 +73,16 @@ export async function processAgentThought(
       "targetId"?: "id_of_entity_to_follow_or_object", 
       "placeAreaId"?: "id_of_placing_area",
       "target"?: {x, y, z}, 
-      "thought": "brief reasoning" 
+      "thought": "brief reasoning reflecting your professional persona" 
     }
     
     ## Rules
-    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
-    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
-    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
-    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
-    - **WANDER**: If no specific entities of interest, explore.
-    - **WAIT**: If idle or thinking.
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
   `;
 
   while (attempt < MAX_RETRIES) {
