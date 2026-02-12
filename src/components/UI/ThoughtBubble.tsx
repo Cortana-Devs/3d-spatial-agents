@@ -79,7 +79,7 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain, isInspected
 
   return (
     <Html
-      position={isInspected ? [0, 7.5, 0] : [0, 4.5, 0]}
+      position={isInspected ? [0, 8.5, 0] : [0, 8.2, 0]}
       center
       distanceFactor={isInspected ? undefined : 24}
       zIndexRange={isInspected ? [100, 0] : undefined}
@@ -88,6 +88,8 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain, isInspected
         pointerEvents: "auto",
         userSelect: "none",
         opacity: 1,
+        transform: isInspected ? "scale(0.85)" : "none",
+        transformOrigin: "bottom center",
       }}
     >
       <div className={`${styles.container} ${expanded ? styles.expanded : ""}`}>

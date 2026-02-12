@@ -112,8 +112,8 @@ function CameraRig({
       );
       const idealPos = robotHead
         .clone()
-        .add(forward.multiplyScalar(5.0))
-        .add(new THREE.Vector3(0, 1.0, 0));
+        .add(forward.multiplyScalar(8.0))
+        .add(new THREE.Vector3(0, 1.5, 0));
 
       camera.position.lerp(idealPos, 0.1);
       camera.lookAt(robotHead);

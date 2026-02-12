@@ -52,8 +52,8 @@ export default function AIRobot({
       onClick={handleClick}
     >
       <ThoughtBubble brain={brain} isInspected={inspectedAgentId === id} />
-      <ErrorBoundary fallback={<HighFiPlaceholderRobot state={animationState} />}>
-        <Suspense fallback={<HighFiPlaceholderRobot state={animationState} />}>
+      <ErrorBoundary fallback={<NexusAndroid state={animationState} id={id || "unknown"} />}>
+        <Suspense fallback={<NexusAndroid state={animationState} id={id || "unknown"} />}>
           <RobotModel animationState={animationState} />
         </Suspense>
       </ErrorBoundary>
