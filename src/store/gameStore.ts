@@ -70,6 +70,9 @@ interface GameState {
   isMenuOpen: boolean;
   setMenuOpen: (isOpen: boolean) => void;
 
+  isMenuPanelOpen: boolean;
+  setMenuPanelOpen: (isOpen: boolean) => void;
+
   // Interaction State
   interactionTarget: string | null;
   setInteractionTarget: (id: string | null) => void;
@@ -155,7 +158,10 @@ export const useGameStore = create<GameState>((set) => ({
 
   // Menu State
   isMenuOpen: false,
-  setMenuOpen: (isOpen) => set({ isMenuOpen: isOpen }),
+  setMenuOpen: (isOpen) => set({ isMenuOpen: isOpen, isMenuPanelOpen: false }),
+
+  isMenuPanelOpen: false,
+  setMenuPanelOpen: (isOpen) => set({ isMenuPanelOpen: isOpen }),
 
   interactionTarget: null,
   setInteractionTarget: (id) => set({ interactionTarget: id }),

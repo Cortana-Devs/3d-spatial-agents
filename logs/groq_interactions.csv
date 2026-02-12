@@ -8781,3 +8781,705 @@ I decided to `INTERACT` with the available Reception Laptop because I see it nea
 ```
 
 The AI agent has decided to change its behavior from wandering to moving towards the 'Office Printer'. This is because it's an 'OBJECT' and it's 'available', which meets the condition for the 'INTERACT' rule. However, since the object is at a distance, it's more appropriate to move towards it first rather than trying to interact with it immediately.",success,7719,690,145,llama-3.1-8b-instant,,,,
+2026-02-12T18:18:35.875Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,784cc3f3-9332-4d9f-8394-3f7a69daf903,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.4, y: 1.5, z: -329.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,448,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:18:37.002Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,784cc3f3-9332-4d9f-8394-3f7a69daf903,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.4, y: 1.5, z: -329.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,115,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:18:38.401Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,784cc3f3-9332-4d9f-8394-3f7a69daf903,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.4, y: 1.5, z: -329.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,355,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:18:50.690Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,7f199158-8542-4e46-b766-97933edbb92c,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -0.6, y: 1.0, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.4m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,328,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:18:51.940Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,7f199158-8542-4e46-b766-97933edbb92c,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -0.6, y: 1.0, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.4m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,157,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:18:53.208Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,7f199158-8542-4e46-b766-97933edbb92c,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -0.6, y: 1.0, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.4m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,150,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:07.816Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,42a21de7-e10b-420c-abf7-77aca69edf4b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -3.0, y: -14.9, z: -329.1}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,485,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:08.959Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,42a21de7-e10b-420c-abf7-77aca69edf4b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -3.0, y: -14.9, z: -329.1}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,134,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:10.103Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,42a21de7-e10b-420c-abf7-77aca69edf4b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -3.0, y: -14.9, z: -329.1}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,126,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:40.379Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,e77aecef-5897-44ff-8351-8a9c79eb1e33,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.1, y: -13.0, z: -331.6}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.4m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,463,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:41.602Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,e77aecef-5897-44ff-8351-8a9c79eb1e33,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.1, y: -13.0, z: -331.6}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.4m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,208,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:42.734Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,e77aecef-5897-44ff-8351-8a9c79eb1e33,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.1, y: -13.0, z: -331.6}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.4m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,121,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:53.910Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,faec89b0-31ba-4eb6-b7c6-fb6d979f5e80,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.0, y: -2.5, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 0.8m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,238,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:55.121Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,faec89b0-31ba-4eb6-b7c6-fb6d979f5e80,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.0, y: -2.5, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 0.8m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,191,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:23:56.274Z,session-a2b7d6b3-f3fd-45cf-bec3-d2cd7c89a686,,faec89b0-31ba-4eb6-b7c6-fb6d979f5e80,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.0, y: -2.5, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 0.8m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,131,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:24:05.382Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,88b392c3-062c-4f5c-a367-897dd1ec347f,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -0.6, y: -2.0, z: -329.2}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,355,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:24:06.511Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,88b392c3-062c-4f5c-a367-897dd1ec347f,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -0.6, y: -2.0, z: -329.2}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,117,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T18:24:07.650Z,session-08d28af7-e623-4e2f-8a7d-7a43be14a0ce,,88b392c3-062c-4f5c-a367-897dd1ec347f,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -0.6, y: -2.0, z: -329.2}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.7m | Idle |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ",,error,125,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
