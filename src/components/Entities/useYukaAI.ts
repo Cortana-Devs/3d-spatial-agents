@@ -277,7 +277,9 @@ export function useYukaAI(
       let foundGround = false;
 
       if (hits.length > 0) {
-        for (const hit of hits) {
+        // Filter out ceilings
+        const validHits = hits.filter(h => !h.object.name.includes("Ceiling"));
+        for (const hit of validHits) {
           if (hit.point.y < rayOrigin.y) {
             groundHeight = Math.max(groundHeight, hit.point.y);
             foundGround = true;

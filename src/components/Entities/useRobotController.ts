@@ -586,7 +586,13 @@ export function useRobotController(
         rayOrigin.y += 50;
         raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
         const hits = raycaster.intersectObjects(collidableMeshes, true);
-        if (hits.length > 0) groundHeight = hits[0].point.y;
+        if (hits.length > 0) {
+          // Filter out ceilings
+          const validHits = hits.filter(h => !h.object.name.includes("Ceiling"));
+          if (validHits.length > 0) {
+            groundHeight = validHits[0].point.y;
+          }
+        }
       }
 
       const groundMeshY = groundHeight;
