@@ -264,7 +264,7 @@ export default function Overlay() {
               paddingTop: "4px",
             }}
           >
-            T: Place selected | Scroll: Change selection
+            T: Place selected | Scroll/Arrows: Change selection
           </div>
         </div>
       )}

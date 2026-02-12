@@ -262,6 +262,18 @@ export function useRobotController(
           console.log(`[Player] Dropped "${selectedItem.name}" on ground`);
         }
       }
+
+      // ===== ARROW KEYS: INVENTORY SELECTION =====
+      if (e.code === "ArrowUp" || e.code === "ArrowDown") {
+        const inventory = useGameStore.getState().playerInventory;
+        if (inventory.length > 1) {
+          const currentIdx = useGameStore.getState().selectedInventoryIndex;
+          const direction = e.code === "ArrowDown" ? 1 : -1;
+          const newIdx =
+            (currentIdx + direction + inventory.length) % inventory.length;
+          useGameStore.getState().setSelectedInventoryIndex(newIdx);
+        }
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {

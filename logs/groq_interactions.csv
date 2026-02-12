@@ -7703,3 +7703,1081 @@ Explanation: Given that our behavior is currently IDLE and there's no immediate 
   ""action"": ""WANDER"",
   ""thought"": ""I'll wander around for now as there's no specific entity of interest, and my memory management is failing. I should continue to explore while assessing the situation.""
 }",success,7643,630,50,llama-3.1-8b-instant,,,,
+2026-02-12T18:00:48.334Z,session-cd9ddb19-ec04-477b-9113-0fc21735102b,,bce4f125-df02-42a0-8b99-5cb6b773aa8b,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.0, y: 4.2, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 0.3m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","    {
+      ""action"": ""WANDER"",
+      ""thought"": ""No player or useful objects nearby, exploring the surroundings to gather more information.""
+    }",success,479,671,34,llama-3.1-8b-instant,,,,
+2026-02-12T18:00:49.994Z,session-b53c117b-293a-4a34-a56a-29a9909ba79d,,4a5cf6d0-8d3b-4ed7-935b-3aeeb0883826,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.0, y: -3.7, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 0.3m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""WANDER"",
+  ""thought"": ""Given the prolonged period of repeated API errors and inability to summarize memories, it's unclear what the correct course of action is. However, as the current perception and memory state do not suggest an immediate necessity to follow, interact, or drop anything, I will opt for wandering to explore the environment and perhaps stumble upon something of interest while trying to regain stability in my system.""
+}",success,500,671,92,llama-3.1-8b-instant,,,,
+2026-02-12T18:00:55.164Z,session-cd9ddb19-ec04-477b-9113-0fc21735102b,,218d5107-8f50-4a03-a1be-7d050e92106e,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.3, y: -12.5, z: -330.6}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""WANDER"", 
+  ""thought"": ""No entities nearby, staying in idle behavior and perceiving empty surroundings. Exploring the environment could be beneficial."" 
+}",success,674,641,42,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:01.500Z,session-b53c117b-293a-4a34-a56a-29a9909ba79d,,01a2c5f7-d5d8-433d-9a4c-a5d54dbb2509,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.5, y: 0.6, z: -330.8}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","### Next Action
+
+The agent needs to decide its next action based on perception and memory.
+
+### Perception
+
+There is an ""AGENT"" (agent-01) within 2.5m, which is idle. Since there is an agent present and no other significant entities within the 20m range, it suggests our priority should be interacting with the existing agent.
+
+### Memory
+
+Past interactions indicate that the memory management system is encountering issues with prolonged API errors. However, as there is an idle agent present, the focus for our next action can be centered around interacting or possibly following it.
+
+### Decision
+
+Given the situation, the agent should follow the nearby ""AGENT"" to interact with it. This action could help clarify whether the idle agent is experiencing an issue and provide an opportunity for interaction.
+
+**JSON Output Format**
+
+```
+{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""agent-01"",
+  ""thought"": ""Follow nearby idle agent for interaction and potential assistance with memory management issues.""
+}
+```",success,1206,672,207,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:01.856Z,session-cd9ddb19-ec04-477b-9113-0fc21735102b,,e42bf2d5-37f6-4460-bfeb-f30557d86143,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.0, y: -4.1, z: -328.4}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""WAIT"", 
+  ""thought"": ""Reviewing past interactions and perception to determine a suitable course of action next."" 
+}",success,291,671,33,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:04.126Z,session-b53c117b-293a-4a34-a56a-29a9909ba79d,,1e8a7af7-cc3c-428c-a526-56d0e8809da6,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.2, y: -18.1, z: -330.6}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","## Next Action
+
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""My current location is isolated and I'm not nearby any players, objects of interest, or surfaces. I should wander around to explore and possibly gather more information about my environment.""
+}",success,397,671,56,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:04.465Z,session-cd9ddb19-ec04-477b-9113-0fc21735102b,,d4a68984-4464-4bb1-8caa-1a86637b94dd,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.0, y: -19.4, z: -328.4}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""WANDER"", 
+  ""thought"": ""I am idle, there is no 'PLAYER' within 20m, and no objects or surfaces nearby to interact with.""
+}",success,302,671,44,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:07.323Z,session-cd9ddb19-ec04-477b-9113-0fc21735102b,,59bc1601-71b4-4eb4-bb80-273fff6ab9be,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -1.0, y: -9.7, z: -330.8}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""I am not near any other agents or objects of interest, and I am wandering as per my current behavior. I should continue exploring to learn more about this environment.""
+}
+```
+
+I will continue to wander as I see no specific entities of interest and there are no clear actions for me to follow based on my current perception and memory.",success,399,672,86,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:07.682Z,session-b53c117b-293a-4a34-a56a-29a9909ba79d,,59522eaf-67f7-40db-b480-429b1d4228ef,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 1.1, y: -11.2, z: -329.5}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 2.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{
+  ""action"": ""WANDER"",
+  ""thought"": ""No immediate tasks or entities of interest nearby. Expanding exploration scope to discover new objects or interactions.""
+}",success,314,671,37,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:27.845Z,session-cd9ddb19-ec04-477b-9113-0fc21735102b,,a16895d9-d957-4cb4-800a-84ebd3578545,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 0.0, y: -0.8, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| AGENT | agent-01 | 0.5m | Idle |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","## Decision: WANDER
+
+{ 
+  ""action"": ""WANDER"", 
+  ""thought"": ""I am currently idle and there are no entities of interest nearby. My memory suggests I experienced some issues with my API, but I don't see any immediate issues or available objects nearby. I should explore my surroundings to see what I can discover.""
+}",success,540,671,75,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:37.215Z,session-a893b9a0-7a19-418b-a469-bc90fd9a2d6d,,4cc4283f-7d13-4052-adc6-f83e71181482,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 26.1, y: 5.5, z: 9.5}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Office Printer | 11.6m | available |
+| SURFACE | Office Desk G | 12.6m | 0/4 items |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""Currently exploring the environment. No 'PLAYER' or available 'OBJECT' in range. Will continue to wander and potentially discover something new.""
+}
+```",success,504,690,48,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:37.645Z,session-7e926823-1932-4dd5-8927-cfd76d449391,,5713fa36-9710-43cd-b1e5-0b5a65f284f0,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -18.4, y: 5.5, z: 53.3}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 6.6m | Active |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{
+  ""action"": ""FOLLOW"",
+  ""targetId"": ""player-01"",
+  ""target"": {x: 0, y: 0, z: 0},
+  ""thought"": ""Player is active and within 20m, I should say hello by following them.""
+}",success,349,670,63,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:41.561Z,session-a893b9a0-7a19-418b-a469-bc90fd9a2d6d,,f93075c4-0f83-4dc4-8719-8766ec2c249a,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 53.0, y: 5.5, z: -20.3}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""Given the current empty environment, wandering seems the most suitable action. No specific entities or objects require attention.""
+}
+```",success,373,642,42,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:42.365Z,session-7e926823-1932-4dd5-8927-cfd76d449391,,af907e88-3384-460f-8819-1cf59f699ce7,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -18.4, y: 5.5, z: 53.3}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""Since there are no entities nearby, I will explore the environment to gather more information.""
+}
+```
+In this case, there are no entities nearby, and there is no specific goal or objective to target. Based on the perception and memory, I will decide to wander and explore the environment to gather more information and possibly discover new entities, objects, or surfaces that I can interact with.",success,749,641,96,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:45.313Z,session-a893b9a0-7a19-418b-a469-bc90fd9a2d6d,,481d4b2b-9676-42b7-ad45-5f63467e90e0,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 60.4, y: 5.5, z: -61.1}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Conference File | 15m | available |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""INTERACT"", 
+  ""targetId"": ""Conference File"", 
+  ""thought"": ""Perceiving the Conference File nearby; attempting to interact with it is a viable and straightforward option given the circumstances.""
+}",success,491,668,50,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:45.922Z,session-7e926823-1932-4dd5-8927-cfd76d449391,,e4554481-ceb8-4d1a-b151-7e8023f95fd4,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -18.4, y: 5.5, z: 53.3}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","## Decision:
+
+```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""There are no entities nearby and no critical tasks, so I will explore my surroundings.""
+}
+```
+
+## Rationale:
+- The `PERCEPTION` indicates that there are no entities nearby, which eliminates the need to follow or interact with anything specific.
+- The `MEMORY` does not contain any information that suggests a specific course of action is needed.
+- Since there are no immediate needs or pressing tasks, the best course of action is to engage in exploratory behavior (`WANDER`). This will likely lead to new discoveries about the environment and may uncover new opportunities or interactions.
+
+## Status:
+- **Position**: {x: -18.4, y: 5.5, z: 53.3}
+- **Behavior**: WANDER",success,517,641,174,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:49.110Z,session-a893b9a0-7a19-418b-a469-bc90fd9a2d6d,,98f1284a-8813-457a-90b3-5aac414ff062,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 25.8, y: 5.5, z: -66.4}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Conference Whiteboard | 12.1m | available |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""INTERACT"",
+  ""targetId"": ""Conference Whiteboard"",
+  ""thought"": ""The Conference Whiteboard appears to be available, and as a wandering agent, I'd like to explore and possibly use it.""
+}
+```
+
+My decision is to interact with the Conference Whiteboard because it's the nearest available object, and given my wandering behavior, I'm inclined to explore and make use of any available resources or objects that can enhance my experience in this 3D world.",success,724,671,106,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:49.514Z,session-7e926823-1932-4dd5-8927-cfd76d449391,,05d39f43-c45e-4d28-87b9-8ad925b0ee30,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -17.3, y: 5.5, z: 52.5}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""No entities of interest nearby, will continue to explore the surroundings.""
+}
+```
+In this decision, I'm choosing to WANDER as there are no specific entities of interest nearby. This allows me to continue exploring the surrounding area, which may potentially reveal new objects or players in the future.",success,369,642,78,llama-3.1-8b-instant,,,,
+2026-02-12T18:04:55.002Z,session-a893b9a0-7a19-418b-a469-bc90fd9a2d6d,,6e7c3d7b-0696-431a-9d6b-8bb18ccb7139,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 20.3, y: 5.5, z: -70.1}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""WANDER"",
+  ""thought"": ""No entities of interest nearby, so decide to wander and explore the surroundings.""
+}
+```
+
+This decision was based on the following reasoning:
+
+- The current perception indicates no entities are nearby.
+- Given the lack of entities of interest, I have no reason to follow, interact with, or drop any objects.
+- Therefore, the most reasonable action is to wander and explore the surroundings to see if anything of interest is nearby.
+- Since I am currently idle, this action is a good candidate given the rules.",success,3713,641,120,llama-3.1-8b-instant,,,,
+2026-02-12T18:05:02.802Z,session-7e926823-1932-4dd5-8927-cfd76d449391,,2e1212c8-8535-4b02-b9c9-d523f36396be,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: -6.9, y: 5.5, z: 47.5}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Reception Laptop | 10.5m | available |
+| OBJECT | Reception Telephone | 13.5m | available |
+| SURFACE | Reception Desk | 10.5m | 0/3 items |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```{ 
+  ""action"": ""INTERACT"",
+  ""targetId"": ""Reception Laptop"",
+  ""thought"": ""I see the Reception Laptop is available nearby. I can pick it up and start interacting with it.""
+}
+```
+
+I decided to `INTERACT` with the available Reception Laptop because I see it nearby, it's available for interaction, and there's no other entity of interest near me. This action will allow me to pick up the laptop and start interacting with it, potentially leading to a new path of exploration or further discovery.",success,7729,702,113,llama-3.1-8b-instant,,,,
+2026-02-12T18:05:10.380Z,session-a893b9a0-7a19-418b-a469-bc90fd9a2d6d,,60d93f2d-2d4b-4f5a-9693-b35b19bc5d83,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 10.9, y: 5.5, z: -72.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","## Decision
+{ 
+  ""action"": ""WANDER"",
+  ""target"": {x: 10.9, y: 5.5, z: -72.0},
+  ""thought"": ""Since there are no entities nearby, I will wander around to explore the environment and potentially discover new objects or areas of interest.""
+}",success,7527,641,72,llama-3.1-8b-instant,,,,
+2026-02-12T18:05:17.274Z,session-7e926823-1932-4dd5-8927-cfd76d449391,,72c7c66c-90f5-4bff-a399-f7fac7f14a01,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 14.6, y: 5.5, z: 24.2}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""WANDER"",
+  ""thought"": ""I am currently IDLE and there are no entities nearby, so I will explore my surroundings to see if anything of interest appears.""
+}",success,6835,641,44,llama-3.1-8b-instant,,,,
+2026-02-12T18:05:23.874Z,session-a893b9a0-7a19-418b-a469-bc90fd9a2d6d,,248593ef-6343-4057-86b6-3f8b9ecd8658,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 3.1, y: 5.5, z: -65.6}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","{ 
+  ""action"": ""WANDER"",
+  ""thought"": ""Visual perception indicates no entities nearby. Considering past interactions and API errors, I am not aware of a specific task or goal to pursue. Wandering will allow me to explore and potentially encounter new entities or objects.""
+}",success,6544,641,60,llama-3.1-8b-instant,,,,
+2026-02-12T18:05:31.622Z,session-7e926823-1932-4dd5-8927-cfd76d449391,,08b2627a-6499-442d-9693-332348466ca2,3d-office-agent,chat_completion,"
+    You are an AI agent in a 3D world.
+    
+    ## Context
+    **Position**: {x: 25.2, y: 5.5, z: 6.3}
+    **Behavior**: WANDERING
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Office Printer | 6.8m | available |
+| SURFACE | Office Desk G | 8.5m | 0/4 items |
+
+    ## Memory (Past Interactions)
+    - [23:29:43] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, specifically ""My brain hurts"" errors, between 20:31:04 and 21:19:43, indicating a persistent issue with memory summarization.
+- [23:19:15] [REFLECTION] **Insight:** The agent's memory management is failing, resulting in repeated API errors and inability to summarize memories, suggesting a critical issue affecting its cognitive functions.
+- [23:13:47] [REFLECTION] **Fact:** The system experienced a prolonged period of repeated API errors, with ""My brain hurts"" messages being generated continuously, indicating a potential issue with the API or system stability, spanning multiple time periods from 18:18:44 to 23:26:52.
+- [22:30:10] [REFLECTION] Fact: The system experienced a prolonged period of repeated API errors, occurring intermittently from 17:50:10 to 18:18:41, indicating a potential issue with the API or system stability.
+- [22:14:29] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
+    - **WANDER**: If no specific entities of interest, explore.
+    - **WAIT**: If idle or thinking.
+  ","```json
+{
+  ""action"": ""MOVE_TO"",
+  ""target"": {
+    ""x"": 6.8,
+    ""y"": 0,
+    ""z"": 0
+  },
+  ""thought"": ""I see an 'Office Printer' nearby and I'm curious. Let's move closer to explore.""
+}
+```
+
+The AI agent has decided to change its behavior from wandering to moving towards the 'Office Printer'. This is because it's an 'OBJECT' and it's 'available', which meets the condition for the 'INTERACT' rule. However, since the object is at a distance, it's more appropriate to move towards it first rather than trying to interact with it immediately.",success,7719,690,145,llama-3.1-8b-instant,,,,
