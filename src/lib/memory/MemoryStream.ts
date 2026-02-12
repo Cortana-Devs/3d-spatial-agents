@@ -5,8 +5,8 @@ import {
   MemoryConfig,
 } from "./types";
 import { memoryStorage } from "./idb-adapter";
+import { generateReflection } from "@/app/actions";
 import { v4 as uuidv4 } from "uuid";
-import { summarizeMemories } from "@/app/actions";
 
 const DEFAULT_CONFIG: MemoryConfig = {
   maxMemories: 500,
@@ -32,6 +32,7 @@ export class MemoryStream {
     type: MemoryType,
     content: string,
     tags: string[] = [],
+    sessionId?: string,
   ): Promise<void> {
     const importance = this.calculateHeuristicImportance(type, tags);
     const memory: MemoryObject = {
@@ -45,7 +46,7 @@ export class MemoryStream {
     };
 
     await memoryStorage.add(memory);
-    this.checkCompaction();
+    this.checkCompaction(sessionId);
   }
 
   /**
@@ -110,7 +111,7 @@ export class MemoryStream {
   /**
    * Checks if memory limit is reached and triggers compaction if needed.
    */
-  private async checkCompaction() {
+  private async checkCompaction(sessionId?: string) {
     if (this.isCompacting) return;
 
     const count = await this.count();
@@ -118,7 +119,7 @@ export class MemoryStream {
       console.log(
         `[MemoryStream] Compaction threshold reached (${count}/${this.config.maxMemories}). triggering reflection...`,
       );
-      this.reflect().catch((err) =>
+      this.reflect(sessionId).catch((err) =>
         console.error("[MemoryStream] Reflection failed:", err),
       );
     }
@@ -131,7 +132,7 @@ export class MemoryStream {
    * 3. Delete the original 50.
    * 4. Add the Insight.
    */
-  async reflect() {
+  async reflect(sessionId?: string) {
     this.isCompacting = true;
     try {
       const batchSize = 50;
@@ -147,16 +148,7 @@ export class MemoryStream {
         )
         .join("\n");
 
-      let summary = "";
-      try {
-        summary = await summarizeMemories(textToSummarize);
-      } catch (error) {
-        console.warn(
-          "[MemoryStream] Failed to summarize memories (likely rate limit), skipping reflection cycle.",
-          error,
-        );
-        return; // Abort reflection this time, try again later
-      }
+      const summary = await generateReflection(textToSummarize, sessionId);
 
       if (summary) {
         // Add Insight

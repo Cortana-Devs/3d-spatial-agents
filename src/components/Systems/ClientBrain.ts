@@ -36,10 +36,12 @@ export class ClientBrain {
   public state: BrainState;
   private rateLimiter: RateLimiter;
   private id: string;
+  private sessionId: string;
   private memoryInitialized = false;
 
   constructor(id: string = "agent-01") {
     this.id = id;
+    this.sessionId = `session-${crypto.randomUUID()}`;
     this.state = {
       thought: "Initializing neural pathways...",
       isThinking: false,
@@ -104,6 +106,7 @@ export class ClientBrain {
       const responseText = await generateAgentThought(
         context,
         memoryContextStr,
+        this.sessionId,
       );
 
       // Clean the response (remove markdown code blocks if present)
@@ -136,7 +139,7 @@ export class ClientBrain {
       if (decision.thought) {
         // Store the thought/action
         memoryStream
-          .add("ACTION", decision.thought, contextTags)
+          .add("ACTION", decision.thought, contextTags, this.sessionId)
           .catch((err) =>
             console.error(`[ClientBrain:${this.id}] Memory add failed:`, err),
           );

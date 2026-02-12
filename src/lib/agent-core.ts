@@ -1,4 +1,5 @@
 import { getGroqClient, rotateGroqKey } from "@/lib/groq";
+import { logAgentInteraction } from "@/lib/logging/agent-logger";
 
 export interface NearbyEntity {
   type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE', 'OBJECT'
@@ -15,11 +16,19 @@ export interface AgentContext {
   currentBehavior: string;
 }
 
+export interface TraceOptions {
+  sessionId: string;
+  requestId: string;
+  conversationId?: string;
+  userId?: string;
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function processAgentThought(
   context: AgentContext,
   memoryContext: string = "",
+  trace?: TraceOptions,
 ): Promise<string> {
   const MAX_RETRIES = 3;
   let attempt = 0;
@@ -71,6 +80,9 @@ export async function processAgentThought(
   `;
 
   while (attempt < MAX_RETRIES) {
+    const startTime = Date.now();
+    const model = "llama-3.1-8b-instant";
+
     try {
       // Get the current client (refreshed on each loop iteration)
       const client = getGroqClient();
@@ -82,7 +94,7 @@ export async function processAgentThought(
             content: prompt,
           },
         ],
-        model: "llama-3.3-70b-versatile",
+        model: model,
         temperature: 1,
         max_completion_tokens: 8192,
         top_p: 1,
@@ -91,28 +103,71 @@ export async function processAgentThought(
       });
 
       const content = completion.choices[0]?.message?.content;
+      const endTime = Date.now();
 
       // Safety check for empty response
       if (!content) {
         throw new Error("Empty response from Groq");
       }
 
+      if (trace) {
+        await logAgentInteraction({
+          timestamp: new Date().toISOString(),
+          session_id: trace.sessionId,
+          conversation_id: trace.conversationId,
+          request_id: trace.requestId,
+          agent_type: '3d-office-agent',
+          request_type: 'chat_completion',
+          request_content: prompt,
+          response_content: content,
+          response_status: 'success',
+          processing_time_ms: endTime - startTime,
+          input_tokens: completion.usage?.prompt_tokens,
+          output_tokens: completion.usage?.completion_tokens,
+          model_version: completion.model || model,
+          user_id: trace.userId,
+        });
+      }
+
       return content;
     } catch (error: any) {
+      const endTime = Date.now();
       console.error(
         `Groq API Error (Attempt ${attempt + 1}/${MAX_RETRIES}):`,
         error.message || error,
       );
 
-      // Check for 429 or similar rate limit errors
-      const isRateLimit =
+      if (trace) {
+        await logAgentInteraction({
+          timestamp: new Date().toISOString(),
+          session_id: trace.sessionId,
+          conversation_id: trace.conversationId,
+          request_id: trace.requestId,
+          agent_type: '3d-office-agent',
+          request_type: 'chat_completion',
+          request_content: prompt,
+          response_content: '',
+          response_status: 'error',
+          processing_time_ms: endTime - startTime,
+          error_code: error.code || error.status,
+          error_message: error.message,
+          model_version: model,
+          user_id: trace.userId,
+        });
+      }
+
+      // Check for 429 (Rate Limit) or 401 (Invalid Key) to trigger rotation
+      const isAuthOrRateError =
         JSON.stringify(error).includes("429") ||
+        JSON.stringify(error).includes("401") ||
         JSON.stringify(error).includes("quota") ||
         JSON.stringify(error).includes("rate limit") ||
-        error?.status === 429;
+        JSON.stringify(error).includes("invalid_api_key") ||
+        error?.status === 429 ||
+        error?.status === 401;
 
-      if (isRateLimit) {
-        console.warn("Rate limit hit. Rotating API key and retrying...");
+      if (isAuthOrRateError) {
+        console.warn("Groq API Error (Auth/RateLimit). Rotating API key and retrying...");
         rotateGroqKey();
         await sleep(1000);
       } else {
@@ -125,3 +180,4 @@ export async function processAgentThought(
 
   throw new Error("Failed to generate thought after multiple attempts.");
 }
+
