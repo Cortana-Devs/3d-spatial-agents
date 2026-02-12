@@ -53,6 +53,10 @@ export function useYukaAI(
 
   const toSafetyRef = useRef(new THREE.Vector3());
 
+  // Animation smoothing
+  const smoothSpeed = useRef(0);
+  const walkTime = useRef(0);
+
   // AI Brain
   const brainRef = useRef(new ClientBrain(id));
   // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
