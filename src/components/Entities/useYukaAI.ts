@@ -146,6 +146,45 @@ export function useYukaAI(
     const dt = Math.min(delta, 0.1);
     frameRef.current++;
 
+    // --- WALL AVOIDANCE (Raycast) ---
+    if (collidableMeshes.length > 0) {
+      const speed = vehicle.velocity.length();
+      if (speed > 0.1) {
+        const forward = new THREE.Vector3();
+        forward.copy(vehicle.velocity as unknown as THREE.Vector3).normalize();
+
+        const raycaster = raycasterRef.current;
+        const rayOrigin = rayOriginRef.current;
+        rayOrigin.set(vehicle.position.x, vehicle.position.y + 1.0, vehicle.position.z);
+
+        raycaster.set(rayOrigin, forward);
+        raycaster.far = 2.5; // Detection range
+
+        const hits = raycaster.intersectObjects(collidableMeshes, true);
+        if (hits.length > 0) {
+          const hit = hits[0];
+          // Simple repulsion: Push away from hit point
+          const pushDir = new THREE.Vector3()
+            .subVectors(vehicle.position as unknown as THREE.Vector3, hit.point);
+          pushDir.y = 0;
+          pushDir.normalize();
+
+          // Strong retroactive braking/push to prevent clipping
+          const strength = (2.5 - hit.distance) * 50.0;
+          vehicle.velocity.x += pushDir.x * strength * dt;
+          vehicle.velocity.z += pushDir.z * strength * dt;
+
+          // If very close, hard clamp position
+          if (hit.distance < 1.0) {
+            const kick = pushDir.multiplyScalar(1.0 - hit.distance);
+            vehicle.position.x += kick.x;
+            vehicle.position.z += kick.z;
+          }
+        }
+        raycaster.far = Infinity; // Reset for ground check
+      }
+    }
+
     // --- PHYSICS CONSTRAINT ---
     vehicle.velocity.y = 0; // Lock Y velocity to prevent pitching
 

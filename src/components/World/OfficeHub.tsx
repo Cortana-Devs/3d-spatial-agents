@@ -78,8 +78,8 @@ export default function OfficeHub() {
   const system = useMemo(
     () => ({
       findAvailableBox: (agentPos: any) => null, // Box collection disabled
-      claimBox: (boxId: string, agentId: string) => {},
-      pickUpBox: (boxId: string, agentId: string) => {},
+      claimBox: (boxId: string, agentId: string) => { },
+      pickUpBox: (boxId: string, agentId: string) => { },
       getNextConstructionSlot: () => {
         const idx = stateRef.current.nextSlotIndex;
         stateRef.current.nextSlotIndex++;
@@ -168,8 +168,8 @@ export default function OfficeHub() {
       // Collision
       // Wall thickness is typically 1.0. Radius 2.0 adds 1.5 padding!
       // Reduce to 0.7 for tighter fit (slightly larger than 0.5 half-thickness)
-      const sphereRadius = 0.7;
-      const step = 1.5;
+      const sphereRadius = 0.8; // Increased from 0.7
+      const step = 1.0; // Reduced from 1.5 to ensure overlap (Solid Wall)
       const steps = Math.ceil(len / step);
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
@@ -236,11 +236,11 @@ export default function OfficeHub() {
         });
       } else {
         // Long object - place spheres along longest axis
-        const sphereRadius = minDim * 0.4; // Even tighter: was 0.45
+        const sphereRadius = minDim * 0.45; // Increased
         // Constrain length so spheres don't poke out
         const effectiveLength = Math.max(0, maxDim - 2 * sphereRadius);
 
-        const step = sphereRadius * 1.2; // Closer ratio for smoother walls
+        const step = sphereRadius * 1.5; // Overlapping
         const count =
           effectiveLength <= 0 ? 0 : Math.ceil(effectiveLength / step);
 
@@ -659,9 +659,11 @@ export default function OfficeHub() {
   // Register Colliders
   useEffect(() => {
     if (groundRef.current) addCollidableMesh(groundRef.current);
+    if (buildingRef.current) addCollidableMesh(buildingRef.current);
     addObstacles(obstacles);
     return () => {
       if (groundRef.current) removeCollidableMesh(groundRef.current.uuid);
+      if (buildingRef.current) removeCollidableMesh(buildingRef.current.uuid);
       removeObstacles(obstacles);
     };
   }, [
@@ -749,13 +751,13 @@ export default function OfficeHub() {
               object={
                 w.isWindow
                   ? new THREE.MeshPhysicalMaterial({
-                      color: 0x88ccff,
-                      metalness: 0,
-                      roughness: 0,
-                      transmission: 0.9,
-                      transparent: true,
-                      thickness: 0.5,
-                    })
+                    color: 0x88ccff,
+                    metalness: 0,
+                    roughness: 0,
+                    transmission: 0.9,
+                    transparent: true,
+                    thickness: 0.5,
+                  })
                   : materials.concrete
               }
               attach="material"
