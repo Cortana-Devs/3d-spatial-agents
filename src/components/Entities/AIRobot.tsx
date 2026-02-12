@@ -11,7 +11,7 @@ import { useGameStore } from "@/store/gameStore";
 
 export default function AIRobot({
   playerRef,
-  initialPosition = [10, 5, -330],
+  initialPosition = [0, 4, 10],
   id = "agent-01",
 }: {
   playerRef: React.RefObject<THREE.Group | null>;
