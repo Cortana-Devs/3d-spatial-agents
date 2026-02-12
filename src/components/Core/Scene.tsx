@@ -21,6 +21,7 @@ function CameraRig({
   const { camera, gl, scene } = useThree();
   const setCameraLocked = useGameStore((state) => state.setCameraLocked);
   const setDebugText = useGameStore((state) => state.setDebugText);
+  const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
 
   const invertedMouse = useGameStore((state) => state.invertedMouse);
   const sensitivity = useGameStore((state) => state.sensitivity);
@@ -83,12 +84,41 @@ function CameraRig({
   const raycaster = useRef(new THREE.Raycaster());
 
   useFrame(() => {
-    if (!target.current) return;
+    let currentTarget = target.current;
+    let isInspecting = false;
+
+    if (inspectedAgentId) {
+      const agent = scene.children.find(
+        (c) => c.userData?.id === inspectedAgentId,
+      );
+      if (agent) {
+        currentTarget = agent as THREE.Group;
+        isInspecting = true;
+      }
+    }
+
+    if (!currentTarget) return;
 
     // Head position (Pivot point)
-    const robotHead = target.current.position
+    const robotHead = currentTarget.position
       .clone()
       .add(new THREE.Vector3(0, 5.5, 0));
+
+    if (isInspecting) {
+      // Zoom Logic (Inspector Mode)
+      // Position camera slightly in front and above the agent
+      const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(
+        currentTarget.quaternion,
+      );
+      const idealPos = robotHead
+        .clone()
+        .add(forward.multiplyScalar(5.0))
+        .add(new THREE.Vector3(0, 1.0, 0));
+
+      camera.position.lerp(idealPos, 0.1);
+      camera.lookAt(robotHead);
+      return;
+    }
 
     // Calculate Rotation from Yaw/Pitch
     // Z- is forward in standard Three.js camera space when rotation is 0,

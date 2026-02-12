@@ -8,6 +8,7 @@ import styles from "./ThoughtBubble.module.css";
 
 interface ThoughtBubbleProps {
   brain: ClientBrain;
+  isInspected?: boolean;
 }
 
 interface ThoughtLog {
@@ -17,7 +18,7 @@ interface ThoughtLog {
   type: "THOUGHT" | "ACTION";
 }
 
-export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain }) => {
+export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain, isInspected }) => {
   const [currentThought, setCurrentThought] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -78,9 +79,10 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain }) => {
 
   return (
     <Html
-      position={[0, 4.5, 0]}
+      position={isInspected ? [0, 7.5, 0] : [0, 4.5, 0]}
       center
-      distanceFactor={24}
+      distanceFactor={isInspected ? undefined : 24}
+      zIndexRange={isInspected ? [100, 0] : undefined}
       occlude
       style={{
         pointerEvents: "auto",

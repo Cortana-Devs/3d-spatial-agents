@@ -5,6 +5,7 @@ import { useYukaAI } from "./useYukaAI";
 import { ThoughtBubble } from "../UI/ThoughtBubble";
 import { useGLTF, useAnimations, Html } from "@react-three/drei";
 import { ErrorBoundary } from "../UI/ErrorBoundary";
+import { useGameStore } from "@/store/gameStore";
 
 // Preload the model if it exists to avoid stutter
 // Note: If the file is missing, this might log a warning but won't crash until used
@@ -29,6 +30,17 @@ export default function AIRobot({
   const joints = useRef<any>({});
 
   const { vehicle, brain, animationState } = useYukaAI(id, groupRef, playerRef, joints);
+  const isMenuOpen = useGameStore((state) => state.isMenuOpen);
+  const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
+  const setInspectedAgentId = useGameStore((state) => state.setInspectedAgentId);
+
+  const handleClick = (e: any) => {
+    if (isMenuOpen) {
+      e.stopPropagation();
+      setInspectedAgentId(id);
+      console.log("Inspecting Agent:", id);
+    }
+  };
 
   return (
     <group
@@ -40,14 +52,15 @@ export default function AIRobot({
         id: id,
         description: "Autonomous Office Assistant",
       }}
+      onClick={handleClick}
     >
-      <ThoughtBubble brain={brain} />
+      <ThoughtBubble brain={brain} isInspected={inspectedAgentId === id} />
       <ErrorBoundary fallback={<HighFiPlaceholderRobot state={animationState} />}>
         <Suspense fallback={<HighFiPlaceholderRobot state={animationState} />}>
           <RobotModel animationState={animationState} />
         </Suspense>
       </ErrorBoundary>
-    </group>
+    </group >
   );
 }
 

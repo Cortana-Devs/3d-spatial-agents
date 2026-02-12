@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import GameMenu from "./GameMenu";
+import { InspectorPanel } from "./InspectorPanel";
 
 export default function Overlay() {
   const debugText = useGameStore((state) => state.debugText);
@@ -527,6 +528,7 @@ export default function Overlay() {
           </div>
         </div>
       )}
+      <InspectorPanel />
     </>
   );
 }

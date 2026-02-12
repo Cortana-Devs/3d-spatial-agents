@@ -23,6 +23,8 @@ export function useYukaAI(
   const collidableMeshes = useGameStore((state) => state.collidableMeshes);
   const isMenuOpen = useGameStore((state) => state.isMenuOpen);
   const isMenuPanelOpen = useGameStore((state) => state.isMenuPanelOpen);
+  const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
+  const setInspectedAgentData = useGameStore((state) => state.setInspectedAgentData);
   const walkTime = useRef(0);
   const greetingState = useRef<"NONE" | "LOOKING" | "WAVING" | "DONE">("NONE");
   const greetingTimer = useRef(0);
@@ -129,6 +131,14 @@ export function useYukaAI(
   }, [obstacles]);
 
   useFrame((state, delta) => {
+    if (id === inspectedAgentId) {
+      setInspectedAgentData({
+        id,
+        thought: brainRef.current.state.thought,
+        state: animationState,
+      });
+    }
+
     if (isMenuOpen || isMenuPanelOpen) return;
     const vehicle = vehicleRef.current;
     if (!vehicle) return;

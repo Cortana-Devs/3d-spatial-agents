@@ -118,6 +118,12 @@ interface GameState {
   setNearbyPlacingAreas: (areas: any[]) => void;
   activePlacingAreaId: string | null;
   setActivePlacingAreaId: (id: string | null) => void;
+
+  // AI Inspector Mode
+  inspectedAgentId: string | null;
+  setInspectedAgentId: (id: string | null) => void;
+  inspectedAgentData: { id: string; thought: string; state: string } | null;
+  setInspectedAgentData: (data: { id: string; thought: string; state: string } | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -238,4 +244,10 @@ export const useGameStore = create<GameState>((set) => ({
   setNearbyPlacingAreas: (areas) => set({ nearbyPlacingAreas: areas }),
   activePlacingAreaId: null,
   setActivePlacingAreaId: (id) => set({ activePlacingAreaId: id }),
+
+  // AI Inspector Mode
+  inspectedAgentId: null,
+  setInspectedAgentId: (id) => set({ inspectedAgentId: id }),
+  inspectedAgentData: null,
+  setInspectedAgentData: (data) => set({ inspectedAgentData: data }),
 }));

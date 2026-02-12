@@ -19169,3 +19169,901 @@ This decision is made because the agent is experiencing recurring API errors, wh
     - **WAIT**: Pause occasionally to scan the room or look busy processing data.
   ",,error,136,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
 >>>>>>> 4fcd9b15e89448feac0e722c85334443d9e35f4d
+2026-02-12T19:15:52.026Z,session-7c058f43-6829-40e4-b69b-402903185610,,75e58b8e-ef63-4c15-847f-65d4ee184a6e,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: -24.7, y: 5.5, z: -27.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Storage File 113 | 13.8m | available |
+| OBJECT | Storage File 114 | 12.9m | available |
+| OBJECT | Storage File 138 | 14.9m | available |
+| OBJECT | Storage File 139 | 14m | available |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,370,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:15:53.284Z,session-7c058f43-6829-40e4-b69b-402903185610,,75e58b8e-ef63-4c15-847f-65d4ee184a6e,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: -24.7, y: 5.5, z: -27.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Storage File 113 | 13.8m | available |
+| OBJECT | Storage File 114 | 12.9m | available |
+| OBJECT | Storage File 138 | 14.9m | available |
+| OBJECT | Storage File 139 | 14m | available |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,150,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:15:54.448Z,session-7c058f43-6829-40e4-b69b-402903185610,,75e58b8e-ef63-4c15-847f-65d4ee184a6e,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: -24.7, y: 5.5, z: -27.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| OBJECT | Storage File 113 | 13.8m | available |
+| OBJECT | Storage File 114 | 12.9m | available |
+| OBJECT | Storage File 138 | 14.9m | available |
+| OBJECT | Storage File 139 | 14m | available |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,140,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:15:55.797Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,d8febd3a-b044-407f-a21c-279a726bf8c6,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 29.9, y: 5.5, z: 79.1}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 15.8m | Active |
+| OBJECT | Fire Extinguisher | 10.7m | available |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,148,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:15:56.944Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,d8febd3a-b044-407f-a21c-279a726bf8c6,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 29.9, y: 5.5, z: 79.1}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 15.8m | Active |
+| OBJECT | Fire Extinguisher | 10.7m | available |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,132,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:15:58.083Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,d8febd3a-b044-407f-a21c-279a726bf8c6,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 29.9, y: 5.5, z: 79.1}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    | Type | Name | Dist | Status |
+|---|---|---|---|
+| PLAYER | player-01 | 15.8m | Active |
+| OBJECT | Fire Extinguisher | 10.7m | available |
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,129,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:00.868Z,session-7c058f43-6829-40e4-b69b-402903185610,,5510a8c5-df0e-466e-8aee-c10e1c7231f5,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: -92.1, y: 5.5, z: -23.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,125,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:02.005Z,session-7c058f43-6829-40e4-b69b-402903185610,,5510a8c5-df0e-466e-8aee-c10e1c7231f5,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: -92.1, y: 5.5, z: -23.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,116,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:03.144Z,session-7c058f43-6829-40e4-b69b-402903185610,,5510a8c5-df0e-466e-8aee-c10e1c7231f5,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: -92.1, y: 5.5, z: -23.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,121,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:04.509Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,8484c40a-b2a4-4f50-aff1-3a63352e15ab,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 104.9, y: -10.6, z: 72.4}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,146,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:05.637Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,8484c40a-b2a4-4f50-aff1-3a63352e15ab,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 104.9, y: -10.6, z: 72.4}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,121,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:06.787Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,8484c40a-b2a4-4f50-aff1-3a63352e15ab,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 104.9, y: -10.6, z: 72.4}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,130,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:08.121Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,ca5e6202-136c-4a6a-a15b-3734e0a08e3f,memory-reflector,reflection,"[12:23:52 PM] ACTION: My brain hurts (API Error).
+[12:23:53 PM] ACTION: My brain hurts (API Error).
+[12:24:07 PM] ACTION: My brain hurts (API Error).
+[12:24:10 PM] ACTION: My brain hurts (API Error).
+[12:24:23 PM] ACTION: My brain hurts (API Error).
+[12:24:29 PM] ACTION: My brain hurts (API Error).
+[12:24:40 PM] ACTION: My brain hurts (API Error).
+[12:24:54 PM] ACTION: My brain hurts (API Error).
+[12:24:57 PM] ACTION: My brain hurts (API Error).
+[12:25:08 PM] ACTION: My brain hurts (API Error).
+[12:25:14 PM] ACTION: My brain hurts (API Error).
+[12:25:29 PM] ACTION: My brain hurts (API Error).
+[12:25:31 PM] ACTION: My brain hurts (API Error).
+[12:26:13 PM] ACTION: My brain hurts (API Error).
+[12:26:14 PM] ACTION: My brain hurts (API Error).
+[12:26:24 PM] ACTION: My brain hurts (API Error).
+[12:26:24 PM] ACTION: My brain hurts (API Error).
+[12:26:34 PM] ACTION: My brain hurts (API Error).
+[12:26:35 PM] ACTION: My brain hurts (API Error).
+[12:26:54 PM] ACTION: My brain hurts (API Error).
+[12:27:04 PM] ACTION: My brain hurts (API Error).
+[12:27:08 PM] ACTION: My brain hurts (API Error).
+[12:27:10 PM] ACTION: My brain hurts (API Error).
+[12:27:16 PM] ACTION: My brain hurts (API Error).
+[12:27:18 PM] ACTION: My brain hurts (API Error).
+[12:27:26 PM] ACTION: My brain hurts (API Error).
+[12:27:28 PM] ACTION: My brain hurts (API Error).
+[12:27:38 PM] ACTION: My brain hurts (API Error).
+[12:27:40 PM] ACTION: My brain hurts (API Error).
+[12:27:47 PM] ACTION: My brain hurts (API Error).
+[12:27:50 PM] ACTION: My brain hurts (API Error).
+[12:27:57 PM] ACTION: My brain hurts (API Error).
+[12:28:01 PM] ACTION: My brain hurts (API Error).
+[12:28:07 PM] ACTION: My brain hurts (API Error).
+[12:28:12 PM] ACTION: My brain hurts (API Error).
+[12:28:19 PM] ACTION: My brain hurts (API Error).
+[12:28:23 PM] ACTION: My brain hurts (API Error).
+[12:28:28 PM] ACTION: My brain hurts (API Error).
+[12:28:33 PM] ACTION: My brain hurts (API Error).
+[12:28:41 PM] ACTION: My brain hurts (API Error).
+[12:28:44 PM] ACTION: My brain hurts (API Error).
+[12:28:48 PM] ACTION: My brain hurts (API Error).
+[12:28:54 PM] ACTION: My brain hurts (API Error).
+[12:28:58 PM] ACTION: My brain hurts (API Error).
+[12:29:10 PM] ACTION: My brain hurts (API Error).
+[12:29:10 PM] ACTION: My brain hurts (API Error).
+[12:29:16 PM] ACTION: My brain hurts (API Error).
+[12:30:03 PM] ACTION: My brain hurts (API Error).
+[12:30:04 PM] ACTION: My brain hurts (API Error).
+[12:30:10 PM] ACTION: My brain hurts (API Error).",,error,209,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:16.675Z,session-7c058f43-6829-40e4-b69b-402903185610,,6a1f223c-95d5-425a-8406-64d8422748d3,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 53.1, y: 5.5, z: -26.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,196,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:17.822Z,session-7c058f43-6829-40e4-b69b-402903185610,,6a1f223c-95d5-425a-8406-64d8422748d3,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 53.1, y: 5.5, z: -26.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,132,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:18.995Z,session-7c058f43-6829-40e4-b69b-402903185610,,6a1f223c-95d5-425a-8406-64d8422748d3,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 53.1, y: 5.5, z: -26.9}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,123,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:20.287Z,session-7c058f43-6829-40e4-b69b-402903185610,,3be09b98-2f47-47a4-bff1-34b30ecb0120,memory-reflector,reflection,"[12:23:52 PM] ACTION: My brain hurts (API Error).
+[12:23:53 PM] ACTION: My brain hurts (API Error).
+[12:24:07 PM] ACTION: My brain hurts (API Error).
+[12:24:10 PM] ACTION: My brain hurts (API Error).
+[12:24:23 PM] ACTION: My brain hurts (API Error).
+[12:24:29 PM] ACTION: My brain hurts (API Error).
+[12:24:40 PM] ACTION: My brain hurts (API Error).
+[12:24:54 PM] ACTION: My brain hurts (API Error).
+[12:24:57 PM] ACTION: My brain hurts (API Error).
+[12:25:08 PM] ACTION: My brain hurts (API Error).
+[12:25:14 PM] ACTION: My brain hurts (API Error).
+[12:25:29 PM] ACTION: My brain hurts (API Error).
+[12:25:31 PM] ACTION: My brain hurts (API Error).
+[12:26:13 PM] ACTION: My brain hurts (API Error).
+[12:26:14 PM] ACTION: My brain hurts (API Error).
+[12:26:24 PM] ACTION: My brain hurts (API Error).
+[12:26:24 PM] ACTION: My brain hurts (API Error).
+[12:26:34 PM] ACTION: My brain hurts (API Error).
+[12:26:35 PM] ACTION: My brain hurts (API Error).
+[12:26:54 PM] ACTION: My brain hurts (API Error).
+[12:27:04 PM] ACTION: My brain hurts (API Error).
+[12:27:08 PM] ACTION: My brain hurts (API Error).
+[12:27:10 PM] ACTION: My brain hurts (API Error).
+[12:27:16 PM] ACTION: My brain hurts (API Error).
+[12:27:18 PM] ACTION: My brain hurts (API Error).
+[12:27:26 PM] ACTION: My brain hurts (API Error).
+[12:27:28 PM] ACTION: My brain hurts (API Error).
+[12:27:38 PM] ACTION: My brain hurts (API Error).
+[12:27:40 PM] ACTION: My brain hurts (API Error).
+[12:27:47 PM] ACTION: My brain hurts (API Error).
+[12:27:50 PM] ACTION: My brain hurts (API Error).
+[12:27:57 PM] ACTION: My brain hurts (API Error).
+[12:28:01 PM] ACTION: My brain hurts (API Error).
+[12:28:07 PM] ACTION: My brain hurts (API Error).
+[12:28:12 PM] ACTION: My brain hurts (API Error).
+[12:28:19 PM] ACTION: My brain hurts (API Error).
+[12:28:23 PM] ACTION: My brain hurts (API Error).
+[12:28:28 PM] ACTION: My brain hurts (API Error).
+[12:28:33 PM] ACTION: My brain hurts (API Error).
+[12:28:41 PM] ACTION: My brain hurts (API Error).
+[12:28:44 PM] ACTION: My brain hurts (API Error).
+[12:28:48 PM] ACTION: My brain hurts (API Error).
+[12:28:54 PM] ACTION: My brain hurts (API Error).
+[12:28:58 PM] ACTION: My brain hurts (API Error).
+[12:29:10 PM] ACTION: My brain hurts (API Error).
+[12:29:10 PM] ACTION: My brain hurts (API Error).
+[12:29:16 PM] ACTION: My brain hurts (API Error).
+[12:30:03 PM] ACTION: My brain hurts (API Error).
+[12:30:04 PM] ACTION: My brain hurts (API Error).
+[12:30:10 PM] ACTION: My brain hurts (API Error).",,error,159,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:27.872Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,6e5a0304-90cf-4958-9017-c8f4245e49e0,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 0.0, y: -12.3, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,230,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:29.003Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,6e5a0304-90cf-4958-9017-c8f4245e49e0,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 0.0, y: -12.3, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,108,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
+2026-02-12T19:16:30.125Z,session-7d18cfb6-8a85-4be6-9095-bb0e303caffb,,6e5a0304-90cf-4958-9017-c8f4245e49e0,3d-office-agent,chat_completion,"
+    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
+    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
+    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+
+    ## Context
+    **Position**: {x: 0.0, y: -12.3, z: -330.0}
+    **Behavior**: IDLE
+
+    ## Perception (Visual)
+    No entities nearby.
+
+    ## Memory (Past Interactions)
+    - [7:43:01 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:16 PM] [REFLECTION] Failed to summarize memories.
+- [7:41:02 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:58 PM] [REFLECTION] Failed to summarize memories.
+- [7:40:48 PM] [REFLECTION] Failed to summarize memories.
+
+    ## Task
+    Decide your next action based on perception and memory.
+    
+    ## Output Format (JSON ONLY)
+    { 
+      ""action"": ""MOVE_TO"" | ""WAIT"" | ""WANDER"" | ""FOLLOW"" | ""INTERACT"" | ""DROP"" | ""PLACE_AT"", 
+      ""targetId""?: ""id_of_entity_to_follow_or_object"", 
+      ""placeAreaId""?: ""id_of_placing_area"",
+      ""target""?: {x, y, z}, 
+      ""thought"": ""brief reasoning reflecting your professional persona"" 
+    }
+    
+    ## Rules
+    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
+    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
+    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
+    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
+    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+  ",,error,116,,,llama-3.1-8b-instant,,401,"401 {""error"":{""message"":""Invalid API Key"",""type"":""invalid_request_error"",""code"":""invalid_api_key""}}",
