@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import { InteractableRegistry } from "../Systems/InteractableRegistry";
+import AIManager from "../Systems/AIManager";
 
 export interface Joints {
   hips?: THREE.Group;
@@ -555,6 +556,21 @@ export function useRobotController(
         if (distSq < minDist * minDist) {
           canMove = false;
           break;
+        }
+      }
+
+      // Check against AI Agents
+      if (canMove) {
+        const agents = AIManager.getInstance().vehicles;
+        for (const agent of agents) {
+          const dx = proposedX - agent.position.x;
+          const dz = proposedZ - agent.position.z;
+          const distSq = dx * dx + dz * dz;
+          const minDist = radius + agent.boundingRadius; // Player radius + Agent radius
+          if (distSq < minDist * minDist) {
+            canMove = false;
+            break;
+          }
         }
       }
       if (canMove) {
