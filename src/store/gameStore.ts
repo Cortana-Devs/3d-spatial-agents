@@ -5,6 +5,7 @@ import { WorldObject } from "@/components/Systems/InteractableRegistry";
 export interface Obstacle {
   position: THREE.Vector3;
   radius: number;
+  type?: "wall" | "furniture" | "cupboard";
 }
 
 export interface DebugTargetInfo {
@@ -137,7 +138,9 @@ interface GameState {
   inspectedAgentId: string | null;
   setInspectedAgentId: (id: string | null) => void;
   inspectedAgentData: { id: string; thought: string; state: string } | null;
-  setInspectedAgentData: (data: { id: string; thought: string; state: string } | null) => void;
+  setInspectedAgentData: (
+    data: { id: string; thought: string; state: string } | null,
+  ) => void;
 
   // Interaction Grid State
   interactionGrid: GridRow[];
@@ -146,6 +149,10 @@ interface GameState {
   setGridSelection: (sel: { row: number; col: number }) => void;
   placingTargetPos: THREE.Vector3 | null;
   setPlacingTargetPos: (pos: THREE.Vector3 | null) => void;
+
+  // Debug Mode
+  isDebugMode: boolean;
+  setDebugMode: (mode: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -280,4 +287,8 @@ export const useGameStore = create<GameState>((set) => ({
   setGridSelection: (sel) => set({ gridSelection: sel }),
   placingTargetPos: null,
   setPlacingTargetPos: (pos) => set({ placingTargetPos: pos }),
+
+  // Debug Mode
+  isDebugMode: false,
+  setDebugMode: (mode) => set({ isDebugMode: mode }),
 }));

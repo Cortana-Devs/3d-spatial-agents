@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
-import { Text } from "@react-three/drei";
+import { Text, Text3D, Center } from "@react-three/drei";
 import { usePlacingArea } from "../Systems/usePlacingArea";
 
 // Materials shared locally or we could import standard ones
@@ -860,5 +860,172 @@ export function ManagersDesk({
         <boxGeometry args={[8, 0.02, 4]} />
       </mesh>
     </group>
+  );
+}
+
+// --- CUPBOARD UNIT (Futuristic 3-Level) ---
+// --- CUPBOARD UNIT (Futuristic 3-Level, 4-Sided) ---
+export function CupboardUnit({
+  position,
+  rotation = 0,
+  label = "1",
+  userData,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  label?: string;
+  userData?: any;
+}) {
+  const w = 8; // Width
+  const h = 10; // Height (3 levels * 3.33)
+  const d = 8; // Depth
+
+  const levels = 3;
+  const levelHeight = h / levels;
+
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
+      {/* Main Cabinet Body (Central Core) */}
+      <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w - 0.2, h, d - 0.2]} />
+        <meshStandardMaterial
+          color="#1a1a1a" // Darker
+          roughness={0.3}
+          metalness={0.7}
+        />
+      </mesh>
+
+      {/* Internal Placement Volume (Shared for all sides) */}
+      {Array.from({ length: levels }).map((_, i) => {
+        const levelNum = i + 1;
+        const yPos = levelHeight / 2 + i * levelHeight;
+        const levelId = userData?.id
+          ? `${userData.id}-level-${levelNum}`
+          : `cupboard-${label}-level-${levelNum}`;
+        const levelName = userData?.name
+          ? `${userData.name} - Level ${levelNum}`
+          : `Cupboard ${label} Level ${levelNum}`;
+
+        return (
+          <CupboardLevel
+            key={`level-vol-${i}`}
+            position={[0, yPos, 0]}
+            dimensions={[w, levelHeight - 0.5, d]}
+            id={levelId}
+            name={levelName}
+          />
+        );
+      })}
+
+      {/* Glowing Number at Top (Rotating billboard style or 4-sided text?) */}
+      {/* Let's make it 4-sided text so it's visible from all angles */}
+      {/* Top Fascia & Integrated Numbers (Jony Ive Style) */}
+      <group position={[0, h / 2 - 0.75, 0]}>
+        {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((rot, i) => (
+          <group key={`fascia-${i}`} rotation={[0, rot, 0]}>
+            {/* Fascia Band */}
+            <mesh position={[0, 0, d / 2 + 0.05]} receiveShadow>
+              <boxGeometry args={[w - 0.2, 1.5, 0.1]} />
+              <meshStandardMaterial
+                color="#111111"
+                metalness={0.8}
+                roughness={0.2}
+              />
+            </mesh>
+
+            {/* Integrated Number */}
+            <group position={[0, 0, d / 2 + 0.12]}>
+              <Center>
+                <Text3D
+                  font="/fonts/helvetiker_regular.typeface.json"
+                  size={1.2}
+                  height={0.1}
+                  curveSegments={12}
+                  bevelEnabled
+                  bevelThickness={0.01}
+                  bevelSize={0.01}
+                  bevelOffset={0}
+                  bevelSegments={3}
+                >
+                  {label}
+                  <meshStandardMaterial
+                    color="#ffffff"
+                    emissive="#ffffff"
+                    emissiveIntensity={0.8}
+                    toneMapped={false}
+                  />
+                </Text3D>
+              </Center>
+            </group>
+          </group>
+        ))}
+      </group>
+
+      {/* 3 Levels (Faces on 4 sides) */}
+      {Array.from({ length: levels }).map((_, levelIndex) => {
+        const levelNum = levelIndex + 1;
+        const yPos = levelHeight / 2 + levelIndex * levelHeight;
+
+        return (
+          <group key={`level-${levelIndex}`} position={[0, yPos, 0]}>
+            {/* 4 Faces */}
+            {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((rot, sideIndex) => (
+              <group key={`side-${sideIndex}`} rotation={[0, rot, 0]}>
+                {/* Drawer Face / Panel */}
+                {/* Positioned slightly out from center */}
+                <mesh position={[0, 0, d / 2]} castShadow>
+                  <boxGeometry args={[w - 0.5, levelHeight - 0.2, 0.1]} />
+                  <meshStandardMaterial
+                    color="#2a2a2a"
+                    roughness={0.5}
+                    metalness={0.6}
+                  />
+                </mesh>
+
+                {/* Handle with Neon Strip */}
+                <mesh position={[0, 0, d / 2 + 0.1]}>
+                  <boxGeometry args={[w - 2, 0.2, 0.1]} />
+                  <meshBasicMaterial color="#00ffff" />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function CupboardLevel({
+  position,
+  dimensions,
+  id,
+  name,
+}: {
+  position: [number, number, number];
+  dimensions: [number, number, number];
+  id: string;
+  name: string;
+}) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id,
+    name,
+    capacity: 4,
+    dimensions,
+  });
+
+  return (
+    <mesh
+      ref={surfaceRef}
+      position={new THREE.Vector3(...position)}
+      visible={false}
+    >
+      <boxGeometry args={dimensions} />
+    </mesh>
   );
 }

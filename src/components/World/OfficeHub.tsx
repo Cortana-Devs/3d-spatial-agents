@@ -11,7 +11,7 @@ import {
   ConferenceTable,
   CeilingLight,
   WallSwitch,
-  StorageShelf,
+  CupboardUnit,
   ReceptionDesk,
   ManagersDesk,
 } from "./Furniture";
@@ -78,8 +78,8 @@ export default function OfficeHub() {
   const system = useMemo(
     () => ({
       findAvailableBox: (agentPos: any) => null, // Box collection disabled
-      claimBox: (boxId: string, agentId: string) => { },
-      pickUpBox: (boxId: string, agentId: string) => { },
+      claimBox: (boxId: string, agentId: string) => {},
+      pickUpBox: (boxId: string, agentId: string) => {},
       getNextConstructionSlot: () => {
         const idx = stateRef.current.nextSlotIndex;
         stateRef.current.nextSlotIndex++;
@@ -114,7 +114,11 @@ export default function OfficeHub() {
 
   // --- BUILDING GENERATION ---
   const { walls, floors, ceiling, obstacles } = useMemo(() => {
-    const buildingObstacles: { position: THREE.Vector3; radius: number }[] = [];
+    const buildingObstacles: {
+      position: THREE.Vector3;
+      radius: number;
+      type?: "wall" | "furniture" | "cupboard";
+    }[] = [];
     const wallGeoms: {
       pos: [number, number, number];
       args: [number, number, number];
@@ -180,6 +184,7 @@ export default function OfficeHub() {
             z1 + (z2 - z1) * t,
           ),
           radius: sphereRadius,
+          type: "wall" as const,
         });
       }
     };
@@ -233,6 +238,7 @@ export default function OfficeHub() {
         buildingObstacles.push({
           position: new THREE.Vector3(x, hubCenter.y, z),
           radius: maxDim / 2.5, // Even tighter: was 2.2
+          type: "furniture" as const,
         });
       } else {
         // Long object - place spheres along longest axis
@@ -260,6 +266,7 @@ export default function OfficeHub() {
           buildingObstacles.push({
             position: new THREE.Vector3(x + ox, hubCenter.y, z + oz),
             radius: sphereRadius,
+            type: "furniture" as const,
           });
         }
       }
@@ -648,6 +655,56 @@ export default function OfficeHub() {
       -Math.PI / 2,
     );
 
+    // H. Storage Room Cupboards (Manual Obstacle Registration)
+    // "Perfect Match" for 8x8 Square: 4 Overlapping Spheres at corners
+    // Center to Edge is 4. Placing spheres at +/- 2 with radius 2.2 gives extent ~4.2
+    const cupOffsetX = 2.0;
+    const cupOffsetZ = 2.0;
+    const cupRadius = 2.2;
+
+    // Helper to add 4-sphere pattern per cupboard
+    const addCupboardObstacles = (cx: number, cy: number, cz: number) => {
+      buildingObstacles.push(
+        {
+          position: new THREE.Vector3(cx - cupOffsetX, cy, cz - cupOffsetZ),
+          radius: cupRadius,
+          type: "cupboard",
+        },
+        {
+          position: new THREE.Vector3(cx + cupOffsetX, cy, cz - cupOffsetZ),
+          radius: cupRadius,
+          type: "cupboard",
+        },
+        {
+          position: new THREE.Vector3(cx - cupOffsetX, cy, cz + cupOffsetZ),
+          radius: cupRadius,
+          type: "cupboard",
+        },
+        {
+          position: new THREE.Vector3(cx + cupOffsetX, cy, cz + cupOffsetZ),
+          radius: cupRadius,
+          type: "cupboard",
+        },
+      );
+    };
+
+    // Row 1 (Back): Z = -60
+    for (let i = 0; i < 5; i++) {
+      addCupboardObstacles(
+        hubCenter.x - 90 + i * 20,
+        hubCenter.y,
+        hubCenter.z - 60,
+      );
+    }
+    // Row 2 (Front): Z = -40
+    for (let i = 0; i < 5; i++) {
+      addCupboardObstacles(
+        hubCenter.x - 90 + i * 20,
+        hubCenter.y,
+        hubCenter.z - 40,
+      );
+    }
+
     return {
       walls: wallGeoms,
       floors: floorGeoms,
@@ -751,13 +808,13 @@ export default function OfficeHub() {
               object={
                 w.isWindow
                   ? new THREE.MeshPhysicalMaterial({
-                    color: 0x88ccff,
-                    metalness: 0,
-                    roughness: 0,
-                    transmission: 0.9,
-                    transparent: true,
-                    thickness: 0.5,
-                  })
+                      color: 0x88ccff,
+                      metalness: 0,
+                      roughness: 0,
+                      transmission: 0.9,
+                      transparent: true,
+                      thickness: 0.5,
+                    })
                   : materials.concrete
               }
               attach="material"
@@ -966,74 +1023,38 @@ export default function OfficeHub() {
         }),
       )}
 
-      {/* 3. Storage Room Shelves (Refactored) */}
-      <StorageShelf
-        position={[hubCenter.x - 50, hubCenter.y, hubCenter.z - 60]}
-        label="Rack 1"
-        userData={{
-          type: "Furniture",
-          id: "storage-rack-1",
-          name: "Storage Rack 1",
-        }}
-      />
-      <StorageShelf
-        position={[hubCenter.x - 50, hubCenter.y, hubCenter.z - 40]}
-        label="Rack 2"
-        userData={{
-          type: "Furniture",
-          id: "storage-rack-2",
-          name: "Storage Rack 2",
-        }}
-      />
-      {/* Fill Storage Shelves with Files (Generic and Blue/Red) */}
-      {/* Rack 1: [-50, ..., -60] */}
-      {[2, 7, 12].map((y) =>
-        [-35, -20, -5, 10, 25].map((off, i) => (
-          <FileFolder
-            key={`file-s1-${y}-${i}`}
-            position={[
-              hubCenter.x - 50 + off,
-              hubCenter.y + y + 0,
-              hubCenter.z - 60,
-            ]}
-            color={i % 2 === 0 ? "blue" : i % 3 === 0 ? "red" : "generic"}
-            rotation={Math.random() * 0.5}
-            label={(i + y * 5 + 1).toString()} // Numbered Label
-            userData={{
-              type: "Prop",
-              id: `file-s1-${y}-${i}`,
-              name: `Storage File ${i + y * 5 + 1}`,
-              interactable: true,
-              pickable: true,
-              objectType: "file",
-            }}
-          />
-        )),
-      )}
-      {/* Rack 2: [-50, ..., -40] */}
-      {[2, 7, 12].map((y) =>
-        [-30, -10, 5, 20, 30].map((off, i) => (
-          <FileFolder
-            key={`file-s2-${y}-${i}`}
-            position={[
-              hubCenter.x - 50 + off,
-              hubCenter.y + y + 0,
-              hubCenter.z - 40,
-            ]}
-            color={i % 3 === 0 ? "blue" : "generic"}
-            rotation={Math.random() * 0.5}
-            label={(i + y * 5 + 100).toString()} // Numbered Label
-            userData={{
-              type: "Prop",
-              id: `file-s2-${y}-${i}`,
-              name: `Storage File ${i + y * 5 + 100}`,
-              interactable: true,
-              pickable: true,
-              objectType: "file",
-            }}
-          />
-        )),
-      )}
+      {/* 3. Storage Room Cupboards (10 Units, 2 Rows x 5 Cols) */}
+      {/* Row 1 (Back): Units 1-5 */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <CupboardUnit
+          key={`cupboard-r1-${i}`}
+          position={[
+            hubCenter.x - 90 + i * 20, // Wide spacing (20)
+            hubCenter.y,
+            hubCenter.z - 60,
+          ]}
+          label={(i + 1).toString()}
+          userData={{
+            type: "Furniture",
+            id: `cupboard-unit-${i + 1}`,
+            name: `Cupboard ${i + 1}`,
+          }}
+        />
+      ))}
+
+      {/* Row 2 (Front): Units 6-10 */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <CupboardUnit
+          key={`cupboard-r2-${i}`}
+          position={[hubCenter.x - 90 + i * 20, hubCenter.y, hubCenter.z - 40]}
+          label={(i + 6).toString()}
+          userData={{
+            type: "Furniture",
+            id: `cupboard-unit-${i + 6}`,
+            name: `Cupboard ${i + 6}`,
+          }}
+        />
+      ))}
 
       {/* 4. Reception Info Desk (Lobby) - Centered */}
       <ReceptionDesk

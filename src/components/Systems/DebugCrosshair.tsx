@@ -7,7 +7,8 @@ import { useGameStore, DebugTargetInfo } from "@/store/gameStore";
 
 export default function DebugCrosshair() {
   const { camera, scene } = useThree();
-  const [active, setActive] = useState(false);
+  const active = useGameStore((s) => s.isDebugMode);
+  const setActive = useGameStore((s) => s.setDebugMode);
   const [hitPoint, setHitPoint] = useState<THREE.Vector3 | null>(null);
 
   // Use store efficiently
@@ -23,7 +24,7 @@ export default function DebugCrosshair() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "`" || e.key === "~") {
-        setActive((prev) => !prev);
+        setActive(!useGameStore.getState().isDebugMode);
       }
     };
     window.addEventListener("keydown", handleKeyDown);

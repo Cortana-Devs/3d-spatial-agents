@@ -9,6 +9,7 @@ import Robot from "../Entities/Robot";
 import AIRobot from "../Entities/AIRobot";
 import YukaSystem from "../Systems/YukaSystem";
 import DebugCrosshair from "../Systems/DebugCrosshair";
+import ObstacleVisualizer from "../Systems/ObstacleVisualizer";
 import { PlacingAreaMarkers } from "../Systems/PlacingAreaMarkers";
 
 import { useGameStore } from "@/store/gameStore";
@@ -218,6 +219,7 @@ export default function Scene() {
 
         <YukaSystem />
         <DebugCrosshair />
+        <ObstacleVisualizer />
         <PlacingAreaMarkers playerRef={robotRef} />
 
         <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
