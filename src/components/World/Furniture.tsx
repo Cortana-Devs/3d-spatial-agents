@@ -170,6 +170,14 @@ export function OfficeChair({
   const removeInteractables = useGameStore(
     (state) => state.removeInteractables,
   );
+  const addCollidableMesh = useGameStore((state) => state.addCollidableMesh);
+  const removeCollidableMesh = useGameStore(
+    (state) => state.removeCollidableMesh,
+  );
+  const addObstacles = useGameStore((state) => state.addObstacles);
+  const removeObstacles = useGameStore((state) => state.removeObstacles);
+
+  const groupRef = useRef<THREE.Group>(null);
 
   // FIX: Memoize vector to prevent effect re-running on every parent render
   const posVec = useMemo(
@@ -192,11 +200,46 @@ export function OfficeChair({
       },
     ]);
 
-    return () => removeInteractables([id]);
-  }, [id, posVec, rotation, addInteractables, removeInteractables]);
+    // Register Navigation Obstacle (Precise Sphere)
+    // Radius 1.5 matches the approximate size of the chair base + seat
+    const obstacle = {
+      position: posVec,
+      radius: 1.5,
+      type: "furniture" as const,
+    };
+    addObstacles([obstacle]);
+
+    // Register Collidable Mesh for Raycasting
+    if (groupRef.current) {
+      addCollidableMesh(groupRef.current);
+    }
+
+    return () => {
+      removeInteractables([id]);
+      removeObstacles([obstacle]);
+      if (groupRef.current) {
+        removeCollidableMesh(groupRef.current.uuid);
+      }
+    };
+  }, [
+    id,
+    posVec,
+    rotation,
+    addInteractables,
+    removeInteractables,
+    addCollidableMesh,
+    removeCollidableMesh,
+    addObstacles,
+    removeObstacles,
+  ]);
 
   return (
-    <group position={posVec} rotation={[0, rotation, 0]} userData={userData}>
+    <group
+      ref={groupRef}
+      position={posVec}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
       {/* Seat */}
       <mesh
         position={[0, 2.2, 0]}

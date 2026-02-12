@@ -8,8 +8,6 @@ import {
 import { getGroqClient } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
 
-export type { NearbyEntity, AgentContext };
-
 export async function generateAgentThought(
   context: AgentContext,
   memoryContext: string,

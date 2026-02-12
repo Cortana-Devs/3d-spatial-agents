@@ -1,9 +1,6 @@
 import * as THREE from "three";
-import {
-  generateAgentThought,
-  AgentContext,
-  NearbyEntity,
-} from "@/app/actions";
+import { generateAgentThought } from "@/app/actions";
+import type { AgentContext, NearbyEntity } from "@/lib/agent-core";
 
 export interface BrainState {
   thought: string;
