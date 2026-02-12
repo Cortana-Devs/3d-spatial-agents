@@ -146,42 +146,69 @@ export function useYukaAI(
     const dt = Math.min(delta, 0.1);
     frameRef.current++;
 
-    // --- WALL AVOIDANCE (Raycast) ---
+    // --- WALL AVOIDANCE (Multi-Ray + Sliding) ---
     if (collidableMeshes.length > 0) {
       const speed = vehicle.velocity.length();
       if (speed > 0.1) {
-        const forward = new THREE.Vector3();
-        forward.copy(vehicle.velocity as unknown as THREE.Vector3).normalize();
+        // Rays: Center, Left (30deg), Right (30deg)
+        const forward = new THREE.Vector3().copy(vehicle.velocity as unknown as THREE.Vector3).normalize();
+        const left = new THREE.Vector3().copy(forward).applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 6);
+        const right = new THREE.Vector3().copy(forward).applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 6);
 
+        const directions = [forward, left, right];
         const raycaster = raycasterRef.current;
         const rayOrigin = rayOriginRef.current;
         rayOrigin.set(vehicle.position.x, vehicle.position.y + 1.0, vehicle.position.z);
 
-        raycaster.set(rayOrigin, forward);
-        raycaster.far = 2.5; // Detection range
+        // Check all feelers
+        for (const dir of directions) {
+          raycaster.set(rayOrigin, dir);
+          raycaster.far = 3.0; // Increased range
 
-        const hits = raycaster.intersectObjects(collidableMeshes, true);
-        if (hits.length > 0) {
-          const hit = hits[0];
-          // Simple repulsion: Push away from hit point
-          const pushDir = new THREE.Vector3()
-            .subVectors(vehicle.position as unknown as THREE.Vector3, hit.point);
-          pushDir.y = 0;
-          pushDir.normalize();
+          const hits = raycaster.intersectObjects(collidableMeshes, true);
+          if (hits.length > 0) {
+            const hit = hits[0];
+            const dist = hit.distance;
 
-          // Strong retroactive braking/push to prevent clipping
-          const strength = (2.5 - hit.distance) * 50.0;
-          vehicle.velocity.x += pushDir.x * strength * dt;
-          vehicle.velocity.z += pushDir.z * strength * dt;
+            // Normal at hit point (approximate if not provided, but usually face.normal)
+            // If it's a box mesh, face normal is good.
+            let normal = new THREE.Vector3();
+            if (hit.face) {
+              normal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld).normalize();
+            } else {
+              // Fallback: vector from hit to agent
+              normal.subVectors(vehicle.position as unknown as THREE.Vector3, hit.point).normalize();
+              normal.y = 0;
+            }
 
-          // If very close, hard clamp position
-          if (hit.distance < 1.0) {
-            const kick = pushDir.multiplyScalar(1.0 - hit.distance);
-            vehicle.position.x += kick.x;
-            vehicle.position.z += kick.z;
+            // 1. Repulsion force (Soft)
+            const pushStrength = (3.0 - dist) * 40.0;
+            vehicle.velocity.x += normal.x * pushStrength * dt;
+            vehicle.velocity.z += normal.z * pushStrength * dt;
+
+            // 2. Hard Velocity Slide (If very close)
+            // Project velocity onto the wall plane to slide
+            if (dist < 1.5) {
+              const vel = vehicle.velocity as unknown as THREE.Vector3;
+              // v_new = v - (v . n) * n
+              const dot = vel.dot(normal);
+              if (dot < 0) { // Only if moving INTO the wall
+                vel.x -= normal.x * dot;
+                vel.z -= normal.z * dot;
+                // Friction
+                vel.multiplyScalar(0.9);
+              }
+            }
+
+            // 3. Hard Position Clamp (If clipping)
+            if (dist < 0.8) {
+              const pushOut = normal.multiplyScalar(0.8 - dist);
+              vehicle.position.x += pushOut.x;
+              vehicle.position.z += pushOut.z;
+            }
           }
         }
-        raycaster.far = Infinity; // Reset for ground check
+        raycaster.far = Infinity;
       }
     }
 
