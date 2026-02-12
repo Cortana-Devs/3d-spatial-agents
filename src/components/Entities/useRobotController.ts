@@ -204,7 +204,6 @@ export function useRobotController(
               useGameStore.getState().setInteractionTarget(nearest.id);
             }
           } else {
-          } else {
             // Check for nearby AI Agents (Follow Logic)
             const agents = AIManager.getInstance().vehicles;
             let nearbyAgent: any = null;
