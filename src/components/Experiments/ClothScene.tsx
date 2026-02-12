@@ -3,7 +3,7 @@
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { Physics, useSphere, usePlane, useDistanceConstraint } from '@react-three/cannon'
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, forwardRef, useImperativeHandle } from 'react'
 import * as THREE from 'three'
 
 // Cloth configuration
@@ -28,14 +28,20 @@ function Cloth() {
     }, [])
 
     // Particle component
-    function Particle({ position, fixed }: { position: [number, number, number], fixed?: boolean }) {
-        const [ref] = useSphere(() => ({
+    // Particle component
+    const Particle = forwardRef(({ position, fixed }: { position: [number, number, number], fixed?: boolean }, ref) => {
+        const [sphereRef] = useSphere(() => ({
             mass: fixed ? 0 : MASS,
             position,
             args: [0.01], // Small invisible sphere
         }))
-        return <mesh ref={ref} visible={false} />
-    }
+
+        // Forward the ref
+        useImperativeHandle(ref, () => sphereRef.current)
+
+        return <mesh ref={sphereRef} visible={false} />
+    })
+    Particle.displayName = 'Particle'
 
     // Create cloth geometry
     const geometry = useMemo(() => {
@@ -46,7 +52,7 @@ function Cloth() {
 
     // Connect particles with distance constraints
     const Constraints = () => {
-        const constraints: JSX.Element[] = []
+        const constraints: any[] = []
 
         for (let i = 0; i <= CLOTH_SEGMENTS; i++) {
             for (let j = 0; j <= CLOTH_SEGMENTS; j++) {
@@ -122,7 +128,7 @@ function Cloth() {
                             key={`${i}-${j}`}
                             position={[x, y, z]}
                             fixed={isFixed}
-                            ref={(ref) => (particles[i][j] = ref)}
+                            ref={(ref) => { particles[i][j] = ref }}
                         />
                     )
                 })

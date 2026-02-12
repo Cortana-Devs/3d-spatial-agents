@@ -401,9 +401,14 @@ export function useYukaAI(
 
     if (newState !== animationState) setAnimationState(newState);
 
-    // Drive Walk Time (Natural Cadence)
-    // 5.5m/s = ~1.8 steps/sec. 
-    walkTime.current += dt * animSpeed * 0.5;
+    // --- GAIT SYNC (Distance Based) ---
+    // Prevent Slipping: Walk cycle advances based on actual distance covered.
+    // Stride Length approx 0.7m. 
+    // Cycle is 0 to 2PI (one full stride L+R). 
+    // So 2PI = 1.4m (approx).
+    const strideLength = 1.4;
+    const distTraveled = animSpeed * dt;
+    walkTime.current += (distTraveled / strideLength) * Math.PI * 2;
 
     const j = joints.current;
     if (
@@ -412,7 +417,47 @@ export function useYukaAI(
     ) {
       const lerpFactor = 0.1;
 
-      // 1. Natural Posture & Sway
+      // 1. Head Tracking (Player Aware)
+      if (playerRef.current) {
+        const toPlayer = new THREE.Vector3().subVectors(playerRef.current.position, vehicle.position);
+        const distToPlayer = toPlayer.length();
+
+        if (distToPlayer < 8.0) { // Look at player within 8m
+          // Calculate local look dir
+          // We need world quaternion of the agent?
+          // Simplification: rotating the neck bone.
+          // Neck rotation is local. 
+          // We need the angle difference between agent forward and vector to player.
+
+          const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(groupRef.current!.quaternion);
+          toPlayer.normalize();
+
+          // Dot product for angle?
+          // Cross product for direction (left/right)?
+          const dot = forward.dot(toPlayer);
+          const cross = new THREE.Vector3().crossVectors(forward, toPlayer);
+
+          // Clamp look angle (don't break neck)
+          // If dot > 0 (in front), we can look.
+          if (dot > 0.2) {
+            const targetNeckY = cross.y * 1.5; // Scale for sensitivity
+            const clampedNeckY = THREE.MathUtils.clamp(targetNeckY, -0.8, 0.8);
+            j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, clampedNeckY, 0.1);
+
+            // Also slight head tilt
+            j.neck.rotation.x = THREE.MathUtils.lerp(j.neck.rotation.x, -0.1, 0.1);
+          } else {
+            // Reset if behind
+            j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, 0, 0.05);
+          }
+        } else {
+          // Idle Looking
+          const t = state.clock.elapsedTime;
+          j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, Math.sin(t * 0.5) * 0.3, 0.05);
+        }
+      }
+
+      // 2. Natural Posture & Sway (Refined)
       const t = state.clock.elapsedTime;
       const breathe = Math.sin(t * 1.5) * 0.02;
       const sway = Math.sin(t * 0.8) * 0.02;
@@ -442,7 +487,7 @@ export function useYukaAI(
         if (animSpeed < 0.1) {
           // IDLE
           j.torso.position.y = breathe;
-          j.neck.rotation.x = Math.sin(t * 1.5) * 0.05; // Look up/down slightly
+          // Neck is handled by Head Tracking block above
 
           // Reset limbs
           const f = 0.1;
