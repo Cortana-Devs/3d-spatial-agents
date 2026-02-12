@@ -16,6 +16,20 @@ export interface DebugTargetInfo {
   desc?: string;
 }
 
+export interface GridCell {
+  id: string; // itemId or slotIndex
+  label: string;
+  type: "item" | "slot";
+  icon?: string;
+  meta?: any; // e.g. areaId for slots
+}
+
+export interface GridRow {
+  id: string; // areaId or "floor"
+  label: string;
+  cells: GridCell[];
+}
+
 interface GameState {
   debugText: string;
   setDebugText: (text: string) => void;
@@ -119,11 +133,13 @@ interface GameState {
   activePlacingAreaId: string | null;
   setActivePlacingAreaId: (id: string | null) => void;
 
-  // AI Inspector Mode
-  inspectedAgentId: string | null;
-  setInspectedAgentId: (id: string | null) => void;
-  inspectedAgentData: { id: string; thought: string; state: string } | null;
-  setInspectedAgentData: (data: { id: string; thought: string; state: string } | null) => void;
+  // Interaction Grid State
+  interactionGrid: GridRow[];
+  setInteractionGrid: (grid: GridRow[]) => void;
+  gridSelection: { row: number; col: number };
+  setGridSelection: (sel: { row: number; col: number }) => void;
+  placingTargetPos: THREE.Vector3 | null;
+  setPlacingTargetPos: (pos: THREE.Vector3 | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -245,9 +261,11 @@ export const useGameStore = create<GameState>((set) => ({
   activePlacingAreaId: null,
   setActivePlacingAreaId: (id) => set({ activePlacingAreaId: id }),
 
-  // AI Inspector Mode
-  inspectedAgentId: null,
-  setInspectedAgentId: (id) => set({ inspectedAgentId: id }),
-  inspectedAgentData: null,
-  setInspectedAgentData: (data) => set({ inspectedAgentData: data }),
+  // Interaction Grid State
+  interactionGrid: [],
+  setInteractionGrid: (grid) => set({ interactionGrid: grid }),
+  gridSelection: { row: 0, col: 0 },
+  setGridSelection: (sel) => set({ gridSelection: sel }),
+  placingTargetPos: null,
+  setPlacingTargetPos: (pos) => set({ placingTargetPos: pos }),
 }));
