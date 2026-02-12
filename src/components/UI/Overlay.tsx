@@ -169,7 +169,9 @@ export default function Overlay() {
           }}
         >
           <button
-            onClick={() => setMenuPanelOpen && setMenuPanelOpen(!isMenuPanelOpen)}
+            onClick={() =>
+              setMenuPanelOpen && setMenuPanelOpen(!isMenuPanelOpen)
+            }
             style={{
               display: "flex",
               alignItems: "center",
@@ -371,159 +373,263 @@ export default function Overlay() {
         </div>
       )}
 
-      {/* Placing Areas Menu (Right Side) */}
-      {nearbyPlacingAreas.length > 0 && playerInventory.length > 0 && (
+      {/* Unified Nearby Interaction Table */}
+      {(nearbyItems.length > 0 ||
+        (playerInventory.length > 0 && nearbyPlacingAreas.length > 0)) && (
         <div
           style={{
             position: "absolute",
-            bottom: "250px",
+            bottom: "200px",
             right: "20px",
-            backgroundColor: "rgba(20, 30, 20, 0.95)",
+            backgroundColor: "rgba(20, 25, 30, 0.95)",
             color: "white",
-            padding: "12px 16px",
-            borderRadius: "10px",
-            border: "1px solid rgba(100, 255, 100, 0.4)",
-            minWidth: "200px",
-            maxWidth: "280px",
+            padding: "0",
+            borderRadius: "12px",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            width: "300px",
             zIndex: 151,
             pointerEvents: "none",
-            backdropFilter: "blur(4px)",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            overflow: "hidden",
+            fontFamily: "Inter, system-ui, sans-serif",
           }}
         >
+          {/* Header */}
           <div
             style={{
-              fontSize: "12px",
-              color: "#aaa",
-              marginBottom: "8px",
-              borderBottom: "1px solid #333",
-              paddingBottom: "4px",
+              padding: "12px 16px",
+              background: "rgba(255, 255, 255, 0.03)",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <span>📍 PLACING AREAS</span>
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#fff",
+                letterSpacing: "0.5px",
+              }}
+            >
+              NEARBY ENTITIES
+            </span>
+            <span
+              style={{
+                fontSize: "10px",
+                color: "rgba(255, 255, 255, 0.4)",
+                background: "rgba(255,255,255,0.05)",
+                padding: "2px 6px",
+                borderRadius: "4px",
+              }}
+            >
+              {nearbyItems.length + nearbyPlacingAreas.length} found
+            </span>
           </div>
-          {nearbyPlacingAreas.map((area: any) => {
-            const isSelected = area.id === activePlacingAreaId;
-            return (
-              <div
-                key={area.id}
-                style={{
-                  padding: "4px 8px",
-                  marginBottom: "2px",
-                  borderRadius: "4px",
-                  backgroundColor: isSelected
-                    ? "rgba(100, 255, 100, 0.2)"
-                    : "transparent",
-                  border: isSelected
-                    ? "1px solid rgba(100, 255, 100, 0.5)"
-                    : "1px solid transparent",
-                  fontSize: "13px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  color: "#dfd",
-                }}
-              >
-                <span>{isSelected ? "▶" : " "}</span>
-                <span style={{ fontWeight: isSelected ? "bold" : "normal" }}>
-                  {area.name}
-                </span>
-              </div>
-            );
-          })}
-          <div
-            style={{
-              fontSize: "10px",
-              color: "#8aa",
-              marginTop: "6px",
-              borderTop: "1px solid #333",
-              paddingTop: "4px",
-            }}
-          >
-            Look at area to select | T: Place
-          </div>
-        </div>
-      )}
 
-      {/* Pickup Selection Menu (Right Side) */}
-      {isPickupMenuOpen && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "70px",
-            right: "20px",
-            backgroundColor: "rgba(20, 30, 20, 0.95)",
-            color: "white",
-            padding: "12px 16px",
-            borderRadius: "10px",
-            border: "1px solid rgba(100, 255, 100, 0.4)",
-            minWidth: "200px",
-            maxWidth: "280px",
-            zIndex: 151,
-            pointerEvents: "none",
-            backdropFilter: "blur(4px)",
-          }}
-        >
+          {/* Table Body */}
           <div
             style={{
-              fontSize: "12px",
-              color: "#aaa",
-              marginBottom: "8px",
-              borderBottom: "1px solid #333",
-              paddingBottom: "4px",
+              maxHeight: "300px",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <span>🤏 NEARBY ITEMS</span>
+            {/* 1. Pickup Items Section */}
+            {nearbyItems.length > 0 && (
+              <>
+                <div
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.5)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    marginTop: "4px",
+                  }}
+                >
+                  Pick Up (Key: P)
+                </div>
+                {nearbyItems.map((item, idx) => {
+                  const isSelected =
+                    idx === selectedPickupIndex && isPickupMenuOpen; // Only highlight if menu active? Or always?
+                  // Let's highlight if it's the "active" selection for P key.
+                  const isTarget = idx === selectedPickupIndex;
+
+                  const emoji =
+                    item.type === "file"
+                      ? "📄"
+                      : item.type === "laptop"
+                        ? "💻"
+                        : item.type === "pendrive"
+                          ? "💾"
+                          : item.type === "coffeecup"
+                            ? "☕"
+                            : "📦";
+
+                  return (
+                    <div
+                      key={`pickup-${item.id}`}
+                      style={{
+                        padding: "8px 16px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        background: isTarget
+                          ? "rgba(50, 150, 255, 0.15)"
+                          : "transparent",
+                        borderLeft: isTarget
+                          ? "3px solid #4a90e2"
+                          : "3px solid transparent",
+                        transition: "background 0.2s",
+                      }}
+                    >
+                      <div
+                        style={{ fontSize: "16px", filter: "grayscale(20%)" }}
+                      >
+                        {emoji}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            color: isTarget ? "#fff" : "#ccc",
+                            fontWeight: isTarget ? 600 : 400,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            color: "rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          {item.type}
+                        </div>
+                      </div>
+                      {isTarget && (
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            color: "#4a90e2",
+                            background: "rgba(74, 144, 226, 0.1)",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          PICK UP
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* 2. Placing Areas Section */}
+            {playerInventory.length > 0 && nearbyPlacingAreas.length > 0 && (
+              <>
+                <div
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.5)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    marginTop: "8px",
+                    borderTop: "1px solid rgba(255,255,255,0.05)",
+                    paddingTop: "8px",
+                  }}
+                >
+                  Place Item (Key: T)
+                </div>
+                {nearbyPlacingAreas.map((area: any) => {
+                  const isSelected = area.id === activePlacingAreaId;
+                  return (
+                    <div
+                      key={`place-${area.id}`}
+                      style={{
+                        padding: "8px 16px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        background: isSelected
+                          ? "rgba(76, 175, 80, 0.15)"
+                          : "transparent",
+                        borderLeft: isSelected
+                          ? "3px solid #4CAF50"
+                          : "3px solid transparent",
+                        transition: "background 0.2s",
+                      }}
+                    >
+                      <div style={{ fontSize: "16px", opacity: 0.8 }}>📍</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            color: isSelected ? "#fff" : "#ccc",
+                            fontWeight: isSelected ? 600 : 400,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {area.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            color: "rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          Capacity: {area.currentItems.length}/{area.capacity}
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            color: "#4CAF50",
+                            background: "rgba(76, 175, 80, 0.1)",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          PLACE HERE
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
-          {nearbyItems.map((item, idx) => {
-            const isSelected = idx === selectedPickupIndex;
-            const emoji =
-              item.type === "file"
-                ? "📄"
-                : item.type === "laptop"
-                  ? "💻"
-                  : item.type === "pendrive"
-                    ? "💾"
-                    : item.type === "coffeecup"
-                      ? "☕"
-                      : "📦";
-            return (
-              <div
-                key={item.id}
-                style={{
-                  padding: "4px 8px",
-                  marginBottom: "2px",
-                  borderRadius: "4px",
-                  backgroundColor: isSelected
-                    ? "rgba(100, 255, 100, 0.2)"
-                    : "transparent",
-                  border: isSelected
-                    ? "1px solid rgba(100, 255, 100, 0.5)"
-                    : "1px solid transparent",
-                  fontSize: "13px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  color: "#dfd",
-                }}
-              >
-                <span>{isSelected ? "▶" : " "}</span>
-                <span>{emoji}</span>
-                <span style={{ fontWeight: isSelected ? "bold" : "normal" }}>
-                  {item.name}
-                </span>
-              </div>
-            );
-          })}
+
+          {/* Footer Hint */}
           <div
             style={{
+              padding: "8px 16px",
+              background: "rgba(0, 0, 0, 0.2)",
+              borderTop: "1px solid rgba(255, 255, 255, 0.05)",
               fontSize: "10px",
-              color: "#8aa",
-              marginTop: "6px",
-              borderTop: "1px solid #333",
-              paddingTop: "4px",
+              color: "rgba(255, 255, 255, 0.4)",
+              display: "flex",
+              justifyContent: "space-between",
             }}
           >
-            P: Confirm Pickup | Arrows: Select
+            <span>Look at object to select</span>
+            <span>Auto-detect active</span>
           </div>
         </div>
       )}
