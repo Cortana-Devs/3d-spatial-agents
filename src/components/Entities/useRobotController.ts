@@ -122,7 +122,8 @@ export function useRobotController(
 
   // Physics Constants
   const walkSpeed = 12.0;
-  const sneakSpeed = 5.0;
+  const runSpeed = 20.0; // Faster than walk
+  const sneakSpeed = 5.0; // Optional, maybe Ctrl?
   const jumpForce = 20.0;
   const gravity = -50.0;
   const radius = 0.8;
@@ -478,8 +479,10 @@ export function useRobotController(
     const dt = Math.min(delta, 0.1);
 
     // Input Processing
-    s.isSneaking = input.sneak;
-    const currentSpeed = s.isSneaking ? sneakSpeed : walkSpeed;
+    // Shift now triggers RUN (isSneaking flag reused for 'modifier' key)
+    const isSprinting = input.sneak;
+    s.isSneaking = false; // Disable sneak logic generally
+    const currentSpeed = isSprinting ? runSpeed : walkSpeed;
     const moveDist = currentSpeed * dt;
 
     let inputZ = 0;
@@ -799,19 +802,34 @@ export function useRobotController(
         s.isWaving = false;
       }
     } else if (isMoving && s.isGrounded) {
-      s.walkTime += dt * (s.isSneaking ? 8 : 12);
-      const legAmp = s.isSneaking ? 0.3 : 0.6;
-      const baseKneeBend = s.isSneaking ? 0.8 : 0.2;
-      const kneeAmp = s.isSneaking ? 0.2 : 0.3;
+      const isSprinting = input.sneak;
+      s.walkTime += dt * (isSprinting ? 18 : 12);
+      const legAmp = isSprinting ? 0.8 : 0.6;
+      const baseKneeBend = isSprinting ? 0.3 : 0.2;
+      const kneeAmp = isSprinting ? 0.5 : 0.3;
 
       j.leftHip.rotation.x =
-        Math.sin(s.walkTime) * legAmp - (s.isSneaking ? 0.5 : 0);
+        Math.sin(s.walkTime) * legAmp; // Removed sneak offset
       j.leftKnee.rotation.x =
         Math.abs(Math.cos(s.walkTime)) * kneeAmp + baseKneeBend;
       j.rightHip.rotation.x =
-        Math.sin(s.walkTime + Math.PI) * legAmp - (s.isSneaking ? 0.5 : 0);
+        Math.sin(s.walkTime + Math.PI) * legAmp;
       j.rightKnee.rotation.x =
         Math.abs(Math.cos(s.walkTime + Math.PI)) * kneeAmp + baseKneeBend;
+
+      // Arms
+      j.leftArm.shoulder.rotation.x =
+        Math.sin(s.walkTime + Math.PI) * legAmp;
+      j.rightArm.shoulder.rotation.x =
+        Math.sin(s.walkTime) * legAmp;
+
+      // Torso Bob
+      j.torso.position.y = Math.sin(s.walkTime * 2) * (isSprinting ? 0.1 : 0.05);
+      j.torso.rotation.x = THREE.MathUtils.lerp(
+        j.torso.rotation.x,
+        isSprinting ? 0.3 : 0, // Lean forward when running
+        0.1
+      );
 
       // Reset spread
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
