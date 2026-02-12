@@ -931,6 +931,9 @@ export default function OfficeHub() {
                     type: "Prop",
                     id: "printer-office",
                     name: "Office Printer",
+                    interactable: true,
+                    description: "A standard office printer.",
+                    objectType: "printer",
                   }}
                 />
               )}
@@ -1038,6 +1041,7 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "reception-desk",
           name: "Reception Desk",
+          interactable: true,
         }}
       />
       <OfficeChair
@@ -1057,6 +1061,9 @@ export default function OfficeHub() {
           type: "Prop",
           id: "laptop-reception",
           name: "Reception Laptop",
+          interactable: true,
+          pickable: true,
+          objectType: "laptop",
         }}
       />
       <Telephone
@@ -1066,6 +1073,9 @@ export default function OfficeHub() {
           type: "Prop",
           id: "telephone-reception",
           name: "Reception Telephone",
+          interactable: true,
+          pickable: true,
+          objectType: "telephone",
         }}
       />
 
@@ -1078,6 +1088,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "sofa-lobby-1",
           name: "Lobby Sofa 1",
+          interactable: true,
+          objectType: "sofa",
         }}
       />
       <Sofa
@@ -1087,6 +1099,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "sofa-lobby-2",
           name: "Lobby Sofa 2",
+          interactable: true,
+          objectType: "sofa",
         }}
       />
       {/* East Wall (Right side of lobby) - Facing West */}
@@ -1097,6 +1111,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "sofa-lobby-3",
           name: "Lobby Sofa 3",
+          interactable: true,
+          objectType: "sofa",
         }}
       />
       <Sofa
@@ -1106,6 +1122,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "sofa-lobby-4",
           name: "Lobby Sofa 4",
+          interactable: true,
+          objectType: "sofa",
         }}
       />
 
@@ -1159,6 +1177,9 @@ export default function OfficeHub() {
           type: "Prop",
           id: "file-manager-blue",
           name: "Blue Manager File",
+          interactable: true,
+          pickable: true,
+          objectType: "file",
         }}
       />
       {/* Laptop & Pen Drive */}
@@ -1172,13 +1193,23 @@ export default function OfficeHub() {
           type: "Prop",
           id: "laptop-manager",
           name: "Manager Laptop",
+          interactable: true,
+          pickable: true,
+          objectType: "laptop",
         }}
       />
       {/* Pen Drive: Left side of desk. Desk center Z=25. Facing East => Left is North (Z < 25). */}
       <PenDrive
         position={[hubCenter.x - 67, hubCenter.y + 4.1, hubCenter.z + 23]}
         rotation={Math.random()}
-        userData={{ type: "Prop", id: "pendrive-manager", name: "USB Drive" }}
+        userData={{
+          type: "Prop",
+          id: "pendrive-manager",
+          name: "USB Drive",
+          interactable: true,
+          pickable: true,
+          objectType: "pendrive",
+        }}
       />
 
       {/* Small Rack with Rose Files & Flower Pot */}
@@ -1189,6 +1220,7 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "rack-manager",
           name: "Manager Rack",
+          interactable: true,
         }}
       />
       <FileFolder
@@ -1199,6 +1231,9 @@ export default function OfficeHub() {
           type: "Prop",
           id: "file-manager-red-1",
           name: "Red Manager File 1",
+          interactable: true,
+          pickable: true,
+          objectType: "file",
         }}
       />
       <FileFolder
@@ -1209,6 +1244,9 @@ export default function OfficeHub() {
           type: "Prop",
           id: "file-manager-red-2",
           name: "Red Manager File 2",
+          interactable: true,
+          pickable: true,
+          objectType: "file",
         }}
       />
       <FlowerPot
@@ -1217,6 +1255,7 @@ export default function OfficeHub() {
           type: "Prop",
           id: "flower-manager",
           name: "Manager Flower Pot",
+          interactable: true,
         }}
       />
 
@@ -1229,6 +1268,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "sofa-break-1",
           name: "Break Room Sofa 1",
+          interactable: true,
+          objectType: "sofa",
         }}
       />
       <Sofa
@@ -1238,6 +1279,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "sofa-break-2",
           name: "Break Room Sofa 2",
+          interactable: true,
+          objectType: "sofa",
         }}
       />
 
@@ -1245,7 +1288,14 @@ export default function OfficeHub() {
       <TV
         position={[hubCenter.x + 51, hubCenter.y + 2, hubCenter.z + 12.8]}
         rotation={0}
-        userData={{ type: "Furniture", id: "tv-break", name: "Break Room TV" }}
+        userData={{
+          type: "Furniture",
+          id: "tv-break",
+          name: "Break Room TV",
+          interactable: true,
+          description: "A large flat screen TV.",
+          objectType: "tv",
+        }}
       />
 
       {/* Coffee Station in Corner (South-East Corner: X approx 90, Z approx 35) */}
@@ -1262,11 +1312,21 @@ export default function OfficeHub() {
             type: "Prop",
             id: "coffee-machine",
             name: "Coffee Machine",
+            interactable: true,
+            description: "Brew a fresh cup of coffee.",
+            objectType: "coffee_machine",
           }}
         />
         <CoffeeCup
           position={[2, 4.1, 0.5]}
-          userData={{ type: "Prop", id: "cup-coffee", name: "Coffee Cup" }}
+          userData={{
+            type: "Prop",
+            id: "cup-coffee",
+            name: "Coffee Cup",
+            interactable: true,
+            pickable: true,
+            objectType: "coffeecup",
+          }}
         />
       </group>
 
@@ -1277,6 +1337,8 @@ export default function OfficeHub() {
           type: "Prop",
           id: "fire-extinguisher-1",
           name: "Fire Extinguisher",
+          interactable: true,
+          description: "Safety first.",
         }}
       />
       {/* Projector Screen on Right Wall (East) of Conference Room */}
@@ -1287,6 +1349,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "projector-screen",
           name: "Projector Screen",
+          interactable: true,
+          objectType: "projector_screen",
         }}
       />
       {/* Physical Projector Device (Ceiling Mounted) */}
@@ -1314,6 +1378,9 @@ export default function OfficeHub() {
           type: "Prop",
           id: "file-conf-table",
           name: "Conference File",
+          interactable: true,
+          pickable: true,
+          objectType: "file",
         }}
       />
 
@@ -1414,6 +1481,8 @@ export default function OfficeHub() {
           type: "Furniture",
           id: "whiteboard-conf",
           name: "Conference Whiteboard",
+          interactable: true,
+          objectType: "whiteboard",
         }}
       />
 

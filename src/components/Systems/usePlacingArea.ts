@@ -16,7 +16,7 @@ export function usePlacingArea(
       | "coffeecup"
       | "generic"
     )[];
-    dimensions?: [number, number, number];
+    dimensions: [number, number, number];
   },
 ) {
   useEffect(() => {
@@ -25,6 +25,8 @@ export function usePlacingArea(
     meshRef.current.updateMatrixWorld(true);
     const pos = new THREE.Vector3();
     meshRef.current.getWorldPosition(pos);
+    const quat = new THREE.Quaternion();
+    meshRef.current.getWorldQuaternion(quat);
 
     console.log(
       `[PlacingArea] Registered "${areaData.name}" (${areaData.id}) at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}), capacity: ${areaData.capacity}`,
@@ -34,10 +36,11 @@ export function usePlacingArea(
       id: areaData.id,
       name: areaData.name,
       position: pos,
+      rotation: quat,
       capacity: areaData.capacity,
       currentItems: [],
-      allowedTypes: areaData.allowedTypes,
       dimensions: areaData.dimensions,
+      allowedTypes: areaData.allowedTypes,
       meshRef: meshRef.current,
     });
 

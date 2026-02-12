@@ -3,7 +3,20 @@ import * as THREE from "three";
 export interface WorldObject {
   id: string;
   name: string;
-  type: "file" | "laptop" | "pendrive" | "printer" | "coffeecup" | "generic";
+  type:
+    | "file"
+    | "laptop"
+    | "pendrive"
+    | "printer"
+    | "coffeecup"
+    | "generic"
+    | "sofa"
+    | "chair"
+    | "whiteboard"
+    | "projector_screen"
+    | "tv"
+    | "coffee_machine"
+    | "telephone";
   position: THREE.Vector3;
   description?: string;
   pickable: boolean;
@@ -15,9 +28,10 @@ export interface PlacingArea {
   id: string;
   name: string;
   position: THREE.Vector3;
+  rotation: THREE.Quaternion; // world rotation of surface
   capacity: number;
   currentItems: string[]; // IDs of placed WorldObjects
-  dimensions?: [number, number, number]; // width, height, depth for visualization
+  dimensions: [number, number, number]; // width, height, depth of surface slab
   allowedTypes?: WorldObject["type"][];
   meshRef?: THREE.Object3D;
 }
@@ -92,14 +106,20 @@ export class InteractableRegistry {
     return true;
   }
 
-  public putDown(objectId: string, position: THREE.Vector3): boolean {
+  public putDown(objectId: string, worldPos: THREE.Vector3): boolean {
     const obj = this.objects.get(objectId);
     if (!obj || !obj.carriedBy) return false;
 
     obj.carriedBy = null;
-    obj.position.copy(position);
+    obj.position.copy(worldPos);
     if (obj.meshRef) {
-      obj.meshRef.position.copy(position);
+      // Convert world position to local parent coordinates
+      if (obj.meshRef.parent) {
+        const localPos = obj.meshRef.parent.worldToLocal(worldPos.clone());
+        obj.meshRef.position.copy(localPos);
+      } else {
+        obj.meshRef.position.copy(worldPos);
+      }
       obj.meshRef.visible = true;
     }
     return true;
@@ -149,16 +169,34 @@ export class InteractableRegistry {
     )
       return false;
 
-    // Calculate offset position on the surface
-    const offset = area.currentItems.length * 1.5; // Spread items along X
-    const placePos = area.position.clone();
-    placePos.x += offset;
-    placePos.y += 0.3; // Slightly above surface
+    const [w, h, d] = area.dimensions;
+    const slotIndex = area.currentItems.length;
+
+    // Grid layout: columns along local-X, rows along local-Z
+    const maxCols = Math.max(1, Math.floor(w / 2));
+    const col = slotIndex % maxCols;
+    const row = Math.floor(slotIndex / maxCols);
+
+    // Local offsets centered on surface
+    const localX = (col - (maxCols - 1) / 2) * 2;
+    const localZ = (row - 0.5) * 2;
+
+    // Build offset vector in local space, then rotate to world
+    const offset = new THREE.Vector3(localX, h / 2 + 0.15, localZ);
+    offset.applyQuaternion(area.rotation);
+
+    const placePos = area.position.clone().add(offset);
 
     obj.carriedBy = null;
     obj.position.copy(placePos);
     if (obj.meshRef) {
-      obj.meshRef.position.copy(placePos);
+      // Convert world position to local parent coordinates
+      if (obj.meshRef.parent) {
+        const localPos = obj.meshRef.parent.worldToLocal(placePos.clone());
+        obj.meshRef.position.copy(localPos);
+      } else {
+        obj.meshRef.position.copy(placePos);
+      }
       obj.meshRef.visible = true;
     }
 

@@ -1,7 +1,10 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { InteractableRegistry, PlacingArea } from "./InteractableRegistry";
+
+const DETECTION_RADIUS = 8;
+const CHECK_INTERVAL = 0.3; // seconds between registry queries
 
 export function PlacingAreaMarkers({
   playerRef,
@@ -9,22 +12,24 @@ export function PlacingAreaMarkers({
   playerRef: React.RefObject<THREE.Group | null>;
 }) {
   const [visibleAreas, setVisibleAreas] = useState<PlacingArea[]>([]);
+  const lastCheckRef = useRef(0);
 
   useFrame((state) => {
     if (!playerRef.current) return;
-    // Check every 0.5s (30 frames approx) to avoid heavy registry queries
-    if (state.clock.elapsedTime % 0.5 < 0.05) {
-      const areas = InteractableRegistry.getInstance().getNearbyPlacingAreas(
-        playerRef.current.position,
-        8,
-      );
-      // Simple shallow comparison or just set it
-      if (
-        areas.length !== visibleAreas.length ||
-        areas[0]?.id !== visibleAreas[0]?.id
-      ) {
-        setVisibleAreas(areas);
-      }
+    const t = state.clock.elapsedTime;
+    if (t - lastCheckRef.current < CHECK_INTERVAL) return;
+    lastCheckRef.current = t;
+
+    const areas = InteractableRegistry.getInstance().getNearbyPlacingAreas(
+      playerRef.current.position,
+      DETECTION_RADIUS,
+    );
+
+    // Update only if list changed
+    const currentIds = visibleAreas.map((a) => a.id).join(",");
+    const newIds = areas.map((a) => a.id).join(",");
+    if (currentIds !== newIds) {
+      setVisibleAreas(areas);
     }
   });
 
@@ -37,43 +42,80 @@ export function PlacingAreaMarkers({
   );
 }
 
-function AreaMarker({ area }: { area: PlacingArea }) {
-  const [w, h, d] = area.dimensions || [1, 1, 1];
+// Reusable materials (created once)
+const fillMaterial = new THREE.MeshBasicMaterial({
+  color: new THREE.Color(0.1, 0.9, 0.4),
+  transparent: true,
+  opacity: 0.2,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
 
-  // Position: Center of the surface
-  // Area position is center of mesh. Top surface is y + h/2.
-  const pos = useMemo(() => {
-    return new THREE.Vector3(
+const borderMaterial = new THREE.MeshBasicMaterial({
+  color: new THREE.Color(0.2, 1.0, 0.5),
+  wireframe: true,
+  transparent: true,
+  opacity: 0.45,
+});
+
+function AreaMarker({ area }: { area: PlacingArea }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const fillRef = useRef<THREE.Mesh>(null);
+
+  const [w, h, d] = area.dimensions;
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+
+    // Update position from registry (in case it was re-registered)
+    groupRef.current.position.set(
       area.position.x,
-      area.position.y + h / 2 + 0.01,
+      area.position.y + h / 2 + 0.02,
       area.position.z,
     );
-  }, [area.position, h]);
+
+    // Apply rotation from registry
+    groupRef.current.quaternion.copy(area.rotation);
+    // But we only want the Y-rotation (yaw), not pitch/tilt
+    // So extract the euler, zero out X and Z, reapply
+    const euler = new THREE.Euler().setFromQuaternion(area.rotation, "YXZ");
+    groupRef.current.rotation.set(0, euler.y, 0);
+
+    // Pulsing opacity animation
+    if (fillRef.current) {
+      const pulse = 0.15 + 0.1 * Math.sin(state.clock.elapsedTime * 3);
+      (fillRef.current.material as THREE.MeshBasicMaterial).opacity = pulse;
+    }
+  });
 
   return (
-    <group position={pos}>
-      {/* 1. Filled Glowing Plane (Base) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+    <group ref={groupRef}>
+      {/* Surface highlight plane (lies flat via rotation) */}
+      <mesh
+        ref={fillRef}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={fillMaterial}
+      >
         <planeGeometry args={[w, d]} />
-        <meshBasicMaterial
-          color="#00aa00"
-          transparent
-          opacity={0.15}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
       </mesh>
 
-      {/* 2. Wireframe Box Border (Slightly raised) */}
-      <mesh position={[0, 0.01, 0]}>
+      {/* Wireframe border rectangle */}
+      <mesh position={[0, 0.01, 0]} material={borderMaterial}>
         <boxGeometry args={[w, 0.02, d]} />
-        <meshBasicMaterial
-          color="#00ff00"
-          wireframe
-          transparent
-          opacity={0.3}
-        />
       </mesh>
+
+      {/* Corner indicator posts */}
+      {[
+        [-w / 2, d / 2],
+        [w / 2, d / 2],
+        [-w / 2, -d / 2],
+        [w / 2, -d / 2],
+      ].map(([cx, cz], i) => (
+        <mesh key={i} position={[cx, 0.15, cz]}>
+          <boxGeometry args={[0.15, 0.3, 0.15]} />
+          <meshBasicMaterial color="#00ff66" transparent opacity={0.5} />
+        </mesh>
+      ))}
     </group>
   );
 }

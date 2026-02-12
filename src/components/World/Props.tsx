@@ -41,8 +41,11 @@ export function Printer({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -94,8 +97,11 @@ export function FireExtinguisher({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -179,8 +185,11 @@ export function Whiteboard({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -240,8 +249,11 @@ export function ProjectorScreen({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -323,8 +335,11 @@ export function PenDrive({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -357,8 +372,11 @@ export function SmallRack({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -399,8 +417,11 @@ export function FlowerPot({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -435,8 +456,11 @@ export function Sofa({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -489,8 +513,11 @@ export function TV({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -530,8 +557,11 @@ export function CoffeeMachine({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -587,8 +617,11 @@ export function Telephone({
   rotation?: number;
   userData?: any;
 }) {
+  const meshRef = useRef<THREE.Group>(null);
+  useInteractable(meshRef, userData);
   return (
     <group
+      ref={meshRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
