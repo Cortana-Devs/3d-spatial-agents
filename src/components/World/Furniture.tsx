@@ -357,6 +357,42 @@ export function OfficeDesk({
   );
 }
 
+// --- SHELF LEVEL COMPONENT ---
+function ShelfLevel({
+  position,
+  dimensions,
+  id,
+  name,
+  userData,
+}: {
+  position: [number, number, number];
+  dimensions: [number, number, number];
+  id: string;
+  name: string;
+  userData?: any;
+}) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id,
+    name,
+    capacity: 6,
+    dimensions,
+  });
+
+  return (
+    <mesh
+      ref={surfaceRef}
+      position={new THREE.Vector3(...position)}
+      castShadow
+      receiveShadow
+      material={metalMaterial}
+      userData={userData}
+    >
+      <boxGeometry args={dimensions} />
+    </mesh>
+  );
+}
+
 // --- STORAGE SHELF (3-Tier) ---
 export function StorageShelf({
   position,
@@ -369,14 +405,6 @@ export function StorageShelf({
   label?: string;
   userData?: any;
 }) {
-  const surfaceRef = useRef<THREE.Mesh>(null);
-  // Attach to middle shelf (index 1)
-  usePlacingArea(surfaceRef, {
-    id: userData?.id || "storage-shelf",
-    name: userData?.name || "Storage Shelf",
-    capacity: 8,
-    dimensions: [80, 0.5, 5],
-  });
   const w = 80;
   const h = 12; // Total height (was 7)
   const d = 5; // Depth
@@ -422,7 +450,7 @@ export function StorageShelf({
         </mesh>
       ))}
 
-      {/* 3 Racks (Planes) */}
+      {/* 3 Racks (Planes) - Now using ShelfLevel for each */}
       {[2, 7, 12].map((y, i) => {
         const levelName = levelLabels[i];
         const specificUserData = userData
@@ -434,18 +462,23 @@ export function StorageShelf({
             }
           : undefined;
 
+        // Unique ID for placing area
+        const shelfId = userData?.id
+          ? `${userData.id}-level-${i}`
+          : `shelf-level-${i}`;
+        const shelfName = userData?.name
+          ? `${userData.name} (${levelName})`
+          : `Storage Shelf (${levelName})`;
+
         return (
           <group key={`rack-group-${i}`}>
-            <mesh
-              ref={i === 1 ? surfaceRef : undefined}
+            <ShelfLevel
               position={[0, y - rackThickness / 2, 0]}
-              castShadow
-              receiveShadow
-              material={metalMaterial}
+              dimensions={[w, rackThickness, d]}
+              id={shelfId}
+              name={shelfName}
               userData={specificUserData}
-            >
-              <boxGeometry args={[w, rackThickness, d]} />
-            </mesh>
+            />
             {/* Level Label */}
             <Text
               position={[-w / 2 + 2, y + rackThickness / 2 + 0.02, 0]}
