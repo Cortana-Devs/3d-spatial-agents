@@ -110,10 +110,12 @@ class NavigationNetwork {
         if (!fromNode || !toNode) return [to];
 
         // 2. A* Search
-        const search = new YUKA.GraphSearchAStar(this.graph);
-        const pathIds = search.search(fromNode.index, toNode.index);
+        const search = new YUKA.AStar(this.graph, fromNode.index, toNode.index);
+        search.search();
 
-        if (pathIds.length === 0) return [to];
+        if (!search.found) return [to];
+
+        const pathIds = search.getPath();
 
         // 3. Convert IDs to Vectors
         const path: THREE.Vector3[] = [];
