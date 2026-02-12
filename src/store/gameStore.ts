@@ -165,6 +165,14 @@ interface GameState {
   // Debug Mode
   isDebugMode: boolean;
   setDebugMode: (mode: boolean) => void;
+
+  // New Position Hooks
+  playerPosition: THREE.Vector3;
+  setPlayerPosition: (pos: THREE.Vector3) => void;
+  agentPositions: { [id: string]: THREE.Vector3 };
+  setAgentPosition: (id: string, pos: THREE.Vector3) => void;
+  followingAgentId: string | null;
+  setFollowingAgentId: (id: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -315,5 +323,13 @@ export const useGameStore = create<GameState>((set) => ({
 
   // Debug Mode
   isDebugMode: false,
-  setDebugMode: (mode) => set({ isDebugMode: mode }),
+  setDebugMode: (mode: boolean) => set({ isDebugMode: mode }),
+
+  playerPosition: new THREE.Vector3(0, 0, 0),
+  setPlayerPosition: (pos) => set({ playerPosition: pos }),
+  agentPositions: {},
+  setAgentPosition: (id, pos) =>
+    set((state) => ({
+      agentPositions: { ...state.agentPositions, [id]: pos },
+    })),
 }));

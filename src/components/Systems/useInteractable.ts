@@ -14,9 +14,11 @@ export function useInteractable(
     meshRef.current.updateMatrixWorld(true); // Ensure world matrix is up to date
     meshRef.current.getWorldPosition(worldPos);
 
+    /*
     console.log(
       `[InteractableRegistry] Registered "${userData.name}" (${userData.id}) at (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)}, ${worldPos.z.toFixed(1)}), pickable: ${userData.pickable}`,
     );
+    */
 
     registry.register({
       id: userData.id,
@@ -30,9 +32,11 @@ export function useInteractable(
     });
 
     return () => {
+      /*
       console.log(
         `[InteractableRegistry] Unregistered "${userData.name}" (${userData.id})`,
       );
+      */
       registry.unregister(userData.id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

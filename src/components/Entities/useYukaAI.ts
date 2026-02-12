@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import AIManager from "../Systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
+import { useProceduralGait } from "./useProceduralGait";
 import { ClientBrain } from "../Systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-core";
 import { InteractableRegistry } from "../Systems/InteractableRegistry";
@@ -31,16 +32,15 @@ export function useYukaAI(
   const followingAgentId = useGameStore((state) => state.followingAgentId);
   const setAgentPosition = useGameStore((state) => state.setAgentPosition);
 
-  // Animation State
-  const walkTime = useRef(0);
-  const greetingState = useRef<"NONE" | "LOOKING" | "WAVING" | "DONE">("NONE");
-  const greetingTimer = useRef(0);
-  const smoothSpeed = useRef(0); // For animation lerping
+  // Gait Engine
+  const gait = useProceduralGait(joints, { strideLength: 1.0 });
 
   // Social State (Robot-Robot Interaction)
+
   const socialState = useRef<"NONE" | "CHATTING" | "COOLDOWN">("NONE");
   const socialTimer = useRef(0);
   const socialTarget = useRef<YUKA.Vehicle | null>(null);
+  const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
 
   // Optimization Refs
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -72,7 +72,7 @@ export function useYukaAI(
     vehicle.maxSpeed = 5.5; // Natural Brisk Walk (was 12.0)
     vehicle.maxForce = 4.0; // Heavy Inertia for smooth turns (was 10.0)
     vehicle.mass = 2.0;
-    vehicle.boundingRadius = 2.0; // Ensure they have size for separation
+    vehicle.boundingRadius = 1.0; // TUNED: 1.0 fits the robot footprint perfectly (was 2.0)
 
     // Sync initial position
     vehicle.position.copy(groupRef.current.position as unknown as YUKA.Vector3);
@@ -177,7 +177,9 @@ export function useYukaAI(
       }
     }
 
-    const dt = delta * 15; // Speed multiplier for simulation steps dt = Math.min(delta, 0.1);
+    // Use a fixed or clamped delta for physics/logic stability
+    const MAX_DELTA = 0.1;
+    const dt = Math.min(delta, MAX_DELTA);
     frameRef.current++;
 
     // --- WALL AVOIDANCE (Multi-Ray + Sliding) ---
@@ -309,9 +311,24 @@ export function useYukaAI(
             socialState.current = "CHATTING";
             socialTarget.current = other;
             socialTimer.current = 0;
+            greetingState.current = "WAVING";
           }
         }
       }
+    }
+
+    // --- SOCIAL UPDATES ---
+    if (socialState.current === "CHATTING") {
+      socialTimer.current += delta;
+      vehicle.velocity.set(0, 0, 0);
+      if (socialTimer.current > 5.0) {
+        socialState.current = "COOLDOWN";
+        socialTimer.current = 0;
+        greetingState.current = "NONE";
+      }
+    } else if (socialState.current === "COOLDOWN") {
+      socialTimer.current += delta;
+      if (socialTimer.current > 3.0) socialState.current = "NONE";
     }
 
     // --- PHYSICS (Gravity / Ground Detection) ---
@@ -481,6 +498,7 @@ export function useYukaAI(
       j.rightKnee &&
       j.neck
     ) {
+      // Head Tracking Logic remains unique to AI for now (or could be extracted too)
       const lerpFactor = 0.1;
 
       // 1. Head Tracking (Player Aware)

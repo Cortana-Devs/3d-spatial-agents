@@ -28,9 +28,11 @@ export function usePlacingArea(
     const quat = new THREE.Quaternion();
     meshRef.current.getWorldQuaternion(quat);
 
+    /*
     console.log(
       `[PlacingArea] Registered "${areaData.name}" (${areaData.id}) at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}), capacity: ${areaData.capacity}`,
     );
+    */
 
     InteractableRegistry.getInstance().registerPlacingArea({
       id: areaData.id,
