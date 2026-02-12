@@ -29,6 +29,8 @@ export default function Overlay() {
   const activePlacingAreaId = useGameStore(
     (state) => state.activePlacingAreaId,
   );
+  const interactionGrid = useGameStore((state) => state.interactionGrid);
+  const gridSelection = useGameStore((state) => state.gridSelection);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -373,9 +375,8 @@ export default function Overlay() {
         </div>
       )}
 
-      {/* Unified Nearby Interaction Table */}
-      {(nearbyItems.length > 0 ||
-        (playerInventory.length > 0 && nearbyPlacingAreas.length > 0)) && (
+      {/* Unified Nearby Interaction Grid */}
+      {interactionGrid.length > 0 && (
         <div
           style={{
             position: "absolute",
@@ -386,7 +387,7 @@ export default function Overlay() {
             padding: "0",
             borderRadius: "12px",
             border: "1px solid rgba(255, 255, 255, 0.1)",
-            width: "300px",
+            width: "320px",
             zIndex: 151,
             pointerEvents: "none",
             backdropFilter: "blur(12px)",
@@ -414,7 +415,7 @@ export default function Overlay() {
                 letterSpacing: "0.5px",
               }}
             >
-              NEARBY ENTITIES
+              NEARBY GRID
             </span>
             <span
               style={{
@@ -425,211 +426,109 @@ export default function Overlay() {
                 borderRadius: "4px",
               }}
             >
-              {nearbyItems.length + nearbyPlacingAreas.length} found
+              Arrows: Move | P: Pick | T: Place
             </span>
           </div>
 
-          {/* Table Body */}
+          {/* Grid Body */}
           <div
             style={{
-              maxHeight: "300px",
+              maxHeight: "350px",
               overflowY: "auto",
               display: "flex",
               flexDirection: "column",
+              gap: "12px",
+              padding: "12px",
             }}
           >
-            {/* 1. Pickup Items Section */}
-            {nearbyItems.length > 0 && (
-              <>
+            {interactionGrid.map((row, rIdx) => (
+              <div key={row.id}>
                 <div
                   style={{
-                    padding: "8px 16px",
-                    fontSize: "10px",
-                    fontWeight: 600,
+                    fontSize: "11px",
                     color: "rgba(255,255,255,0.5)",
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
-                    marginTop: "4px",
+                    marginBottom: "6px",
+                    paddingLeft: "4px",
                   }}
                 >
-                  Pick Up (Key: P)
+                  {row.label}
                 </div>
-                {nearbyItems.map((item, idx) => {
-                  const isSelected =
-                    idx === selectedPickupIndex && isPickupMenuOpen; // Only highlight if menu active? Or always?
-                  // Let's highlight if it's the "active" selection for P key.
-                  const isTarget = idx === selectedPickupIndex;
-
-                  const emoji =
-                    item.type === "file"
-                      ? "📄"
-                      : item.type === "laptop"
-                        ? "💻"
-                        : item.type === "pendrive"
-                          ? "💾"
-                          : item.type === "coffeecup"
-                            ? "☕"
-                            : "📦";
-
-                  return (
-                    <div
-                      key={`pickup-${item.id}`}
-                      style={{
-                        padding: "8px 16px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        background: isTarget
-                          ? "rgba(50, 150, 255, 0.15)"
-                          : "transparent",
-                        borderLeft: isTarget
-                          ? "3px solid #4a90e2"
-                          : "3px solid transparent",
-                        transition: "background 0.2s",
-                      }}
-                    >
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {row.cells.map((cell, cIdx) => {
+                    const isSelected =
+                      gridSelection.row === rIdx && gridSelection.col === cIdx;
+                    return (
                       <div
-                        style={{ fontSize: "16px", filter: "grayscale(20%)" }}
+                        key={cell.id}
+                        style={{
+                          border: isSelected
+                            ? "1px solid #4CAF50"
+                            : "1px solid rgba(255,255,255,0.1)",
+                          background: isSelected
+                            ? "rgba(76, 175, 80, 0.2)"
+                            : "rgba(255,255,255,0.05)",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          minWidth: "50px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "4px",
+                          position: "relative",
+                          transition: "all 0.15s ease-out",
+                          transform: isSelected ? "translateY(-2px)" : "none",
+                          boxShadow: isSelected
+                            ? "0 4px 12px rgba(76, 175, 80, 0.3)"
+                            : "none",
+                        }}
                       >
-                        {emoji}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div
                           style={{
-                            fontSize: "13px",
-                            color: isTarget ? "#fff" : "#ccc",
-                            fontWeight: isTarget ? 600 : 400,
+                            fontSize: "18px",
+                            filter:
+                              cell.type === "slot"
+                                ? "opacity(0.4) grayscale(100%)"
+                                : "none",
+                          }}
+                        >
+                          {cell.icon}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            color: isSelected
+                              ? "#fff"
+                              : "rgba(255,255,255,0.6)",
                             whiteSpace: "nowrap",
+                            maxWidth: "70px",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {item.name}
+                          {cell.label}
                         </div>
-                        <div
-                          style={{
-                            fontSize: "10px",
-                            color: "rgba(255,255,255,0.4)",
-                          }}
-                        >
-                          {item.type}
-                        </div>
+                        {isSelected && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: 4,
+                              right: 4,
+                              width: 6,
+                              height: 6,
+                              background: "#4CAF50",
+                              borderRadius: "50%",
+                              boxShadow: "0 0 4px #4CAF50",
+                            }}
+                          />
+                        )}
                       </div>
-                      {isTarget && (
-                        <div
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 600,
-                            color: "#4a90e2",
-                            background: "rgba(74, 144, 226, 0.1)",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          PICK UP
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            )}
-
-            {/* 2. Placing Areas Section */}
-            {playerInventory.length > 0 && nearbyPlacingAreas.length > 0 && (
-              <>
-                <div
-                  style={{
-                    padding: "8px 16px",
-                    fontSize: "10px",
-                    fontWeight: 600,
-                    color: "rgba(255,255,255,0.5)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    marginTop: "8px",
-                    borderTop: "1px solid rgba(255,255,255,0.05)",
-                    paddingTop: "8px",
-                  }}
-                >
-                  Place Item (Key: T)
+                    );
+                  })}
                 </div>
-                {nearbyPlacingAreas.map((area: any) => {
-                  const isSelected = area.id === activePlacingAreaId;
-                  return (
-                    <div
-                      key={`place-${area.id}`}
-                      style={{
-                        padding: "8px 16px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        background: isSelected
-                          ? "rgba(76, 175, 80, 0.15)"
-                          : "transparent",
-                        borderLeft: isSelected
-                          ? "3px solid #4CAF50"
-                          : "3px solid transparent",
-                        transition: "background 0.2s",
-                      }}
-                    >
-                      <div style={{ fontSize: "16px", opacity: 0.8 }}>📍</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "13px",
-                            color: isSelected ? "#fff" : "#ccc",
-                            fontWeight: isSelected ? 600 : 400,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {area.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "10px",
-                            color: "rgba(255,255,255,0.4)",
-                          }}
-                        >
-                          Capacity: {area.currentItems.length}/{area.capacity}
-                        </div>
-                      </div>
-                      {isSelected && (
-                        <div
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 600,
-                            color: "#4CAF50",
-                            background: "rgba(76, 175, 80, 0.1)",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          PLACE HERE
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
-
-          {/* Footer Hint */}
-          <div
-            style={{
-              padding: "8px 16px",
-              background: "rgba(0, 0, 0, 0.2)",
-              borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-              fontSize: "10px",
-              color: "rgba(255, 255, 255, 0.4)",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <span>Look at object to select</span>
-            <span>Auto-detect active</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

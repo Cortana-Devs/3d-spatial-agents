@@ -203,4 +203,29 @@ export class InteractableRegistry {
     area.currentItems.push(objectId);
     return true;
   }
+
+  public getSlotPosition(
+    areaId: string,
+    slotIndex: number,
+  ): THREE.Vector3 | null {
+    const area = this.placingAreas.get(areaId);
+    if (!area) return null;
+
+    const [w, h, d] = area.dimensions;
+
+    // Grid layout: columns along local-X, rows along local-Z
+    const maxCols = Math.max(1, Math.floor(w / 2));
+    const col = slotIndex % maxCols;
+    const row = Math.floor(slotIndex / maxCols);
+
+    // Local offsets centered on surface
+    const localX = (col - (maxCols - 1) / 2) * 2;
+    const localZ = (row - 0.5) * 2;
+
+    // Build offset vector in local space, then rotate to world
+    const offset = new THREE.Vector3(localX, h / 2 + 0.15, localZ);
+    offset.applyQuaternion(area.rotation);
+
+    return area.position.clone().add(offset);
+  }
 }

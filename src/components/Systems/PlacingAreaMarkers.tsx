@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { InteractableRegistry, PlacingArea } from "./InteractableRegistry";
+import { useGameStore } from "@/store/gameStore";
 
 const DETECTION_RADIUS = 8;
 const CHECK_INTERVAL = 0.3; // seconds between registry queries
@@ -38,6 +39,7 @@ export function PlacingAreaMarkers({
       {visibleAreas.map((area) => (
         <AreaMarker key={area.id} area={area} />
       ))}
+      <PlacingTargetMarker />
     </group>
   );
 }
@@ -116,6 +118,37 @@ function AreaMarker({ area }: { area: PlacingArea }) {
           <meshBasicMaterial color="#00ff66" transparent opacity={0.5} />
         </mesh>
       ))}
+    </group>
+  );
+}
+
+function PlacingTargetMarker() {
+  const pos = useGameStore((state) => state.placingTargetPos);
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame((state) => {
+    if (!groupRef.current || !pos) return;
+    
+    // Bobbing animation
+    const yOffset = Math.sin(state.clock.elapsedTime * 5) * 0.1 + 0.5;
+    groupRef.current.position.set(pos.x, pos.y + yOffset, pos.z);
+    groupRef.current.rotation.y += 2 * 0.016;
+  });
+
+  if (!pos) return null;
+
+  return (
+    <group ref={groupRef}>
+      {/* Downward pointing cone/pyramid */}
+      <mesh rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.2, 0.5, 4]} />
+        <meshBasicMaterial color="#ffff00" transparent opacity={0.8} />
+      </mesh>
+      {/* Shadow/Spot on surface */}
+       <mesh position={[0, -0.5, 0]} rotation={[-Math.PI/2, 0, 0]}>
+         <ringGeometry args={[0.1, 0.15, 16]} />
+         <meshBasicMaterial color="#ffff00" side={THREE.DoubleSide} />
+       </mesh>
     </group>
   );
 }

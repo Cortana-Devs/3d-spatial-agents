@@ -207,115 +207,144 @@ export function useRobotController(
         }
       }
 
-      // ===== P KEY: PICK UP =====
+      // ===== P KEY: PICK UP (GRID) =====
       if (e.code === keyBindings.pickUp) {
         if (currentIsSitting || !groupRef.current) return;
+        const grid = useGameStore.getState().interactionGrid;
+        const sel = useGameStore.getState().gridSelection;
 
-        const isPickupMenuOpen = useGameStore.getState().isPickupMenuOpen;
-
-        if (isPickupMenuOpen) {
-          // Confirm Selection from Menu
-          const nearbyItems = useGameStore.getState().nearbyItems;
-          const selectedIdx = useGameStore.getState().selectedPickupIndex;
-          if (nearbyItems.length > 0) {
-            const item = nearbyItems[selectedIdx];
-            InteractableRegistry.getInstance().pickUp(item.id, "player");
-            addToInventory(item);
-            setInteractionNotification(`Picked up ${item.name}`);
-            useGameStore.getState().setPickupMenuOpen(false);
-            useGameStore.getState().setNearbyItems([]);
+        if (grid.length > 0 && sel.row >= 0 && sel.row < grid.length) {
+          const cell = grid[sel.row].cells[sel.col];
+          if (cell && cell.type === "item") {
+            const success = InteractableRegistry.getInstance().pickUp(
+              cell.id,
+              "player",
+            );
+            if (success) {
+              const obj = InteractableRegistry.getInstance().getById(cell.id);
+              if (obj) {
+                addToInventory(obj);
+                setInteractionNotification(`Picked up ${obj.name}`);
+              }
+            }
           }
-          return;
-        }
-
-        const robotPos = groupRef.current.position;
-        const nearbyObjs = InteractableRegistry.getInstance()
-          .getNearby(robotPos, 6)
-          .filter((o) => o.pickable && !o.carriedBy);
-
-        if (nearbyObjs.length === 0) {
-          setInteractionNotification("Nothing to pick up nearby");
-        } else if (nearbyObjs.length === 1) {
-          InteractableRegistry.getInstance().pickUp(nearbyObjs[0].id, "player");
-          addToInventory(nearbyObjs[0]);
-          setInteractionNotification(`Picked up ${nearbyObjs[0].name}`);
-          console.log(`[Player] Picked up "${nearbyObjs[0].name}"`);
-        } else {
-          // Multiple items -> Open Menu
-          useGameStore.getState().setNearbyItems(nearbyObjs);
-          useGameStore.getState().setPickupMenuOpen(true);
-          useGameStore.getState().setSelectedPickupIndex(0);
-          setInteractionNotification("Multiple items. select to pick up.");
         }
       }
 
-      // ===== T KEY: PLACE / DROP =====
+      // ===== T KEY: PLACE (GRID) =====
       if (e.code === keyBindings.placeItem) {
         if (currentIsSitting || !groupRef.current) return;
+
         const inventory = useGameStore.getState().playerInventory;
         if (inventory.length === 0) {
           setInteractionNotification("Inventory is empty");
           return;
         }
 
-        const selectedIdx = useGameStore.getState().selectedInventoryIndex;
-        const clampedIdx = Math.min(selectedIdx, inventory.length - 1);
-        const selectedItem = inventory[clampedIdx];
-        const robotPos = groupRef.current.position;
+        const grid = useGameStore.getState().interactionGrid;
+        const sel = useGameStore.getState().gridSelection;
 
-        // Check for nearby placing area
-        const nearbyArea = InteractableRegistry.getInstance()
-          .getNearbyPlacingAreas(robotPos, 6)
-          .find((a) => a.currentItems.length < a.capacity);
+        if (grid.length > 0 && sel.row >= 0 && sel.row < grid.length) {
+          const cell = grid[sel.row].cells[sel.col];
 
-        if (nearbyArea) {
-          InteractableRegistry.getInstance().placeItemAt(
-            selectedItem.id,
-            nearbyArea.id,
-          );
-          removeFromInventory(selectedItem.id);
-          setInteractionNotification(
-            `Placed ${selectedItem.name} on ${nearbyArea.name}`,
-          );
-          console.log(
-            `[Player] Placed "${selectedItem.name}" on "${nearbyArea.name}"`,
-          );
+          // Get currently selected inventory item
+          const invIdx = useGameStore.getState().selectedInventoryIndex;
+          const clampedIdx = Math.min(invIdx, inventory.length - 1);
+          const selectedItem = inventory[clampedIdx];
+
+          if (cell && cell.type === "slot") {
+            // Place in specific slot/area
+            const areaId = cell.meta.areaId;
+            // Note: placeItemAt currently just pushes to the end.
+            // We assume selecting *any* empty slot in the area means "Add to this area".
+            const success = InteractableRegistry.getInstance().placeItemAt(
+              selectedItem.id,
+              areaId,
+            );
+
+            if (success) {
+              removeFromInventory(selectedItem.id);
+              setInteractionNotification(
+                `Placed ${selectedItem.name} on ${cell.meta.areaName}`,
+              );
+            } else {
+              setInteractionNotification(
+                `Cannot place ${selectedItem.name} here (Full or Invalid Type)`,
+              );
+            }
+          } else if (
+            cell &&
+            cell.type === "item" &&
+            cell.meta &&
+            cell.meta.type === "ground"
+          ) {
+            // Dropping on ground? Or replacing a ground item?
+            // Tapping T on a ground item could swap?
+            // For now, if "Floor" row is selected, allow dropping generic?
+            // Or just fallback to ground drop if NO slot selected?
+            // Let's implement explicit ground drop if "Floor Items" row is selected but NOT targeting an item?
+            // Actually, "Empty Slot" logic handles areas. Ground doesn't have slots.
+            // Maybe add an "Empty Ground" cell to Floor row?
+          }
         } else {
-          // Fallback: drop on ground
+          // Fallback: Drop on ground if no grid (shouldn't happen if items in inv)
+          // But if grid is empty (no nearby items/areas), then just drop?
+          const robotPos = groupRef.current.position;
+          const invIdx = useGameStore.getState().selectedInventoryIndex;
+          const clampedIdx = Math.min(invIdx, inventory.length - 1);
+          const selectedItem = inventory[clampedIdx];
+
           InteractableRegistry.getInstance().putDown(
             selectedItem.id,
             robotPos.clone(),
           );
           removeFromInventory(selectedItem.id);
           setInteractionNotification(`Dropped ${selectedItem.name}`);
-          console.log(`[Player] Dropped "${selectedItem.name}" on ground`);
         }
       }
 
-      // ===== ARROW KEYS: INVENTORY / PICKUP SELECTION =====
-      if (e.code === "ArrowUp" || e.code === "ArrowDown") {
-        const isPickupMenuOpen = useGameStore.getState().isPickupMenuOpen;
+      // ===== ARROW KEYS: INVENTORY SELECTION (Scroll also works) =====
+      // We keep ARROW keys for GRID only now. Inventory uses SCROLL only?
+      // Or maybe shift+arrows?
+      // User said: "placing areas select by up and down arrow keys".
+      // So Arrow keys are for Grid.
+      // We removed the old Arrow key block in previous step.
 
-        if (isPickupMenuOpen) {
-          // Navigate Pickup Menu
-          const items = useGameStore.getState().nearbyItems;
-          if (items.length > 1) {
-            const currentIdx = useGameStore.getState().selectedPickupIndex;
-            const direction = e.code === "ArrowDown" ? 1 : -1;
-            const newIdx =
-              (currentIdx + direction + items.length) % items.length;
-            useGameStore.getState().setSelectedPickupIndex(newIdx);
-          }
-        } else {
-          // Navigate Inventory
-          const inventory = useGameStore.getState().playerInventory;
-          if (inventory.length > 1) {
-            const currentIdx = useGameStore.getState().selectedInventoryIndex;
-            const direction = e.code === "ArrowDown" ? 1 : -1;
-            const newIdx =
-              (currentIdx + direction + inventory.length) % inventory.length;
-            useGameStore.getState().setSelectedInventoryIndex(newIdx);
-          }
+      // ===== ARROW KEYS: GRID NAVIGATION =====
+      if (
+        e.code === "ArrowUp" ||
+        e.code === "ArrowDown" ||
+        e.code === "ArrowLeft" ||
+        e.code === "ArrowRight"
+      ) {
+        const grid = useGameStore.getState().interactionGrid;
+        const sel = useGameStore.getState().gridSelection;
+
+        if (grid.length > 0) {
+          let newRow = sel.row;
+          let newCol = sel.col;
+
+          if (e.code === "ArrowUp") newRow--;
+          if (e.code === "ArrowDown") newRow++;
+
+          // Clamp Row
+          if (newRow < 0) newRow = grid.length - 1;
+          if (newRow >= grid.length) newRow = 0;
+
+          // If Row Changed, Clamp Col to new row's length
+          const rowData = grid[newRow];
+          if (newCol >= rowData.cells.length) newCol = rowData.cells.length - 1;
+
+          if (e.code === "ArrowLeft") newCol--;
+          if (e.code === "ArrowRight") newCol++;
+
+          // Clamp Col
+          if (newCol < 0) newCol = rowData.cells.length - 1;
+          if (newCol >= rowData.cells.length) newCol = 0;
+
+          useGameStore
+            .getState()
+            .setGridSelection({ row: newRow, col: newCol });
         }
       }
     };
@@ -355,118 +384,96 @@ export function useRobotController(
     const input = inputRef.current;
     const s = state.current;
 
-    // Interaction Prompts (separated by key)
+    // Interaction Prompts & Grid Construction
     if (!isSitting) {
-      const hints: string[] = [];
-      const robotPos = groupRef.current.position;
-
-      // --- CONTINUOUS DETECTION of Nearby Items (Passive) ---
-      // We do this every frame (or could throttle) so the UI table is always up to date
-      const pickableObjs = InteractableRegistry.getInstance()
+      // Build interaction grid
+      const robotPos = mesh.position;
+      const nearbyInteractables = InteractableRegistry.getInstance()
         .getNearby(robotPos, 6)
         .filter((o) => o.pickable && !o.carriedBy);
 
-      // Simple diff check to avoid react-three-fiber infinite re-render loops if state matches
-      // Note: A deep comparison or ID list check is better.
-      const currentNearbyItems = useGameStore.getState().nearbyItems;
-      const idsChanged =
-        pickableObjs.length !== currentNearbyItems.length ||
-        pickableObjs.some((obj, i) => obj.id !== currentNearbyItems[i]?.id);
+      const nearbyPlacingAreas = InteractableRegistry.getInstance()
+        .getNearbyPlacingAreas(robotPos, 6)
+        .filter((a) => a.currentItems.length < a.capacity);
 
-      if (idsChanged) {
-        useGameStore.getState().setNearbyItems(pickableObjs);
-        // Reset selection if list changed significantly? Or keep it?
-        // For now, let's just ensure index is valid in the UI component
+      const grid: any[] = [];
+
+      if (nearbyInteractables.length > 0) {
+        grid.push({
+          id: "floor",
+          label: "Nearby Items",
+          cells: nearbyInteractables.map((item) => ({
+            id: item.id,
+            label: item.name,
+            type: "item",
+            icon: "🔹", // Simplified
+            meta: item,
+            interactableId: item.id,
+          })),
+        });
       }
 
-      // E key hints (sit/door)
-      let nearest: any = null;
-      let minDist = 6.0;
-      for (const item of interactables) {
-        const d = robotPos.distanceTo(item.position);
-        if (d < minDist) {
-          minDist = d;
-          nearest = item;
-        }
+      if (nearbyPlacingAreas.length > 0) {
+        nearbyPlacingAreas.forEach((area) => {
+          const cells: any[] = [];
+          // Items on desk (if we want to pick them?)
+          // For now, let's just show EMPTY slots
+          const remaining = area.capacity - area.currentItems.length;
+          for (let i = 0; i < remaining; i++) {
+            cells.push({
+              id: `slot-${area.id}-${i}`,
+              label: "Empty Slot",
+              type: "slot",
+              icon: "⬜",
+              meta: { areaId: area.id, areaName: area.name, offset: i },
+            });
+          }
+          if (cells.length > 0) {
+            grid.push({
+              id: area.id,
+              label: area.name,
+              cells: cells,
+            });
+          }
+        });
       }
-      if (nearest) {
-        if (nearest.type === "chair" || nearest.type === "sofa") {
-          hints.push("E: Sit");
-        } else if (nearest.type === "door") {
-          hints.push("E: Open/Close");
-        }
-      }
 
-      // P key hints (pick up) - NOW just a hint, list is always visible
-      if (pickableObjs.length > 0) {
-        hints.push("P: Pick Up");
-      }
+      useGameStore.getState().setInteractionGrid(grid);
 
-      // T key hints (place/drop)
-      if (playerInventory.length > 0) {
-        const selectedIdx = useGameStore.getState().selectedInventoryIndex;
-        const clampedIdx = Math.min(selectedIdx, playerInventory.length - 1);
-        const selectedItem = playerInventory[clampedIdx];
+      // Update Placing Target Visualization
+      const curSel = useGameStore.getState().gridSelection;
+      let targetPos: THREE.Vector3 | null = null;
 
-        // LOOK-BASED HINT LOGIC
-        const candidates = InteractableRegistry.getInstance()
-          .getNearbyPlacingAreas(robotPos, 6) // Use robotPos variable
-          .filter((a) => a.currentItems.length < a.capacity);
-
-        let bestArea = null;
-        let bestScore = -1.0;
-
-        if (candidates.length > 0) {
-          const camDir = new THREE.Vector3();
-          camera.getWorldDirection(camDir);
-          const camPos = camera.position;
-
-          for (const area of candidates) {
-            const toArea = area.position.clone().sub(camPos).normalize();
-            const dot = camDir.dot(toArea);
-            if (dot > bestScore) {
-              bestScore = dot;
-              bestArea = area;
-            }
+      if (grid.length > 0 && curSel.row >= 0 && curSel.row < grid.length) {
+        const row = grid[curSel.row];
+        const cell = row.cells[curSel.col];
+        if (cell && cell.type === "slot") {
+          const areaId = cell.meta.areaId;
+          // We target the next available slot for the area
+          const area =
+            InteractableRegistry.getInstance().getPlacingAreaById(areaId);
+          if (area) {
+            const nextSlotIdx = area.currentItems.length;
+            targetPos = InteractableRegistry.getInstance().getSlotPosition(
+              areaId,
+              nextSlotIdx,
+            );
           }
         }
-
-        // Sync with Store for UI List
-        const currentIds = candidates
-          .map((c) => c.id)
-          .sort()
-          .join(",");
-        if (currentIds !== prevPlacingIds.current) {
-          useGameStore.getState().setNearbyPlacingAreas(candidates);
-          prevPlacingIds.current = currentIds;
-        }
-
-        const bestAreaId = bestArea ? bestArea.id : null;
-        if (bestAreaId !== prevActivePlacingId.current) {
-          useGameStore.getState().setActivePlacingAreaId(bestAreaId);
-          prevActivePlacingId.current = bestAreaId;
-        }
-
-        const nearbyArea = bestArea;
-
-        if (nearbyArea) {
-          hints.push(`T: Place ${selectedItem.name} on ${nearbyArea.name}`);
-        } else {
-          hints.push(`T: Drop ${selectedItem.name}`);
-        }
-
-        // Inventory count
-        hints.push(
-          `🎒 ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
-        );
       }
+      useGameStore.getState().setPlacingTargetPos(targetPos);
 
-      setDebugText(hints.length > 0 ? hints.join(" | ") : "");
+      if (grid.length > 0 && useGameStore.getState().gridSelection.row === -1) {
+        useGameStore.getState().setGridSelection({ row: 0, col: 0 });
+      } else if (grid.length === 0) {
+        useGameStore.getState().setGridSelection({ row: -1, col: -1 });
+      }
     } else {
-      setDebugText("E: Stand");
+      useGameStore.getState().setInteractionGrid([]);
+      useGameStore.getState().setGridSelection({ row: -1, col: -1 });
+      useGameStore.getState().setPlacingTargetPos(null);
     }
 
-    // Clamp delta
     const dt = Math.min(delta, 0.1);
 
     // Input Processing
