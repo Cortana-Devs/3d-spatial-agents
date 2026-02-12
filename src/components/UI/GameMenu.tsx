@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '@/store/gameStore';
+import { Minimap } from './Minimap';
 
 export default function GameMenu() {
     const {
@@ -184,24 +185,11 @@ export default function GameMenu() {
                         alignItems: 'center',
                         height: '260px',
                         flexDirection: 'column',
-                        color: 'rgba(255,255,255,0.3)',
                     }}>
-                        <div style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                            borderRadius: '12px',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            border: '1px dashed rgba(255, 255, 255, 0.1)',
-                        }}>
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '40px', marginBottom: '12px', opacity: 0.4 }}>🗺️</div>
-                                <h3 style={{ margin: 0, fontWeight: 500, fontSize: '16px' }}>Map Unavailable</h3>
-                                <p style={{ margin: '8px 0 0', fontSize: '13px', opacity: 0.6 }}>Minimap system coming soon</p>
-                            </div>
-                        </div>
+                        <Minimap />
+                        <p style={{ margin: '8px 0 0', fontSize: '12px', opacity: 0.5, color: 'white' }}>
+                            Office Layout • {new Date().toLocaleTimeString()}
+                        </p>
                     </div>
                 )}
 

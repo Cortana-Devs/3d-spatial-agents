@@ -280,6 +280,9 @@ export const useGameStore = create<GameState>((set) => ({
   inspectedAgentData: null,
   setInspectedAgentData: (data) => set({ inspectedAgentData: data }),
 
+  followingAgentId: null,
+  setFollowingAgentId: (id) => set({ followingAgentId: id }),
+
   // Interaction Grid State
   interactionGrid: [],
   setInteractionGrid: (grid) => set({ interactionGrid: grid }),

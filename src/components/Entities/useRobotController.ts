@@ -122,7 +122,8 @@ export function useRobotController(
 
   // Physics Constants
   const walkSpeed = 12.0;
-  const sneakSpeed = 5.0;
+  const runSpeed = 20.0; // Faster than walk
+  const sneakSpeed = 5.0; // Optional, maybe Ctrl?
   const jumpForce = 20.0;
   const gravity = -50.0;
   const radius = 0.8;
@@ -142,6 +143,9 @@ export function useRobotController(
   const setInteractionNotification = useGameStore(
     (state) => state.setInteractionNotification,
   );
+  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
+  const followingAgentId = useGameStore((state) => state.followingAgentId);
+  const setFollowingAgentId = useGameStore((state) => state.setFollowingAgentId);
 
   // Sitting State
   const sitTargetPos = useRef<THREE.Vector3 | null>(null);
@@ -201,9 +205,41 @@ export function useRobotController(
               useGameStore.getState().setInteractionTarget(nearest.id);
             }
           } else {
-            // Wave
-            state.current.isWaving = true;
-            state.current.waveTimer = 0;
+            // Check for nearby AI Agents (Follow Logic)
+            const agents = AIManager.getInstance().vehicles;
+            let nearbyAgent: any = null;
+            let agentDist = 999;
+            const myPos = groupRef.current.position;
+
+            for (const v of agents) {
+              // @ts-ignore
+              if (v.id) {
+                const d = v.position.squaredDistanceTo(myPos as unknown as any);
+                if (d < 9.0) { // < 3m squared
+                  agentDist = d;
+                  nearbyAgent = v;
+                  break;
+                }
+              }
+            }
+
+            if (nearbyAgent) {
+              // Toggle Follow
+              // @ts-ignore
+              const targetId = nearbyAgent.id;
+              const currentFollowingId = useGameStore.getState().followingAgentId;
+              if (currentFollowingId === targetId) {
+                setFollowingAgentId(null);
+                setInteractionNotification(`Agent Stopped Following`);
+              } else {
+                setFollowingAgentId(targetId);
+                setInteractionNotification(`Agent ${targetId} Following!`);
+              }
+            } else {
+              // Wave
+              state.current.isWaving = true;
+              state.current.waveTimer = 0;
+            }
           }
         }
       }
@@ -478,8 +514,10 @@ export function useRobotController(
     const dt = Math.min(delta, 0.1);
 
     // Input Processing
-    s.isSneaking = input.sneak;
-    const currentSpeed = s.isSneaking ? sneakSpeed : walkSpeed;
+    // Shift now triggers RUN (isSneaking flag reused for 'modifier' key)
+    const isSprinting = input.sneak;
+    s.isSneaking = false; // Disable sneak logic generally
+    const currentSpeed = isSprinting ? runSpeed : walkSpeed;
     const moveDist = currentSpeed * dt;
 
     let inputZ = 0;
@@ -615,6 +653,10 @@ export function useRobotController(
         }
       }
     }
+
+    // Update Minimap Position (Throttled or every frame? Every frame is fine for single player)
+    setPlayerPosition(mesh.position.clone());
+
 
     // --- Animation Logic ---
     const j = joints.current;
@@ -799,19 +841,34 @@ export function useRobotController(
         s.isWaving = false;
       }
     } else if (isMoving && s.isGrounded) {
-      s.walkTime += dt * (s.isSneaking ? 8 : 12);
-      const legAmp = s.isSneaking ? 0.3 : 0.6;
-      const baseKneeBend = s.isSneaking ? 0.8 : 0.2;
-      const kneeAmp = s.isSneaking ? 0.2 : 0.3;
+      const isSprinting = input.sneak;
+      s.walkTime += dt * (isSprinting ? 18 : 12);
+      const legAmp = isSprinting ? 0.8 : 0.6;
+      const baseKneeBend = isSprinting ? 0.3 : 0.2;
+      const kneeAmp = isSprinting ? 0.5 : 0.3;
 
       j.leftHip.rotation.x =
-        Math.sin(s.walkTime) * legAmp - (s.isSneaking ? 0.5 : 0);
+        Math.sin(s.walkTime) * legAmp; // Removed sneak offset
       j.leftKnee.rotation.x =
         Math.abs(Math.cos(s.walkTime)) * kneeAmp + baseKneeBend;
       j.rightHip.rotation.x =
-        Math.sin(s.walkTime + Math.PI) * legAmp - (s.isSneaking ? 0.5 : 0);
+        Math.sin(s.walkTime + Math.PI) * legAmp;
       j.rightKnee.rotation.x =
         Math.abs(Math.cos(s.walkTime + Math.PI)) * kneeAmp + baseKneeBend;
+
+      // Arms
+      j.leftArm.shoulder.rotation.x =
+        Math.sin(s.walkTime + Math.PI) * legAmp;
+      j.rightArm.shoulder.rotation.x =
+        Math.sin(s.walkTime) * legAmp;
+
+      // Torso Bob
+      j.torso.position.y = Math.sin(s.walkTime * 2) * (isSprinting ? 0.1 : 0.05);
+      j.torso.rotation.x = THREE.MathUtils.lerp(
+        j.torso.rotation.x,
+        isSprinting ? 0.3 : 0, // Lean forward when running
+        0.1
+      );
 
       // Reset spread
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
