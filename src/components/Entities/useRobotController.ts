@@ -143,6 +143,7 @@ export function useRobotController(
   const setInteractionNotification = useGameStore(
     (state) => state.setInteractionNotification,
   );
+  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
 
   // Sitting State
   const sitTargetPos = useRef<THREE.Vector3 | null>(null);
@@ -616,8 +617,12 @@ export function useRobotController(
           s.isGrounded = true;
           s.velocity.y = 0;
         }
+        }
       }
-    }
+
+      // Update Minimap Position (Throttled or every frame? Every frame is fine for single player)
+      setPlayerPosition(mesh.position.clone());
+
 
     // --- Animation Logic ---
     const j = joints.current;

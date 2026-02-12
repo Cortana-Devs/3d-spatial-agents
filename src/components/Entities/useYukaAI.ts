@@ -26,6 +26,7 @@ export function useYukaAI(
   // Remote Logic: Inspection
   const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
   const setInspectedAgentData = useGameStore((state) => state.setInspectedAgentData);
+  const setAgentPosition = useGameStore((state) => state.setAgentPosition);
 
   // Animation State
   const walkTime = useRef(0);
@@ -423,7 +424,11 @@ export function useYukaAI(
       }
     }
 
+    // Update Minimap Position
+    setAgentPosition(id, new THREE.Vector3(vehicle.position.x, vehicle.position.y, vehicle.position.z));
   });
+
+
 
   return { vehicle: vehicleRef.current, brain: brainRef.current, animationState };
 }

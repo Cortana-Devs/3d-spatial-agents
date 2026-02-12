@@ -146,6 +146,12 @@ interface GameState {
   setGridSelection: (sel: { row: number; col: number }) => void;
   placingTargetPos: THREE.Vector3 | null;
   setPlacingTargetPos: (pos: THREE.Vector3 | null) => void;
+
+  // Minimap State
+  playerPosition: THREE.Vector3;
+  setPlayerPosition: (pos: THREE.Vector3) => void;
+  agentPositions: Record<string, THREE.Vector3>;
+  setAgentPosition: (id: string, pos: THREE.Vector3) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -280,4 +286,13 @@ export const useGameStore = create<GameState>((set) => ({
   setGridSelection: (sel) => set({ gridSelection: sel }),
   placingTargetPos: null,
   setPlacingTargetPos: (pos) => set({ placingTargetPos: pos }),
+
+  // Minimap State
+  playerPosition: new THREE.Vector3(0, 0, 0),
+  setPlayerPosition: (pos) => set({ playerPosition: pos }),
+  agentPositions: {},
+  setAgentPosition: (id, pos) =>
+    set((state) => ({
+      agentPositions: { ...state.agentPositions, [id]: pos },
+    })),
 }));
