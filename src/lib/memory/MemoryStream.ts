@@ -1,12 +1,12 @@
 import { MemoryObject, MemoryType, RetrievalContext, MemoryConfig } from './types';
 import { memoryStorage } from './idb-adapter';
-import { getGroqClient } from '../groq';
 import { v4 as uuidv4 } from 'uuid';
+import { summarizeMemories } from '@/app/actions';
 
 const DEFAULT_CONFIG: MemoryConfig = {
     maxMemories: 500,
     compactionThreshold: 400
-};
+ };
 
 export class MemoryStream {
     private isCompacting = false;
@@ -126,24 +126,7 @@ export class MemoryStream {
                 .map(m => `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.type}: ${m.content}`)
                 .join('\n');
 
-            const client = getGroqClient();
-            const completion = await client.chat.completions.create({
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are an agent's memory manager. Summarize the following events into a single, concise 'Insight' or 'Fact' that captures the key context. Ignore mundane details."
-                    },
-                    {
-                        role: "user",
-                        content: textToSummarize
-                    }
-                ],
-                model: "llama-3.3-70b-versatile",
-                temperature: 0.5,
-                max_completion_tokens: 200,
-            });
-
-            const summary = completion.choices[0]?.message?.content?.trim();
+            const summary = await summarizeMemories(textToSummarize);
 
             if (summary) {
                 // Add Insight

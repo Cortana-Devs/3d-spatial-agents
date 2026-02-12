@@ -1,3 +1,4 @@
+import 'server-only';
 import { Groq } from 'groq-sdk';
 
 class KeyManager {
