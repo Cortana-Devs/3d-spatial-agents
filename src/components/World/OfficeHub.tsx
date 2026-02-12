@@ -559,8 +559,7 @@ export default function OfficeHub() {
     // D. Lobby
     // Reception Desk (Centered)
     createFurniture(hubCenter.x, hubCenter.z + 55, 20, 4, 5, "#222"); // Matches desk
-    // Reception Chair
-    createFurniture(hubCenter.x, hubCenter.z + 50, 3, 3, 3, "#222");
+    // Reception Chair (Handled by Component)
 
     // E. Manager's Office (Manually added visuals, registering obstacles)
     // Managers Desk

@@ -16,12 +16,12 @@ const DEFAULT_CONFIG: MemoryConfig = {
 export class MemoryStream {
   private isCompacting = false;
 
-  constructor(private config: MemoryConfig = DEFAULT_CONFIG) {}
+  constructor(private config: MemoryConfig = DEFAULT_CONFIG) { }
 
   async init() {
     // Any async setup if needed, IDB open is handled in adapter lazy-load
     const count = await this.count();
-    console.log(`[MemoryStream] Initialized with ${count} memories.`);
+    // console.log(`[MemoryStream] Initialized with ${count} memories.`);
   }
 
   /**
@@ -116,9 +116,11 @@ export class MemoryStream {
 
     const count = await this.count();
     if (count >= this.config.compactionThreshold) {
+      /*
       console.log(
         `[MemoryStream] Compaction threshold reached (${count}/${this.config.maxMemories}). triggering reflection...`,
       );
+      */
       this.reflect(sessionId).catch((err) =>
         console.error("[MemoryStream] Reflection failed:", err),
       );
@@ -162,16 +164,16 @@ export class MemoryStream {
           isInsight: true,
         };
         await memoryStorage.add(insight);
+        /*
         console.log(
           `[MemoryStream] Generated insight: "${summary.substring(0, 50)}..."`,
         );
+        */
 
         // Prune old memories
         const idsToDelete = oldest.map((m) => m.id);
         await memoryStorage.delete(idsToDelete);
-        console.log(
-          `[MemoryStream] Pruned ${idsToDelete.length} old memories.`,
-        );
+        // console.log(`[MemoryStream] Pruned ${idsToDelete.length} old memories.`);
       }
     } finally {
       this.isCompacting = false;

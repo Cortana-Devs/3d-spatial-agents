@@ -1,0 +1,309 @@
+﻿
+> metallic-nova@0.1.0 build D:\Uni Works\web-native-3d-office-assistant
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+node.exe : 
+At C:\Users\hasit\App
+Data\Roaming\npm\pnpm
+.ps1:24 char:5
++     & "node$exe"  "
+$basedir/node_modules
+/pnpm/bin/pnpm.cjs" 
+$args
++     ~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (:String   
+ ) [], RemoteExce    
+ption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+> Build error 
+occurred
+Error: Turbopack 
+build failed with 2 
+errors:
+./src/app/actions.ts:
+3:1
+Export AgentContext 
+doesn't exist in 
+target module
+[0m [90m 1 |[39m 
+[32m'use server'[39
+m[33m;[39m
+ [90m 2 |[39m
+[31m[1m>[22m[39m
+[90m 3 |[39m 
+[36mimport[39m { [
+33mNearbyEntity[39m
+[33m,[39m [33mAgent
+Context[39m[33m,[3
+9m 
+processAgentThought 
+} [36mfrom[39m [32
+m'@/lib/agent-core'[
+39m[33m;[39m
+ [90m   |[39m [31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31
+m[1m^[22m[39m[31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31
+m[1m^[22m[39m[31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31
+m[1m^[22m[39m[31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m
+ [90m 4 |[39m 
+[36mimport[39m { 
+getGroqClient } 
+[36mfrom[39m [32m'
+@/lib/groq'[39m[33m
+;[39m
+ [90m 5 |[39m 
+[36mimport[39m { 
+logAgentInteraction 
+} [36mfrom[39m [32
+m'@/lib/logging/agent
+-logger'[39m[33m;[
+39m
+ [90m 6 |[39m[0m
+
+The export 
+AgentContext was not 
+found in module [proj
+ect]/src/lib/agent-co
+re.ts [app-rsc] 
+(ecmascript).
+Did you mean to 
+import 
+processAgentThought?
+All exports of the 
+module are 
+statically known (It 
+doesn't have dynamic 
+exports). So it's 
+known statically 
+that the requested 
+export doesn't exist.
+
+
+./src/app/actions.ts:
+3:1
+Export NearbyEntity 
+doesn't exist in 
+target module
+[0m [90m 1 |[39m 
+[32m'use server'[39
+m[33m;[39m
+ [90m 2 |[39m
+[31m[1m>[22m[39m
+[90m 3 |[39m 
+[36mimport[39m { [
+33mNearbyEntity[39m
+[33m,[39m [33mAgent
+Context[39m[33m,[3
+9m 
+processAgentThought 
+} [36mfrom[39m [32
+m'@/lib/agent-core'[
+39m[33m;[39m
+ [90m   |[39m [31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31
+m[1m^[22m[39m[31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31
+m[1m^[22m[39m[31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31
+m[1m^[22m[39m[31m
+[1m^[22m[39m[31m
+[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^
+[22m[39m[31m[1m^
+[22m[39m[31m[1m^[
+22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22
+m[39m[31m[1m^[22m
+[39m[31m[1m^[22m
+[39m[31m[1m^[22m[
+39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m^[22m[39m[
+31m[1m^[22m[39m[3
+1m[1m^[22m[39m
+ [90m 4 |[39m 
+[36mimport[39m { 
+getGroqClient } 
+[36mfrom[39m [32m'
+@/lib/groq'[39m[33m
+;[39m
+ [90m 5 |[39m 
+[36mimport[39m { 
+logAgentInteraction 
+} [36mfrom[39m [32
+m'@/lib/logging/agent
+-logger'[39m[33m;[
+39m
+ [90m 6 |[39m[0m
+
+The export 
+NearbyEntity was not 
+found in module [proj
+ect]/src/lib/agent-co
+re.ts [app-rsc] 
+(ecmascript).
+Did you mean to 
+import 
+processAgentThought?
+All exports of the 
+module are 
+statically known (It 
+doesn't have dynamic 
+exports). So it's 
+known statically 
+that the requested 
+export doesn't exist.
+
+
+    at <unknown> (./s
+rc/app/actions.ts:3:1
+)
+    at <unknown> (./s
+rc/app/actions.ts:3:1
+)
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

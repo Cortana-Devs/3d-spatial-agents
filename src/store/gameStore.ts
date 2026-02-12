@@ -150,9 +150,29 @@ interface GameState {
   placingTargetPos: THREE.Vector3 | null;
   setPlacingTargetPos: (pos: THREE.Vector3 | null) => void;
 
+  // Player Position (for minimap, etc.)
+  playerPosition: THREE.Vector3;
+  setPlayerPosition: (pos: THREE.Vector3) => void;
+
+  // Following Agent
+  followingAgentId: string | null;
+  setFollowingAgentId: (id: string | null) => void;
+
+  // Agent Positions (Minimap)
+  agentPositions: Record<string, THREE.Vector3>;
+  setAgentPosition: (id: string, pos: THREE.Vector3) => void;
+
   // Debug Mode
   isDebugMode: boolean;
   setDebugMode: (mode: boolean) => void;
+
+  // New Position Hooks
+  playerPosition: THREE.Vector3;
+  setPlayerPosition: (pos: THREE.Vector3) => void;
+  agentPositions: { [id: string]: THREE.Vector3 };
+  setAgentPosition: (id: string, pos: THREE.Vector3) => void;
+  followingAgentId: string | null;
+  setFollowingAgentId: (id: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -283,6 +303,12 @@ export const useGameStore = create<GameState>((set) => ({
   followingAgentId: null,
   setFollowingAgentId: (id) => set({ followingAgentId: id }),
 
+  agentPositions: {},
+  setAgentPosition: (id, pos) =>
+    set((state) => ({
+      agentPositions: { ...state.agentPositions, [id]: pos },
+    })),
+
   // Interaction Grid State
   interactionGrid: [],
   setInteractionGrid: (grid) => set({ interactionGrid: grid }),
@@ -291,7 +317,19 @@ export const useGameStore = create<GameState>((set) => ({
   placingTargetPos: null,
   setPlacingTargetPos: (pos) => set({ placingTargetPos: pos }),
 
+  // Player Position
+  playerPosition: new THREE.Vector3(),
+  setPlayerPosition: (pos) => set({ playerPosition: pos }),
+
   // Debug Mode
   isDebugMode: false,
-  setDebugMode: (mode) => set({ isDebugMode: mode }),
+  setDebugMode: (mode: boolean) => set({ isDebugMode: mode }),
+
+  playerPosition: new THREE.Vector3(0, 0, 0),
+  setPlayerPosition: (pos) => set({ playerPosition: pos }),
+  agentPositions: {},
+  setAgentPosition: (id, pos) =>
+    set((state) => ({
+      agentPositions: { ...state.agentPositions, [id]: pos },
+    })),
 }));

@@ -30,7 +30,7 @@ export default function AIRobot({
     if (isMenuOpen) {
       e.stopPropagation();
       setInspectedAgentId(id);
-      console.log("Inspecting Agent:", id);
+      // console.log("Inspecting Agent:", id);
     }
   };
 
