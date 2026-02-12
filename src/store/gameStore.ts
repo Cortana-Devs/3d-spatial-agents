@@ -137,7 +137,12 @@ interface GameState {
   inspectedAgentId: string | null;
   setInspectedAgentId: (id: string | null) => void;
   inspectedAgentData: { id: string; thought: string; state: string } | null;
+  inspectedAgentData: { id: string; thought: string; state: string } | null;
   setInspectedAgentData: (data: { id: string; thought: string; state: string } | null) => void;
+
+  // Follow Mode
+  followingAgentId: string | null;
+  setFollowingAgentId: (id: string | null) => void;
 
   // Interaction Grid State
   interactionGrid: GridRow[];
@@ -272,6 +277,9 @@ export const useGameStore = create<GameState>((set) => ({
   setInspectedAgentId: (id) => set({ inspectedAgentId: id }),
   inspectedAgentData: null,
   setInspectedAgentData: (data) => set({ inspectedAgentData: data }),
+
+  followingAgentId: null,
+  setFollowingAgentId: (id) => set({ followingAgentId: id }),
 
   // Interaction Grid State
   interactionGrid: [],

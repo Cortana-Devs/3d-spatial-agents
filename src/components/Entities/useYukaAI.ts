@@ -26,6 +26,10 @@ export function useYukaAI(
   // Remote Logic: Inspection
   const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
   const setInspectedAgentData = useGameStore((state) => state.setInspectedAgentData);
+  const setInspectedAgentId = useGameStore(
+    (state) => state.setInspectedAgentId,
+  );
+  const followingAgentId = useGameStore((state) => state.followingAgentId);
 
   // Animation State
   const walkTime = useRef(0);
@@ -143,7 +147,32 @@ export function useYukaAI(
     if (isMenuOpen || isMenuPanelOpen) return;
     const vehicle = vehicleRef.current;
     if (!vehicle) return;
-    const dt = Math.min(delta, 0.1);
+
+    // --- FOLLOW PLAYER LOGIC ---
+    if (followingAgentId === id && playerRef.current) {
+      // Switch to Follow Mode
+      if (!vehicle.steering.behaviors[3].active) {
+        // Disable Wander
+        vehicle.steering.behaviors[4].active = false;
+        // Enable Arrive (Index 3)
+        vehicle.steering.behaviors[3].active = true;
+        // Target Player
+        const arriveBehavior = vehicle.steering.behaviors[3] as YUKA.ArriveBehavior;
+        arriveBehavior.target = playerRef.current.position as unknown as YUKA.Vector3;
+        arriveBehavior.deceleration = 1.5; // Smooth stop
+        arriveBehavior.tolerance = 2.0; // Stop 2m away
+      }
+    } else {
+      // Default Mode
+      if (vehicle.steering.behaviors[3].active) {
+        // Disable Arrive
+        vehicle.steering.behaviors[3].active = false;
+        // Enable Wander
+        vehicle.steering.behaviors[4].active = true;
+      }
+    }
+
+    const dt = delta * 15; // Speed multiplier for simulation steps dt = Math.min(delta, 0.1);
     frameRef.current++;
 
     // --- WALL AVOIDANCE (Multi-Ray + Sliding) ---
@@ -308,6 +337,9 @@ export function useYukaAI(
     // --- BRAIN UPDATE ---
     const brain = brainRef.current;
     if (frameRef.current % brainIntervalRef.current === 0) {
+      // SKIP BRAIN IF FOLLOWING (Manual Override)
+      if (followingAgentId === id) return;
+
       let currentBehavior = "IDLE";
       if (vehicle.steering.behaviors[2].active) currentBehavior = "SEEKING";
       else if (vehicle.steering.behaviors[1].active) currentBehavior = "WANDERING";
