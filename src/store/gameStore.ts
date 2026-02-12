@@ -137,7 +137,6 @@ interface GameState {
   inspectedAgentId: string | null;
   setInspectedAgentId: (id: string | null) => void;
   inspectedAgentData: { id: string; thought: string; state: string } | null;
-  inspectedAgentData: { id: string; thought: string; state: string } | null;
   setInspectedAgentData: (data: { id: string; thought: string; state: string } | null) => void;
 
   // Follow Mode
