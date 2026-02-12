@@ -14,7 +14,7 @@ export interface BrainState {
 import { RateLimiter } from "@/lib/rateLimiter";
 
 export interface AgentDecision {
-  action: "MOVE_TO" | "WAIT" | "WANDER" | "FOLLOW";
+  action: "MOVE_TO" | "WAIT" | "WANDER" | "FOLLOW" | "INTERACT" | "DROP";
   targetId?: string;
   target?: { x: number; y: number; z: number };
   thought: string;

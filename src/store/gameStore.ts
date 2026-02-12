@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as THREE from "three";
+import { WorldObject } from "@/components/Systems/InteractableRegistry";
 
 export interface Obstacle {
   position: THREE.Vector3;
@@ -89,6 +90,13 @@ interface GameState {
   // Debug Info
   debugTarget: DebugTargetInfo | null;
   setDebugTarget: (target: DebugTargetInfo | null) => void;
+
+  // Inventory & Notifications
+  playerInventory: WorldObject | null;
+  setPlayerInventory: (item: WorldObject | null) => void;
+
+  interactionNotification: string | null;
+  setInteractionNotification: (msg: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -166,4 +174,16 @@ export const useGameStore = create<GameState>((set) => ({
   // Debug Info
   debugTarget: null,
   setDebugTarget: (target) => set({ debugTarget: target }),
+
+  // Inventory & Notifications
+  playerInventory: null,
+  setPlayerInventory: (item) => set({ playerInventory: item }),
+
+  interactionNotification: null,
+  setInteractionNotification: (msg) => {
+    set({ interactionNotification: msg });
+    if (msg) {
+      setTimeout(() => set({ interactionNotification: null }), 3000);
+    }
+  },
 }));

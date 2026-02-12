@@ -11,6 +11,10 @@ export default function Overlay() {
   const isMenuOpen = useGameStore((state) => state.isMenuOpen);
   const setMenuOpen = useGameStore((state) => state.setMenuOpen);
   const keyBindings = useGameStore((state) => state.keyBindings);
+  const interactionNotification = useGameStore(
+    (state) => state.interactionNotification,
+  );
+  const playerInventory = useGameStore((state) => state.playerInventory);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -155,6 +159,55 @@ export default function Overlay() {
 
       {/* Game Menu */}
       {isMenuOpen && <GameMenu />}
+
+      {/* Interaction Notification Toast */}
+      {interactionNotification && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "rgba(0, 50, 200, 0.8)",
+            color: "white",
+            padding: "10px 20px",
+            borderRadius: "8px",
+            fontWeight: "bold",
+            zIndex: 200,
+            pointerEvents: "none",
+            animation: "fadeInOut 3s forwards",
+          }}
+        >
+          {interactionNotification}
+        </div>
+      )}
+
+      {/* Inventory Indicator */}
+      {playerInventory && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "20px",
+            left: "20px",
+            backgroundColor: "rgba(50, 50, 50, 0.8)",
+            color: "white",
+            padding: "15px",
+            borderRadius: "10px",
+            border: "2px solid #aaa",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            zIndex: 150,
+            pointerEvents: "none",
+          }}
+        >
+          <div style={{ fontSize: "24px" }}>🎒</div>
+          <div>
+            <div style={{ fontSize: "12px", color: "#ccc" }}>CARRYING</div>
+            <div style={{ fontWeight: "bold" }}>{playerInventory.name}</div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

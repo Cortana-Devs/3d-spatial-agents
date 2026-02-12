@@ -6,6 +6,7 @@ import AIManager from "../Systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
 import { ClientBrain } from "../Systems/ClientBrain";
 import { NearbyEntity } from "@/app/actions";
+import { InteractableRegistry } from "../Systems/InteractableRegistry";
 
 export function useYukaAI(
   id: string,
@@ -358,6 +359,27 @@ export function useYukaAI(
         });
       });
 
+      // 3. Perceive Nearby Objects
+      const nearbyObjects = InteractableRegistry.getInstance().getNearby(
+        vehicle.position as unknown as THREE.Vector3,
+        15,
+      );
+
+      nearbyObjects.forEach((obj) => {
+        nearbyEntities.push({
+          type: "OBJECT",
+          id: obj.id,
+          distance: parseFloat(
+            vehicle.position
+              .distanceTo(obj.position as unknown as YUKA.Vector3)
+              .toFixed(1),
+          ),
+          status: obj.carriedBy ? `carried by ${obj.carriedBy}` : "available",
+          objectType: obj.type,
+          name: obj.name,
+        });
+      });
+
       // Always update brain, even if alone, so it can decide to Wander
       if (nearbyEntities.length >= 0) {
         // Condition actually redundant but keeps structure
@@ -414,9 +436,71 @@ export function useYukaAI(
                 seek.active = false;
                 wander.active = false;
                 vehicle.velocity.multiplyScalar(0.5); // Slow down
+              } else if (decision.action === "INTERACT" && decision.targetId) {
+                // Move toward the object first
+                const obj = InteractableRegistry.getInstance().getById(
+                  decision.targetId,
+                );
+                if (obj && obj.pickable && !obj.carriedBy) {
+                  seek.active = true;
+                  wander.active = false;
+                  seek.target.set(
+                    obj.position.x,
+                    obj.position.y,
+                    obj.position.z,
+                  );
+                  // When close enough, pick it up (handled in frame loop)
+                }
+              } else if (decision.action === "DROP") {
+                // Drop any carried object
+                const registry = InteractableRegistry.getInstance();
+                const carried = registry.getCarriedBy(id);
+                if (carried) {
+                  registry.putDown(
+                    carried.id,
+                    vehicle.position as unknown as THREE.Vector3,
+                  );
+                }
               }
             }
           });
+      }
+    }
+
+    // --- INTERACTION UPDATE (Auto-Pickup) ---
+    // Check if we are trying to interact with something
+    // const brain = brainRef.current; // access again if needed, or use state -> Removed redeclaration
+    // We don't have easy access to "current decision" here without storing it.
+    // Instead, let's check: if we are SEEKING an object that is close, pick it up.
+    // But we don't know if we are seeking an *object* or a point.
+    // Let's use the Seek behavior's target.
+
+    // Simplification: Check all nearby pickable objects. if very close and we are moving slow (arrived), pick up?
+    // No, that might be accidental.
+    // Let's rely on the fact that if we issued INTERACT, we set seek target to object pos.
+    // If distance to any pickable object < 3.0 AND we are not carrying anything, pick it up?
+    // Only if the Brain *wanted* to interact.
+    // For now, let's just use proximity = auto-pickup (Greedy Agent).
+    // Or better: The brain loop sets a "targetObjectId" ref?
+
+    // Let's perform a quick check:
+    const registry = InteractableRegistry.getInstance();
+    if (!registry.getCarriedBy(id)) {
+      // Not carrying anything
+      const closeObjects = registry.getNearby(
+        vehicle.position as unknown as THREE.Vector3,
+        2.5,
+      );
+      for (const obj of closeObjects) {
+        // If we are very close, and we are steering towards it?
+        // Or just pick it up if we are close.
+        // To avoid accidental pickups, let's check if the brain thought about it?
+        // For now, allow greedy pickup for testing.
+        if (obj.pickable) {
+          registry.pickUp(obj.id, id);
+          console.log(`[Agent ${id}] Picked up ${obj.name}`);
+          break; // Pick up one
+        }
       }
     }
 

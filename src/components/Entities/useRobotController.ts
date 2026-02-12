@@ -2,6 +2,7 @@ import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
+import { InteractableRegistry } from "../Systems/InteractableRegistry";
 
 export interface Joints {
   hips?: THREE.Group;
@@ -18,7 +19,7 @@ export interface Joints {
 }
 
 export function useRobotController(
-  groupRef: React.RefObject<THREE.Group | null>
+  groupRef: React.RefObject<THREE.Group | null>,
 ) {
   useEffect(() => {
     console.log("useRobotController MOUNTED");
@@ -127,6 +128,11 @@ export function useRobotController(
   const isSitting = useGameStore((state) => state.isSitting);
   const setSitting = useGameStore((state) => state.setSitting);
   const setDebugText = useGameStore((state) => state.setDebugText);
+  const playerInventory = useGameStore((state) => state.playerInventory);
+  const setPlayerInventory = useGameStore((state) => state.setPlayerInventory);
+  const setInteractionNotification = useGameStore(
+    (state) => state.setInteractionNotification,
+  );
 
   // Sitting State
   const sitTargetPos = useRef<THREE.Vector3 | null>(null);
@@ -171,38 +177,62 @@ export function useRobotController(
             groupRef.current.rotation.x = 0;
             groupRef.current.rotation.z = 0;
           }
+        } else if (
+          useGameStore.getState().playerInventory &&
+          groupRef.current
+        ) {
+          // DROP
+          const currentInventory = useGameStore.getState().playerInventory!;
+          const robotPos = groupRef.current.position;
+          InteractableRegistry.getInstance().putDown(
+            currentInventory.id,
+            robotPos.clone(),
+          );
+          setPlayerInventory(null);
+          setInteractionNotification(`Dropped ${currentInventory.name}`);
         } else {
           if (!groupRef.current) return;
           const robotPos = groupRef.current.position;
 
-          let nearest: any = null;
-          let minDist = 12.0;
+          // Check for nearby pickable objects FIRST
+          const nearbyObj = InteractableRegistry.getInstance()
+            .getNearby(robotPos, 6)
+            .find((o) => o.pickable && !o.carriedBy);
 
-          for (const item of currentInteractables) {
-            const dist = robotPos.distanceTo(item.position);
-            if (dist < minDist) {
-              minDist = dist;
-              nearest = item;
-            }
-          }
-
-          if (nearest) {
-            console.log("Found nearest:", nearest.type, nearest.id);
-            if (nearest.type === "sofa" || nearest.type === "chair") {
-              setDebugText("Sitting...");
-              setSitting(true);
-              sitTargetPos.current = nearest.position.clone();
-              sitTargetRot.current = nearest.rotation.clone();
-            } else if (nearest.type === "door") {
-              setDebugText("Toggling Door...");
-              useGameStore.getState().setInteractionTarget(nearest.id);
-            }
+          if (nearbyObj) {
+            InteractableRegistry.getInstance().pickUp(nearbyObj.id, "player");
+            setPlayerInventory(nearbyObj);
+            setInteractionNotification(`Picked up ${nearbyObj.name}`);
           } else {
-            console.log("No interactable found within range.");
-            inputRef.current.wave = true;
-            state.current.isWaving = true;
-            state.current.waveTimer = 0;
-          }
+            let nearest: any = null;
+            let minDist = 12.0;
+
+            for (const item of currentInteractables) {
+              const dist = robotPos.distanceTo(item.position);
+              if (dist < minDist) {
+                minDist = dist;
+                nearest = item;
+              }
+            }
+
+            if (nearest) {
+              console.log("Found nearest:", nearest.type, nearest.id);
+              if (nearest.type === "sofa" || nearest.type === "chair") {
+                setDebugText("Sitting...");
+                setSitting(true);
+                sitTargetPos.current = nearest.position.clone();
+                sitTargetRot.current = nearest.rotation.clone();
+              } else if (nearest.type === "door") {
+                setDebugText("Toggling Door...");
+                useGameStore.getState().setInteractionTarget(nearest.id);
+              }
+            } else {
+              console.log("No interactable found within range.");
+              state.current.isWaving = true;
+              state.current.waveTimer = 0;
+            }
+            // End of else block
+          } // End of inner else
         }
       }
     };
@@ -240,18 +270,37 @@ export function useRobotController(
         }
       }
 
-      if (nearest) {
+      // Check for pickable object
+      const pickableObj = InteractableRegistry.getInstance()
+        .getNearby(groupRef.current.position, 6)
+        .find((o) => o.pickable && !o.carriedBy);
+
+      let pickableDist = 999;
+      if (pickableObj) {
+        pickableDist = groupRef.current.position.distanceTo(
+          pickableObj.position as unknown as THREE.Vector3,
+        );
+      }
+
+      // Determine winner
+      if (pickableObj && pickableDist < minDist) {
+        // Pickable is closer (or no store-item found)
+        setDebugText(
+          `Press '${keyBindings.interact.replace("Key", "")}' to Pick Up ${pickableObj.name}`,
+        );
+      } else if (nearest) {
+        // Store item is closest
         if (nearest.type === "chair" || nearest.type === "sofa") {
           setDebugText(
-            `Press '${keyBindings.interact.replace("Key", "")}' to Sit`
+            `Press '${keyBindings.interact.replace("Key", "")}' to Sit`,
           );
         } else if (nearest.type === "door") {
           setDebugText(
-            `Press '${keyBindings.interact.replace("Key", "")}' to Open/Close`
+            `Press '${keyBindings.interact.replace("Key", "")}' to Open/Close`,
           );
         } else {
           setDebugText(
-            `Press '${keyBindings.interact.replace("Key", "")}' to Interact`
+            `Press '${keyBindings.interact.replace("Key", "")}' to Interact`,
           );
         }
       } else {
@@ -259,8 +308,19 @@ export function useRobotController(
       }
     } else {
       setDebugText(
-        `Press '${keyBindings.interact.replace("Key", "")}' to Stand`
+        `Press '${keyBindings.interact.replace("Key", "")}' to Stand`,
       );
+    }
+
+    // Inventory Hint
+    if (playerInventory) {
+      // Override debug text or append?
+      // Let's prepend if we are walking
+      if (!isSitting) {
+        setDebugText(
+          `Carrying: ${playerInventory.name} | Press '${keyBindings.interact.replace("Key", "")}' to Drop`,
+        );
+      }
     }
 
     // Clamp delta
@@ -287,12 +347,12 @@ export function useRobotController(
     // Camera-relative movement
     const camera = stateRoot.camera;
     const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
-      camera.quaternion
+      camera.quaternion,
     );
     camForward.y = 0;
     camForward.normalize();
     const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(
-      camera.quaternion
+      camera.quaternion,
     );
     camRight.y = 0;
     camRight.normalize();
@@ -409,12 +469,12 @@ export function useRobotController(
     j.hips.position.y = THREE.MathUtils.lerp(
       j.hips.position.y,
       targetHipY,
-      0.15
+      0.15,
     );
     j.torso.rotation.x = THREE.MathUtils.lerp(
       j.torso.rotation.x,
       s.isSneaking ? 0.5 : 0,
-      0.1
+      0.1,
     );
 
     const lerpFactor = 0.15;
@@ -445,22 +505,22 @@ export function useRobotController(
       j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
         j.leftArm.shoulder.rotation.z,
         0.5,
-        0.1
+        0.1,
       );
       j.leftArm.shoulder.rotation.y = THREE.MathUtils.lerp(
         j.leftArm.shoulder.rotation.y,
         -0.5,
-        0.1
+        0.1,
       );
       j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
         j.rightArm.shoulder.rotation.z,
         -0.5,
-        0.1
+        0.1,
       );
       j.rightArm.shoulder.rotation.y = THREE.MathUtils.lerp(
         j.rightArm.shoulder.rotation.y,
         0.5,
-        0.1
+        0.1,
       );
 
       // Legs - Perfect Sit (90 degree bends)
@@ -468,36 +528,36 @@ export function useRobotController(
       j.leftHip.rotation.x = THREE.MathUtils.lerp(
         j.leftHip.rotation.x,
         -1.6,
-        0.1
+        0.1,
       );
       j.rightHip.rotation.x = THREE.MathUtils.lerp(
         j.rightHip.rotation.x,
         -1.6,
-        0.1
+        0.1,
       );
 
       // Knees bent 90 degrees (legs down)
       j.leftKnee.rotation.x = THREE.MathUtils.lerp(
         j.leftKnee.rotation.x,
         1.6,
-        0.1
+        0.1,
       );
       j.rightKnee.rotation.x = THREE.MathUtils.lerp(
         j.rightKnee.rotation.x,
         1.6,
-        0.1
+        0.1,
       );
 
       // Slight spread
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
         j.leftHip.rotation.z,
         -0.15,
-        0.1
+        0.1,
       );
       j.rightHip.rotation.z = THREE.MathUtils.lerp(
         j.rightHip.rotation.z,
         0.15,
-        0.1
+        0.1,
       );
 
       return; // Skip other animations
@@ -515,12 +575,12 @@ export function useRobotController(
       const currentShoulderZ = THREE.MathUtils.lerp(
         j.rightArm.shoulder.rotation.z,
         targetShoulderZ,
-        easedLift
+        easedLift,
       );
       const currentElbowZ = THREE.MathUtils.lerp(
         j.rightArm.elbow.rotation.z,
         targetElbowZ,
-        easedLift
+        easedLift,
       );
 
       if (liftProgress >= 1) {
@@ -535,33 +595,33 @@ export function useRobotController(
       j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
         j.leftArm.shoulder.rotation.x,
         0,
-        lerpFactor
+        lerpFactor,
       );
       j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
         j.leftArm.shoulder.rotation.z,
         0.2,
-        lerpFactor
+        lerpFactor,
       );
       j.leftHip.rotation.x = THREE.MathUtils.lerp(
         j.leftHip.rotation.x,
         0,
-        lerpFactor
+        lerpFactor,
       );
       j.rightHip.rotation.x = THREE.MathUtils.lerp(
         j.rightHip.rotation.x,
         0,
-        lerpFactor
+        lerpFactor,
       );
       // Reset spread
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
         j.leftHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
       j.rightHip.rotation.z = THREE.MathUtils.lerp(
         j.rightHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
 
       if (s.waveTimer > 2.5) {
@@ -586,34 +646,34 @@ export function useRobotController(
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
         j.leftHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
       j.rightHip.rotation.z = THREE.MathUtils.lerp(
         j.rightHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
 
       if (s.isSneaking) {
         j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.x,
           -0.5,
-          lerpFactor
+          lerpFactor,
         );
         j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.x,
           -0.5,
-          lerpFactor
+          lerpFactor,
         );
         j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.z,
           0.8,
-          lerpFactor
+          lerpFactor,
         );
         j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.z,
           -0.8,
-          lerpFactor
+          lerpFactor,
         );
       } else {
         j.leftArm.shoulder.rotation.x = Math.sin(s.walkTime + Math.PI) * 0.6;
@@ -621,56 +681,56 @@ export function useRobotController(
         j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.z,
           0.2,
-          lerpFactor
+          lerpFactor,
         );
         j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.z,
           -0.2,
-          lerpFactor
+          lerpFactor,
         );
       }
       j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
         j.rightArm.elbow.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
     } else if (!s.isGrounded) {
       j.leftHip.rotation.x = THREE.MathUtils.lerp(
         j.leftHip.rotation.x,
         0.5,
-        lerpFactor
+        lerpFactor,
       );
       j.rightHip.rotation.x = THREE.MathUtils.lerp(
         j.rightHip.rotation.x,
         0.2,
-        lerpFactor
+        lerpFactor,
       );
       j.leftKnee.rotation.x = THREE.MathUtils.lerp(
         j.leftKnee.rotation.x,
         0.8,
-        lerpFactor
+        lerpFactor,
       );
       j.rightKnee.rotation.x = THREE.MathUtils.lerp(
         j.rightKnee.rotation.x,
         0.1,
-        lerpFactor
+        lerpFactor,
       );
       j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
         j.rightArm.elbow.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
 
       // Reset spread
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
         j.leftHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
       j.rightHip.rotation.z = THREE.MathUtils.lerp(
         j.rightHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
     } else {
       s.idleTime += dt;
@@ -683,94 +743,94 @@ export function useRobotController(
       j.leftHip.rotation.x = THREE.MathUtils.lerp(
         j.leftHip.rotation.x,
         baseHipBend,
-        lerpFactor
+        lerpFactor,
       );
       j.rightHip.rotation.x = THREE.MathUtils.lerp(
         j.rightHip.rotation.x,
         baseHipBend + microMovement * 0.02,
-        lerpFactor
+        lerpFactor,
       );
       j.leftKnee.rotation.x = THREE.MathUtils.lerp(
         j.leftKnee.rotation.x,
         baseKneeBend,
-        lerpFactor
+        lerpFactor,
       );
       j.rightKnee.rotation.x = THREE.MathUtils.lerp(
         j.rightKnee.rotation.x,
         baseKneeBend - microMovement * 0.02,
-        lerpFactor
+        lerpFactor,
       );
 
       // Reset spread
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
         j.leftHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
       j.rightHip.rotation.z = THREE.MathUtils.lerp(
         j.rightHip.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
 
       j.torso.rotation.x = THREE.MathUtils.lerp(
         j.torso.rotation.x,
         (s.isSneaking ? 0.5 : 0) + breath * 0.03,
-        lerpFactor
+        lerpFactor,
       );
       j.neck.rotation.x = THREE.MathUtils.lerp(
         j.neck.rotation.x,
         -breath * 0.03 + microMovement * 0.02,
-        lerpFactor
+        lerpFactor,
       );
 
       if (s.isSneaking) {
         j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.x,
           -0.4 + breath * 0.05,
-          lerpFactor
+          lerpFactor,
         );
         j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.x,
           -0.4 + breath * 0.05,
-          lerpFactor
+          lerpFactor,
         );
         j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.z,
           0.5,
-          lerpFactor
+          lerpFactor,
         );
         j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.z,
           -0.5,
-          lerpFactor
+          lerpFactor,
         );
       } else {
         j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.x,
           breath * 0.05,
-          lerpFactor
+          lerpFactor,
         );
         j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.x,
           -breath * 0.05,
-          lerpFactor
+          lerpFactor,
         );
         j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.z,
           0.2 + microMovement * 0.03,
-          lerpFactor
+          lerpFactor,
         );
         j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.z,
           -0.2 - microMovement * 0.03,
-          lerpFactor
+          lerpFactor,
         );
       }
       j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
         j.rightArm.elbow.rotation.z,
         0,
-        lerpFactor
+        lerpFactor,
       );
     }
   });
