@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+﻿import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
@@ -51,6 +51,9 @@ export function useRobotController(
     isSneaking: false,
     idleTime: 0,
   });
+
+  const prevPlacingIds = useRef<string>("");
+  const prevActivePlacingId = useRef<string | null>(null);
 
   const keyBindings = useGameStore((state) => state.keyBindings);
 
@@ -207,18 +210,42 @@ export function useRobotController(
       // ===== P KEY: PICK UP =====
       if (e.code === keyBindings.pickUp) {
         if (currentIsSitting || !groupRef.current) return;
-        const robotPos = groupRef.current.position;
-        const nearbyObj = InteractableRegistry.getInstance()
-          .getNearby(robotPos, 6)
-          .find((o) => o.pickable && !o.carriedBy);
 
-        if (nearbyObj) {
-          InteractableRegistry.getInstance().pickUp(nearbyObj.id, "player");
-          addToInventory(nearbyObj);
-          setInteractionNotification(`Picked up ${nearbyObj.name}`);
-          console.log(`[Player] Picked up "${nearbyObj.name}"`);
-        } else {
+        const isPickupMenuOpen = useGameStore.getState().isPickupMenuOpen;
+
+        if (isPickupMenuOpen) {
+          // Confirm Selection from Menu
+          const nearbyItems = useGameStore.getState().nearbyItems;
+          const selectedIdx = useGameStore.getState().selectedPickupIndex;
+          if (nearbyItems.length > 0) {
+            const item = nearbyItems[selectedIdx];
+            InteractableRegistry.getInstance().pickUp(item.id, "player");
+            addToInventory(item);
+            setInteractionNotification(`Picked up ${item.name}`);
+            useGameStore.getState().setPickupMenuOpen(false);
+            useGameStore.getState().setNearbyItems([]);
+          }
+          return;
+        }
+
+        const robotPos = groupRef.current.position;
+        const nearbyObjs = InteractableRegistry.getInstance()
+          .getNearby(robotPos, 6)
+          .filter((o) => o.pickable && !o.carriedBy);
+
+        if (nearbyObjs.length === 0) {
           setInteractionNotification("Nothing to pick up nearby");
+        } else if (nearbyObjs.length === 1) {
+          InteractableRegistry.getInstance().pickUp(nearbyObjs[0].id, "player");
+          addToInventory(nearbyObjs[0]);
+          setInteractionNotification(`Picked up ${nearbyObjs[0].name}`);
+          console.log(`[Player] Picked up "${nearbyObjs[0].name}"`);
+        } else {
+          // Multiple items -> Open Menu
+          useGameStore.getState().setNearbyItems(nearbyObjs);
+          useGameStore.getState().setPickupMenuOpen(true);
+          useGameStore.getState().setSelectedPickupIndex(0);
+          setInteractionNotification("Multiple items. select to pick up.");
         }
       }
 
@@ -264,6 +291,33 @@ export function useRobotController(
           console.log(`[Player] Dropped "${selectedItem.name}" on ground`);
         }
       }
+
+      // ===== ARROW KEYS: INVENTORY / PICKUP SELECTION =====
+      if (e.code === "ArrowUp" || e.code === "ArrowDown") {
+        const isPickupMenuOpen = useGameStore.getState().isPickupMenuOpen;
+
+        if (isPickupMenuOpen) {
+          // Navigate Pickup Menu
+          const items = useGameStore.getState().nearbyItems;
+          if (items.length > 1) {
+            const currentIdx = useGameStore.getState().selectedPickupIndex;
+            const direction = e.code === "ArrowDown" ? 1 : -1;
+            const newIdx =
+              (currentIdx + direction + items.length) % items.length;
+            useGameStore.getState().setSelectedPickupIndex(newIdx);
+          }
+        } else {
+          // Navigate Inventory
+          const inventory = useGameStore.getState().playerInventory;
+          if (inventory.length > 1) {
+            const currentIdx = useGameStore.getState().selectedInventoryIndex;
+            const direction = e.code === "ArrowDown" ? 1 : -1;
+            const newIdx =
+              (currentIdx + direction + inventory.length) % inventory.length;
+            useGameStore.getState().setSelectedInventoryIndex(newIdx);
+          }
+        }
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -296,6 +350,7 @@ export function useRobotController(
   useFrame((stateRoot, delta) => {
     if (isMenuOpen || isMenuPanelOpen) return;
     if (!groupRef.current) return;
+    const camera = stateRoot.camera;
     const mesh = groupRef.current;
     const input = inputRef.current;
     const s = state.current;
@@ -323,11 +378,14 @@ export function useRobotController(
       }
 
       // P key hints (pick up)
-      const pickableObj = InteractableRegistry.getInstance()
+      const pickableObjs = InteractableRegistry.getInstance()
         .getNearby(groupRef.current.position, 6)
-        .find((o) => o.pickable && !o.carriedBy);
-      if (pickableObj) {
-        hints.push(`P: Pick Up ${pickableObj.name}`);
+        .filter((o) => o.pickable && !o.carriedBy);
+
+      if (pickableObjs.length === 1) {
+        hints.push(`P: Pick Up ${pickableObjs[0].name}`);
+      } else if (pickableObjs.length > 1) {
+        hints.push(`P: Pick Up (${pickableObjs.length} items nearby)`);
       }
 
       // T key hints (place/drop)
@@ -336,9 +394,46 @@ export function useRobotController(
         const clampedIdx = Math.min(selectedIdx, playerInventory.length - 1);
         const selectedItem = playerInventory[clampedIdx];
 
-        const nearbyArea = InteractableRegistry.getInstance()
+        // LOOK-BASED HINT LOGIC
+        const candidates = InteractableRegistry.getInstance()
           .getNearbyPlacingAreas(groupRef.current.position, 6)
-          .find((a) => a.currentItems.length < a.capacity);
+          .filter((a) => a.currentItems.length < a.capacity);
+
+        let bestArea = null;
+        let bestScore = -1.0;
+
+        if (candidates.length > 0) {
+          const camDir = new THREE.Vector3();
+          camera.getWorldDirection(camDir);
+          const camPos = camera.position;
+
+          for (const area of candidates) {
+            const toArea = area.position.clone().sub(camPos).normalize();
+            const dot = camDir.dot(toArea);
+            if (dot > bestScore) {
+              bestScore = dot;
+              bestArea = area;
+            }
+          }
+        }
+
+        // Sync with Store for UI List
+        const currentIds = candidates
+          .map((c) => c.id)
+          .sort()
+          .join(",");
+        if (currentIds !== prevPlacingIds.current) {
+          useGameStore.getState().setNearbyPlacingAreas(candidates);
+          prevPlacingIds.current = currentIds;
+        }
+
+        const bestAreaId = bestArea ? bestArea.id : null;
+        if (bestAreaId !== prevActivePlacingId.current) {
+          useGameStore.getState().setActivePlacingAreaId(bestAreaId);
+          prevActivePlacingId.current = bestAreaId;
+        }
+
+        const nearbyArea = bestArea;
 
         if (nearbyArea) {
           hints.push(`T: Place ${selectedItem.name} on ${nearbyArea.name}`);
@@ -348,7 +443,7 @@ export function useRobotController(
 
         // Inventory count
         hints.push(
-          `🎒 ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
+          `ðŸŽ’ ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
         );
       }
 
@@ -379,7 +474,6 @@ export function useRobotController(
     }
 
     // Camera-relative movement
-    const camera = stateRoot.camera;
     const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
       camera.quaternion,
     );

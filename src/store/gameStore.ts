@@ -105,6 +105,19 @@ interface GameState {
 
   interactionNotification: string | null;
   setInteractionNotification: (msg: string | null) => void;
+
+  // Pickup Menu State
+  isPickupMenuOpen: boolean;
+  setPickupMenuOpen: (isOpen: boolean) => void;
+  nearbyItems: WorldObject[];
+  setNearbyItems: (items: WorldObject[]) => void;
+  selectedPickupIndex: number;
+  setSelectedPickupIndex: (index: number) => void;
+  // Placing Menu State
+  nearbyPlacingAreas: any[];
+  setNearbyPlacingAreas: (areas: any[]) => void;
+  activePlacingAreaId: string | null;
+  setActivePlacingAreaId: (id: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -211,4 +224,18 @@ export const useGameStore = create<GameState>((set) => ({
       setTimeout(() => set({ interactionNotification: null }), 3000);
     }
   },
+
+  // Pickup Menu State
+  isPickupMenuOpen: false,
+  setPickupMenuOpen: (isOpen) => set({ isPickupMenuOpen: isOpen }),
+  nearbyItems: [],
+  setNearbyItems: (items) => set({ nearbyItems: items }),
+  selectedPickupIndex: 0,
+  setSelectedPickupIndex: (index) => set({ selectedPickupIndex: index }),
+
+  // Placing Menu State
+  nearbyPlacingAreas: [],
+  setNearbyPlacingAreas: (areas) => set({ nearbyPlacingAreas: areas }),
+  activePlacingAreaId: null,
+  setActivePlacingAreaId: (id) => set({ activePlacingAreaId: id }),
 }));
