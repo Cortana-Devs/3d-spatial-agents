@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { useYukaAI } from "./useYukaAI";
 import { ThoughtBubble } from "../UI/ThoughtBubble";
 import { useGLTF, useAnimations, Html } from "@react-three/drei";
+import { ErrorBoundary } from "../UI/ErrorBoundary";
 
 // Preload the model if it exists to avoid stutter
 // Note: If the file is missing, this might log a warning but won't crash until used
@@ -41,9 +42,11 @@ export default function AIRobot({
       }}
     >
       <ThoughtBubble brain={brain} />
-      <Suspense fallback={<HighFiPlaceholderRobot state={animationState} />}>
-        <RobotModel animationState={animationState} />
-      </Suspense>
+      <ErrorBoundary fallback={<HighFiPlaceholderRobot state={animationState} />}>
+        <Suspense fallback={<HighFiPlaceholderRobot state={animationState} />}>
+          <RobotModel animationState={animationState} />
+        </Suspense>
+      </ErrorBoundary>
     </group>
   );
 }
