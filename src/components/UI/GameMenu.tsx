@@ -8,7 +8,7 @@ export default function GameMenu() {
         invertedMouse, setInvertedMouse,
         sensitivity, setSensitivity,
         volume, setVolume,
-        setMenuOpen,
+        setMenuPanelOpen,
         keyBindings, setKeyBinding
     } = useGameStore();
 
@@ -16,7 +16,9 @@ export default function GameMenu() {
     const [listeningFor, setListeningFor] = useState<string | null>(null);
 
     const handleClose = () => {
-        setMenuOpen(false);
+        if (setMenuPanelOpen) {
+            setMenuPanelOpen(false);
+        }
     };
 
     useEffect(() => {
@@ -25,7 +27,7 @@ export default function GameMenu() {
         const handleKeyDown = (e: KeyboardEvent) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Allow Escape to cancel listening if it's not the target being remapped
             if (e.code === 'Escape' && listeningFor !== 'menu') {
                 setListeningFor(null);
@@ -40,108 +42,178 @@ export default function GameMenu() {
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
     }, [listeningFor, setKeyBinding]);
 
+    const tabStyle = (tab: string) => ({
+        background: activeTab === tab
+            ? 'rgba(76, 175, 80, 0.2)'
+            : 'transparent',
+        border: activeTab === tab
+            ? '1px solid rgba(76, 175, 80, 0.5)'
+            : '1px solid transparent',
+        color: activeTab === tab ? '#4CAF50' : 'rgba(255,255,255,0.5)',
+        fontSize: '14px',
+        cursor: 'pointer' as const,
+        textTransform: 'capitalize' as const,
+        fontWeight: activeTab === tab ? 600 : 400,
+        padding: '8px 20px',
+        borderRadius: '10px',
+        transition: 'all 0.2s ease',
+        letterSpacing: '0.3px',
+    });
+
     return (
         <div style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -55%)',
+            width: 'min(680px, 90vw)',
+            maxHeight: '70vh',
+            backgroundColor: 'rgba(10, 10, 20, 0.75)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
             zIndex: 1000,
             color: 'white',
-            fontFamily: 'sans-serif'
+            fontFamily: 'sans-serif',
+            borderRadius: '20px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 24px 80px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255,255,255,0.1)',
+            overflow: 'hidden',
         }}>
-            {/* Header / Tabs */}
+            {/* Header with tabs and close button */}
             <div style={{
                 display: 'flex',
-                gap: '20px',
-                marginBottom: '30px',
-                borderBottom: '1px solid #555',
-                paddingBottom: '10px',
-                width: '80%',
-                justifyContent: 'center'
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
             }}>
-                {['map', 'settings', 'controls'].map((tab) => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab as any)}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: activeTab === tab ? '#4CAF50' : '#aaa',
-                            fontSize: '24px',
-                            cursor: 'pointer',
-                            textTransform: 'capitalize',
-                            fontWeight: activeTab === tab ? 'bold' : 'normal',
-                            padding: '10px 20px'
-                        }}
-                    >
-                        {tab}
-                    </button>
-                ))}
+                <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                }}>
+                    {['map', 'settings', 'controls'].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab as any)}
+                            style={tabStyle(tab)}
+                        >
+                            {tab === 'map' ? '🗺️' : tab === 'settings' ? '⚙️' : '🎮'}{' '}
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+                <button
+                    onClick={handleClose}
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 80, 80, 0.2)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 80, 80, 0.4)';
+                        e.currentTarget.style.color = '#ff5555';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                    }}
+                >
+                    ✕
+                </button>
             </div>
 
             {/* Content Area */}
             <div style={{
-                width: '80%',
-                height: '60%',
-                backgroundColor: '#222',
-                borderRadius: '10px',
-                padding: '40px',
+                padding: '24px',
                 overflowY: 'auto',
-                boxShadow: '0 0 30px rgba(0,0,0,0.5)'
+                flex: 1,
             }}>
                 {activeTab === 'map' && (
                     <div style={{
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        height: '100%',
+                        height: '260px',
                         flexDirection: 'column',
-                        color: '#888'
+                        color: 'rgba(255,255,255,0.3)',
                     }}>
                         <div style={{
                             width: '100%',
                             height: '100%',
-                            backgroundColor: '#111',
-                            borderRadius: '5px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                            borderRadius: '12px',
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            border: '2px dashed #444'
+                            border: '1px dashed rgba(255, 255, 255, 0.1)',
                         }}>
-                            <h2>Map Unavailable</h2>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '40px', marginBottom: '12px', opacity: 0.4 }}>🗺️</div>
+                                <h3 style={{ margin: 0, fontWeight: 500, fontSize: '16px' }}>Map Unavailable</h3>
+                                <p style={{ margin: '8px 0 0', fontSize: '13px', opacity: 0.6 }}>Minimap system coming soon</p>
+                            </div>
                         </div>
-                        <p style={{ marginTop: '10px' }}>Minimap system coming soon.</p>
                     </div>
                 )}
 
                 {activeTab === 'settings' && (
-                    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                        <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px' }}>Game Settings</h2>
-                        
+                    <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+                        <h3 style={{
+                            fontWeight: 500,
+                            fontSize: '16px',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginTop: 0,
+                            marginBottom: '24px',
+                            letterSpacing: '0.5px',
+                        }}>
+                            Game Settings
+                        </h3>
+
                         {/* Inverted Mouse */}
-                        <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label htmlFor="inverted-mouse" style={{ fontSize: '18px' }}>Inverted Mouse</label>
+                        <div style={{
+                            margin: '0 0 20px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '14px 16px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                        }}>
+                            <label htmlFor="inverted-mouse" style={{ fontSize: '14px', fontWeight: 500 }}>Inverted Mouse</label>
                             <input
                                 id="inverted-mouse"
                                 type="checkbox"
                                 checked={invertedMouse}
                                 onChange={(e) => setInvertedMouse(e.target.checked)}
-                                style={{ transform: 'scale(1.5)', cursor: 'pointer' }}
+                                style={{ transform: 'scale(1.3)', cursor: 'pointer', accentColor: '#4CAF50' }}
                             />
                         </div>
 
                         {/* Sensitivity */}
-                        <div style={{ margin: '30px 0' }}>
+                        <div style={{
+                            margin: '0 0 20px',
+                            padding: '14px 16px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                        }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                <label htmlFor="sensitivity" style={{ fontSize: '18px' }}>Mouse Sensitivity</label>
-                                <span style={{ color: '#4CAF50' }}>{sensitivity.toFixed(1)}</span>
+                                <label htmlFor="sensitivity" style={{ fontSize: '14px', fontWeight: 500 }}>Mouse Sensitivity</label>
+                                <span style={{ color: '#4CAF50', fontWeight: 600, fontSize: '14px' }}>{sensitivity.toFixed(1)}</span>
                             </div>
                             <input
                                 id="sensitivity"
@@ -151,15 +223,21 @@ export default function GameMenu() {
                                 step="0.1"
                                 value={sensitivity}
                                 onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-                                style={{ width: '100%', cursor: 'pointer' }}
+                                style={{ width: '100%', cursor: 'pointer', accentColor: '#4CAF50' }}
                             />
                         </div>
 
                         {/* Volume */}
-                        <div style={{ margin: '30px 0' }}>
+                        <div style={{
+                            margin: '0 0 20px',
+                            padding: '14px 16px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                        }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                <label htmlFor="volume" style={{ fontSize: '18px' }}>Master Volume</label>
-                                <span style={{ color: '#4CAF50' }}>{Math.round(volume * 100)}%</span>
+                                <label htmlFor="volume" style={{ fontSize: '14px', fontWeight: 500 }}>Master Volume</label>
+                                <span style={{ color: '#4CAF50', fontWeight: 600, fontSize: '14px' }}>{Math.round(volume * 100)}%</span>
                             </div>
                             <input
                                 id="volume"
@@ -169,17 +247,26 @@ export default function GameMenu() {
                                 step="0.01"
                                 value={volume}
                                 onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                style={{ width: '100%', cursor: 'pointer' }}
+                                style={{ width: '100%', cursor: 'pointer', accentColor: '#4CAF50' }}
                             />
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'controls' && (
-                    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px' }}>Key Bindings</h2>
-                        <p style={{ color: '#888', marginBottom: '20px' }}>Click a key to rebind it.</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' }}>
+                    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                        <h3 style={{
+                            fontWeight: 500,
+                            fontSize: '16px',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginTop: 0,
+                            marginBottom: '8px',
+                            letterSpacing: '0.5px',
+                        }}>
+                            Key Bindings
+                        </h3>
+                        <p style={{ color: 'rgba(255,255,255,0.3)', marginBottom: '20px', fontSize: '13px' }}>Click a key to rebind it.</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                             <ControlRow action="Move Forward" actionKey="forward" currentKey={keyBindings.forward} isListening={listeningFor === 'forward'} onListen={() => setListeningFor('forward')} />
                             <ControlRow action="Move Backward" actionKey="backward" currentKey={keyBindings.backward} isListening={listeningFor === 'backward'} onListen={() => setListeningFor('backward')} />
                             <ControlRow action="Move Left" actionKey="left" currentKey={keyBindings.left} isListening={listeningFor === 'left'} onListen={() => setListeningFor('left')} />
@@ -192,55 +279,38 @@ export default function GameMenu() {
                     </div>
                 )}
             </div>
-
-            {/* Footer / Close */}
-            <div style={{ marginTop: '30px' }}>
-                <button
-                    onClick={handleClose}
-                    style={{
-                        padding: '15px 40px',
-                        backgroundColor: '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)'
-                    }}
-                >
-                    RESUME GAME
-                </button>
-            </div>
         </div>
     );
 }
 
-function ControlRow({ action, actionKey, currentKey, isListening, onListen }: { action: string, actionKey: string, currentKey: string, isListening: boolean, onListen: () => void }) {
+function ControlRow({ action, currentKey, isListening, onListen }: { action: string, actionKey: string, currentKey: string, isListening: boolean, onListen: () => void }) {
     return (
         <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            padding: '15px',
-            backgroundColor: isListening ? '#444' : '#333',
-            borderRadius: '5px',
+            padding: '12px 14px',
+            backgroundColor: isListening ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 255, 255, 0.04)',
+            borderRadius: '10px',
             alignItems: 'center',
-            border: isListening ? '1px solid #4CAF50' : '1px solid transparent',
-            transition: 'all 0.2s'
+            border: isListening ? '1px solid rgba(76, 175, 80, 0.4)' : '1px solid rgba(255, 255, 255, 0.06)',
+            transition: 'all 0.2s ease',
         }}>
-            <span style={{ fontSize: '16px' }}>{action}</span>
-            <button 
+            <span style={{ fontSize: '13px', fontWeight: 500 }}>{action}</span>
+            <button
                 onClick={onListen}
                 style={{
-                    backgroundColor: isListening ? '#4CAF50' : '#111',
-                    padding: '8px 20px',
-                    borderRadius: '4px',
+                    backgroundColor: isListening ? 'rgba(76, 175, 80, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                    padding: '6px 16px',
+                    borderRadius: '8px',
                     fontFamily: 'monospace',
-                    fontWeight: 'bold',
-                    color: isListening ? 'white' : '#ddd',
-                    border: '1px solid #555',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    color: isListening ? '#4CAF50' : 'rgba(255, 255, 255, 0.7)',
+                    border: isListening ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
                     cursor: 'pointer',
-                    minWidth: '100px'
+                    minWidth: '80px',
+                    textAlign: 'center',
+                    transition: 'all 0.2s ease',
                 }}
             >
                 {isListening ? 'PRESS KEY...' : currentKey.replace('Key', '')}

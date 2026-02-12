@@ -10,6 +10,8 @@ export default function Overlay() {
   const isTeleporting = useGameStore((state) => state.isTeleporting);
   const isMenuOpen = useGameStore((state) => state.isMenuOpen);
   const setMenuOpen = useGameStore((state) => state.setMenuOpen);
+  const isMenuPanelOpen = useGameStore((state) => state.isMenuPanelOpen!); // ! because we know it exists now
+  const setMenuPanelOpen = useGameStore((state) => state.setMenuPanelOpen!);
   const keyBindings = useGameStore((state) => state.keyBindings);
   const interactionNotification = useGameStore(
     (state) => state.interactionNotification,
@@ -41,9 +43,6 @@ export default function Overlay() {
         setMenuOpen(!isMenuOpen);
         if (!isMenuOpen) {
           document.exitPointerLock();
-        } else {
-          // Optional: Re-lock pointer when closing menu?
-          // Usually better to let user click to resume.
         }
       }
     };
@@ -100,7 +99,6 @@ export default function Overlay() {
             bottom: "20px",
             right: "20px",
             background: "rgba(0, 0, 0, 0.85)",
-            // Using similar colors to the original 3D tooltip
             color: "#00ff00",
             padding: "12px",
             borderRadius: "8px",
@@ -156,28 +154,113 @@ export default function Overlay() {
         </div>
       )}
 
-      {/* Settings Button (Optional, can keep or remove since ESC works) */}
-      <button
-        onClick={() => setMenuOpen(true)}
-        style={{
-          position: "absolute",
-          top: "20px",
-          right: "20px",
-          padding: "10px",
-          backgroundColor: "rgba(0,0,0,0.5)",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-          zIndex: 10,
-          pointerEvents: "auto",
-        }}
-      >
-        Menu ({keyBindings.menu.replace("Key", "")})
-      </button>
+      {/* Bottom Center Control Bar — visible when ESC is pressed (isMenuOpen) */}
+      {isMenuOpen && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1001,
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <button
+            onClick={() => setMenuPanelOpen && setMenuPanelOpen(!isMenuPanelOpen)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "12px 28px",
+              background: isMenuPanelOpen
+                ? "rgba(76, 175, 80, 0.25)"
+                : "rgba(15, 15, 25, 0.7)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: isMenuPanelOpen
+                ? "1px solid rgba(76, 175, 80, 0.6)"
+                : "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: "14px",
+              color: "white",
+              fontSize: "15px",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: isMenuPanelOpen
+                ? "0 0 20px rgba(76, 175, 80, 0.3), 0 8px 32px rgba(0,0,0,0.4)"
+                : "0 8px 32px rgba(0,0,0,0.4)",
+              transition: "all 0.25s ease",
+              letterSpacing: "0.5px",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = isMenuPanelOpen
+                ? "rgba(76, 175, 80, 0.35)"
+                : "rgba(25, 25, 40, 0.85)";
+              e.currentTarget.style.borderColor = isMenuPanelOpen
+                ? "rgba(76, 175, 80, 0.8)"
+                : "rgba(255, 255, 255, 0.25)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = isMenuPanelOpen
+                ? "rgba(76, 175, 80, 0.25)"
+                : "rgba(15, 15, 25, 0.7)";
+              e.currentTarget.style.borderColor = isMenuPanelOpen
+                ? "rgba(76, 175, 80, 0.6)"
+                : "rgba(255, 255, 255, 0.12)";
+            }}
+          >
+            <span style={{ fontSize: "18px" }}>☰</span>
+            <span>Menu</span>
+            <span
+              style={{
+                fontSize: "11px",
+                padding: "2px 8px",
+                borderRadius: "6px",
+                background: "rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.5)",
+                fontWeight: 400,
+              }}
+            >
+              ESC
+            </span>
+          </button>
 
-      {/* Game Menu */}
-      {isMenuOpen && <GameMenu />}
+          {/* Resume button - closes menu entirely */}
+          <button
+            onClick={() => setMenuOpen(false)}
+            style={{
+              padding: "12px 24px",
+              background: "rgba(76, 175, 80, 0.2)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: "1px solid rgba(76, 175, 80, 0.4)",
+              borderRadius: "14px",
+              color: "#4CAF50",
+              fontSize: "14px",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+              transition: "all 0.25s ease",
+              letterSpacing: "0.5px",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(76, 175, 80, 0.35)";
+              e.currentTarget.style.color = "white";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(76, 175, 80, 0.2)";
+              e.currentTarget.style.color = "#4CAF50";
+            }}
+          >
+            ▶ Resume
+          </button>
+        </div>
+      )}
+
+      {/* Game Menu Panel — only when menu icon is clicked (Stage 2) */}
+      {isMenuPanelOpen && <GameMenu />}
 
       {/* Interaction Notification Toast */}
       {interactionNotification && (
@@ -283,7 +366,7 @@ export default function Overlay() {
               paddingTop: "4px",
             }}
           >
-            T: Place selected | Scroll/Arrows: Change selection
+            T: Place selected | Scroll: Change selection
           </div>
         </div>
       )}

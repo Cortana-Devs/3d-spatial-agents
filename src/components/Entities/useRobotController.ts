@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+﻿import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
@@ -440,7 +440,7 @@ export function useRobotController(
 
         // Inventory count
         hints.push(
-          `🎒 ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
+          `ðŸŽ’ ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
         );
       }
 
