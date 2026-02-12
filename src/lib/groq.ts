@@ -13,7 +13,7 @@ class KeyManager {
         if (this.keys.length === 0) {
             console.warn("No GROQ_API_KEYS or GROQ_API_KEY found in environment variables.");
         } else {
-            console.log(`Loaded ${this.keys.length} Groq API keys.`);
+            // console.log(`Loaded ${this.keys.length} Groq API keys.`);
         }
     }
 
@@ -47,7 +47,7 @@ class KeyManager {
     public rotateKey() {
         if (this.keys.length <= 1) return;
         this.currentIndex = (this.currentIndex + 1) % this.keys.length;
-        console.log(`Rotating to Groq API Key Index: ${this.currentIndex}`);
+        // console.log(`Rotating to Groq API Key Index: ${this.currentIndex}`);
     }
 }
 

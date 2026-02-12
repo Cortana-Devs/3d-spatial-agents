@@ -15,13 +15,13 @@ import { RateLimiter } from "@/lib/rateLimiter";
 
 export interface AgentDecision {
   action:
-    | "MOVE_TO"
-    | "WAIT"
-    | "WANDER"
-    | "FOLLOW"
-    | "INTERACT"
-    | "DROP"
-    | "PLACE_AT";
+  | "MOVE_TO"
+  | "WAIT"
+  | "WANDER"
+  | "FOLLOW"
+  | "INTERACT"
+  | "DROP"
+  | "PLACE_AT";
   targetId?: string;
   placeAreaId?: string;
   target?: { x: number; y: number; z: number };
@@ -76,9 +76,11 @@ export class ClientBrain {
     };
 
     try {
+      /*
       console.log(
         `[ClientBrain:${this.id}] Thinking... (Tokens left: ${this.rateLimiter.getTokensRemaining()})`,
       );
+      */
 
       // --- 1. RETRIEVE MEMORIES (Client Side) ---
       const contextTags = nearbyEntities.flatMap((e) => {
@@ -95,11 +97,11 @@ export class ClientBrain {
       const memoryContextStr =
         relevantMemories.length > 0
           ? relevantMemories
-              .map(
-                (m) =>
-                  `- [${new Date(m.timestamp).toLocaleTimeString()}] ${m.content}`,
-              )
-              .join("\n")
+            .map(
+              (m) =>
+                `- [${new Date(m.timestamp).toLocaleTimeString()}] ${m.content}`,
+            )
+            .join("\n")
           : "No relevant past memories.";
 
       // --- 2. THINK (Server Side) ---
@@ -133,7 +135,7 @@ export class ClientBrain {
       this.state.lastThoughtTime = Date.now();
       this.state.isThinking = false;
 
-      console.log(`[ClientBrain:${this.id}] Decided:`, decision);
+      // console.log(`[ClientBrain:${this.id}] Decided:`, decision);
 
       // --- 3. MEMORIZE (Client Side) ---
       if (decision.thought) {
