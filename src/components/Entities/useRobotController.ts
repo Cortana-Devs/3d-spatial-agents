@@ -355,12 +355,32 @@ export function useRobotController(
     // Interaction Prompts (separated by key)
     if (!isSitting) {
       const hints: string[] = [];
+      const robotPos = groupRef.current.position;
+
+      // --- CONTINUOUS DETECTION of Nearby Items (Passive) ---
+      // We do this every frame (or could throttle) so the UI table is always up to date
+      const pickableObjs = InteractableRegistry.getInstance()
+        .getNearby(robotPos, 6)
+        .filter((o) => o.pickable && !o.carriedBy);
+
+      // Simple diff check to avoid react-three-fiber infinite re-render loops if state matches
+      // Note: A deep comparison or ID list check is better.
+      const currentNearbyItems = useGameStore.getState().nearbyItems;
+      const idsChanged =
+        pickableObjs.length !== currentNearbyItems.length ||
+        pickableObjs.some((obj, i) => obj.id !== currentNearbyItems[i]?.id);
+
+      if (idsChanged) {
+        useGameStore.getState().setNearbyItems(pickableObjs);
+        // Reset selection if list changed significantly? Or keep it?
+        // For now, let's just ensure index is valid in the UI component
+      }
 
       // E key hints (sit/door)
       let nearest: any = null;
       let minDist = 6.0;
       for (const item of interactables) {
-        const d = groupRef.current.position.distanceTo(item.position);
+        const d = robotPos.distanceTo(item.position);
         if (d < minDist) {
           minDist = d;
           nearest = item;
@@ -374,15 +394,9 @@ export function useRobotController(
         }
       }
 
-      // P key hints (pick up)
-      const pickableObjs = InteractableRegistry.getInstance()
-        .getNearby(groupRef.current.position, 6)
-        .filter((o) => o.pickable && !o.carriedBy);
-
-      if (pickableObjs.length === 1) {
-        hints.push(`P: Pick Up ${pickableObjs[0].name}`);
-      } else if (pickableObjs.length > 1) {
-        hints.push(`P: Pick Up (${pickableObjs.length} items nearby)`);
+      // P key hints (pick up) - NOW just a hint, list is always visible
+      if (pickableObjs.length > 0) {
+        hints.push("P: Pick Up");
       }
 
       // T key hints (place/drop)
@@ -393,7 +407,7 @@ export function useRobotController(
 
         // LOOK-BASED HINT LOGIC
         const candidates = InteractableRegistry.getInstance()
-          .getNearbyPlacingAreas(groupRef.current.position, 6)
+          .getNearbyPlacingAreas(robotPos, 6) // Use robotPos variable
           .filter((a) => a.currentItems.length < a.capacity);
 
         let bestArea = null;
@@ -440,7 +454,7 @@ export function useRobotController(
 
         // Inventory count
         hints.push(
-          `ðŸŽ’ ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
+          `🎒 ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
         );
       }
 
