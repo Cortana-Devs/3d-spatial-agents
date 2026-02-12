@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as YUKA from "yuka";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
@@ -7,6 +7,8 @@ import { useGameStore } from "@/store/gameStore";
 import { ClientBrain } from "../Systems/ClientBrain";
 import { NearbyEntity } from "@/app/actions";
 import { InteractableRegistry } from "../Systems/InteractableRegistry";
+import NavigationNetwork from "../Systems/NavigationNetwork";
+
 
 export function useYukaAI(
   id: string,
@@ -41,6 +43,9 @@ export function useYukaAI(
   const brainRef = useRef(new ClientBrain(id));
   // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
   const brainIntervalRef = useRef(300 + Math.floor(Math.random() * 100));
+
+  // --- ANIMATION STATE ---
+  const [animationState, setAnimationState] = useState<"Idle" | "Walk" | "Run" | "Wave">("Idle");
 
   useEffect(() => {
     if (!groupRef.current) return;
@@ -80,21 +85,37 @@ export function useYukaAI(
     obstacleAvoidance.weight = 5.0;
     vehicle.steering.add(obstacleAvoidance);
 
-    // 2. Wander (Idle/Patrol)
-    const wander = new YUKA.WanderBehavior();
-    wander.weight = 1.0;
-    vehicle.steering.add(wander);
+    // 2. Follow Path (Primary Movement)
+    const followPath = new YUKA.FollowPathBehavior();
+    followPath.active = false;
+    followPath.nextWaypointDistance = 2.0;
+    vehicle.steering.add(followPath);
 
-    // 3. Seek (Follow Player)
+    // 3. Seek (Legacy / Short distance)
     const seek = new YUKA.SeekBehavior(new YUKA.Vector3());
     seek.active = false;
     vehicle.steering.add(seek);
 
-    // 4. Separation (Don't overlap with other robots)
-    // We pass the global list of vehicles. Yuka will check distance to each.
+    // 4. Arrive (Final stopping)
+    // We arrive at the *final* destination after path following
+    const arrive = new YUKA.ArriveBehavior(new YUKA.Vector3());
+    arrive.active = false;
+    arrive.deceleration = 1.5;
+    arrive.tolerance = 0.5;
+    vehicle.steering.add(arrive);
+
+    // 5. Wander (Idle)
+    const wander = new YUKA.WanderBehavior();
+    wander.weight = 0.5;
+    vehicle.steering.add(wander);
+
+    // 6. Separation
     const separation = new YUKA.SeparationBehavior(aiManager.vehicles);
-    separation.weight = 5.0; // Strong personal space
+    separation.weight = 5.0;
     vehicle.steering.add(separation);
+
+
+
 
     vehicleRef.current = vehicle;
     aiManager.addEntity(vehicle);
@@ -432,6 +453,25 @@ export function useYukaAI(
               const seek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior;
               const wander = vehicle.steering
                 .behaviors[1] as YUKA.WanderBehavior;
+              const followPath = vehicle.steering.behaviors[1] as YUKA.FollowPathBehavior; // Index 1 is followPath now? 
+              // Wait, indexes changed. 
+              // 0: Obstacle, 1: FollowPath, 2: Seek, 3: Arrive, 4: Wander, 5: Separation
+              // Let's re-fetch by type or keep index consistent. 
+              // My previous edit inserted FollowPath at index 1.
+              // So: 0=Obstacle, 1=FollowPath, 2=Seek, 3=Arrive, 4=Wander, 5=Separation.
+
+              const bFollowPath = vehicle.steering.behaviors[1] as YUKA.FollowPathBehavior;
+              const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior; // Keep legacy seek for short dist
+              const bArrive = vehicle.steering.behaviors[3] as YUKA.ArriveBehavior;
+              const bWander = vehicle.steering.behaviors[4] as YUKA.WanderBehavior;
+
+              // Helper to reset all
+              const resetBehaviors = () => {
+                bFollowPath.active = false;
+                bSeek.active = false;
+                bArrive.active = false;
+                bWander.active = false;
+              }
 
               if (decision.action === "FOLLOW" && decision.targetId) {
                 // High Priority: Follow specific entity
@@ -452,24 +492,47 @@ export function useYukaAI(
                 }
 
                 if (targetPos) {
-                  seek.active = true;
-                  wander.active = false;
-                  seek.target.copy(targetPos as unknown as YUKA.Vector3);
+                  resetBehaviors();
+
+                  const dist = vehicle.position.distanceTo(targetPos as unknown as YUKA.Vector3);
+                  if (dist < 5) {
+                    // Close enough, just Seek (Arrival)
+                    bArrive.active = true;
+                    bArrive.target.copy(targetPos as unknown as YUKA.Vector3);
+                  } else {
+                    // Use Pathfinding
+                    const path = NavigationNetwork.getInstance().findPath(
+                      vehicle.position as unknown as THREE.Vector3,
+                      targetPos
+                    );
+
+                    // Convert to Yuka Path
+                    const yukaPath = new YUKA.Path();
+                    path.forEach(p => yukaPath.add(new YUKA.Vector3(p.x, p.y, p.z)));
+
+                    bFollowPath.path = yukaPath;
+                    bFollowPath.active = true;
+                  }
                 }
               } else if (decision.action === "MOVE_TO" && decision.target) {
-                seek.active = true;
-                wander.active = false;
-                seek.target.set(
-                  decision.target.x,
-                  decision.target.y,
-                  decision.target.z,
+                resetBehaviors();
+                const target = new THREE.Vector3(decision.target.x, decision.target.y, decision.target.z);
+
+                const path = NavigationNetwork.getInstance().findPath(
+                  vehicle.position as unknown as THREE.Vector3,
+                  target
                 );
+
+                const yukaPath = new YUKA.Path();
+                path.forEach(p => yukaPath.add(new YUKA.Vector3(p.x, p.y, p.z)));
+                bFollowPath.path = yukaPath;
+                bFollowPath.active = true;
+
               } else if (decision.action === "WANDER") {
-                seek.active = false;
-                wander.active = true;
+                resetBehaviors();
+                bWander.active = true;
               } else if (decision.action === "WAIT") {
-                seek.active = false;
-                wander.active = false;
+                resetBehaviors();
                 vehicle.velocity.multiplyScalar(0.5); // Slow down
               } else if (decision.action === "INTERACT" && decision.targetId) {
                 // Move toward the object first
@@ -477,14 +540,10 @@ export function useYukaAI(
                   decision.targetId,
                 );
                 if (obj && obj.pickable && !obj.carriedBy) {
-                  seek.active = true;
-                  wander.active = false;
-                  seek.target.set(
-                    obj.position.x,
-                    obj.position.y,
-                    obj.position.z,
-                  );
-                  // When close enough, pick it up (handled in frame loop)
+                  resetBehaviors();
+                  // Close range direct seek
+                  bArrive.active = true;
+                  bArrive.target.set(obj.position.x, obj.position.y, obj.position.z);
                 }
               } else if (decision.action === "DROP" && decision.targetId) {
                 // Drop a specific carried object
@@ -642,257 +701,24 @@ export function useYukaAI(
     // No, Yuka needs the manager update.
     // We will add a <YukaSystem /> component to Scene to handle the global update.
 
-    // --- ANIMATION UPDATE ---
-    const speed = vehicle.velocity.length(); // Yuka vector length
-    const isRunning = speed > 6.0;
-    const j = joints.current;
+    // Determine Animation State
+    const speed = vehicle.velocity.length();
+    let newState: "Idle" | "Walk" | "Run" | "Wave" = "Idle";
 
-    if (
-      j.hips &&
-      j.torso &&
-      j.leftArm &&
-      j.rightArm &&
-      j.leftHip &&
-      j.rightHip &&
-      j.leftKnee &&
-      j.rightKnee &&
-      j.neck
-    ) {
-      const lerpFactor = 0.15;
-
-      // Greeting Animations
-      if (
-        greetingState.current === "LOOKING" ||
-        greetingState.current === "WAVING"
-      ) {
-        // Look at player
-        if (playerRef.current) {
-          const targetPos = playerRef.current.position.clone();
-          const lookDir = targetPos
-            .sub(vehicle.position as unknown as THREE.Vector3)
-            .normalize();
-          const targetAngle = Math.atan2(lookDir.x, lookDir.z);
-
-          // Rotate body to face player slowly
-          const currentRot = new THREE.Euler().setFromQuaternion(
-            vehicle.rotation as unknown as THREE.Quaternion,
-          );
-          let diff = targetAngle - currentRot.y;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-
-          // Manually rotate Yuka entity (it will sync to mesh)
-          const rot = new YUKA.Quaternion().copy(vehicle.rotation);
-          const targetQ = new YUKA.Quaternion().fromEuler(0, targetAngle, 0);
-          vehicle.rotation.slerp(targetQ, 0.05);
-
-          // Neck look at player
-          const neckLookDir = playerRef.current.position
-            .clone()
-            .sub(j.neck.getWorldPosition(new THREE.Vector3()))
-            .normalize();
-          const neckTargetQuaternion =
-            new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, 1),
-              neckLookDir,
-            );
-          j.neck.quaternion.slerp(neckTargetQuaternion, lerpFactor);
-        }
-
-        // Reset legs/arms to Idle
-        j.hips.position.y = THREE.MathUtils.lerp(
-          j.hips.position.y,
-          3.5,
-          lerpFactor,
-        );
-        j.leftHip.rotation.x = THREE.MathUtils.lerp(
-          j.leftHip.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.rightHip.rotation.x = THREE.MathUtils.lerp(
-          j.rightHip.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.leftKnee.rotation.x = THREE.MathUtils.lerp(
-          j.leftKnee.rotation.x,
-          0.1,
-          lerpFactor,
-        );
-        j.rightKnee.rotation.x = THREE.MathUtils.lerp(
-          j.rightKnee.rotation.x,
-          0.1,
-          lerpFactor,
-        );
-        j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.leftArm.shoulder.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.torso.rotation.x = THREE.MathUtils.lerp(
-          j.torso.rotation.x,
-          0,
-          lerpFactor,
-        );
-
-        if (greetingState.current === "WAVING") {
-          // Wave Animation
-          const waveSpeed = 12;
-          const liftDuration = 0.4;
-          const liftProgress = Math.min(
-            greetingTimer.current / liftDuration,
-            1,
-          );
-          const targetShoulderZ = -2.8; // Raised high
-          const targetElbowZ = -0.8;
-          const easedLift = 1 - Math.pow(1 - liftProgress, 3);
-
-          if (liftProgress >= 1) {
-            const wave =
-              Math.sin((greetingTimer.current - liftDuration) * waveSpeed) *
-              0.4;
-            j.rightArm.shoulder.rotation.z = targetShoulderZ + wave;
-            j.rightArm.elbow.rotation.z = targetElbowZ + wave * 0.2;
-          } else {
-            j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
-              j.rightArm.shoulder.rotation.z,
-              targetShoulderZ,
-              easedLift,
-            );
-            j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
-              j.rightArm.elbow.rotation.z,
-              targetElbowZ,
-              easedLift,
-            );
-          }
-        } else {
-          // Just Looking
-          j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
-            j.rightArm.shoulder.rotation.z,
-            -0.2,
-            lerpFactor,
-          );
-          j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
-            j.rightArm.elbow.rotation.z,
-            0,
-            lerpFactor,
-          );
-        }
-      } else if (speed > 0.1) {
-        // Walk/Run
-        walkTime.current += dt * (isRunning ? 15 : 10);
-        const w = walkTime.current;
-
-        const legAmp = isRunning ? 0.8 : 0.6;
-        const kneeAmp = isRunning ? 0.5 : 0.3;
-
-        j.hips.position.y = THREE.MathUtils.lerp(
-          j.hips.position.y,
-          3.5 + Math.sin(w * 2) * (isRunning ? 0.2 : 0.1),
-          lerpFactor,
-        );
-
-        j.leftHip.rotation.x = Math.sin(w) * legAmp;
-        j.leftKnee.rotation.x = Math.abs(Math.cos(w)) * kneeAmp + 0.2;
-
-        j.rightHip.rotation.x = Math.sin(w + Math.PI) * legAmp;
-        j.rightKnee.rotation.x =
-          Math.abs(Math.cos(w + Math.PI)) * kneeAmp + 0.2;
-
-        j.leftArm.shoulder.rotation.x = Math.sin(w + Math.PI) * legAmp;
-        j.rightArm.shoulder.rotation.x = Math.sin(w) * legAmp;
-        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.z,
-          -0.2,
-          lerpFactor,
-        ); // Arms down
-        j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.z,
-          0,
-          lerpFactor,
-        );
-
-        // Fix Lean: Reduced to 0.1 max
-        j.torso.rotation.x = THREE.MathUtils.lerp(
-          j.torso.rotation.x,
-          isRunning ? 0.1 : 0.02,
-          lerpFactor,
-        );
-        j.neck.rotation.y = THREE.MathUtils.lerp(
-          j.neck.rotation.y,
-          0,
-          lerpFactor,
-        );
-      } else {
-        // Idle
-        walkTime.current += dt;
-        const breath = Math.sin(walkTime.current * 1.5);
-
-        j.hips.position.y = THREE.MathUtils.lerp(
-          j.hips.position.y,
-          3.5,
-          lerpFactor,
-        );
-        j.torso.rotation.x = THREE.MathUtils.lerp(
-          j.torso.rotation.x,
-          breath * 0.02,
-          lerpFactor,
-        );
-
-        j.leftHip.rotation.x = THREE.MathUtils.lerp(
-          j.leftHip.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.rightHip.rotation.x = THREE.MathUtils.lerp(
-          j.rightHip.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.leftKnee.rotation.x = THREE.MathUtils.lerp(
-          j.leftKnee.rotation.x,
-          0.1,
-          lerpFactor,
-        );
-        j.rightKnee.rotation.x = THREE.MathUtils.lerp(
-          j.rightKnee.rotation.x,
-          0.1,
-          lerpFactor,
-        );
-
-        // Reset Arms (Fix "Hand Up" glitch)
-        j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.leftArm.shoulder.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.x,
-          0,
-          lerpFactor,
-        );
-        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.z,
-          -0.2,
-          lerpFactor,
-        ); // Arms down
-        j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.z,
-          0,
-          lerpFactor,
-        );
-
-        // Look around (Simple version for now)
-        j.neck.rotation.y = Math.sin(walkTime.current * 0.5) * 0.3;
-      }
+    if (greetingState.current === "WAVING") {
+      newState = "Wave";
+    } else if (speed > 6.0) {
+      newState = "Run";
+    } else if (speed > 0.1) {
+      newState = "Walk";
     }
+
+    if (newState !== animationState) {
+      setAnimationState(newState);
+    }
+
+
   });
 
-  return { vehicle: vehicleRef.current, brain: brainRef.current };
+  return { vehicle: vehicleRef.current, brain: brainRef.current, animationState };
 }
