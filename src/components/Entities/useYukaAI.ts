@@ -392,10 +392,10 @@ export function useYukaAI(
     // --- ANIMATION UPDATE (Procedural) ---
     const speed = vehicle.velocity.length();
     let newState: "Idle" | "Walk" | "Run" | "Wave" = "Idle";
-    const isRunning = speed > 8.0;
+    const isRunning = false; // AI never runs
 
     if (greetingState.current === "WAVING") newState = "Wave";
-    else if (speed > 8.0) newState = "Run";
+    // else if (speed > 8.0) newState = "Run"; // Disabled for AI
     else if (speed > 0.1) newState = "Walk";
 
     if (newState !== animationState) setAnimationState(newState);
