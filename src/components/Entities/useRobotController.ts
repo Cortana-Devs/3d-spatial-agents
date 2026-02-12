@@ -129,7 +129,10 @@ export function useRobotController(
   const setSitting = useGameStore((state) => state.setSitting);
   const setDebugText = useGameStore((state) => state.setDebugText);
   const playerInventory = useGameStore((state) => state.playerInventory);
-  const setPlayerInventory = useGameStore((state) => state.setPlayerInventory);
+  const addToInventory = useGameStore((state) => state.addToInventory);
+  const removeFromInventory = useGameStore(
+    (state) => state.removeFromInventory,
+  );
   const setInteractionNotification = useGameStore(
     (state) => state.setInteractionNotification,
   );
@@ -140,99 +143,123 @@ export function useRobotController(
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Use getState() to access fresh state without re-binding the listener
       const currentIsSitting = useGameStore.getState().isSitting;
       const currentInteractables = useGameStore.getState().interactables;
 
-      // console.log("Key:", e.code, "Looking for:", keyBindings.interact);
-
+      // ===== E KEY: SIT / STAND / DOOR / WAVE =====
       if (e.code === keyBindings.interact) {
-        // console.log("Interact!", "Sitting:", currentIsSitting, "Items:", currentInteractables.length);
-
         if (currentIsSitting) {
-          console.log("Standing up...");
-
-          // Calculate safe stand-up position (Left of chair)
+          // Stand up
           if (
             sitTargetPos.current &&
             sitTargetRot.current &&
             groupRef.current
           ) {
-            const standOffset = new THREE.Vector3(0, 0, -4.0); // Behind chair, comfortable distance
+            const standOffset = new THREE.Vector3(0, 0, -4.0);
             standOffset.applyQuaternion(sitTargetRot.current);
             standOffset.add(sitTargetPos.current);
-
-            // Apply position
             groupRef.current.position.copy(standOffset);
-            groupRef.current.position.y = 5.0; // Ensure we aren't in the floor (Center height is ~5 for robot?)
+            groupRef.current.position.y = 5.0;
           }
-
           setSitting(false);
           sitTargetPos.current = null;
           sitTargetRot.current = null;
-          state.current.velocity.set(0, 0, 0); // No jump needed if we teleport out
+          state.current.velocity.set(0, 0, 0);
           state.current.isGrounded = false;
-
           if (groupRef.current) {
             groupRef.current.rotation.x = 0;
             groupRef.current.rotation.z = 0;
           }
-        } else if (
-          useGameStore.getState().playerInventory &&
-          groupRef.current
-        ) {
-          // DROP
-          const currentInventory = useGameStore.getState().playerInventory!;
-          const robotPos = groupRef.current.position;
-          InteractableRegistry.getInstance().putDown(
-            currentInventory.id,
-            robotPos.clone(),
-          );
-          setPlayerInventory(null);
-          setInteractionNotification(`Dropped ${currentInventory.name}`);
         } else {
           if (!groupRef.current) return;
           const robotPos = groupRef.current.position;
+          let nearest: any = null;
+          let minDist = 12.0;
 
-          // Check for nearby pickable objects FIRST
-          const nearbyObj = InteractableRegistry.getInstance()
-            .getNearby(robotPos, 6)
-            .find((o) => o.pickable && !o.carriedBy);
+          for (const item of currentInteractables) {
+            const dist = robotPos.distanceTo(item.position);
+            if (dist < minDist) {
+              minDist = dist;
+              nearest = item;
+            }
+          }
 
-          if (nearbyObj) {
-            InteractableRegistry.getInstance().pickUp(nearbyObj.id, "player");
-            setPlayerInventory(nearbyObj);
-            setInteractionNotification(`Picked up ${nearbyObj.name}`);
+          if (nearest) {
+            if (nearest.type === "sofa" || nearest.type === "chair") {
+              setDebugText("Sitting...");
+              setSitting(true);
+              sitTargetPos.current = nearest.position.clone();
+              sitTargetRot.current = nearest.rotation.clone();
+            } else if (nearest.type === "door") {
+              setDebugText("Toggling Door...");
+              useGameStore.getState().setInteractionTarget(nearest.id);
+            }
           } else {
-            let nearest: any = null;
-            let minDist = 12.0;
+            // Wave
+            state.current.isWaving = true;
+            state.current.waveTimer = 0;
+          }
+        }
+      }
 
-            for (const item of currentInteractables) {
-              const dist = robotPos.distanceTo(item.position);
-              if (dist < minDist) {
-                minDist = dist;
-                nearest = item;
-              }
-            }
+      // ===== P KEY: PICK UP =====
+      if (e.code === keyBindings.pickUp) {
+        if (currentIsSitting || !groupRef.current) return;
+        const robotPos = groupRef.current.position;
+        const nearbyObj = InteractableRegistry.getInstance()
+          .getNearby(robotPos, 6)
+          .find((o) => o.pickable && !o.carriedBy);
 
-            if (nearest) {
-              console.log("Found nearest:", nearest.type, nearest.id);
-              if (nearest.type === "sofa" || nearest.type === "chair") {
-                setDebugText("Sitting...");
-                setSitting(true);
-                sitTargetPos.current = nearest.position.clone();
-                sitTargetRot.current = nearest.rotation.clone();
-              } else if (nearest.type === "door") {
-                setDebugText("Toggling Door...");
-                useGameStore.getState().setInteractionTarget(nearest.id);
-              }
-            } else {
-              console.log("No interactable found within range.");
-              state.current.isWaving = true;
-              state.current.waveTimer = 0;
-            }
-            // End of else block
-          } // End of inner else
+        if (nearbyObj) {
+          InteractableRegistry.getInstance().pickUp(nearbyObj.id, "player");
+          addToInventory(nearbyObj);
+          setInteractionNotification(`Picked up ${nearbyObj.name}`);
+          console.log(`[Player] Picked up "${nearbyObj.name}"`);
+        } else {
+          setInteractionNotification("Nothing to pick up nearby");
+        }
+      }
+
+      // ===== T KEY: PLACE / DROP =====
+      if (e.code === keyBindings.placeItem) {
+        if (currentIsSitting || !groupRef.current) return;
+        const inventory = useGameStore.getState().playerInventory;
+        if (inventory.length === 0) {
+          setInteractionNotification("Inventory is empty");
+          return;
+        }
+
+        const selectedIdx = useGameStore.getState().selectedInventoryIndex;
+        const clampedIdx = Math.min(selectedIdx, inventory.length - 1);
+        const selectedItem = inventory[clampedIdx];
+        const robotPos = groupRef.current.position;
+
+        // Check for nearby placing area
+        const nearbyArea = InteractableRegistry.getInstance()
+          .getNearbyPlacingAreas(robotPos, 6)
+          .find((a) => a.currentItems.length < a.capacity);
+
+        if (nearbyArea) {
+          InteractableRegistry.getInstance().placeItemAt(
+            selectedItem.id,
+            nearbyArea.id,
+          );
+          removeFromInventory(selectedItem.id);
+          setInteractionNotification(
+            `Placed ${selectedItem.name} on ${nearbyArea.name}`,
+          );
+          console.log(
+            `[Player] Placed "${selectedItem.name}" on "${nearbyArea.name}"`,
+          );
+        } else {
+          // Fallback: drop on ground
+          InteractableRegistry.getInstance().putDown(
+            selectedItem.id,
+            robotPos.clone(),
+          );
+          removeFromInventory(selectedItem.id);
+          setInteractionNotification(`Dropped ${selectedItem.name}`);
+          console.log(`[Player] Dropped "${selectedItem.name}" on ground`);
         }
       }
     };
@@ -243,11 +270,24 @@ export function useRobotController(
       }
     };
 
+    // Scroll wheel for inventory selection
+    const handleWheel = (e: WheelEvent) => {
+      const inventory = useGameStore.getState().playerInventory;
+      if (inventory.length <= 1) return;
+      const currentIdx = useGameStore.getState().selectedInventoryIndex;
+      const direction = e.deltaY > 0 ? 1 : -1;
+      const newIdx =
+        (currentIdx + direction + inventory.length) % inventory.length;
+      useGameStore.getState().setSelectedInventoryIndex(newIdx);
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("wheel", handleWheel);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("wheel", handleWheel);
     };
   }, [groupRef, keyBindings]);
 
@@ -257,11 +297,13 @@ export function useRobotController(
     const input = inputRef.current;
     const s = state.current;
 
-    // Interaction Prompt
+    // Interaction Prompts (separated by key)
     if (!isSitting) {
+      const hints: string[] = [];
+
+      // E key hints (sit/door)
       let nearest: any = null;
       let minDist = 6.0;
-
       for (const item of interactables) {
         const d = groupRef.current.position.distanceTo(item.position);
         if (d < minDist) {
@@ -269,58 +311,47 @@ export function useRobotController(
           nearest = item;
         }
       }
+      if (nearest) {
+        if (nearest.type === "chair" || nearest.type === "sofa") {
+          hints.push("E: Sit");
+        } else if (nearest.type === "door") {
+          hints.push("E: Open/Close");
+        }
+      }
 
-      // Check for pickable object
+      // P key hints (pick up)
       const pickableObj = InteractableRegistry.getInstance()
         .getNearby(groupRef.current.position, 6)
         .find((o) => o.pickable && !o.carriedBy);
-
-      let pickableDist = 999;
       if (pickableObj) {
-        pickableDist = groupRef.current.position.distanceTo(
-          pickableObj.position as unknown as THREE.Vector3,
-        );
+        hints.push(`P: Pick Up ${pickableObj.name}`);
       }
 
-      // Determine winner
-      if (pickableObj && pickableDist < minDist) {
-        // Pickable is closer (or no store-item found)
-        setDebugText(
-          `Press '${keyBindings.interact.replace("Key", "")}' to Pick Up ${pickableObj.name}`,
-        );
-      } else if (nearest) {
-        // Store item is closest
-        if (nearest.type === "chair" || nearest.type === "sofa") {
-          setDebugText(
-            `Press '${keyBindings.interact.replace("Key", "")}' to Sit`,
-          );
-        } else if (nearest.type === "door") {
-          setDebugText(
-            `Press '${keyBindings.interact.replace("Key", "")}' to Open/Close`,
-          );
+      // T key hints (place/drop)
+      if (playerInventory.length > 0) {
+        const selectedIdx = useGameStore.getState().selectedInventoryIndex;
+        const clampedIdx = Math.min(selectedIdx, playerInventory.length - 1);
+        const selectedItem = playerInventory[clampedIdx];
+
+        const nearbyArea = InteractableRegistry.getInstance()
+          .getNearbyPlacingAreas(groupRef.current.position, 6)
+          .find((a) => a.currentItems.length < a.capacity);
+
+        if (nearbyArea) {
+          hints.push(`T: Place ${selectedItem.name} on ${nearbyArea.name}`);
         } else {
-          setDebugText(
-            `Press '${keyBindings.interact.replace("Key", "")}' to Interact`,
-          );
+          hints.push(`T: Drop ${selectedItem.name}`);
         }
-      } else {
-        setDebugText("");
-      }
-    } else {
-      setDebugText(
-        `Press '${keyBindings.interact.replace("Key", "")}' to Stand`,
-      );
-    }
 
-    // Inventory Hint
-    if (playerInventory) {
-      // Override debug text or append?
-      // Let's prepend if we are walking
-      if (!isSitting) {
-        setDebugText(
-          `Carrying: ${playerInventory.name} | Press '${keyBindings.interact.replace("Key", "")}' to Drop`,
+        // Inventory count
+        hints.push(
+          `🎒 ${playerInventory.length} item${playerInventory.length > 1 ? "s" : ""}`,
         );
       }
+
+      setDebugText(hints.length > 0 ? hints.join(" | ") : "");
+    } else {
+      setDebugText("E: Stand");
     }
 
     // Clamp delta

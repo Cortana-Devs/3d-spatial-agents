@@ -380,6 +380,41 @@ export function useYukaAI(
         });
       });
 
+      // 4. Perceive Placing Areas (Surfaces)
+      const nearbyAreas =
+        InteractableRegistry.getInstance().getNearbyPlacingAreas(
+          vehicle.position as unknown as THREE.Vector3,
+          15,
+        );
+
+      nearbyAreas.forEach((area) => {
+        nearbyEntities.push({
+          type: "SURFACE",
+          id: area.id,
+          distance: parseFloat(
+            vehicle.position
+              .distanceTo(area.position as unknown as YUKA.Vector3)
+              .toFixed(1),
+          ),
+          status: `${area.currentItems.length}/${area.capacity} items`,
+          name: area.name,
+        });
+      });
+
+      // 5. Perceive carried items
+      const carriedItems =
+        InteractableRegistry.getInstance().getAllCarriedBy(id);
+      carriedItems.forEach((obj) => {
+        nearbyEntities.push({
+          type: "CARRIED",
+          id: obj.id,
+          distance: 0,
+          status: "in inventory",
+          objectType: obj.type,
+          name: obj.name,
+        });
+      });
+
       // Always update brain, even if alone, so it can decide to Wander
       if (nearbyEntities.length >= 0) {
         // Condition actually redundant but keeps structure
@@ -451,15 +486,45 @@ export function useYukaAI(
                   );
                   // When close enough, pick it up (handled in frame loop)
                 }
-              } else if (decision.action === "DROP") {
-                // Drop any carried object
+              } else if (decision.action === "DROP" && decision.targetId) {
+                // Drop a specific carried object
                 const registry = InteractableRegistry.getInstance();
-                const carried = registry.getCarriedBy(id);
-                if (carried) {
+                const obj = registry.getById(decision.targetId);
+                if (obj && obj.carriedBy === id) {
                   registry.putDown(
-                    carried.id,
+                    obj.id,
                     vehicle.position as unknown as THREE.Vector3,
                   );
+                  console.log(`[Agent ${id}] Dropped ${obj.name}`);
+                }
+              } else if (
+                decision.action === "PLACE_AT" &&
+                decision.targetId &&
+                decision.placeAreaId
+              ) {
+                // Place a carried object on a surface
+                const registry = InteractableRegistry.getInstance();
+                const obj = registry.getById(decision.targetId);
+                const area = registry.getPlacingAreaById(decision.placeAreaId);
+                if (obj && obj.carriedBy === id && area) {
+                  // Move toward the area first
+                  seek.active = true;
+                  wander.active = false;
+                  seek.target.set(
+                    area.position.x,
+                    area.position.y,
+                    area.position.z,
+                  );
+                  // If close enough, place it
+                  const distToArea = vehicle.position.distanceTo(
+                    area.position as unknown as YUKA.Vector3,
+                  );
+                  if (distToArea < 5.0) {
+                    registry.placeItemAt(obj.id, area.id);
+                    console.log(
+                      `[Agent ${id}] Placed ${obj.name} on ${area.name}`,
+                    );
+                  }
                 }
               }
             }
@@ -467,40 +532,27 @@ export function useYukaAI(
       }
     }
 
-    // --- INTERACTION UPDATE (Auto-Pickup) ---
-    // Check if we are trying to interact with something
-    // const brain = brainRef.current; // access again if needed, or use state -> Removed redeclaration
-    // We don't have easy access to "current decision" here without storing it.
-    // Instead, let's check: if we are SEEKING an object that is close, pick it up.
-    // But we don't know if we are seeking an *object* or a point.
-    // Let's use the Seek behavior's target.
-
-    // Simplification: Check all nearby pickable objects. if very close and we are moving slow (arrived), pick up?
-    // No, that might be accidental.
-    // Let's rely on the fact that if we issued INTERACT, we set seek target to object pos.
-    // If distance to any pickable object < 3.0 AND we are not carrying anything, pick it up?
-    // Only if the Brain *wanted* to interact.
-    // For now, let's just use proximity = auto-pickup (Greedy Agent).
-    // Or better: The brain loop sets a "targetObjectId" ref?
-
-    // Let's perform a quick check:
+    // --- INTERACTION UPDATE (Brain-Controlled Pickup) ---
+    // Only pick up if the brain has decided INTERACT and we are close
     const registry = InteractableRegistry.getInstance();
-    if (!registry.getCarriedBy(id)) {
-      // Not carrying anything
-      const closeObjects = registry.getNearby(
-        vehicle.position as unknown as THREE.Vector3,
-        2.5,
-      );
-      for (const obj of closeObjects) {
-        // If we are very close, and we are steering towards it?
-        // Or just pick it up if we are close.
-        // To avoid accidental pickups, let's check if the brain thought about it?
-        // For now, allow greedy pickup for testing.
-        if (obj.pickable) {
-          registry.pickUp(obj.id, id);
-          console.log(`[Agent ${id}] Picked up ${obj.name}`);
-          break; // Pick up one
+    const brain_state = brain.state;
+    if (brain_state.thought) {
+      try {
+        const lastDecision = JSON.parse(brain_state.thought);
+        if (lastDecision.action === "INTERACT" && lastDecision.targetId) {
+          const obj = registry.getById(lastDecision.targetId);
+          if (obj && obj.pickable && !obj.carriedBy) {
+            const distToObj = vehicle.position.distanceTo(
+              obj.position as unknown as YUKA.Vector3,
+            );
+            if (distToObj < 3.0) {
+              registry.pickUp(obj.id, id);
+              console.log(`[Agent ${id}] Picked up ${obj.name}`);
+            }
+          }
         }
+      } catch {
+        // Thought is not a valid JSON — could be a natural language string
       }
     }
 

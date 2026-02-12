@@ -83,6 +83,8 @@ interface GameState {
     jump: string;
     sprint: string;
     interact: string;
+    pickUp: string;
+    placeItem: string;
     menu: string;
   };
   setKeyBinding: (action: string, key: string) => void;
@@ -92,8 +94,11 @@ interface GameState {
   setDebugTarget: (target: DebugTargetInfo | null) => void;
 
   // Inventory & Notifications
-  playerInventory: WorldObject | null;
-  setPlayerInventory: (item: WorldObject | null) => void;
+  playerInventory: WorldObject[];
+  addToInventory: (item: WorldObject) => void;
+  removeFromInventory: (itemId: string) => void;
+  selectedInventoryIndex: number;
+  setSelectedInventoryIndex: (index: number) => void;
 
   interactionNotification: string | null;
   setInteractionNotification: (msg: string | null) => void;
@@ -164,6 +169,8 @@ export const useGameStore = create<GameState>((set) => ({
     jump: "Space",
     sprint: "ShiftLeft",
     interact: "KeyE",
+    pickUp: "KeyP",
+    placeItem: "KeyT",
     menu: "Escape",
   },
   setKeyBinding: (action, key) =>
@@ -176,8 +183,20 @@ export const useGameStore = create<GameState>((set) => ({
   setDebugTarget: (target) => set({ debugTarget: target }),
 
   // Inventory & Notifications
-  playerInventory: null,
-  setPlayerInventory: (item) => set({ playerInventory: item }),
+  playerInventory: [],
+  addToInventory: (item) =>
+    set((state) => ({ playerInventory: [...state.playerInventory, item] })),
+  removeFromInventory: (itemId) =>
+    set((state) => ({
+      playerInventory: state.playerInventory.filter((i) => i.id !== itemId),
+      // Adjust selected index if needed
+      selectedInventoryIndex: Math.min(
+        state.selectedInventoryIndex,
+        Math.max(0, state.playerInventory.length - 2),
+      ),
+    })),
+  selectedInventoryIndex: 0,
+  setSelectedInventoryIndex: (index) => set({ selectedInventoryIndex: index }),
 
   interactionNotification: null,
   setInteractionNotification: (msg) => {

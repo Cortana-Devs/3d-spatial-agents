@@ -998,6 +998,9 @@ export default function OfficeHub() {
               type: "Prop",
               id: `file-s1-${y}-${i}`,
               name: `Storage File ${i + y * 5 + 1}`,
+              interactable: true,
+              pickable: true,
+              objectType: "file",
             }}
           />
         )),
@@ -1019,6 +1022,9 @@ export default function OfficeHub() {
               type: "Prop",
               id: `file-s2-${y}-${i}`,
               name: `Storage File ${i + y * 5 + 100}`,
+              interactable: true,
+              pickable: true,
+              objectType: "file",
             }}
           />
         )),

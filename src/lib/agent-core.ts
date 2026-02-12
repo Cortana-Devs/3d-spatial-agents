@@ -54,16 +54,18 @@ export async function processAgentThought(
     
     ## Output Format (JSON ONLY)
     { 
-      "action": "MOVE_TO" | "WAIT" | "WANDER" | "FOLLOW" | "INTERACT" | "DROP", 
-      "targetId"?: "id_of_entity_to_follow", 
+      "action": "MOVE_TO" | "WAIT" | "WANDER" | "FOLLOW" | "INTERACT" | "DROP" | "PLACE_AT", 
+      "targetId"?: "id_of_entity_to_follow_or_object", 
+      "placeAreaId"?: "id_of_placing_area",
       "target"?: {x, y, z}, 
       "thought": "brief reasoning" 
     }
     
     ## Rules
-    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
-    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may choose to INTERACT with it (pick it up). Set targetId to the object's id.
-    - **DROP**: If you are carrying an object, you may DROP it at your current location.
+    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decide to 'FOLLOW' them to say hello.
+    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up. Set targetId to the object's id. You can carry multiple items.
+    - **DROP**: If you are carrying objects, you may DROP one at your current location. Set targetId to the object's id.
+    - **PLACE_AT**: If you are carrying objects and see a 'SURFACE' nearby, you can place an item on it. Set targetId to the object id and placeAreaId to the surface id.
     - **WANDER**: If no specific entities of interest, explore.
     - **WAIT**: If idle or thinking.
   `;

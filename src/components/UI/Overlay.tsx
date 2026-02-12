@@ -182,29 +182,89 @@ export default function Overlay() {
         </div>
       )}
 
-      {/* Inventory Indicator */}
-      {playerInventory && (
+      {/* Inventory Panel */}
+      {playerInventory.length > 0 && (
         <div
           style={{
             position: "absolute",
-            bottom: "20px",
+            bottom: "70px",
             left: "20px",
-            backgroundColor: "rgba(50, 50, 50, 0.8)",
+            backgroundColor: "rgba(20, 20, 30, 0.9)",
             color: "white",
-            padding: "15px",
+            padding: "12px 16px",
             borderRadius: "10px",
-            border: "2px solid #aaa",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
+            border: "1px solid rgba(100, 100, 255, 0.4)",
+            minWidth: "200px",
+            maxWidth: "280px",
             zIndex: 150,
             pointerEvents: "none",
+            backdropFilter: "blur(4px)",
           }}
         >
-          <div style={{ fontSize: "24px" }}>🎒</div>
-          <div>
-            <div style={{ fontSize: "12px", color: "#ccc" }}>CARRYING</div>
-            <div style={{ fontWeight: "bold" }}>{playerInventory.name}</div>
+          <div
+            style={{
+              fontSize: "12px",
+              color: "#aaa",
+              marginBottom: "8px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>🎒 INVENTORY ({playerInventory.length})</span>
+            <span style={{ fontSize: "10px", color: "#666" }}>Scroll ↕</span>
+          </div>
+          {playerInventory.map((item, idx) => {
+            const selectedIdx = useGameStore.getState().selectedInventoryIndex;
+            const isSelected =
+              idx === Math.min(selectedIdx, playerInventory.length - 1);
+            const emoji =
+              item.type === "file"
+                ? "📄"
+                : item.type === "laptop"
+                  ? "💻"
+                  : item.type === "pendrive"
+                    ? "💾"
+                    : item.type === "coffeecup"
+                      ? "☕"
+                      : "📦";
+            return (
+              <div
+                key={item.id}
+                style={{
+                  padding: "4px 8px",
+                  marginBottom: "2px",
+                  borderRadius: "4px",
+                  backgroundColor: isSelected
+                    ? "rgba(80, 80, 255, 0.3)"
+                    : "transparent",
+                  border: isSelected
+                    ? "1px solid rgba(100, 100, 255, 0.5)"
+                    : "1px solid transparent",
+                  fontSize: "13px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span>{isSelected ? "▶" : " "}</span>
+                <span>{emoji}</span>
+                <span style={{ fontWeight: isSelected ? "bold" : "normal" }}>
+                  {item.name}
+                </span>
+              </div>
+            );
+          })}
+          <div
+            style={{
+              fontSize: "10px",
+              color: "#666",
+              marginTop: "6px",
+              borderTop: "1px solid #333",
+              paddingTop: "4px",
+            }}
+          >
+            T: Place selected | Scroll: Change selection
           </div>
         </div>
       )}

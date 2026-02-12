@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import { Text } from "@react-three/drei";
+import { usePlacingArea } from "../Systems/usePlacingArea";
 
 // Materials shared locally or we could import standard ones
 const woodMaterial = new THREE.MeshStandardMaterial({
@@ -232,10 +233,17 @@ export function ConferenceTable({
   position: [number, number, number];
   userData?: any;
 }) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id: userData?.id || "conf-table",
+    name: userData?.name || "Conference Table",
+    capacity: 6,
+    dimensions: [40, 0.8, 20],
+  });
   return (
     <group position={position} userData={userData}>
       {/* Main Rectangular Table Top */}
-      <mesh position={[0, 4, 0]} castShadow receiveShadow>
+      <mesh ref={surfaceRef} position={[0, 4, 0]} castShadow receiveShadow>
         <boxGeometry args={[40, 0.8, 20]} />
         <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
       </mesh>
@@ -267,6 +275,13 @@ export function OfficeDesk({
   rotation?: number;
   userData?: any;
 }) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id: userData?.id || "office-desk",
+    name: userData?.name || "Office Desk",
+    capacity: 4,
+    dimensions: [12, 0.4, 6],
+  });
   return (
     <group
       position={new THREE.Vector3(...position)}
@@ -275,6 +290,7 @@ export function OfficeDesk({
     >
       {/* Table Top */}
       <mesh
+        ref={surfaceRef}
         position={[0, 3.8, 0]}
         castShadow
         receiveShadow
@@ -312,12 +328,16 @@ export function OfficeDesk({
       {/* Monitor */}
       <group
         position={[0, 4.0, -1.5]}
-        userData={userData ? {
-          type: 'Prop',
-          id: `${userData.id}-monitor`,
-          name: `${userData.name} - Monitor`,
-          parentID: userData.id
-        } : undefined}
+        userData={
+          userData
+            ? {
+                type: "Prop",
+                id: `${userData.id}-monitor`,
+                name: `${userData.name} - Monitor`,
+                parentID: userData.id,
+              }
+            : undefined
+        }
       >
         <mesh
           position={[0, 1.5, 0]}
@@ -349,6 +369,14 @@ export function StorageShelf({
   label?: string;
   userData?: any;
 }) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  // Attach to middle shelf (index 1)
+  usePlacingArea(surfaceRef, {
+    id: userData?.id || "storage-shelf",
+    name: userData?.name || "Storage Shelf",
+    capacity: 8,
+    dimensions: [80, 0.5, 5],
+  });
   const w = 80;
   const h = 12; // Total height (was 7)
   const d = 5; // Depth
@@ -397,16 +425,19 @@ export function StorageShelf({
       {/* 3 Racks (Planes) */}
       {[2, 7, 12].map((y, i) => {
         const levelName = levelLabels[i];
-        const specificUserData = userData ? {
-          type: 'Furniture Part',
-          id: `${userData.id}-level-${i}`,
-          name: `${userData.name} - ${levelName} Level`,
-          parentID: userData.id
-        } : undefined;
+        const specificUserData = userData
+          ? {
+              type: "Furniture Part",
+              id: `${userData.id}-level-${i}`,
+              name: `${userData.name} - ${levelName} Level`,
+              parentID: userData.id,
+            }
+          : undefined;
 
         return (
           <group key={`rack-group-${i}`}>
             <mesh
+              ref={i === 1 ? surfaceRef : undefined}
               position={[0, y - rackThickness / 2, 0]}
               castShadow
               receiveShadow
@@ -429,7 +460,7 @@ export function StorageShelf({
               {levelLabels[i]}
             </Text>
           </group>
-        )
+        );
       })}
     </group>
   );
@@ -541,7 +572,12 @@ export function OfficeDoor({
   });
 
   return (
-    <group ref={groupRef} position={posVec} rotation={[0, rotation, 0]} userData={userData}>
+    <group
+      ref={groupRef}
+      position={posVec}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
       {/* --- Futurustic Frame --- */}
       {/* Side Pillars with Neon */}
       <group position={[8, 15, 0]}>
@@ -666,6 +702,13 @@ export function ReceptionDesk({
   rotation?: number;
   userData?: any;
 }) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id: userData?.id || "reception-desk",
+    name: userData?.name || "Reception Desk",
+    capacity: 3,
+    dimensions: [20, 0.2, 6],
+  });
   return (
     <group
       position={new THREE.Vector3(...position)}
@@ -677,7 +720,9 @@ export function ReceptionDesk({
         position={[0, 2, 0]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })}
+        material={
+          new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })
+        }
       >
         <boxGeometry args={[20, 4, 6]} />
       </mesh>
@@ -686,15 +731,24 @@ export function ReceptionDesk({
         position={[8, 2, 6]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })}
+        material={
+          new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })
+        }
       >
         <boxGeometry args={[4, 4, 8]} />
       </mesh>
       {/* Counter Top */}
-      <mesh position={[0, 4.1, 0]} material={new THREE.MeshStandardMaterial({ color: "#444" })}>
+      <mesh
+        ref={surfaceRef}
+        position={[0, 4.1, 0]}
+        material={new THREE.MeshStandardMaterial({ color: "#444" })}
+      >
         <boxGeometry args={[20, 0.2, 6]} />
       </mesh>
-      <mesh position={[8, 4.1, 6]} material={new THREE.MeshStandardMaterial({ color: "#444" })}>
+      <mesh
+        position={[8, 4.1, 6]}
+        material={new THREE.MeshStandardMaterial({ color: "#444" })}
+      >
         <boxGeometry args={[4, 0.2, 8]} />
       </mesh>
 
@@ -716,6 +770,13 @@ export function ManagersDesk({
   rotation?: number;
   userData?: any;
 }) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id: userData?.id || "managers-desk",
+    name: userData?.name || "Manager's Desk",
+    capacity: 3,
+    dimensions: [16, 0.5, 8],
+  });
   const darkWood = new THREE.MeshStandardMaterial({
     color: "#3e2723",
     roughness: 0.4,
@@ -728,22 +789,41 @@ export function ManagersDesk({
       userData={userData}
     >
       {/* Executive Desktop */}
-      <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={darkWood}>
+      <mesh
+        ref={surfaceRef}
+        position={[0, 3.8, 0]}
+        castShadow
+        receiveShadow
+        material={darkWood}
+      >
         <boxGeometry args={[16, 0.5, 8]} />
       </mesh>
       {/* Massive Legs/Cabinets */}
-      <mesh position={[-6, 1.8, 0]} castShadow receiveShadow material={darkWood}>
+      <mesh
+        position={[-6, 1.8, 0]}
+        castShadow
+        receiveShadow
+        material={darkWood}
+      >
         <boxGeometry args={[3, 3.6, 6]} />
       </mesh>
       <mesh position={[6, 1.8, 0]} castShadow receiveShadow material={darkWood}>
         <boxGeometry args={[3, 3.6, 6]} />
       </mesh>
       {/* Modesty Panel */}
-      <mesh position={[0, 2.5, -2]} castShadow receiveShadow material={darkWood}>
+      <mesh
+        position={[0, 2.5, -2]}
+        castShadow
+        receiveShadow
+        material={darkWood}
+      >
         <boxGeometry args={[10, 3, 0.2]} />
       </mesh>
       {/* Leather Pad */}
-      <mesh position={[0, 4.06, 1]} material={new THREE.MeshStandardMaterial({ color: "#111" })}>
+      <mesh
+        position={[0, 4.06, 1]}
+        material={new THREE.MeshStandardMaterial({ color: "#111" })}
+      >
         <boxGeometry args={[8, 0.02, 4]} />
       </mesh>
     </group>
