@@ -143,7 +143,6 @@ export function useRobotController(
   const setInteractionNotification = useGameStore(
     (state) => state.setInteractionNotification,
   );
-  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
 
   // Sitting State
   const sitTargetPos = useRef<THREE.Vector3 | null>(null);
@@ -203,9 +202,40 @@ export function useRobotController(
               useGameStore.getState().setInteractionTarget(nearest.id);
             }
           } else {
-            // Wave
-            state.current.isWaving = true;
-            state.current.waveTimer = 0;
+            // Check for nearby AI Agents (Follow Logic)
+            const agents = AIManager.getInstance().vehicles;
+            let nearbyAgent: any = null;
+            let agentDist = 999;
+            const myPos = groupRef.current.position;
+
+            for (const v of agents) {
+              // @ts-ignore
+              if (v.id) {
+                const d = v.position.squaredDistanceTo(myPos as unknown as any);
+                if (d < 9.0) { // < 3m squared
+                  agentDist = d;
+                  nearbyAgent = v;
+                  break;
+                }
+              }
+            }
+
+            if (nearbyAgent) {
+              // Toggle Follow
+              // @ts-ignore
+              const targetId = nearbyAgent.id;
+              if (followingAgentId === targetId) {
+                setFollowingAgentId(null);
+                setInteractionNotification(`Agent Stopped Following`);
+              } else {
+                setFollowingAgentId(targetId);
+                setInteractionNotification(`Agent ${targetId} Following!`);
+              }
+            } else {
+              // Wave
+              state.current.isWaving = true;
+              state.current.waveTimer = 0;
+            }
           }
         }
       }
