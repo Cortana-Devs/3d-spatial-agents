@@ -26,6 +26,8 @@ export function useYukaAI(
   // Remote Logic: Inspection
   const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
   const setInspectedAgentData = useGameStore((state) => state.setInspectedAgentData);
+  const followingAgentId = useGameStore((state) => state.followingAgentId);
+  const setAgentPosition = useGameStore((state) => state.setAgentPosition);
 
   // Animation State
   const walkTime = useRef(0);

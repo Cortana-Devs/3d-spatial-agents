@@ -143,6 +143,9 @@ export function useRobotController(
   const setInteractionNotification = useGameStore(
     (state) => state.setInteractionNotification,
   );
+  const followingAgentId = useGameStore((state) => state.followingAgentId);
+  const setFollowingAgentId = useGameStore((state) => state.setFollowingAgentId);
+  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
 
   // Sitting State
   const sitTargetPos = useRef<THREE.Vector3 | null>(null);
