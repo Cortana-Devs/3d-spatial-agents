@@ -143,9 +143,9 @@ export function useRobotController(
   const setInteractionNotification = useGameStore(
     (state) => state.setInteractionNotification,
   );
+  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
   const followingAgentId = useGameStore((state) => state.followingAgentId);
   const setFollowingAgentId = useGameStore((state) => state.setFollowingAgentId);
-  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
 
   // Sitting State
   const sitTargetPos = useRef<THREE.Vector3 | null>(null);
@@ -227,7 +227,8 @@ export function useRobotController(
               // Toggle Follow
               // @ts-ignore
               const targetId = nearbyAgent.id;
-              if (followingAgentId === targetId) {
+              const currentFollowingId = useGameStore.getState().followingAgentId;
+              if (currentFollowingId === targetId) {
                 setFollowingAgentId(null);
                 setInteractionNotification(`Agent Stopped Following`);
               } else {
@@ -650,11 +651,11 @@ export function useRobotController(
           s.isGrounded = true;
           s.velocity.y = 0;
         }
-        }
       }
+    }
 
-      // Update Minimap Position (Throttled or every frame? Every frame is fine for single player)
-      setPlayerPosition(mesh.position.clone());
+    // Update Minimap Position (Throttled or every frame? Every frame is fine for single player)
+    setPlayerPosition(mesh.position.clone());
 
 
     // --- Animation Logic ---
