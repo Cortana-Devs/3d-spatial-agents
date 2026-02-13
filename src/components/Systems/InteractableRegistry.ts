@@ -194,14 +194,28 @@ export class InteractableRegistry {
 
     const [w, h, d] = area.dimensions;
 
-    // Grid layout: columns along local-X, rows along local-Z
-    const maxCols = Math.max(1, Math.floor(w / 2));
-    const col = slotIndex % maxCols;
-    const row = Math.floor(slotIndex / maxCols);
+    // Grid layout: Try to make it square-ish if possible, bounded by width
+    // Heuristic: Use sqrt of capacity to estimate columns, but clamping to width/2
+    const capacity = area.capacity || 100;
 
-    // Local offsets centered on surface
-    const localX = (col - (maxCols - 1) / 2) * 2;
-    const localZ = (row - 0.5) * 2;
+    let optimalCols = Math.round(Math.sqrt(capacity * (w / d)));
+    optimalCols = Math.max(1, optimalCols); // At least 1 column
+
+    const maxPossibleCols = Math.max(1, Math.floor(w / 1.5)); // Assuming item width ~1.5
+    const cols = Math.min(optimalCols, maxPossibleCols, capacity);
+
+    const col = slotIndex % cols;
+    const row = Math.floor(slotIndex / cols);
+    const rows = Math.ceil(capacity / cols);
+
+    // Dynamic Spacing: Spread items evenly across the surface
+    const margin = 0.8; // Use 80% of space to avoid edges
+    const spacingX = (w * margin) / cols;
+    const safeSpacingZ = rows > 1 ? (d * margin) / rows : 0;
+
+    // Local offsets
+    const localX = (col - (cols - 1) / 2) * spacingX;
+    const localZ = rows > 1 ? (row - (rows - 1) / 2) * safeSpacingZ : 0;
 
     // Build offset vector in local space, then rotate to world
     const offset = new THREE.Vector3(localX, h / 2 + 0.15, localZ);
@@ -235,14 +249,36 @@ export class InteractableRegistry {
 
     const [w, h, d] = area.dimensions;
 
-    // Grid layout: columns along local-X, rows along local-Z
-    const maxCols = Math.max(1, Math.floor(w / 2));
-    const col = slotIndex % maxCols;
-    const row = Math.floor(slotIndex / maxCols);
+    // Grid layout: Try to make it square-ish if possible, bounded by width
+    // Heuristic: Use sqrt of capacity to estimate columns, but clamping to width/2
+    // Grid layout: Try to respect the aspect ratio of the area
+    const capacity = area.capacity || 100;
 
-    // Local offsets centered on surface
-    const localX = (col - (maxCols - 1) / 2) * 2;
-    const localZ = (row - 0.5) * 2;
+    // Idea: We want cols / rows approx equal to w / d
+    // cols * rows = capacity
+    // cols / rows = w / d
+    // => cols^2 = capacity * (w / d)
+    // => cols = sqrt(capacity * w / d)
+
+    let optimalCols = Math.round(Math.sqrt(capacity * (w / d)));
+    optimalCols = Math.max(1, optimalCols); // At least 1 column
+
+    // Clamp to available space (each item needs ~1 unit width?)
+    const maxPossibleCols = Math.max(1, Math.floor(w / 1.5));
+    const cols = Math.min(optimalCols, maxPossibleCols, capacity);
+
+    const col = slotIndex % cols;
+    const row = Math.floor(slotIndex / cols);
+    const rows = Math.ceil(capacity / cols);
+
+    // Dynamic Spacing: Spread items evenly across the surface
+    const margin = 0.8; // Use 80% of space to avoid edges
+    const spacingX = (w * margin) / cols;
+    const spacingZ = rows > 1 ? (d * margin) / rows : 0; // If 1 row, Z is 0 (centered)
+
+    // Local offsets
+    const localX = (col - (cols - 1) / 2) * spacingX;
+    const localZ = rows > 1 ? (row - (rows - 1) / 2) * spacingZ : 0;
 
     // Build offset vector in local space, then rotate to world
     const offset = new THREE.Vector3(localX, h / 2 + 0.15, localZ);

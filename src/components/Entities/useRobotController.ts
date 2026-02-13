@@ -439,11 +439,11 @@ export function useRobotController(
       // Build interaction grid
       const robotPos = mesh.position;
       const nearbyInteractables = InteractableRegistry.getInstance()
-        .getNearby(robotPos, 6)
+        .getNearby(robotPos, 10)
         .filter((o) => o.pickable && !o.carriedBy);
 
       const nearbyPlacingAreas = InteractableRegistry.getInstance()
-        .getNearbyPlacingAreas(robotPos, 6)
+        .getNearbyPlacingAreas(robotPos, 10)
         .filter((a) => a.currentItems.some((item) => !item));
 
       const grid: any[] = [];

@@ -284,8 +284,8 @@ export function ConferenceTable({
   usePlacingArea(surfaceRef, {
     id: userData?.id || "conf-table",
     name: userData?.name || "Conference Table",
-    capacity: 6,
-    dimensions: [40, 0.8, 20],
+    capacity: 8,
+    dimensions: [36, 0.8, 16], // Slightly smaller than top to keep items away from edge
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
@@ -368,9 +368,11 @@ export function OfficeDesk({
   usePlacingArea(surfaceRef, {
     id: userData?.id || "office-desk",
     name: userData?.name || "Office Desk",
-    capacity: 4,
-    dimensions: [12, 0.4, 6],
+    capacity: 2, // Reduced from 4 to avoid crowding
+    dimensions: [10, 0.4, 3], // Only front half of desk
   });
+
+  // No useEffect shift needed - we position the group directly
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
   const posVec = useMemo(
@@ -417,9 +419,22 @@ export function OfficeDesk({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Table Top */}
+      {/* Placing Area Group (Logic + Visuals) */}
+      <group position={[0, 3.8, 1.5]}>
+        {/* Logical Surface (Invisible Raycast Target) */}
+        <mesh visible={false} ref={surfaceRef}>
+          <boxGeometry args={[10, 0.4, 3]} />
+        </mesh>
+
+        {/* Visual Desk Pad (Black Mat) */}
+        <mesh position={[0, 0.205, 0]} receiveShadow>
+          <boxGeometry args={[10.2, 0.05, 3.2]} />
+          <meshStandardMaterial color="#222222" roughness={0.8} />
+        </mesh>
+      </group>
+
+      {/* Table Top (Base) */}
       <mesh
-        ref={surfaceRef}
         position={[0, 3.8, 0]}
         castShadow
         receiveShadow
@@ -1035,11 +1050,12 @@ export function CupboardUnit({
   userData?: any;
 }) {
   const w = 8; // Width
-  const h = 10; // Height (3 levels * 3.33)
+  const h = 7.5; // Height (3 levels * 2.5) -- Reduced from 10 to be reachable
   const d = 8; // Depth
 
   const levels = 3;
-  const levelHeight = h / levels;
+  const baseHeight = 0.5; // Solid base
+  const levelHeight = (h - baseHeight) / levels;
 
   // Self-managed obstacle registration
   const addObstacles = useGameStore((state) => state.addObstacles);
@@ -1054,10 +1070,10 @@ export function CupboardUnit({
     // Cupboard: 8 x 10 x 8 — single box obstacle
     const obs = [
       {
-        position: posVec.clone().add(new THREE.Vector3(0, 5, 0)),
+        position: posVec.clone().add(new THREE.Vector3(0, 3.75, 0)),
         radius: 0,
         type: "cupboard" as const,
-        halfExtents: new THREE.Vector3(4, 5, 4),
+        halfExtents: new THREE.Vector3(4, 3.75, 4),
         rotation,
       },
     ];
@@ -1071,20 +1087,34 @@ export function CupboardUnit({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Main Cabinet Body (Central Core) */}
-      <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w - 0.2, h, d - 0.2]} />
-        <meshStandardMaterial
-          color="#1a1a1a" // Darker
-          roughness={0.3}
-          metalness={0.7}
+      {/* Base Plinth (Solid) */}
+      <mesh position={[0, baseHeight / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, baseHeight, d]} />
+        <meshStandardMaterial color="#111" roughness={0.5} />
+      </mesh>
+
+      {/* Main Cabinet Body (Glass) - Sitting on Base */}
+      <mesh
+        position={[0, baseHeight + (h - baseHeight) / 2, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[w - 0.2, h - baseHeight, d - 0.2]} />
+        <meshPhysicalMaterial
+          color="#aaddff" // Light blue tint
+          roughness={0.1}
+          metalness={0.1}
+          transmission={0.9} // Glass effect
+          transparent={true}
+          opacity={0.3}
+          thickness={0.5}
         />
       </mesh>
 
       {/* Internal Placement Volume (Shared for all sides) */}
       {Array.from({ length: levels }).map((_, i) => {
         const levelNum = i + 1;
-        const yPos = levelHeight / 2 + i * levelHeight;
+        const yPos = baseHeight + levelHeight / 2 + i * levelHeight;
         const levelId = userData?.id
           ? `${userData.id}-level-${levelNum}`
           : `cupboard-${label}-level-${levelNum}`;
@@ -1105,17 +1135,19 @@ export function CupboardUnit({
 
       {/* Glowing Number at Top (Rotating billboard style or 4-sided text?) */}
       {/* Let's make it 4-sided text so it's visible from all angles */}
-      {/* Top Fascia & Integrated Numbers (Jony Ive Style) */}
-      <group position={[0, h / 2 - 0.75, 0]}>
+      {/* Top Fascia & Integrated Numbers (Sitting on Top) */}
+      <group position={[0, h + 0.75, 0]}>
         {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((rot, i) => (
           <group key={`fascia-${i}`} rotation={[0, rot, 0]}>
-            {/* Fascia Band */}
             <mesh position={[0, 0, d / 2 + 0.05]} receiveShadow>
               <boxGeometry args={[w - 0.2, 1.5, 0.1]} />
-              <meshStandardMaterial
-                color="#111111"
-                metalness={0.8}
-                roughness={0.2}
+              <meshPhysicalMaterial
+                color="#000000" // Dark tint
+                roughness={0.1}
+                metalness={0.9}
+                transmission={0.8} // See-through
+                transparent={true}
+                opacity={0.5}
               />
             </mesh>
 
@@ -1150,10 +1182,27 @@ export function CupboardUnit({
       {/* 3 Levels (Faces on 4 sides) */}
       {Array.from({ length: levels }).map((_, levelIndex) => {
         const levelNum = levelIndex + 1;
-        const yPos = levelHeight / 2 + levelIndex * levelHeight;
+        const yPos = baseHeight + levelHeight / 2 + levelIndex * levelHeight;
 
         return (
           <group key={`level-${levelIndex}`} position={[0, yPos, 0]}>
+            {/* Physical Shelf Floor */}
+            <mesh
+              position={[0, -levelHeight / 2 + 0.05, 0]}
+              castShadow
+              receiveShadow
+            >
+              <boxGeometry args={[w - 0.2, 0.05, d - 0.2]} />
+              <meshPhysicalMaterial
+                color="#000000"
+                metalness={0.8}
+                roughness={0.2}
+                transmission={0.2}
+                transparent={true}
+                opacity={0.8}
+              />
+            </mesh>
+
             {/* 4 Faces */}
             {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((rot, sideIndex) => (
               <group key={`side-${sideIndex}`} rotation={[0, rot, 0]}>
@@ -1161,18 +1210,33 @@ export function CupboardUnit({
                 {/* Positioned slightly out from center */}
                 <mesh position={[0, 0, d / 2]} castShadow>
                   <boxGeometry args={[w - 0.5, levelHeight - 0.2, 0.1]} />
-                  <meshStandardMaterial
-                    color="#2a2a2a"
-                    roughness={0.5}
-                    metalness={0.6}
+                  <meshPhysicalMaterial
+                    color="#ffffff"
+                    roughness={0.1}
+                    metalness={0.1}
+                    transmission={0.9} // More clear
+                    transparent={true}
+                    opacity={0.2} // Less opaque
                   />
                 </mesh>
 
-                {/* Handle with Neon Strip */}
-                <mesh position={[0, 0, d / 2 + 0.1]}>
-                  <boxGeometry args={[w - 2, 0.2, 0.1]} />
+                {/* Handle with Neon Strip (Thinner and sleeker) */}
+                <mesh position={[0, -0.5, d / 2 + 0.1]}>
+                  <boxGeometry args={[w - 2, 0.05, 0.05]} />
                   <meshBasicMaterial color="#00ffff" />
                 </mesh>
+
+                {/* Level Label */}
+                <Text
+                  position={[0, 0.2, d / 2 + 0.06]}
+                  fontSize={0.8}
+                  color="white"
+                  anchorX="center"
+                  anchorY="middle"
+                  // font prop removed to use default (typeface.json is invalid for Text)
+                >
+                  {`Level 0${levelNum}`}
+                </Text>
               </group>
             ))}
           </group>
@@ -1201,13 +1265,56 @@ function CupboardLevel({
     dimensions,
   });
 
+  // Calculate generic 2x2 grid for slot visualization (matches 8x8 size approx)
+  const slotOffsets = [
+    [-2, -2],
+    [2, -2],
+    [-2, 2],
+    [2, 2],
+  ];
+
   return (
-    <mesh
-      ref={surfaceRef}
-      position={new THREE.Vector3(...position)}
-      visible={false}
-    >
-      <boxGeometry args={dimensions} />
-    </mesh>
+    <group position={new THREE.Vector3(...position)}>
+      {/* Invisible Collision/Area Volume */}
+      <mesh ref={surfaceRef} visible={false}>
+        <boxGeometry args={dimensions} />
+      </mesh>
+
+      {/* Visual Slot Markers (Projected on the shelf floor) */}
+      {/* Shelf floor is at y = -dimensions[1]/2. We want markers just above it. */}
+      {slotOffsets.map((offset, i) => (
+        <group
+          key={`slot-mark-${i}`}
+          position={[offset[0], -dimensions[1] / 2 + 0.1, offset[1]]}
+        >
+          {/* Glowing Frame */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[1.0, 1.2, 32]} />
+            <meshBasicMaterial
+              color="#00ffff"
+              transparent
+              opacity={0.3}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          {/* Faint Pad */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[1.0, 32]} />
+            <meshBasicMaterial color="#00ffff" transparent opacity={0.05} />
+          </mesh>
+          {/* Slot Number */}
+          <Text
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 1.6]}
+            fontSize={0.4}
+            color="#00ffff"
+            anchorX="center"
+            anchorY="middle"
+          >
+            {`Slot ${i + 1}`}
+          </Text>
+        </group>
+      ))}
+    </group>
   );
 }
