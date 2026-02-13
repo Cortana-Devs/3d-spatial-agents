@@ -30,7 +30,7 @@ export interface PlacingArea {
   position: THREE.Vector3;
   rotation: THREE.Quaternion; // world rotation of surface
   capacity: number;
-  currentItems: string[]; // IDs of placed WorldObjects
+  currentItems: (string | null)[]; // IDs of placed WorldObjects or null for empty slot
   dimensions: [number, number, number]; // width, height, depth of surface slab
   allowedTypes?: WorldObject["type"][];
   meshRef?: THREE.Object3D;
@@ -95,11 +95,11 @@ export class InteractableRegistry {
     obj.carriedBy = actorId;
     if (obj.meshRef) obj.meshRef.visible = false;
 
-    // Remove from any placing area
+    // Remove from any placing area (Fixed Slot Logic)
     for (const area of this.placingAreas.values()) {
       const idx = area.currentItems.indexOf(objectId);
       if (idx !== -1) {
-        area.currentItems.splice(idx, 1);
+        area.currentItems[idx] = null; // Mark slot as empty
         break;
       }
     }
@@ -157,11 +157,34 @@ export class InteractableRegistry {
     return nearby;
   }
 
-  public placeItemAt(objectId: string, areaId: string): boolean {
+  public placeItemAt(
+    objectId: string,
+    areaId: string,
+    targetSlotIndex?: number,
+  ): boolean {
     const obj = this.objects.get(objectId);
     const area = this.placingAreas.get(areaId);
     if (!obj || !area) return false;
-    if (area.currentItems.length >= area.capacity) return false;
+
+    // Determine target slot
+    let slotIndex = -1;
+
+    if (targetSlotIndex !== undefined) {
+      if (
+        targetSlotIndex >= 0 &&
+        targetSlotIndex < area.capacity &&
+        !area.currentItems[targetSlotIndex]
+      ) {
+        slotIndex = targetSlotIndex;
+      } else {
+        return false; // Invalid or occupied slot
+      }
+    } else {
+      // Find first empty slot
+      slotIndex = area.currentItems.findIndex((item) => !item);
+      if (slotIndex === -1) return false; // Full
+    }
+
     if (
       area.allowedTypes &&
       area.allowedTypes.length > 0 &&
@@ -170,7 +193,6 @@ export class InteractableRegistry {
       return false;
 
     const [w, h, d] = area.dimensions;
-    const slotIndex = area.currentItems.length;
 
     // Grid layout: columns along local-X, rows along local-Z
     const maxCols = Math.max(1, Math.floor(w / 2));
@@ -200,7 +222,7 @@ export class InteractableRegistry {
       obj.meshRef.visible = true;
     }
 
-    area.currentItems.push(objectId);
+    area.currentItems[slotIndex] = objectId;
     return true;
   }
 

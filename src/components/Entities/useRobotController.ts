@@ -153,7 +153,9 @@ export function useRobotController(
   );
   const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
   const followingAgentId = useGameStore((state) => state.followingAgentId);
-  const setFollowingAgentId = useGameStore((state) => state.setFollowingAgentId);
+  const setFollowingAgentId = useGameStore(
+    (state) => state.setFollowingAgentId,
+  );
 
   // Sitting State
   const sitTargetPos = useRef<THREE.Vector3 | null>(null);
@@ -223,7 +225,8 @@ export function useRobotController(
               // @ts-ignore
               if (v.id) {
                 const d = v.position.squaredDistanceTo(myPos as unknown as any);
-                if (d < 9.0) { // < 3m squared
+                if (d < 9.0) {
+                  // < 3m squared
                   agentDist = d;
                   nearbyAgent = v;
                   break;
@@ -235,7 +238,8 @@ export function useRobotController(
               // Toggle Follow
               // @ts-ignore
               const targetId = nearbyAgent.id;
-              const currentFollowingId = useGameStore.getState().followingAgentId;
+              const currentFollowingId =
+                useGameStore.getState().followingAgentId;
               if (currentFollowingId === targetId) {
                 setFollowingAgentId(null);
                 setInteractionNotification(`Agent Stopped Following`);
@@ -300,17 +304,18 @@ export function useRobotController(
           if (cell && cell.type === "slot") {
             // Place in specific slot/area
             const areaId = cell.meta.areaId;
-            // Note: placeItemAt currently just pushes to the end.
-            // We assume selecting *any* empty slot in the area means "Add to this area".
+            const slotIdx = cell.meta.offset; // Now this is the absolute index
+
             const success = InteractableRegistry.getInstance().placeItemAt(
               selectedItem.id,
               areaId,
+              slotIdx,
             );
 
             if (success) {
               removeFromInventory(selectedItem.id);
               setInteractionNotification(
-                `Placed ${selectedItem.name} on ${cell.meta.areaName}`,
+                `Placed ${selectedItem.name} on ${cell.meta.areaName} (Slot ${slotIdx})`,
               );
             } else {
               setInteractionNotification(
@@ -439,7 +444,7 @@ export function useRobotController(
 
       const nearbyPlacingAreas = InteractableRegistry.getInstance()
         .getNearbyPlacingAreas(robotPos, 6)
-        .filter((a) => a.currentItems.length < a.capacity);
+        .filter((a) => a.currentItems.some((item) => !item));
 
       const grid: any[] = [];
 
@@ -461,16 +466,27 @@ export function useRobotController(
       if (nearbyPlacingAreas.length > 0) {
         nearbyPlacingAreas.forEach((area) => {
           const cells: any[] = [];
-          const remaining = area.capacity - area.currentItems.length;
-          for (let i = 0; i < remaining; i++) {
-            cells.push({
-              id: `slot-${area.id}-${i}`,
-              label: "Empty Slot",
-              type: "slot",
-              icon: "⬜",
-              meta: { areaId: area.id, areaName: area.name, offset: i },
-            });
+          // Iterate all slots (fixed capacity)
+          for (let i = 0; i < area.capacity; i++) {
+            const itemInSlot = area.currentItems[i];
+            if (!itemInSlot) {
+              // Empty Slot
+              cells.push({
+                id: `slot-${area.id}-${i}`,
+                label: "Empty Slot",
+                type: "slot",
+                icon: "⬜",
+                meta: { areaId: area.id, areaName: area.name, offset: i },
+              });
+            } else {
+              // Occupied Slot
+              // Optional: Show item in slot?
+              // For now we might skip valid slots in the "placing" menu?
+              // Or show them as "Occupied"?
+              // Let's just show empty slots for placing action.
+            }
           }
+
           if (cells.length > 0) {
             grid.push({
               id: area.id,
@@ -492,10 +508,27 @@ export function useRobotController(
         const cell = row.cells[curSel.col];
         if (cell && cell.type === "slot") {
           const areaId = cell.meta.areaId;
-          const area = InteractableRegistry.getInstance().getPlacingAreaById(areaId);
+          const area =
+            InteractableRegistry.getInstance().getPlacingAreaById(areaId);
           if (area) {
-            const nextSlotIdx = area.currentItems.length;
-            targetPos = InteractableRegistry.getInstance().getSlotPosition(areaId, nextSlotIdx);
+            // Calculate specific slot index based on offset (absolute index now)
+            const slotIdx = cell.meta.offset || 0;
+            targetPos = InteractableRegistry.getInstance().getSlotPosition(
+              areaId,
+              slotIdx,
+            );
+          }
+        } else if (cell && cell.type === "item") {
+          const obj = InteractableRegistry.getInstance().getById(cell.id);
+          if (obj) {
+            targetPos = obj.position.clone();
+            // Try to place on top of the object
+            if (obj.meshRef) {
+              const bbox = new THREE.Box3().setFromObject(obj.meshRef);
+              targetPos.y = bbox.max.y + 0.2;
+            } else {
+              targetPos.y += 0.5;
+            }
           }
         }
       }
@@ -533,10 +566,14 @@ export function useRobotController(
       inputZ /= len;
     }
 
-    const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+      camera.quaternion,
+    );
     camForward.y = 0;
     camForward.normalize();
-    const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(
+      camera.quaternion,
+    );
     camRight.y = 0;
     camRight.normalize();
 
@@ -612,7 +649,9 @@ export function useRobotController(
         raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
         const hits = raycaster.intersectObjects(collidableMeshes, true);
         if (hits.length > 0) {
-          const validHits = hits.filter(h => !h.object.name.includes("Ceiling"));
+          const validHits = hits.filter(
+            (h) => !h.object.name.includes("Ceiling"),
+          );
           if (validHits.length > 0) {
             groundHeight = validHits[0].point.y;
           }
@@ -649,15 +688,34 @@ export function useRobotController(
     gait.update(playerVel, dt, {
       strideLength: playerStride,
       leanFactor: 0.1,
-      bankFactor: 0.08
+      bankFactor: 0.08,
     });
 
     const j = joints.current;
-    if (!j.hips || !j.torso || !j.leftArm || !j.rightArm || !j.leftHip || !j.rightHip || !j.leftKnee || !j.rightKnee || !j.neck) return;
+    if (
+      !j.hips ||
+      !j.torso ||
+      !j.leftArm ||
+      !j.rightArm ||
+      !j.leftHip ||
+      !j.rightHip ||
+      !j.leftKnee ||
+      !j.rightKnee ||
+      !j.neck
+    )
+      return;
 
     const targetHipY = s.isSneaking ? 2.8 : 3.5;
-    j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, targetHipY, 0.15);
-    j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, s.isSneaking ? 0.5 : 0, 0.1);
+    j.hips.position.y = THREE.MathUtils.lerp(
+      j.hips.position.y,
+      targetHipY,
+      0.15,
+    );
+    j.torso.rotation.x = THREE.MathUtils.lerp(
+      j.torso.rotation.x,
+      s.isSneaking ? 0.5 : 0,
+      0.1,
+    );
 
     const lerpFactor = 0.15;
 
@@ -669,17 +727,57 @@ export function useRobotController(
       j.neck.rotation.x = Math.sin(t * 8) * 0.05;
       j.neck.rotation.y = Math.sin(t * 2) * 0.1;
 
-      j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.z, 0.5, 0.1);
-      j.leftArm.shoulder.rotation.y = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.y, -0.5, 0.1);
-      j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.z, -0.5, 0.1);
-      j.rightArm.shoulder.rotation.y = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.y, 0.5, 0.1);
+      j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
+        j.leftArm.shoulder.rotation.z,
+        0.5,
+        0.1,
+      );
+      j.leftArm.shoulder.rotation.y = THREE.MathUtils.lerp(
+        j.leftArm.shoulder.rotation.y,
+        -0.5,
+        0.1,
+      );
+      j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
+        j.rightArm.shoulder.rotation.z,
+        -0.5,
+        0.1,
+      );
+      j.rightArm.shoulder.rotation.y = THREE.MathUtils.lerp(
+        j.rightArm.shoulder.rotation.y,
+        0.5,
+        0.1,
+      );
 
-      j.leftHip.rotation.x = THREE.MathUtils.lerp(j.leftHip.rotation.x, -1.6, 0.1);
-      j.rightHip.rotation.x = THREE.MathUtils.lerp(j.rightHip.rotation.x, -1.6, 0.1);
-      j.leftKnee.rotation.x = THREE.MathUtils.lerp(j.leftKnee.rotation.x, 1.6, 0.1);
-      j.rightKnee.rotation.x = THREE.MathUtils.lerp(j.rightKnee.rotation.x, 1.6, 0.1);
-      j.leftHip.rotation.z = THREE.MathUtils.lerp(j.leftHip.rotation.z, -0.15, 0.1);
-      j.rightHip.rotation.z = THREE.MathUtils.lerp(j.rightHip.rotation.z, 0.15, 0.1);
+      j.leftHip.rotation.x = THREE.MathUtils.lerp(
+        j.leftHip.rotation.x,
+        -1.6,
+        0.1,
+      );
+      j.rightHip.rotation.x = THREE.MathUtils.lerp(
+        j.rightHip.rotation.x,
+        -1.6,
+        0.1,
+      );
+      j.leftKnee.rotation.x = THREE.MathUtils.lerp(
+        j.leftKnee.rotation.x,
+        1.6,
+        0.1,
+      );
+      j.rightKnee.rotation.x = THREE.MathUtils.lerp(
+        j.rightKnee.rotation.x,
+        1.6,
+        0.1,
+      );
+      j.leftHip.rotation.z = THREE.MathUtils.lerp(
+        j.leftHip.rotation.z,
+        -0.15,
+        0.1,
+      );
+      j.rightHip.rotation.z = THREE.MathUtils.lerp(
+        j.rightHip.rotation.z,
+        0.15,
+        0.1,
+      );
       return;
     }
 
@@ -692,8 +790,16 @@ export function useRobotController(
       const targetElbowZ = -0.8;
       const easedLift = 1 - Math.pow(1 - liftProgress, 3);
 
-      const currentShoulderZ = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.z, targetShoulderZ, easedLift);
-      const currentElbowZ = THREE.MathUtils.lerp(j.rightArm.elbow.rotation.z, targetElbowZ, easedLift);
+      const currentShoulderZ = THREE.MathUtils.lerp(
+        j.rightArm.shoulder.rotation.z,
+        targetShoulderZ,
+        easedLift,
+      );
+      const currentElbowZ = THREE.MathUtils.lerp(
+        j.rightArm.elbow.rotation.z,
+        targetElbowZ,
+        easedLift,
+      );
 
       if (liftProgress >= 1) {
         const wave = Math.sin((s.waveTimer - liftDuration) * waveSpeed) * 0.4;
@@ -704,12 +810,36 @@ export function useRobotController(
         j.rightArm.elbow.rotation.z = currentElbowZ;
       }
 
-      j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.x, 0, lerpFactor);
-      j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.z, 0.2, lerpFactor);
-      j.leftHip.rotation.x = THREE.MathUtils.lerp(j.leftHip.rotation.x, 0, lerpFactor);
-      j.rightHip.rotation.x = THREE.MathUtils.lerp(j.rightHip.rotation.x, 0, lerpFactor);
-      j.leftHip.rotation.z = THREE.MathUtils.lerp(j.leftHip.rotation.z, 0, lerpFactor);
-      j.rightHip.rotation.z = THREE.MathUtils.lerp(j.rightHip.rotation.z, 0, lerpFactor);
+      j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
+        j.leftArm.shoulder.rotation.x,
+        0,
+        lerpFactor,
+      );
+      j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
+        j.leftArm.shoulder.rotation.z,
+        0.2,
+        lerpFactor,
+      );
+      j.leftHip.rotation.x = THREE.MathUtils.lerp(
+        j.leftHip.rotation.x,
+        0,
+        lerpFactor,
+      );
+      j.rightHip.rotation.x = THREE.MathUtils.lerp(
+        j.rightHip.rotation.x,
+        0,
+        lerpFactor,
+      );
+      j.leftHip.rotation.z = THREE.MathUtils.lerp(
+        j.leftHip.rotation.z,
+        0,
+        lerpFactor,
+      );
+      j.rightHip.rotation.z = THREE.MathUtils.lerp(
+        j.rightHip.rotation.z,
+        0,
+        lerpFactor,
+      );
 
       if (s.waveTimer > 2.5) s.isWaving = false;
     }

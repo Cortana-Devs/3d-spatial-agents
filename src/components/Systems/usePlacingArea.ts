@@ -40,7 +40,7 @@ export function usePlacingArea(
       position: pos,
       rotation: quat,
       capacity: areaData.capacity,
-      currentItems: [],
+      currentItems: new Array(areaData.capacity).fill(null),
       dimensions: areaData.dimensions,
       allowedTypes: areaData.allowedTypes,
       meshRef: meshRef.current,
