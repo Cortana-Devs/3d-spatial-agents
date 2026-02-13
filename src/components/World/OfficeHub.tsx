@@ -118,6 +118,8 @@ export default function OfficeHub() {
       position: THREE.Vector3;
       radius: number;
       type?: "wall" | "furniture" | "cupboard";
+      halfExtents?: THREE.Vector3;
+      rotation?: number;
     }[] = [];
     const wallGeoms: {
       pos: [number, number, number];
@@ -169,24 +171,19 @@ export default function OfficeHub() {
         isWindow: isWindow,
       });
 
-      // Collision
-      // Wall thickness is typically 1.0. Radius 2.0 adds 1.5 padding!
-      // Reduce to 0.7 for tighter fit (slightly larger than 0.5 half-thickness)
-      const sphereRadius = 0.8; // Increased from 0.7
-      const step = 1.0; // Reduced from 1.5 to ensure overlap (Solid Wall)
-      const steps = Math.ceil(len / step);
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        buildingObstacles.push({
-          position: new THREE.Vector3(
-            x1 + (x2 - x1) * t,
-            hubCenter.y,
-            z1 + (z2 - z1) * t,
-          ),
-          radius: sphereRadius,
-          type: "wall" as const,
-        });
-      }
+      // Collision (OBB) - Single box per wall
+      // Match visual mesh parameters exactly
+      const halfX = len / 2;
+      const halfY = bHeight / 2;
+      const halfZ = thickness / 2;
+
+      buildingObstacles.push({
+        position: new THREE.Vector3(mx, hubCenter.y + halfY, mz),
+        radius: 0, // Ignored for OBB
+        type: "wall" as const,
+        halfExtents: new THREE.Vector3(halfX, halfY, halfZ),
+        rotation: -ang,
+      });
     };
 
     // --- HELPER: Ceiling ---
@@ -200,77 +197,8 @@ export default function OfficeHub() {
     };
 
     // --- HELPER: Furniture ---
-    const createFurniture = (
-      x: number,
-      z: number,
-      w: number,
-      h: number,
-      d: number,
-      color: string,
-      rot: number = 0,
-    ) => {
-      // Visual
-      furnitureGeoms.push({
-        pos: [x, hubCenter.y + h / 2, z],
-        args: [w, h, d],
-        color: color,
-        rot: rot,
-      });
-
-      // Collision (Spheres along the major axis)
-      // Adjust W/D for rotation (Only supports 0 or 90 approx for now)
-      let effW = w;
-      let effD = d;
-      if (
-        Math.abs(rot - Math.PI / 2) < 0.1 ||
-        Math.abs(rot + Math.PI / 2) < 0.1
-      ) {
-        effW = d;
-        effD = w;
-      }
-
-      const minDim = Math.min(effW, effD);
-      const maxDim = Math.max(effW, effD);
-
-      // If generic small object or square-ish
-      // If generic small object or square-ish
-      if (maxDim < minDim * 1.5) {
-        buildingObstacles.push({
-          position: new THREE.Vector3(x, hubCenter.y, z),
-          radius: maxDim / 2.5, // Even tighter: was 2.2
-          type: "furniture" as const,
-        });
-      } else {
-        // Long object - place spheres along longest axis
-        const sphereRadius = minDim * 0.45; // Increased
-        // Constrain length so spheres don't poke out
-        const effectiveLength = Math.max(0, maxDim - 2 * sphereRadius);
-
-        const step = sphereRadius * 1.5; // Overlapping
-        const count =
-          effectiveLength <= 0 ? 0 : Math.ceil(effectiveLength / step);
-
-        // Direction
-        const dx = effW >= effD ? 1 : 0;
-        const dz = effW < effD ? 1 : 0;
-
-        for (let i = 0; i <= count; i++) {
-          // t from -0.5 to 0.5 mapped to effectiveLength
-          // if count 0, t=0
-          const fraction = count === 0 ? 0.5 : i / count;
-          const t = fraction - 0.5;
-          // position offset based on effective length
-          const ox = dx * t * effectiveLength;
-          const oz = dz * t * effectiveLength;
-
-          buildingObstacles.push({
-            position: new THREE.Vector3(x + ox, hubCenter.y, z + oz),
-            radius: sphereRadius,
-            type: "furniture" as const,
-          });
-        }
-      }
-    };
+    // --- HELPER: Furniture ---
+    // (Removed legacy sphere-based createFurniture function)
 
     // Coordinates
     const left = hubCenter.x - bWidth / 2;
@@ -364,8 +292,14 @@ export default function OfficeHub() {
 
     // Fixed: End-Cap Pillar for Spine Wall
     buildingObstacles.push({
-      position: new THREE.Vector3(hubCenter.x, hubCenter.y, roomDividerZ),
-      radius: 1.5,
+      position: new THREE.Vector3(
+        hubCenter.x,
+        hubCenter.y + bHeight / 2,
+        roomDividerZ,
+      ),
+      radius: 0,
+      type: "wall" as const,
+      halfExtents: new THREE.Vector3(1, bHeight / 2, 1), // 2x30x2 box
     });
     // We need a visual pillar
     wallGeoms.push({

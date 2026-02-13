@@ -200,12 +200,14 @@ export function OfficeChair({
       },
     ]);
 
-    // Register Navigation Obstacle (Precise Sphere)
-    // Radius 1.5 matches the approximate size of the chair base + seat
+    // Register Navigation Obstacle (Box)
+    // Chair footprint approx 1.5x1.5, height 3
     const obstacle = {
-      position: posVec,
-      radius: 1.5,
+      position: posVec.clone().add(new THREE.Vector3(0, 1.5, 0)),
+      radius: 0,
       type: "furniture" as const,
+      halfExtents: new THREE.Vector3(0.75, 1.5, 0.75),
+      rotation,
     };
     addObstacles([obstacle]);
 
@@ -689,33 +691,22 @@ export function OfficeDoor({
   }, [interactionTarget, id, setInteractionTarget]);
 
   // Manage Collision
+  // Manage Collision
   useEffect(() => {
-    const obstacles: { position: THREE.Vector3; radius: number }[] = [];
-
-    // Door width from props
-    const widthVal = doorWidth;
-    const step = 2.0;
-    const count = Math.ceil(widthVal / step);
-
+    // Single Box Obstacle for Door
+    // Width = doorWidth, Height = 29, Thickness = 2 (approx)
+    // Only exists when !isOpen
     if (!isOpen) {
-      const dir = new THREE.Vector3(1, 0, 0).applyAxisAngle(
-        new THREE.Vector3(0, 1, 0),
+      const obstacle = {
+        position: posVec.clone().add(new THREE.Vector3(0, 14.5, 0)), // Centered vertically
+        radius: 0,
+        type: "wall" as const,
+        halfExtents: new THREE.Vector3(doorWidth / 2, 14.5, 1),
         rotation,
-      );
-      for (let i = 0; i < count; i++) {
-        const t = i / (count - 1) - 0.5;
-        const offset = dir.clone().multiplyScalar(t * widthVal);
-        obstacles.push({
-          position: posVec.clone().add(offset),
-          radius: 1.5,
-        });
-      }
-      addObstacles(obstacles);
+      };
+      addObstacles([obstacle]);
+      return () => removeObstacles([obstacle]);
     }
-
-    return () => {
-      if (obstacles.length > 0) removeObstacles(obstacles);
-    };
   }, [isOpen, posVec, rotation, addObstacles, removeObstacles, doorWidth]);
 
   // Animation (Vertical Slide)
