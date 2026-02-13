@@ -612,14 +612,60 @@ export function useRobotController(
       const proposedZ = mesh.position.z + worldDz;
       let canMove = true;
 
+      const playerHeight = 4.0; // Estimated player height
+      const bottomY = mesh.position.y;
+      const topY = bottomY + playerHeight;
+
       for (const ob of obstacles) {
-        const dx = proposedX - ob.position.x;
-        const dz = proposedZ - ob.position.z;
-        const distSq = dx * dx + dz * dz;
-        const minDist = radius + ob.radius;
-        if (distSq < minDist * minDist) {
-          canMove = false;
-          break;
+        // 1. Vertical (Y-axis) Check
+        if (ob.halfExtents) {
+          // Box Obstacle
+          const boxBottom = ob.position.y - ob.halfExtents.y;
+          const boxTop = ob.position.y + ob.halfExtents.y;
+          // If no vertical overlap, skip this obstacle
+          if (topY < boxBottom || bottomY > boxTop) continue;
+
+          // 2. Horizontal (XZ) Check - Circle vs Rotated Box
+          // Transform player pos to box local space
+          const dx = proposedX - ob.position.x;
+          const dz = proposedZ - ob.position.z;
+          const localX =
+            dx * Math.cos(-ob.rotation!) - dz * Math.sin(-ob.rotation!);
+          const localZ =
+            dx * Math.sin(-ob.rotation!) + dz * Math.cos(-ob.rotation!);
+
+          // Find closest point on box to circle center
+          const closestX = Math.max(
+            -ob.halfExtents.x,
+            Math.min(ob.halfExtents.x, localX),
+          );
+          const closestZ = Math.max(
+            -ob.halfExtents.z,
+            Math.min(ob.halfExtents.z, localZ),
+          );
+
+          // Check distance from closest point to circle center
+          const distX = localX - closestX;
+          const distZ = localZ - closestZ;
+          const distSq = distX * distX + distZ * distZ;
+
+          if (distSq < radius * radius) {
+            canMove = false;
+            break;
+          }
+        } else {
+          // Sphere Obstacle - Default fallthrough
+          const dx = proposedX - ob.position.x;
+          const dz = proposedZ - ob.position.z;
+          const distSq = dx * dx + dz * dz;
+          const minDist = radius + ob.radius;
+
+          // Note: Sphere obstacles currently ignore height (infinite cylinder)
+          // We could add height check here too if needed, but keeping legacy behavior for walls
+          if (distSq < minDist * minDist) {
+            canMove = false;
+            break;
+          }
         }
       }
 

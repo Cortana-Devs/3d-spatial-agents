@@ -271,9 +271,11 @@ export function OfficeChair({
 
 export function ConferenceTable({
   position,
+  rotation = 0,
   userData,
 }: {
   position: [number, number, number];
+  rotation?: number;
   userData?: any;
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
@@ -283,8 +285,50 @@ export function ConferenceTable({
     capacity: 6,
     dimensions: [40, 0.8, 20],
   });
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    // Conference Table: Split into Top and 4 Legs
+    // Top: [40, 0.8, 20] at Y=4
+    const top = {
+      position: posVec.clone().add(new THREE.Vector3(0, 4, 0)),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(20, 0.4, 10),
+      rotation,
+    };
+
+    // Legs: 4 cylinders at [±15, 2, ±7.5], height 4 (radius 0.5 -> box 0.5x2x0.5)
+    const legPositions = [
+      new THREE.Vector3(-15, 2, -7.5),
+      new THREE.Vector3(15, 2, -7.5),
+      new THREE.Vector3(-15, 2, 7.5),
+      new THREE.Vector3(15, 2, 7.5),
+    ];
+
+    const rotQ = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotation,
+    );
+
+    const legs = legPositions.map((pos) => ({
+      position: pos.clone().applyQuaternion(rotQ).add(posVec),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(0.5, 2.0, 0.5),
+      rotation,
+    }));
+
+    const obs = [top, ...legs];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
   return (
-    <group position={position} userData={userData}>
+    <group position={position} rotation={[0, rotation, 0]} userData={userData}>
       {/* Main Rectangular Table Top */}
       <mesh ref={surfaceRef} position={[0, 4, 0]} castShadow receiveShadow>
         <boxGeometry args={[40, 0.8, 20]} />
@@ -325,6 +369,46 @@ export function OfficeDesk({
     capacity: 4,
     dimensions: [12, 0.4, 6],
   });
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    // Office Desk: Split into Top and 2 Side Cabinets
+    // Top: [12, 0.4, 6] at Y=3.8
+    const top = {
+      position: posVec.clone().add(new THREE.Vector3(0, 3.8, 0)),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(6, 0.2, 3),
+      rotation,
+    };
+
+    // Cabinets: [1.8, 3.6, 5] at [±5, 1.8, 0]
+    const cabinetPositions = [
+      new THREE.Vector3(-5, 1.8, 0),
+      new THREE.Vector3(5, 1.8, 0),
+    ];
+
+    const rotQ = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotation,
+    );
+
+    const cabinets = cabinetPositions.map((pos) => ({
+      position: pos.clone().applyQuaternion(rotQ).add(posVec),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(0.9, 1.8, 2.5),
+      rotation,
+    }));
+
+    const obs = [top, ...cabinets];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
   return (
     <group
       position={new THREE.Vector3(...position)}
@@ -785,6 +869,26 @@ export function ReceptionDesk({
     capacity: 3,
     dimensions: [20, 0.2, 6],
   });
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    // Reception Desk: 20 x 6 x 4 — single box obstacle
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 2, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(10, 2, 3),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
   return (
     <group
       position={new THREE.Vector3(...position)}
@@ -853,6 +957,26 @@ export function ManagersDesk({
     capacity: 3,
     dimensions: [16, 0.5, 8],
   });
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    // Manager Desk: 16 x 8 x 4 — single box obstacle
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 2, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(8, 2, 4),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
   const darkWood = new THREE.MeshStandardMaterial({
     color: "#3e2723",
     roughness: 0.4,
@@ -925,6 +1049,30 @@ export function CupboardUnit({
 
   const levels = 3;
   const levelHeight = h / levels;
+
+  // Self-managed obstacle registration
+  const addObstacles = useGameStore((state) => state.addObstacles);
+  const removeObstacles = useGameStore((state) => state.removeObstacles);
+
+  const posVec = useMemo(
+    () => new THREE.Vector3(position[0], position[1], position[2]),
+    [position[0], position[1], position[2]],
+  );
+
+  useEffect(() => {
+    // Cupboard: 8 x 10 x 8 — single box obstacle
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 5, 0)),
+        radius: 0,
+        type: "cupboard" as const,
+        halfExtents: new THREE.Vector3(4, 5, 4),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
 
   return (
     <group

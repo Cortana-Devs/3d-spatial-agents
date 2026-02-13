@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { Text } from "@react-three/drei";
@@ -374,6 +374,26 @@ export function SmallRack({
 }) {
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    // SmallRack: 4 x 4 x 2 — single box obstacle
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 2, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(2, 2, 1),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
   return (
     <group
       ref={meshRef}
@@ -458,6 +478,61 @@ export function Sofa({
 }) {
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    // Sofa: Split into Seat, Backrest, Armrests
+    const rotQ = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotation,
+    );
+
+    // 1. Seat: [8, 1.5, 3] at [0, 1.5, 0]
+    const seat = {
+      position: new THREE.Vector3(0, 1.5, 0).applyQuaternion(rotQ).add(posVec),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(4, 0.75, 1.5),
+      rotation,
+    };
+
+    // 2. Backrest: [8, 2, 0.6] at [0, 3, -1.2]
+    const backrest = {
+      position: new THREE.Vector3(0, 3, -1.2).applyQuaternion(rotQ).add(posVec),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(4, 1.0, 0.3),
+      rotation,
+    };
+
+    // 3. Armrests: [0.8, 1.5, 3] at [±3.6, 2.5, 0]
+    const armLeft = {
+      position: new THREE.Vector3(-3.6, 2.5, 0)
+        .applyQuaternion(rotQ)
+        .add(posVec),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(0.4, 0.75, 1.5),
+      rotation,
+    };
+    const armRight = {
+      position: new THREE.Vector3(3.6, 2.5, 0)
+        .applyQuaternion(rotQ)
+        .add(posVec),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(0.4, 0.75, 1.5),
+      rotation,
+    };
+
+    const obs = [seat, backrest, armLeft, armRight];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
   return (
     <group
       ref={meshRef}

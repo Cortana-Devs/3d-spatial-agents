@@ -21,6 +21,35 @@ export default function ObstacleVisualizer() {
     <group>
       {obstacles.map((obs, i) => {
         const color = COLOR_MAP[obs.type || ""] || DEFAULT_COLOR;
+
+        // OBB (Box) obstacle
+        if (obs.halfExtents) {
+          return (
+            <mesh
+              key={`obs-${i}`}
+              position={obs.position}
+              rotation={[0, obs.rotation || 0, 0]}
+              userData={{ isDebug: true }}
+            >
+              <boxGeometry
+                args={[
+                  obs.halfExtents.x * 2,
+                  obs.halfExtents.y * 2,
+                  obs.halfExtents.z * 2,
+                ]}
+              />
+              <meshBasicMaterial
+                color={color}
+                wireframe
+                transparent
+                opacity={0.35}
+                depthWrite={false}
+              />
+            </mesh>
+          );
+        }
+
+        // Sphere obstacle (walls, trees, etc.)
         return (
           <mesh
             key={`obs-${i}`}

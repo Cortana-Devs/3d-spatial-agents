@@ -6,6 +6,9 @@ export interface Obstacle {
   position: THREE.Vector3;
   radius: number;
   type?: "wall" | "furniture" | "cupboard";
+  // OBB (Oriented Bounding Box) fields — if halfExtents is set, render as box
+  halfExtents?: THREE.Vector3; // half-width, half-height, half-depth
+  rotation?: number; // Y-axis rotation in radians
 }
 
 export interface DebugTargetInfo {
