@@ -286,4 +286,35 @@ export class InteractableRegistry {
 
     return area.position.clone().add(offset);
   }
+
+  // Calculate squared distance from a point to the CLOSEST point on the area's volume (OBB)
+  public getDistanceToArea(areaId: string, point: THREE.Vector3): number {
+    const area = this.placingAreas.get(areaId);
+    if (!area) return Infinity;
+
+    const [w, h, d] = area.dimensions;
+    const halfExtents = new THREE.Vector3(w / 2, h / 2, d / 2);
+
+    // Transform point to local space of the area
+    const localPoint = point.clone().sub(area.position);
+    const inverseRotation = area.rotation.clone().invert();
+    localPoint.applyQuaternion(inverseRotation);
+
+    // Clamp point to box extents to find closest point on surface/volume
+    const closestLocal = new THREE.Vector3();
+    closestLocal.x = Math.max(
+      -halfExtents.x,
+      Math.min(halfExtents.x, localPoint.x),
+    );
+    closestLocal.y = Math.max(
+      -halfExtents.y,
+      Math.min(halfExtents.y, localPoint.y),
+    );
+    closestLocal.z = Math.max(
+      -halfExtents.z,
+      Math.min(halfExtents.z, localPoint.z),
+    );
+
+    return localPoint.distanceToSquared(closestLocal);
+  }
 }
