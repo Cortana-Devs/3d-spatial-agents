@@ -15,6 +15,7 @@ export function usePlacingArea(
       | "printer"
       | "coffeecup"
       | "generic"
+      | "pc"
     )[];
     dimensions: [number, number, number];
   },

@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import * as THREE from "three";
-import { WorldObject } from "@/components/Systems/InteractableRegistry";
+import {
+  WorldObject,
+  InteractableRegistry,
+} from "@/components/Systems/InteractableRegistry";
 
 export interface Obstacle {
   position: THREE.Vector3;
@@ -53,18 +56,56 @@ interface GameState {
   // Interactables (for actions like sitting)
   interactables: {
     id: string;
-    type: string;
+    type:
+      | "switch"
+      | "door"
+      | "chair"
+      | "pc"
+      | "file"
+      | "laptop"
+      | "pendrive"
+      | "printer"
+      | "coffeecup"
+      | "generic"
+      | "whiteboard"
+      | "projector_screen"
+      | "tv"
+      | "coffee_machine"
+      | "telephone";
     position: THREE.Vector3;
     rotation: THREE.Quaternion;
     label?: string;
+    pickable?: boolean;
+    name?: string;
+    description?: string;
+    meshRef?: THREE.Object3D;
   }[];
   addInteractables: (
     items: {
       id: string;
-      type: string;
+      type:
+        | "switch"
+        | "door"
+        | "chair"
+        | "pc"
+        | "file"
+        | "laptop"
+        | "pendrive"
+        | "printer"
+        | "coffeecup"
+        | "generic"
+        | "whiteboard"
+        | "projector_screen"
+        | "tv"
+        | "coffee_machine"
+        | "telephone";
       position: THREE.Vector3;
       rotation: THREE.Quaternion;
       label?: string;
+      pickable?: boolean;
+      name?: string;
+      description?: string;
+      meshRef?: THREE.Object3D;
     }[],
   ) => void;
   removeInteractables: (ids: string[]) => void;
@@ -206,12 +247,23 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
   interactables: [],
-  addInteractables: (items) =>
-    set((state) => ({ interactables: [...state.interactables, ...items] })),
-  removeInteractables: (ids) =>
+  addInteractables: (items) => {
+    // Sync with Registry
+    items.forEach((item) => {
+      // @ts-ignore
+      InteractableRegistry.getInstance().register(item);
+    });
+    set((state) => ({ interactables: [...state.interactables, ...items] }));
+  },
+  removeInteractables: (ids) => {
+    // Sync with Registry
+    ids.forEach((id) => {
+      InteractableRegistry.getInstance().unregister(id);
+    });
     set((state) => ({
       interactables: state.interactables.filter((i) => !ids.includes(i.id)),
-    })),
+    }));
+  },
 
   isSitting: false,
   setSitting: (sitting) => set({ isSitting: sitting }),

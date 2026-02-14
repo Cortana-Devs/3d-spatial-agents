@@ -469,33 +469,31 @@ export function OfficeDesk({
         <boxGeometry args={[8, 2.5, 0.2]} />
       </mesh>
 
-      {/* Monitor */}
-      <group
-        position={[0, 4.0, -1.5]}
-        userData={
-          userData
-            ? {
-                type: "Prop",
-                id: `${userData.id}-monitor`,
-                name: `${userData.name} - Monitor`,
-                parentID: userData.id,
-              }
-            : undefined
-        }
-      >
-        <mesh
-          position={[0, 1.5, 0]}
-          castShadow
-          material={new THREE.MeshStandardMaterial({ color: "#111" })}
-        >
-          <boxGeometry args={[4, 2.5, 0.2]} />
-        </mesh>
-        <mesh position={[0, 0, 0]} castShadow material={metalMaterial}>
-          <cylinderGeometry args={[0.2, 0.5, 0.5]} />
-        </mesh>
-        <mesh position={[0, -0.25, 0]} castShadow material={metalMaterial}>
-          <boxGeometry args={[1.5, 0.1, 1]} />
-        </mesh>
+      {/* PC Placing Slot */}
+      <group position={[0, 4.0, -1.5]}>
+        {/* Invisible Slot Mesh */}
+        <PCPlacingSlot
+          id={userData?.id ? `${userData.id}-pc-slot` : "office-desk-pc-slot"}
+          name="PC Slot"
+          position={[0, 0, 0]}
+        />
+
+        {/* Default Desktop PC if slot empty? 
+            For now, let's just place it. 
+            Ideally, we check if something is in the slot.
+            But simplified: we just render the PC here initially.
+            It will register itself.
+        */}
+        <DesktopPC
+          id={userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"}
+          position={[0, 0, 0]} // Relative to this group which is already at PC location
+          rotation={0}
+          userData={{
+            type: "Prop",
+            name: "Desktop PC",
+            parentID: userData?.id,
+          }}
+        />
       </group>
     </group>
   );
@@ -639,6 +637,135 @@ export function StorageShelf({
           </group>
         );
       })}
+    </group>
+  );
+}
+
+function PCPlacingSlot({
+  id,
+  name,
+  position,
+}: {
+  id: string;
+  name: string;
+  position: [number, number, number];
+}) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id,
+    name,
+    capacity: 1,
+    dimensions: [5, 0.1, 3], // Approximate size of PC footprint area
+    allowedTypes: ["pc"],
+  });
+
+  return (
+    <mesh
+      ref={surfaceRef}
+      position={new THREE.Vector3(...position)}
+      visible={false}
+    >
+      <boxGeometry args={[5, 0.1, 3]} />
+    </mesh>
+  );
+}
+
+// --- DESKTOP PC ---
+export function DesktopPC({
+  position,
+  rotation = 0,
+  id,
+  userData,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  id: string;
+  userData?: any;
+}) {
+  const addInteractables = useGameStore((state) => state.addInteractables);
+  const removeInteractables = useGameStore(
+    (state) => state.removeInteractables,
+  );
+  const addCollidableMesh = useGameStore((state) => state.addCollidableMesh);
+  const removeCollidableMesh = useGameStore(
+    (state) => state.removeCollidableMesh,
+  );
+
+  const groupRef = useRef<THREE.Group>(null);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+
+  useEffect(() => {
+    const rotQuat = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotation,
+    );
+
+    if (groupRef.current) {
+      // Ensure world matrix is up to date
+      groupRef.current.updateMatrixWorld(true);
+      const worldPos = new THREE.Vector3();
+      groupRef.current.getWorldPosition(worldPos);
+
+      addInteractables([
+        {
+          id,
+          type: "pc",
+          position: worldPos, // Use calculated World Position
+          rotation: rotQuat, // Rotation might also need world rotation if nested?
+          // For now, local rotation relative to parent (desk)
+          // might be enough if standard interaction doesn't depend heavily on orientation
+          // checking InteractableRegistry... it just stores it.
+          // But wait, if I pick it up, does it matter?
+          // Let's stick to worldPos for distance check.
+          pickable: true,
+          name: "Desktop PC",
+          description: "A high-performance workstation.",
+          meshRef: groupRef.current || undefined,
+        },
+      ]);
+
+      addCollidableMesh(groupRef.current);
+    }
+
+    return () => {
+      removeInteractables([id]);
+      if (groupRef.current) {
+        removeCollidableMesh(groupRef.current.uuid);
+      }
+    };
+  }, [
+    id,
+    posVec,
+    rotation,
+    addInteractables,
+    removeInteractables,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
+
+  return (
+    <group
+      ref={groupRef}
+      position={posVec}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
+      <mesh
+        position={[0, 1.5, 0]}
+        castShadow
+        material={new THREE.MeshStandardMaterial({ color: "#111" })}
+      >
+        <boxGeometry args={[4, 2.5, 0.2]} />
+      </mesh>
+      <mesh position={[0, 0, 0]} castShadow material={metalMaterial}>
+        <cylinderGeometry args={[0.2, 0.5, 0.5]} />
+      </mesh>
+      <mesh position={[0, -0.25, 0]} castShadow material={metalMaterial}>
+        <boxGeometry args={[1.5, 0.1, 1]} />
+      </mesh>
     </group>
   );
 }

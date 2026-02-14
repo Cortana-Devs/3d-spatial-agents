@@ -16,7 +16,8 @@ export interface WorldObject {
     | "projector_screen"
     | "tv"
     | "coffee_machine"
-    | "telephone";
+    | "telephone"
+    | "pc";
   position: THREE.Vector3;
   description?: string;
   pickable: boolean;
