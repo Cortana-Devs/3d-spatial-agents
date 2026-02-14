@@ -562,27 +562,30 @@ export function useRobotController(
       // Update Placing Target Visualization
       const curSel = useGameStore.getState().gridSelection;
       let targetPos: THREE.Vector3 | null = null;
+      let targetType: "item" | "slot" | null = null;
+      let targetId: string | undefined;
+
+      const interactableRegistry = InteractableRegistry.getInstance();
 
       if (grid.length > 0 && curSel.row >= 0 && curSel.row < grid.length) {
         const row = grid[curSel.row];
         const cell = row.cells[curSel.col];
+
         if (cell && cell.type === "slot") {
+          targetType = "slot";
+          targetId = cell.id;
           const areaId = cell.meta.areaId;
-          const area =
-            InteractableRegistry.getInstance().getPlacingAreaById(areaId);
+          const area = interactableRegistry.getPlacingAreaById(areaId);
           if (area) {
-            // Calculate specific slot index based on offset (absolute index now)
             const slotIdx = cell.meta.offset || 0;
-            targetPos = InteractableRegistry.getInstance().getSlotPosition(
-              areaId,
-              slotIdx,
-            );
+            targetPos = interactableRegistry.getSlotPosition(areaId, slotIdx);
           }
         } else if (cell && cell.type === "item") {
-          const obj = InteractableRegistry.getInstance().getById(cell.id);
+          targetType = "item";
+          targetId = cell.id;
+          const obj = interactableRegistry.getById(cell.id);
           if (obj) {
             targetPos = obj.position.clone();
-            // Try to place on top of the object
             if (obj.meshRef) {
               const bbox = new THREE.Box3().setFromObject(obj.meshRef);
               targetPos.y = bbox.max.y + 0.2;
@@ -592,7 +595,11 @@ export function useRobotController(
           }
         }
       }
-      useGameStore.getState().setPlacingTargetPos(targetPos);
+
+      // Ensure specific type is compatible with store
+      useGameStore
+        .getState()
+        .setPlacingTargetPos(targetPos, targetType || undefined, targetId);
 
       if (grid.length > 0 && useGameStore.getState().gridSelection.row === -1) {
         useGameStore.getState().setGridSelection({ row: 0, col: 0 });

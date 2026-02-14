@@ -36,9 +36,11 @@ export function PlacingAreaMarkers({
 
   return (
     <group>
+      {/* 
       {visibleAreas.map((area) => (
         <AreaMarker key={area.id} area={area} />
-      ))}
+      ))} 
+      */}
       <PlacingTargetMarker />
     </group>
   );
@@ -124,11 +126,12 @@ function AreaMarker({ area }: { area: PlacingArea }) {
 
 function PlacingTargetMarker() {
   const pos = useGameStore((state) => state.placingTargetPos);
+  const targetType = useGameStore((state) => state.placingTargetType);
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
     if (!groupRef.current || !pos) return;
-    
+
     // Bobbing animation
     const yOffset = Math.sin(state.clock.elapsedTime * 5) * 0.1 + 0.5;
     groupRef.current.position.set(pos.x, pos.y + yOffset, pos.z);
@@ -136,6 +139,9 @@ function PlacingTargetMarker() {
   });
 
   if (!pos) return null;
+
+  // New Logic: Only show this marker for SLOTS or general placement, NOT for Items
+  if (targetType === "item") return null;
 
   return (
     <group ref={groupRef}>
@@ -145,10 +151,10 @@ function PlacingTargetMarker() {
         <meshBasicMaterial color="#ffff00" transparent opacity={0.8} />
       </mesh>
       {/* Shadow/Spot on surface */}
-       <mesh position={[0, -0.5, 0]} rotation={[-Math.PI/2, 0, 0]}>
-         <ringGeometry args={[0.1, 0.15, 16]} />
-         <meshBasicMaterial color="#ffff00" side={THREE.DoubleSide} />
-       </mesh>
+      <mesh position={[0, -0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.1, 0.15, 16]} />
+        <meshBasicMaterial color="#ffff00" side={THREE.DoubleSide} />
+      </mesh>
     </group>
   );
 }

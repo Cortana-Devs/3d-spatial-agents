@@ -11,6 +11,7 @@ import YukaSystem from "../Systems/YukaSystem";
 import DebugCrosshair from "../Systems/DebugCrosshair";
 import ObstacleVisualizer from "../Systems/ObstacleVisualizer";
 import { PlacingAreaMarkers } from "../Systems/PlacingAreaMarkers";
+import ObjectHighlighter from "../Systems/ObjectHighlighter";
 
 import { useGameStore } from "@/store/gameStore";
 
@@ -221,6 +222,7 @@ export default function Scene() {
         <DebugCrosshair />
         <ObstacleVisualizer />
         <PlacingAreaMarkers playerRef={robotRef} />
+        <ObjectHighlighter />
 
         <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
 

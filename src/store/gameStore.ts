@@ -150,8 +150,15 @@ interface GameState {
   setInteractionGrid: (grid: GridRow[]) => void;
   gridSelection: { row: number; col: number };
   setGridSelection: (sel: { row: number; col: number }) => void;
+  // Visual target for placement/selection
   placingTargetPos: THREE.Vector3 | null;
-  setPlacingTargetPos: (pos: THREE.Vector3 | null) => void;
+  placingTargetType?: "item" | "slot"; // Changed to optional (undefined)
+  placingTargetId?: string; // ID of the specific object/slot being targeted
+  setPlacingTargetPos: (
+    pos: THREE.Vector3 | null,
+    type?: "item" | "slot",
+    id?: string,
+  ) => void;
 
   // Player Position (for minimap, etc.)
   playerPosition: THREE.Vector3;
@@ -168,14 +175,6 @@ interface GameState {
   // Debug Mode
   isDebugMode: boolean;
   setDebugMode: (mode: boolean) => void;
-
-  // New Position Hooks
-  playerPosition: THREE.Vector3;
-  setPlayerPosition: (pos: THREE.Vector3) => void;
-  agentPositions: { [id: string]: THREE.Vector3 };
-  setAgentPosition: (id: string, pos: THREE.Vector3) => void;
-  followingAgentId: string | null;
-  setFollowingAgentId: (id: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -303,9 +302,11 @@ export const useGameStore = create<GameState>((set) => ({
   inspectedAgentData: null,
   setInspectedAgentData: (data) => set({ inspectedAgentData: data }),
 
+  // Following Agent
   followingAgentId: null,
   setFollowingAgentId: (id) => set({ followingAgentId: id }),
 
+  // Agent Positions (Minimap)
   agentPositions: {},
   setAgentPosition: (id, pos) =>
     set((state) => ({
@@ -318,7 +319,14 @@ export const useGameStore = create<GameState>((set) => ({
   gridSelection: { row: 0, col: 0 },
   setGridSelection: (sel) => set({ gridSelection: sel }),
   placingTargetPos: null,
-  setPlacingTargetPos: (pos) => set({ placingTargetPos: pos }),
+  placingTargetType: undefined,
+  placingTargetId: undefined,
+  setPlacingTargetPos: (pos, type, id) =>
+    set({
+      placingTargetPos: pos,
+      placingTargetType: type,
+      placingTargetId: id,
+    }),
 
   // Player Position
   playerPosition: new THREE.Vector3(),
@@ -327,12 +335,4 @@ export const useGameStore = create<GameState>((set) => ({
   // Debug Mode
   isDebugMode: false,
   setDebugMode: (mode: boolean) => set({ isDebugMode: mode }),
-
-  playerPosition: new THREE.Vector3(0, 0, 0),
-  setPlayerPosition: (pos) => set({ playerPosition: pos }),
-  agentPositions: {},
-  setAgentPosition: (id, pos) =>
-    set((state) => ({
-      agentPositions: { ...state.agentPositions, [id]: pos },
-    })),
 }));
