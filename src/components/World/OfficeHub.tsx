@@ -31,6 +31,7 @@ import {
   CoffeeMachine,
   CoffeeCup,
   Telephone,
+  CoffeeStation,
 } from "./Props";
 
 interface Box {
@@ -527,11 +528,25 @@ export default function OfficeHub() {
         position={[hubCenter.x + 50, hubCenter.y, hubCenter.z - 47.5]}
         userData={{
           type: "Furniture",
-          id: "conf-table-main",
           name: "Conference Table",
           description: "A large table for meetings.",
         }}
-      />
+        initialItems={["file-conf-table"]}
+        initialItemsCenter={["file-conf-table"]}
+      >
+        {/* Objects on conference table (relative to table) */}
+        <FileFolder
+          position={[5, 4.5, 0]}
+          userData={{
+            type: "Prop",
+            id: "file-conf-table",
+            name: "Conference File",
+            interactable: true,
+            pickable: true,
+            objectType: "file",
+          }}
+        />
+      </ConferenceTable>
       {/* Chairs North (along north edge of table) */}
       {[-1, 0, 1].map((i) => (
         <OfficeChair
@@ -561,6 +576,32 @@ export default function OfficeHub() {
         />
       ))}
 
+      {/* Chair East (End, facing West) */}
+      <OfficeChair
+        key="conf-e"
+        id="conf-e"
+        position={[hubCenter.x + 75, hubCenter.y, hubCenter.z - 47.5]}
+        rotation={Math.PI * 1.5}
+        userData={{
+          type: "Furniture",
+          id: "conf-e",
+          name: "Conference Chair East",
+        }}
+      />
+
+      {/* Chair West (End, facing East) */}
+      <OfficeChair
+        key="conf-w"
+        id="conf-w"
+        position={[hubCenter.x + 25, hubCenter.y, hubCenter.z - 47.5]}
+        rotation={Math.PI * 0.5}
+        userData={{
+          type: "Furniture",
+          id: "conf-w",
+          name: "Conference Chair West",
+        }}
+      />
+
       {/* 2. Workstations (Open Office) */}
       {/* Left Block */}
       {[0, 1].map((r) =>
@@ -582,7 +623,28 @@ export default function OfficeHub() {
                   name: `Office Desk ${String.fromCharCode(65 + r * 3 + c)}`,
                   interactable: true,
                 }}
-              />
+                initialItems={r === 0 && c === 0 ? ["red-file-01"] : undefined}
+              >
+                {/* Objects on desk surface (relative to desk position) */}
+                {r === 0 && c === 0 && (
+                  <FileFolder
+                    position={[-3, 4.1, 0]}
+                    color="red"
+                    rotation={0.1}
+                    userData={{
+                      type: "Prop",
+                      id: "red-file-01",
+                      name: "Confidential Red File",
+                      description:
+                        "A highly important confidential file containing sensitive data.",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                      owner: "System",
+                    }}
+                  />
+                )}
+              </OfficeDesk>
               <OfficeChair
                 id={`chair-l-${r}-${c}`}
                 position={[dx, hubCenter.y, dz + 5]}
@@ -593,35 +655,9 @@ export default function OfficeHub() {
                   name: "Office Chair",
                 }}
               />
-              {/* Only ONE computer table gets red file (e.g., Row 0, Col 0, Left Block) */}
-              {r === 0 && c === 0 && (
-                <FileFolder
-                  position={[dx - 3, hubCenter.y + 4.1, dz]}
-                  color="red"
-                  rotation={0.1}
-                  userData={{
-                    type: "Prop",
-                    id: "red-file-01",
-                    name: "Confidential Red File",
-                    description:
-                      "A highly important confidential file containing sensitive data.",
-                    interactable: true,
-                    pickable: true,
-                    objectType: "file",
-                    owner: "System",
-                  }}
-                />
-              )}
-
-              {/* Label Left Block: A (0,0), B (0,1), C (0,2)... */}
-              {/* Global Index Logic: Left Block first. 
-                   Row 0: 0, 1, 2 -> A, B, C
-                   Row 1: 0, 1, 2 -> D, E, F
-                   Index = r * 3 + c
-               */}
               <Text
                 position={[dx - 5.5, hubCenter.y + 4.1, dz - 2.5]}
-                rotation={[-Math.PI / 2, 0, 0]} // Flat on table
+                rotation={[-Math.PI / 2, 0, 0]}
                 fontSize={1}
                 color="black"
                 anchorX="center"
@@ -659,7 +695,26 @@ export default function OfficeHub() {
                   name: `Office Desk ${String.fromCharCode(65 + 6 + r * 3 + c)}`,
                   interactable: true,
                 }}
-              />
+                initialItems={
+                  r === 0 && c === 0 ? ["printer-office"] : undefined
+                }
+              >
+                {/* Objects on desk surface (relative to desk position) */}
+                {r === 0 && c === 0 && (
+                  <Printer
+                    position={[4.4, 4, 0]}
+                    rotation={Math.PI / 2}
+                    userData={{
+                      type: "Prop",
+                      id: "printer-office",
+                      name: "Office Printer",
+                      interactable: true,
+                      description: "A standard office printer.",
+                      objectType: "printer",
+                    }}
+                  />
+                )}
+              </OfficeDesk>
               <OfficeChair
                 id={`chair-r-${r}-${c}`}
                 position={[
@@ -667,47 +722,20 @@ export default function OfficeHub() {
                   hubCenter.y,
                   hubCenter.z + r * 30 + 5,
                 ]}
-                rotation={Math.PI} // Facing desk (North)
+                rotation={Math.PI}
                 userData={{
                   type: "Furniture",
                   id: `chair-r-${r}-${c}`,
                   name: "Office Chair",
                 }}
               />
-              {/* Printer on specific desk: Right Block, Row 0, Col 0 */}
-              {r === 0 && c === 0 && (
-                <Printer
-                  position={[
-                    hubCenter.x + 21.4 + c * 20 + 3,
-                    hubCenter.y + 4,
-                    hubCenter.z + r * 30,
-                  ]}
-                  rotation={Math.PI / 2}
-                  userData={{
-                    type: "Prop",
-                    id: "printer-office",
-                    name: "Office Printer",
-                    interactable: true,
-                    description: "A standard office printer.",
-                    objectType: "printer",
-                  }}
-                />
-              )}
-
-              {/* Remove Red Files from all other tables logic - user said "dont add all computer tables to red file only add file in one cumputer table" */}
-              {/* We added one in Left Block above. So none here. */}
-
-              {/* Label Right Block: continue from F? 
-                  Left had 6 (indices 0-5). Right starts at G (Index 6).
-                  Index = 6 + r * 3 + c
-              */}
               <Text
                 position={[
                   hubCenter.x + 20 + c * 20 - 5.5,
                   hubCenter.y + 4.1,
                   hubCenter.z + r * 30 - 2.5,
                 ]}
-                rotation={[-Math.PI / 2, 0, 0]} // Flat on table
+                rotation={[-Math.PI / 2, 0, 0]}
                 fontSize={1}
                 color="black"
                 anchorX="center"
@@ -756,46 +784,49 @@ export default function OfficeHub() {
       {/* 4. Reception Info Desk (Lobby) - Centered */}
       <ReceptionDesk
         position={[hubCenter.x, hubCenter.y, hubCenter.z + 55]}
-        rotation={Math.PI} // Facing Entrance
+        rotation={Math.PI}
         userData={{
           type: "Furniture",
           id: "reception-desk",
           name: "Reception Desk",
           interactable: true,
         }}
-      />
+        initialItems={["laptop-reception", "telephone-reception"]}
+      >
+        {/* Objects on reception counter — local coords, desk rotated π */}
+        <Laptop
+          position={[0, 4.1, 0]}
+          rotation={0}
+          userData={{
+            type: "Prop",
+            id: "laptop-reception",
+            name: "Reception Laptop",
+            interactable: true,
+            pickable: true,
+            objectType: "laptop",
+          }}
+        />
+        <Telephone
+          position={[-4, 4.1, 0]}
+          rotation={0}
+          userData={{
+            type: "Prop",
+            id: "telephone-reception",
+            name: "Reception Telephone",
+            interactable: true,
+            pickable: true,
+            objectType: "telephone",
+          }}
+        />
+      </ReceptionDesk>
       <OfficeChair
         id="chair-reception"
-        position={[hubCenter.x, hubCenter.y, hubCenter.z + 50]} // Behind desk
-        rotation={0} // Facing South (towards desk/entrance)
+        position={[hubCenter.x, hubCenter.y, hubCenter.z + 50]}
+        rotation={0}
         userData={{
           type: "Furniture",
           id: "chair-reception",
           name: "Reception Chair",
-        }}
-      />
-      <Laptop
-        position={[hubCenter.x, hubCenter.y + 4.1, hubCenter.z + 55]}
-        rotation={Math.PI} // Screen facing North (towards chair)
-        userData={{
-          type: "Prop",
-          id: "laptop-reception",
-          name: "Reception Laptop",
-          interactable: true,
-          pickable: true,
-          objectType: "laptop",
-        }}
-      />
-      <Telephone
-        position={[hubCenter.x + 4, hubCenter.y + 4.1, hubCenter.z + 55]}
-        rotation={Math.PI}
-        userData={{
-          type: "Prop",
-          id: "telephone-reception",
-          name: "Reception Telephone",
-          interactable: true,
-          pickable: true,
-          objectType: "telephone",
         }}
       />
 
@@ -852,13 +883,57 @@ export default function OfficeHub() {
       {/* 5. Manager's Office */}
       <ManagersDesk
         position={[hubCenter.x - 65, hubCenter.y, hubCenter.z + 25]}
-        rotation={Math.PI / 2} // Facing East (Door)
+        rotation={Math.PI / 2}
         userData={{
           type: "Furniture",
           id: "desk-manager",
           name: "Manager Desk",
         }}
-      />
+        initialItems={[
+          "file-manager-blue",
+          "laptop-manager",
+          "pendrive-manager",
+        ]}
+      >
+        {/* Objects on Manager desk — local coords, desk rotated π/2 */}
+        {/* inverse(π/2): local_x = -wz, local_z = wx */}
+        <FileFolder
+          position={[5, 4, -1]}
+          color="blue"
+          userData={{
+            type: "Prop",
+            id: "file-manager-blue",
+            name: "Blue Manager File",
+            interactable: true,
+            pickable: true,
+            objectType: "file",
+          }}
+        />
+        <Laptop
+          position={[0, 4, 0]}
+          rotation={-Math.PI}
+          userData={{
+            type: "Prop",
+            id: "laptop-manager",
+            name: "Manager Laptop",
+            interactable: true,
+            pickable: true,
+            objectType: "laptop",
+          }}
+        />
+        <PenDrive
+          position={[2, 4.1, -2]}
+          rotation={0.3}
+          userData={{
+            type: "Prop",
+            id: "pendrive-manager",
+            name: "USB Drive",
+            interactable: true,
+            pickable: true,
+            objectType: "pendrive",
+          }}
+        />
+      </ManagersDesk>
       <OfficeChair
         id="chair-manager"
         position={[hubCenter.x - 75, hubCenter.y, hubCenter.z + 25]}
@@ -869,10 +944,9 @@ export default function OfficeHub() {
           name: "Manager Chair",
         }}
       />
-      {/* Two Visitor Chairs in front of Manager's Desk */}
       <OfficeChair
         id="chair-manager-visitor-1"
-        position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 21]} // Facing Manager (West)
+        position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 21]}
         rotation={-Math.PI / 2}
         userData={{
           type: "Furniture",
@@ -882,7 +956,7 @@ export default function OfficeHub() {
       />
       <OfficeChair
         id="chair-manager-visitor-2"
-        position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 29]} // Facing Manager (West)
+        position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 29]}
         rotation={-Math.PI / 2}
         userData={{
           type: "Furniture",
@@ -890,49 +964,8 @@ export default function OfficeHub() {
           name: "Manager Visitor Chair 2",
         }}
       />
-      <FileFolder
-        position={[hubCenter.x - 66, hubCenter.y + 4, hubCenter.z + 20]}
-        color="blue"
-        userData={{
-          type: "Prop",
-          id: "file-manager-blue",
-          name: "Blue Manager File",
-          interactable: true,
-          pickable: true,
-          objectType: "file",
-        }}
-      />
-      {/* Laptop & Pen Drive */}
-      {/* Laptop: rotation 0 is open towards +Z (South). Manager chair faces East (+X). Screen should face West (-X). 
-          If rotation is -Math.PI/2, screen faces West.
-      */}
-      <Laptop
-        position={[hubCenter.x - 65, hubCenter.y + 4, hubCenter.z + 25]}
-        rotation={-Math.PI / 2}
-        userData={{
-          type: "Prop",
-          id: "laptop-manager",
-          name: "Manager Laptop",
-          interactable: true,
-          pickable: true,
-          objectType: "laptop",
-        }}
-      />
-      {/* Pen Drive: Left side of desk. Desk center Z=25. Facing East => Left is North (Z < 25). */}
-      <PenDrive
-        position={[hubCenter.x - 67, hubCenter.y + 4.1, hubCenter.z + 23]}
-        rotation={Math.random()}
-        userData={{
-          type: "Prop",
-          id: "pendrive-manager",
-          name: "USB Drive",
-          interactable: true,
-          pickable: true,
-          objectType: "pendrive",
-        }}
-      />
 
-      {/* Small Rack with Rose Files & Flower Pot */}
+      {/* Small Rack with Files & Flower Pot (objects as children) */}
       <SmallRack
         position={[hubCenter.x - 75, hubCenter.y, hubCenter.z + 15]}
         rotation={Math.PI / 4}
@@ -942,42 +975,47 @@ export default function OfficeHub() {
           name: "Manager Rack",
           interactable: true,
         }}
-      />
-      <FileFolder
-        position={[hubCenter.x - 75, hubCenter.y + 3.1, hubCenter.z + 15]}
-        color="red"
-        rotation={0.1}
-        userData={{
-          type: "Prop",
-          id: "file-manager-red-1",
-          name: "Red Manager File 1",
-          interactable: true,
-          pickable: true,
-          objectType: "file",
-        }}
-      />
-      <FileFolder
-        position={[hubCenter.x - 75, hubCenter.y + 3.1, hubCenter.z + 15.5]}
-        color="red"
-        rotation={-0.1}
-        userData={{
-          type: "Prop",
-          id: "file-manager-red-2",
-          name: "Red Manager File 2",
-          interactable: true,
-          pickable: true,
-          objectType: "file",
-        }}
-      />
-      <FlowerPot
-        position={[hubCenter.x - 75, hubCenter.y + 4.2, hubCenter.z + 15]}
-        userData={{
-          type: "Prop",
-          id: "flower-manager",
-          name: "Manager Flower Pot",
-          interactable: true,
-        }}
-      />
+        initialItems={["flower-manager"]}
+        initialItemsMiddle={["file-manager-red-1", "file-manager-red-2"]}
+      >
+        {/* Red files on middle shelf, flower pot on top — local coords, rack rotated π/4 */}
+        {/* inverse(π/4): local = R(-π/4) × world */}
+        <FileFolder
+          position={[0, 3.1, 0]}
+          color="red"
+          rotation={0.1}
+          userData={{
+            type: "Prop",
+            id: "file-manager-red-1",
+            name: "Red Manager File 1",
+            interactable: true,
+            pickable: true,
+            objectType: "file",
+          }}
+        />
+        <FileFolder
+          position={[-0.35, 3.1, 0.35]}
+          color="red"
+          rotation={-0.1}
+          userData={{
+            type: "Prop",
+            id: "file-manager-red-2",
+            name: "Red Manager File 2",
+            interactable: true,
+            pickable: true,
+            objectType: "file",
+          }}
+        />
+        <FlowerPot
+          position={[0, 4.2, 0]}
+          userData={{
+            type: "Prop",
+            id: "flower-manager",
+            name: "Manager Flower Pot",
+            interactable: true,
+          }}
+        />
+      </SmallRack>
 
       {/* 6. Break Room (South-East) */}
       {/* Two Sofas facing North (towards TV on North Wall) - Moved back to South Wall (Z=35) to clear door path */}
@@ -1018,14 +1056,16 @@ export default function OfficeHub() {
         }}
       />
 
-      {/* Coffee Station in Corner (South-East Corner: X approx 90, Z approx 35) */}
-      <group position={[hubCenter.x + 90, hubCenter.y, hubCenter.z + 35]}>
-        <mesh
-          position={[0, 2, 0]}
-          material={new THREE.MeshStandardMaterial({ color: "#333" })}
-        >
-          <boxGeometry args={[6, 4, 3]} />
-        </mesh>
+      {/* Coffee Station in Corner (South-East Corner) */}
+      <CoffeeStation
+        position={[hubCenter.x + 90, hubCenter.y, hubCenter.z + 35]}
+        userData={{
+          type: "Furniture",
+          id: "coffee-station",
+          name: "Coffee Station",
+        }}
+        initialItems={["coffee-machine", "cup-coffee"]}
+      >
         <CoffeeMachine
           position={[0, 4, 0]}
           userData={{
@@ -1048,7 +1088,7 @@ export default function OfficeHub() {
             objectType: "coffeecup",
           }}
         />
-      </group>
+      </CoffeeStation>
 
       <FireExtinguisher
         position={[hubCenter.x + 39, hubCenter.y + 2, hubCenter.z + 73.5]} // Near Window
@@ -1091,18 +1131,7 @@ export default function OfficeHub() {
           <cylinderGeometry args={[0.5, 0.5, 0.5]} />
         </mesh>
       </group>
-      {/* Laptop on Conf Table */}
-      <FileFolder
-        position={[hubCenter.x + 55, hubCenter.y + 4.5, hubCenter.z - 47.5]}
-        userData={{
-          type: "Prop",
-          id: "file-conf-table",
-          name: "Conference File",
-          interactable: true,
-          pickable: true,
-          objectType: "file",
-        }}
-      />
+      {/* Conference Table File is now a child of ConferenceTable */}
 
       {/* DOORS */}
       {/* Lobby: Single Centered Door at Z=40 (Matches lobbyDividerZ) */}

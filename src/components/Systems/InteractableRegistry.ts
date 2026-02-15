@@ -33,7 +33,7 @@ export interface PlacingArea {
   capacity: number;
   currentItems: (string | null)[]; // IDs of placed WorldObjects or null for empty slot
   dimensions: [number, number, number]; // width, height, depth of surface slab
-  allowedTypes?: WorldObject["type"][];
+  // allowedTypes?: WorldObject["type"][]; // Deprecated: Any item can go anywhere
   meshRef?: THREE.Object3D;
 }
 
@@ -186,12 +186,13 @@ export class InteractableRegistry {
       if (slotIndex === -1) return false; // Full
     }
 
-    if (
-      area.allowedTypes &&
-      area.allowedTypes.length > 0 &&
-      !area.allowedTypes.includes(obj.type)
-    )
-      return false;
+    // Constraint Check Removed: allowedTypes
+    // if (
+    //   area.allowedTypes &&
+    //   area.allowedTypes.length > 0 &&
+    //   !area.allowedTypes.includes(obj.type)
+    // )
+    //   return false;
 
     const [w, h, d] = area.dimensions;
 

@@ -8,16 +8,8 @@ export function usePlacingArea(
     id: string;
     name: string;
     capacity: number;
-    allowedTypes?: (
-      | "file"
-      | "laptop"
-      | "pendrive"
-      | "printer"
-      | "coffeecup"
-      | "generic"
-      | "pc"
-    )[];
     dimensions: [number, number, number];
+    initialItems?: string[]; // IDs of objects already placed in slots (fills from index 0)
   },
 ) {
   useEffect(() => {
@@ -29,11 +21,17 @@ export function usePlacingArea(
     const quat = new THREE.Quaternion();
     meshRef.current.getWorldQuaternion(quat);
 
-    /*
-    console.log(
-      `[PlacingArea] Registered "${areaData.name}" (${areaData.id}) at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}), capacity: ${areaData.capacity}`,
+    // Build currentItems: fill initial items into slots, rest null
+    const currentItems: (string | null)[] = new Array(areaData.capacity).fill(
+      null,
     );
-    */
+    if (areaData.initialItems) {
+      areaData.initialItems.forEach((itemId, i) => {
+        if (i < areaData.capacity) {
+          currentItems[i] = itemId;
+        }
+      });
+    }
 
     InteractableRegistry.getInstance().registerPlacingArea({
       id: areaData.id,
@@ -41,9 +39,8 @@ export function usePlacingArea(
       position: pos,
       rotation: quat,
       capacity: areaData.capacity,
-      currentItems: new Array(areaData.capacity).fill(null),
+      currentItems,
       dimensions: areaData.dimensions,
-      allowedTypes: areaData.allowedTypes,
       meshRef: meshRef.current,
     });
 

@@ -275,17 +275,77 @@ export function ConferenceTable({
   position,
   rotation = 0,
   userData,
+  children,
+  initialItems,
+  initialItemsNorth,
+  initialItemsSouth,
+  initialItemsCenter,
+  initialItemsEast,
+  initialItemsWest,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
+  children?: React.ReactNode;
+  initialItems?: string[];
+  initialItemsNorth?: string[];
+  initialItemsSouth?: string[];
+  initialItemsCenter?: string[];
+  initialItemsEast?: string[];
+  initialItemsWest?: string[];
 }) {
-  const surfaceRef = useRef<THREE.Mesh>(null);
-  usePlacingArea(surfaceRef, {
-    id: userData?.id || "conf-table",
-    name: userData?.name || "Conference Table",
-    capacity: 8,
-    dimensions: [36, 0.8, 16], // Slightly smaller than top to keep items away from edge
+  const surfaceRef = useRef<THREE.Mesh>(null); // Kept for raycast or center
+  const northRef = useRef<THREE.Mesh>(null);
+  const southRef = useRef<THREE.Mesh>(null);
+  const centerRef = useRef<THREE.Mesh>(null);
+  const eastRef = useRef<THREE.Mesh>(null);
+  const westRef = useRef<THREE.Mesh>(null);
+
+  // North Zone (Seats facing South)
+  usePlacingArea(northRef, {
+    id: userData?.id ? `${userData.id}-north` : "conf-table-north",
+    name: userData?.name ? `${userData.name} North` : "Conference Table North",
+    capacity: 4,
+    dimensions: [34, 0.8, 4],
+    initialItems: initialItemsNorth,
+  });
+
+  // South Zone (Seats facing North)
+  usePlacingArea(southRef, {
+    id: userData?.id ? `${userData.id}-south` : "conf-table-south",
+    name: userData?.name ? `${userData.name} South` : "Conference Table South",
+    capacity: 4,
+    dimensions: [34, 0.8, 4],
+    initialItems: initialItemsSouth,
+  });
+
+  // Center Zone (Shared)
+  usePlacingArea(centerRef, {
+    id: userData?.id ? `${userData.id}-center` : "conf-table-center",
+    name: userData?.name
+      ? `${userData.name} Center`
+      : "Conference Table Center",
+    capacity: 4,
+    dimensions: [34, 0.8, 6],
+    initialItems: initialItemsCenter || initialItems, // Fallback for backward compat
+  });
+
+  // East Zone (End Seat facing West)
+  usePlacingArea(eastRef, {
+    id: userData?.id ? `${userData.id}-east` : "conf-table-east",
+    name: userData?.name ? `${userData.name} East` : "Conference Table East",
+    capacity: 1,
+    dimensions: [4, 0.8, 16],
+    initialItems: initialItemsEast,
+  });
+
+  // West Zone (End Seat facing East)
+  usePlacingArea(westRef, {
+    id: userData?.id ? `${userData.id}-west` : "conf-table-west",
+    name: userData?.name ? `${userData.name} West` : "Conference Table West",
+    capacity: 1,
+    dimensions: [4, 0.8, 16],
+    initialItems: initialItemsWest,
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
@@ -331,10 +391,35 @@ export function ConferenceTable({
   }, [posVec, rotation, addObstacles, removeObstacles]);
   return (
     <group position={position} rotation={[0, rotation, 0]} userData={userData}>
-      {/* Main Rectangular Table Top */}
+      {/* Main Rectangular Table Top - Visual */}
       <mesh ref={surfaceRef} position={[0, 4, 0]} castShadow receiveShadow>
         <boxGeometry args={[40, 0.8, 20]} />
         <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
+      </mesh>
+
+      {/* North Placing Area (Seats facing South) */}
+      <mesh ref={northRef} position={[0, 4.4, -6]} visible={false}>
+        <boxGeometry args={[34, 0.1, 4]} />
+      </mesh>
+
+      {/* South Placing Area (Seats facing North) */}
+      <mesh ref={southRef} position={[0, 4.4, 6]} visible={false}>
+        <boxGeometry args={[34, 0.1, 4]} />
+      </mesh>
+
+      {/* Center Placing Area */}
+      <mesh ref={centerRef} position={[0, 4.4, 0]} visible={false}>
+        <boxGeometry args={[34, 0.1, 6]} />
+      </mesh>
+
+      {/* East Placing Area (End Seat facing West) */}
+      <mesh ref={eastRef} position={[18, 4.4, 0]} visible={false}>
+        <boxGeometry args={[4, 0.1, 16]} />
+      </mesh>
+
+      {/* West Placing Area (End Seat facing East) */}
+      <mesh ref={westRef} position={[-18, 4.4, 0]} visible={false}>
+        <boxGeometry args={[4, 0.1, 16]} />
       </mesh>
 
       {/* Table Legs */}
@@ -350,6 +435,7 @@ export function ConferenceTable({
       <mesh position={[15, 2, 7.5]} castShadow material={metalMaterial}>
         <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
       </mesh>
+      {children}
     </group>
   );
 }
@@ -359,10 +445,14 @@ export function OfficeDesk({
   position,
   rotation = 0,
   userData,
+  children,
+  initialItems,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
+  children?: React.ReactNode;
+  initialItems?: string[];
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
   usePlacingArea(surfaceRef, {
@@ -370,6 +460,7 @@ export function OfficeDesk({
     name: userData?.name || "Office Desk",
     capacity: 2, // Reduced from 4 to avoid crowding
     dimensions: [10, 0.4, 3], // Only front half of desk
+    initialItems,
   });
 
   // No useEffect shift needed - we position the group directly
@@ -495,6 +586,7 @@ export function OfficeDesk({
           }}
         />
       </group>
+      {children}
     </group>
   );
 }
@@ -656,7 +748,7 @@ function PCPlacingSlot({
     name,
     capacity: 1,
     dimensions: [5, 0.1, 3], // Approximate size of PC footprint area
-    allowedTypes: ["pc"],
+    // allowedTypes: ["pc"], // Removed: Generic Slot
   });
 
   return (
@@ -990,10 +1082,14 @@ export function ReceptionDesk({
   position,
   rotation = 0,
   userData,
+  children,
+  initialItems,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
+  children?: React.ReactNode;
+  initialItems?: string[];
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
   usePlacingArea(surfaceRef, {
@@ -1001,6 +1097,7 @@ export function ReceptionDesk({
     name: userData?.name || "Reception Desk",
     capacity: 3,
     dimensions: [20, 0.2, 6],
+    initialItems,
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
@@ -1069,6 +1166,7 @@ export function ReceptionDesk({
       <mesh position={[0, 2, 3.1]} material={lightGlowMaterial}>
         <boxGeometry args={[18, 0.2, 0.1]} />
       </mesh>
+      {children}
     </group>
   );
 }
@@ -1078,10 +1176,14 @@ export function ManagersDesk({
   position,
   rotation = 0,
   userData,
+  children,
+  initialItems,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
+  children?: React.ReactNode;
+  initialItems?: string[];
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
   usePlacingArea(surfaceRef, {
@@ -1089,6 +1191,7 @@ export function ManagersDesk({
     name: userData?.name || "Manager's Desk",
     capacity: 3,
     dimensions: [16, 0.5, 8],
+    initialItems,
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
@@ -1159,6 +1262,7 @@ export function ManagersDesk({
       >
         <boxGeometry args={[8, 0.02, 4]} />
       </mesh>
+      {children}
     </group>
   );
 }

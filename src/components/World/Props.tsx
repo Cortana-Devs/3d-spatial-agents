@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { Text } from "@react-three/drei";
 import { useInteractable } from "../Systems/useInteractable"; // Import hook
+import { usePlacingArea } from "../Systems/usePlacingArea";
 
 // --- MATERIALS ---
 const plasticWhite = new THREE.MeshStandardMaterial({
@@ -367,13 +368,45 @@ export function SmallRack({
   position,
   rotation = 0,
   userData,
+  children,
+  initialItems,
+  initialItemsMiddle,
+  initialItemsBottom,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
+  children?: React.ReactNode;
+  initialItems?: string[];
+  initialItemsMiddle?: string[];
+  initialItemsBottom?: string[];
 }) {
   const meshRef = useRef<THREE.Group>(null);
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  const middleRef = useRef<THREE.Mesh>(null);
+  const bottomRef = useRef<THREE.Mesh>(null);
   useInteractable(meshRef, userData);
+  usePlacingArea(surfaceRef, {
+    id: userData?.id ? `${userData.id}-surface-top` : "small-rack-surface-top",
+    name: userData?.name ? `${userData.name} Top` : "Small Rack Top",
+    capacity: 2,
+    dimensions: [3.8, 0.1, 1.8],
+    initialItems,
+  });
+  usePlacingArea(middleRef, {
+    id: userData?.id ? `${userData.id}-surface-mid` : "small-rack-surface-mid",
+    name: userData?.name ? `${userData.name} Middle` : "Small Rack Middle",
+    capacity: 2,
+    dimensions: [3.8, 0.1, 1.8],
+    initialItems: initialItemsMiddle,
+  });
+  usePlacingArea(bottomRef, {
+    id: userData?.id ? `${userData.id}-surface-bot` : "small-rack-surface-bot",
+    name: userData?.name ? `${userData.name} Bottom` : "Small Rack Bottom",
+    capacity: 2,
+    dimensions: [3.8, 0.1, 1.8],
+    initialItems: initialItemsBottom,
+  });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
   const posVec = useMemo(
@@ -409,6 +442,18 @@ export function SmallRack({
       >
         <boxGeometry args={[4, 4, 2]} />
       </mesh>
+      {/* Top shelf surface (placing area) */}
+      <mesh ref={surfaceRef} position={[0, 4.05, 0]} visible={false}>
+        <boxGeometry args={[3.8, 0.1, 1.8]} />
+      </mesh>
+      {/* Middle Surface */}
+      <mesh ref={middleRef} position={[0, 2.05, 0]} visible={false}>
+        <boxGeometry args={[3.8, 0.1, 1.8]} />
+      </mesh>
+      {/* Bottom Surface */}
+      <mesh ref={bottomRef} position={[0, 0.05, 0]} visible={false}>
+        <boxGeometry args={[3.8, 0.1, 1.8]} />
+      </mesh>
       <mesh
         position={[0, 3, 0]}
         receiveShadow
@@ -423,6 +468,8 @@ export function SmallRack({
       >
         <boxGeometry args={[3.8, 0.1, 1.8]} />
       </mesh>
+      {/* Children (objects placed on rack surfaces) */}
+      {children}
     </group>
   );
 }
@@ -724,6 +771,73 @@ export function Telephone({
       >
         <planeGeometry args={[0.8, 0.6]} />
       </mesh>
+    </group>
+  );
+}
+
+// --- COFFEE STATION ---
+export function CoffeeStation({
+  position,
+  rotation = 0,
+  userData,
+  children,
+  initialItems,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  userData?: any;
+  children?: React.ReactNode;
+  initialItems?: string[];
+}) {
+  const surfaceRef = useRef<THREE.Mesh>(null);
+  usePlacingArea(surfaceRef, {
+    id: userData?.id ? `${userData.id}-surface` : "coffee-station-surface",
+    name: userData?.name || "Coffee Station",
+    capacity: 3,
+    dimensions: [5.5, 0.2, 2.5],
+    initialItems,
+  });
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 2, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(3, 2, 1.5),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    return () => removeObstacles(obs);
+  }, [posVec, rotation, addObstacles, removeObstacles]);
+
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
+      {/* Counter body */}
+      <mesh
+        position={[0, 2, 0]}
+        castShadow
+        receiveShadow
+        material={new THREE.MeshStandardMaterial({ color: "#333" })}
+      >
+        <boxGeometry args={[6, 4, 3]} />
+      </mesh>
+      {/* Counter surface (placing area) */}
+      <mesh ref={surfaceRef} position={[0, 4.05, 0]} visible={false}>
+        <boxGeometry args={[5.5, 0.2, 2.5]} />
+      </mesh>
+      {/* Children (objects placed on counter) */}
+      {children}
     </group>
   );
 }
