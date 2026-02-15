@@ -8,7 +8,11 @@ import NavigationNetwork from "./NavigationNetwork";
 // Task Types
 // ============================================================================
 
-export type AgentTaskType = "FETCH_AND_PLACE" | "GO_TO";
+export type AgentTaskType =
+  | "FETCH_AND_PLACE"
+  | "GO_TO"
+  | "PICK_NEARBY"
+  | "PLACE_INVENTORY";
 
 export interface AgentTask {
   type: AgentTaskType;
@@ -320,10 +324,44 @@ export class AgentTaskQueue {
         }
 
         // For GO_TO, we reuse WALK_TO_SOURCE phase but target is a position
-        // We'll create a temporary item-like target
         this.activeItemId = null;
         this.activeDestAreaId = null;
         this.phase = "WALK_TO_SOURCE";
+        break;
+      }
+
+      case "PICK_NEARBY": {
+        // Walk to item then pick it up (no destination placement)
+        this.activeItemId = this.currentTask.itemId || null;
+        this.activeDestAreaId = null;
+
+        if (!this.activeItemId) {
+          console.warn(
+            `[AgentTaskQueue:${this.agentId}] PICK_NEARBY requires itemId`,
+          );
+          this.phase = "COMPLETED";
+          return;
+        }
+
+        this.phase = "WALK_TO_SOURCE";
+        break;
+      }
+
+      case "PLACE_INVENTORY": {
+        // Walk to placing area and place carried item
+        this.activeItemId = this.currentTask.itemId || null;
+        this.activeDestAreaId = this.currentTask.destAreaId || null;
+
+        if (!this.activeDestAreaId) {
+          console.warn(
+            `[AgentTaskQueue:${this.agentId}] PLACE_INVENTORY requires destAreaId`,
+          );
+          this.phase = "COMPLETED";
+          return;
+        }
+
+        // Skip walk-to-source, go directly to walk-to-dest
+        this.phase = "WALK_TO_DEST";
         break;
       }
     }
@@ -356,6 +394,24 @@ class AgentTaskRegistry {
 
   public getQueue(agentId: string): AgentTaskQueue | undefined {
     return this.queues.get(agentId);
+  }
+
+  /** Returns all registered agent IDs */
+  public getAllAgentIds(): string[] {
+    return Array.from(this.queues.keys());
+  }
+
+  /** Returns queue status for UI display */
+  public getQueueStatus(agentId: string): {
+    taskCount: number;
+    phase: TaskPhase;
+  } {
+    const queue = this.queues.get(agentId);
+    if (!queue) return { taskCount: 0, phase: "IDLE" };
+    return {
+      taskCount: queue.isActive() ? 1 : 0, // Simplified — active or not
+      phase: queue.getCurrentPhase(),
+    };
   }
 }
 

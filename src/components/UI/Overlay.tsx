@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import GameMenu from "./GameMenu";
 import { InspectorPanel } from "./InspectorPanel";
+import { TaskAssignmentPanel } from "./TaskAssignmentPanel";
 
 export default function Overlay() {
   const debugText = useGameStore((state) => state.debugText);
@@ -36,6 +37,11 @@ export default function Overlay() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === keyBindings.menu) {
+        // If Task Panel is open, close it first
+        if (useGameStore.getState().isTaskPanelOpen) {
+          useGameStore.getState().setTaskPanelOpen(false);
+          return;
+        }
         // If Pickup Menu is open, Close it first
         if (useGameStore.getState().isPickupMenuOpen) {
           useGameStore.getState().setPickupMenuOpen(false);
@@ -45,6 +51,15 @@ export default function Overlay() {
 
         setMenuOpen(!isMenuOpen);
         if (!isMenuOpen) {
+          document.exitPointerLock();
+        }
+      }
+
+      // P key: Toggle Task Assignment Panel
+      if (e.code === "KeyP" && !isMenuOpen) {
+        const isOpen = useGameStore.getState().isTaskPanelOpen;
+        useGameStore.getState().setTaskPanelOpen(!isOpen);
+        if (!isOpen) {
           document.exitPointerLock();
         }
       }
@@ -261,8 +276,6 @@ export default function Overlay() {
           >
             ▶ Resume
           </button>
-
-
         </div>
       )}
 
@@ -536,6 +549,7 @@ export default function Overlay() {
         </div>
       )}
       <InspectorPanel />
+      <TaskAssignmentPanel />
     </>
   );
 }

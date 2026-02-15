@@ -4,6 +4,7 @@ import {
   WorldObject,
   InteractableRegistry,
 } from "@/components/Systems/InteractableRegistry";
+import type { AgentTask } from "@/components/Systems/AgentTaskQueue";
 
 export interface Obstacle {
   position: THREE.Vector3;
@@ -216,6 +217,20 @@ interface GameState {
   // Debug Mode
   isDebugMode: boolean;
   setDebugMode: (mode: boolean) => void;
+
+  // Task Assignment Panel
+  isTaskPanelOpen: boolean;
+  setTaskPanelOpen: (isOpen: boolean) => void;
+  taskPanelStep: number; // 0=agent, 1=action, 2=target, 3=review
+  setTaskPanelStep: (step: number) => void;
+  taskPanelSelectedAgent: string | null;
+  setTaskPanelSelectedAgent: (id: string | null) => void;
+  taskPanelSelectedAction: string | null;
+  setTaskPanelSelectedAction: (action: string | null) => void;
+  taskPanelPendingTasks: AgentTask[];
+  addPendingTask: (task: AgentTask) => void;
+  clearPendingTasks: () => void;
+  removePendingTask: (index: number) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -387,4 +402,39 @@ export const useGameStore = create<GameState>((set) => ({
   // Debug Mode
   isDebugMode: false,
   setDebugMode: (mode: boolean) => set({ isDebugMode: mode }),
+
+  // Task Assignment Panel
+  isTaskPanelOpen: false,
+  setTaskPanelOpen: (isOpen) =>
+    set({
+      isTaskPanelOpen: isOpen,
+      // Reset panel state when closing
+      ...(isOpen
+        ? {}
+        : {
+            taskPanelStep: 0,
+            taskPanelSelectedAgent: null,
+            taskPanelSelectedAction: null,
+            taskPanelPendingTasks: [],
+          }),
+    }),
+  taskPanelStep: 0,
+  setTaskPanelStep: (step) => set({ taskPanelStep: step }),
+  taskPanelSelectedAgent: null,
+  setTaskPanelSelectedAgent: (id) => set({ taskPanelSelectedAgent: id }),
+  taskPanelSelectedAction: null,
+  setTaskPanelSelectedAction: (action) =>
+    set({ taskPanelSelectedAction: action }),
+  taskPanelPendingTasks: [],
+  addPendingTask: (task) =>
+    set((state) => ({
+      taskPanelPendingTasks: [...state.taskPanelPendingTasks, task],
+    })),
+  clearPendingTasks: () => set({ taskPanelPendingTasks: [] }),
+  removePendingTask: (index) =>
+    set((state) => ({
+      taskPanelPendingTasks: state.taskPanelPendingTasks.filter(
+        (_, i) => i !== index,
+      ),
+    })),
 }));

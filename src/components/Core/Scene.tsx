@@ -215,8 +215,16 @@ export default function Scene() {
         <OfficeHub />
 
         <Robot groupRef={robotRef} initialPosition={[0, 4, 65]} />
-        <AIRobot playerRef={robotRef} initialPosition={[10, 4, 10]} />
-        <AIRobot playerRef={robotRef} initialPosition={[-10, 4, 20]} />
+        <AIRobot
+          playerRef={robotRef}
+          initialPosition={[10, 4, 10]}
+          id="agent-01"
+        />
+        <AIRobot
+          playerRef={robotRef}
+          initialPosition={[-10, 4, 20]}
+          id="agent-02"
+        />
 
         <YukaSystem />
         <DebugCrosshair />

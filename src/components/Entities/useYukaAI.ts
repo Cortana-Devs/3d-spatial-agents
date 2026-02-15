@@ -10,6 +10,8 @@ import { ClientBrain } from "../Systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-core";
 import { InteractableRegistry } from "../Systems/InteractableRegistry";
 import NavigationNetwork from "../Systems/NavigationNetwork";
+import { AgentTaskRegistry } from "../Systems/AgentTaskQueue";
+import type { SteeringCommand } from "../Systems/AgentTaskQueue";
 
 export function useYukaAI(
   id: string,
@@ -58,6 +60,9 @@ export function useYukaAI(
   const brainRef = useRef(new ClientBrain(id));
   // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
   const brainIntervalRef = useRef(300 + Math.floor(Math.random() * 100));
+
+  // --- TASK QUEUE (Manual Task Assignment) ---
+  const taskQueueRef = useRef(AgentTaskRegistry.getInstance().getOrCreate(id));
 
   // --- ANIMATION STATE ---
   const [animationState, setAnimationState] = useState<
@@ -152,34 +157,55 @@ export function useYukaAI(
     const vehicle = vehicleRef.current;
     if (!vehicle) return;
 
-    // --- FOLLOW PLAYER LOGIC ---
-    if (followingAgentId === id && playerRef.current) {
-      // Switch to Follow Mode
-      if (!vehicle.steering.behaviors[3].active) {
-        // Disable Wander
-        vehicle.steering.behaviors[4].active = false;
-        // Enable Arrive (Index 3)
-        vehicle.steering.behaviors[3].active = true;
-        // Target Player
-        const arriveBehavior = vehicle.steering
-          .behaviors[3] as YUKA.ArriveBehavior;
-        arriveBehavior.target = playerRef.current
-          .position as unknown as YUKA.Vector3;
-        arriveBehavior.deceleration = 1.5; // Smooth stop
-        arriveBehavior.tolerance = 2.0; // Stop 2m away
-      }
-    } else {
-      // Default Mode
-      if (vehicle.steering.behaviors[3].active) {
-        // Disable Arrive
-        vehicle.steering.behaviors[3].active = false;
-        // Enable Wander
-        vehicle.steering.behaviors[4].active = true;
-      }
-    }
-
     const dt = delta * 15; // Speed multiplier for simulation steps
     frameRef.current++;
+
+    // --- MANUAL TASK QUEUE UPDATE ---
+    const taskQueue = taskQueueRef.current;
+    const vehiclePos = new THREE.Vector3(
+      vehicle.position.x,
+      vehicle.position.y,
+      vehicle.position.z,
+    );
+    const steeringCmd: SteeringCommand = taskQueue.update(delta, vehiclePos);
+    const hasManualTask = taskQueue.isActive();
+
+    // Apply steering command from task queue
+    if (steeringCmd.type !== "NONE") {
+      const bFollowPath = vehicle.steering
+        .behaviors[1] as YUKA.FollowPathBehavior;
+      const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior;
+      const bArrive = vehicle.steering.behaviors[3] as YUKA.ArriveBehavior;
+      const bWander = vehicle.steering.behaviors[4] as YUKA.WanderBehavior;
+
+      const resetBehaviors = () => {
+        bFollowPath.active = false;
+        bSeek.active = false;
+        bArrive.active = false;
+        bWander.active = false;
+      };
+
+      if (steeringCmd.type === "FOLLOW_PATH" && steeringCmd.path) {
+        resetBehaviors();
+        const yukaPath = new YUKA.Path();
+        steeringCmd.path.forEach((p) =>
+          yukaPath.add(new YUKA.Vector3(p.x, p.y, p.z)),
+        );
+        bFollowPath.path = yukaPath;
+        bFollowPath.active = true;
+      } else if (steeringCmd.type === "ARRIVE" && steeringCmd.target) {
+        resetBehaviors();
+        bArrive.target = new YUKA.Vector3(
+          steeringCmd.target.x,
+          steeringCmd.target.y,
+          steeringCmd.target.z,
+        );
+        bArrive.active = true;
+      } else if (steeringCmd.type === "STOP") {
+        resetBehaviors();
+        vehicle.velocity.set(0, 0, 0);
+      }
+    }
 
     // --- WALL AVOIDANCE (Multi-Ray + Sliding) ---
     if (collidableMeshes.length > 0) {
@@ -379,84 +405,89 @@ export function useYukaAI(
 
     // --- BRAIN UPDATE ---
     const brain = brainRef.current;
-    if (frameRef.current % brainIntervalRef.current === 0) {
+    // SKIP BRAIN IF MANUAL TASK IS ACTIVE (Task Queue Override)
+    if (hasManualTask) {
+      // Skip LLM brain entirely — manual tasks control steering
+    } else if (frameRef.current % brainIntervalRef.current === 0) {
       // SKIP BRAIN IF FOLLOWING (Manual Override)
-      if (followingAgentId === id) return;
+      if (followingAgentId === id) {
+        // Follow mode - handled above via task queue or legacy
+      } else {
+        let currentBehavior = "IDLE";
+        if (vehicle.steering.behaviors[2].active) currentBehavior = "SEEKING";
+        else if (vehicle.steering.behaviors[1].active)
+          currentBehavior = "WANDERING";
 
-      let currentBehavior = "IDLE";
-      if (vehicle.steering.behaviors[2].active) currentBehavior = "SEEKING";
-      else if (vehicle.steering.behaviors[1].active)
-        currentBehavior = "WANDERING";
+        const nearbyEntities: NearbyEntity[] = [];
 
-      const nearbyEntities: NearbyEntity[] = [];
+        // Perception Logic (Condensed for brevity - same as before)
+        if (playerRef.current) {
+          const d = vehicle.position.distanceTo(
+            playerRef.current.position as unknown as YUKA.Vector3,
+          );
+          if (d < 30)
+            nearbyEntities.push({
+              type: "PLAYER",
+              id: "player-01",
+              distance: d,
+              status: "Active",
+            });
+        }
 
-      // Perception Logic (Condensed for brevity - same as before)
-      if (playerRef.current) {
-        const d = vehicle.position.distanceTo(
-          playerRef.current.position as unknown as YUKA.Vector3,
-        );
-        if (d < 30)
-          nearbyEntities.push({
-            type: "PLAYER",
-            id: "player-01",
-            distance: d,
-            status: "Active",
+        // Update Brain
+        brain
+          .update(
+            vehicle.position as unknown as THREE.Vector3,
+            nearbyEntities,
+            currentBehavior,
+          )
+          .then((decision) => {
+            if (decision) {
+              const bFollowPath = vehicle.steering
+                .behaviors[1] as YUKA.FollowPathBehavior;
+              const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior; // Keep legacy seek for short dist
+              const bArrive = vehicle.steering
+                .behaviors[3] as YUKA.ArriveBehavior;
+              const bWander = vehicle.steering
+                .behaviors[4] as YUKA.WanderBehavior;
+
+              const resetBehaviors = () => {
+                bFollowPath.active = false;
+                bSeek.active = false;
+                bArrive.active = false;
+                bWander.active = false;
+              };
+
+              // Simple handling of MOVE_TO / FOLLOW for now to keep it robust
+              if (decision.action === "MOVE_TO" && decision.target) {
+                resetBehaviors();
+                // Use Pathfinding
+                const target = new THREE.Vector3(
+                  decision.target.x,
+                  decision.target.y,
+                  decision.target.z,
+                );
+                const path = NavigationNetwork.getInstance().findPath(
+                  vehicle.position as unknown as THREE.Vector3,
+                  target,
+                );
+
+                const yukaPath = new YUKA.Path();
+                path.forEach((p) =>
+                  yukaPath.add(new YUKA.Vector3(p.x, p.y, p.z)),
+                );
+                bFollowPath.path = yukaPath;
+                bFollowPath.active = true;
+              } else if (decision.action === "WANDER") {
+                resetBehaviors();
+                bWander.active = true;
+              } else if (decision.action === "WAIT") {
+                resetBehaviors();
+                vehicle.velocity.multiplyScalar(0.5);
+              }
+            }
           });
       }
-
-      // Update Brain
-      brain
-        .update(
-          vehicle.position as unknown as THREE.Vector3,
-          nearbyEntities,
-          currentBehavior,
-        )
-        .then((decision) => {
-          if (decision) {
-            const bFollowPath = vehicle.steering
-              .behaviors[1] as YUKA.FollowPathBehavior;
-            const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior; // Keep legacy seek for short dist
-            const bArrive = vehicle.steering
-              .behaviors[3] as YUKA.ArriveBehavior;
-            const bWander = vehicle.steering
-              .behaviors[4] as YUKA.WanderBehavior;
-
-            const resetBehaviors = () => {
-              bFollowPath.active = false;
-              bSeek.active = false;
-              bArrive.active = false;
-              bWander.active = false;
-            };
-
-            // Simple handling of MOVE_TO / FOLLOW for now to keep it robust
-            if (decision.action === "MOVE_TO" && decision.target) {
-              resetBehaviors();
-              // Use Pathfinding
-              const target = new THREE.Vector3(
-                decision.target.x,
-                decision.target.y,
-                decision.target.z,
-              );
-              const path = NavigationNetwork.getInstance().findPath(
-                vehicle.position as unknown as THREE.Vector3,
-                target,
-              );
-
-              const yukaPath = new YUKA.Path();
-              path.forEach((p) =>
-                yukaPath.add(new YUKA.Vector3(p.x, p.y, p.z)),
-              );
-              bFollowPath.path = yukaPath;
-              bFollowPath.active = true;
-            } else if (decision.action === "WANDER") {
-              resetBehaviors();
-              bWander.active = true;
-            } else if (decision.action === "WAIT") {
-              resetBehaviors();
-              vehicle.velocity.multiplyScalar(0.5);
-            }
-          }
-        });
     }
 
     // --- ANIMATION UPDATE (Procedural) ---
