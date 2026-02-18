@@ -12,9 +12,9 @@ import * as THREE from "three";
 // ============================================================================
 
 const ACTIONS = [
-  { id: "GO_TO", label: "🚶 Walk to Location", icon: "🚶" },
   { id: "PICK_NEARBY", label: "📦 Pick Nearby Item", icon: "📦" },
   { id: "PLACE_INVENTORY", label: "📥 Place Carried Item", icon: "📥" },
+  { id: "FOLLOW_PLAYER", label: "🏃 Follow Player", icon: "🏃" },
 ] as const;
 
 // ============================================================================
@@ -200,15 +200,6 @@ export function TaskAssignmentPanel() {
 
   const formatTask = (task: AgentTask): string => {
     switch (task.type) {
-      case "GO_TO": {
-        const target = NAV_TARGETS.find(
-          (t) =>
-            task.targetPos &&
-            t.position.x === task.targetPos.x &&
-            t.position.z === task.targetPos.z,
-        );
-        return `🚶 Walk → ${target?.label || "Custom Position"}`;
-      }
       case "PICK_NEARBY": {
         const item = task.itemId
           ? InteractableRegistry.getInstance().getById(task.itemId)
@@ -225,6 +216,8 @@ export function TaskAssignmentPanel() {
       }
       case "FETCH_AND_PLACE":
         return `🔄 Fetch & Place`;
+      case "FOLLOW_PLAYER":
+        return `🏃 Follow Player`;
       default:
         return `${task.type}`;
     }
@@ -315,65 +308,6 @@ export function TaskAssignmentPanel() {
   // STEP 2: Select Target
   // ==========================================================================
   const renderTargetStep = () => {
-    if (selectedAction === "GO_TO") {
-      return (
-        <div>
-          <p
-            style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}
-          >
-            Select destination:
-          </p>
-          {NAV_TARGETS.map((target) => (
-            <div
-              key={target.label}
-              style={itemStyle(false)}
-              onClick={() => {
-                addTask({
-                  type: "GO_TO",
-                  targetPos: target.position.clone(),
-                });
-                setStep(3);
-                setAction(null);
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(255,255,255,0.08)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "rgba(255,255,255,0.04)")
-              }
-            >
-              <span style={{ fontSize: "16px" }}>📍</span>
-              <span>{target.label}</span>
-            </div>
-          ))}
-          {/* Also list placing areas as walk targets */}
-          {placingAreas.map((area) => (
-            <div
-              key={area.id}
-              style={itemStyle(false)}
-              onClick={() => {
-                addTask({
-                  type: "GO_TO",
-                  targetPos: area.position.clone(),
-                });
-                setStep(3);
-                setAction(null);
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(255,255,255,0.08)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "rgba(255,255,255,0.04)")
-              }
-            >
-              <span style={{ fontSize: "16px" }}>🪑</span>
-              <span>{area.name}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
     if (selectedAction === "PICK_NEARBY") {
       return (
         <div>
@@ -418,6 +352,37 @@ export function TaskAssignmentPanel() {
               </div>
             ))
           )}
+        </div>
+      );
+    }
+
+    if (selectedAction === "FOLLOW_PLAYER") {
+      return (
+        <div>
+          <p
+            style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}
+          >
+            Confirm task:
+          </p>
+          <div
+            style={itemStyle(false)}
+            onClick={() => {
+              addTask({
+                type: "FOLLOW_PLAYER",
+              });
+              setStep(3);
+              setAction(null);
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,255,255,0.08)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255,255,255,0.04)")
+            }
+          >
+            <span style={{ fontSize: "16px" }}>🏃</span>
+            <span>Follow Player</span>
+          </div>
         </div>
       );
     }

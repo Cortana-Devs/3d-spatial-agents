@@ -12,7 +12,8 @@ export type AgentTaskType =
   | "FETCH_AND_PLACE"
   | "GO_TO"
   | "PICK_NEARBY"
-  | "PLACE_INVENTORY";
+  | "PLACE_INVENTORY"
+  | "FOLLOW_PLAYER";
 
 export interface AgentTask {
   type: AgentTaskType;
@@ -31,6 +32,7 @@ export type TaskPhase =
   | "PICKING_UP" // Brief pause then pick up
   | "WALK_TO_DEST" // Navigating to placing area
   | "PLACING" // Brief pause then place
+  | "FOLLOW_PLAYER" // Following player
   | "COMPLETED";
 
 // Return type: tells useYukaAI what steering to apply
@@ -102,7 +104,11 @@ export class AgentTaskQueue {
 
   // --- MAIN UPDATE (called every frame from useYukaAI) ---
 
-  public update(delta: number, vehiclePos: THREE.Vector3): SteeringCommand {
+  public update(
+    delta: number,
+    vehiclePos: THREE.Vector3,
+    playerPos?: THREE.Vector3,
+  ): SteeringCommand {
     if (this.phase === "IDLE") {
       return { type: "NONE" };
     }
@@ -277,6 +283,63 @@ export class AgentTaskQueue {
         return { type: "STOP" };
       }
 
+      // ------------------------------------------------------------------
+      // FOLLOW_PLAYER: Continuously move towards player
+      // ------------------------------------------------------------------
+      case "FOLLOW_PLAYER": {
+        if (!playerPos) {
+          // No player position available -> Completed or Idle?
+          console.warn(
+            `[AgentTaskQueue:${this.agentId}] Player position unknown`,
+          );
+          this.phase = "COMPLETED";
+          return { type: "STOP" };
+        }
+
+        const distToPlayer = vehiclePos.distanceTo(playerPos);
+        const stopDistance = 2.5; // Stop a bit away from player
+
+        if (distToPlayer < stopDistance) {
+          // Close enough, stop but keep looking/waiting (don't complete task)
+          return { type: "STOP" };
+        }
+
+        // Re-pathfind occasionally or if target moved significantly?
+        // For simplicity, re-pathfind if we don't have a path or if it's been a while.
+        // Actually, let's use a simple distance check to re-pathfind.
+        // Or just let "FOLLOW_PATH" handle it until we reach near-end, then re-path.
+
+        // Simpler approach:
+        // If we are far, pathfind to player.
+        // If we are close, we stop.
+        // We need to update path as player moves.
+
+        // Let's rely on hasSetPath reset.
+        // But we need to reset path if player moves too much from our current target.
+        // We can store lastTargetPos.
+
+        if (!this.hasSetPath) {
+          const path = nav.findPath(vehiclePos, playerPos);
+          this.hasSetPath = true;
+          return { type: "FOLLOW_PATH", path };
+        }
+
+        // If player moved significantly (e.g. > 2m) from where we last pathfound to?
+        // We don't have easy access to "last path target" here without storing state.
+        // Let's just re-path every few seconds? Or let useYukaAI handle it?
+        // AgentTaskQueue is updated every frame.
+        // We can add a timer for re-pathing.
+
+        this.phaseTimer += delta;
+        if (this.phaseTimer > 1.0) {
+          // Re-path every 1s
+          this.phaseTimer = 0;
+          this.hasSetPath = false;
+        }
+
+        return { type: "NONE" };
+      }
+
       default:
         return { type: "NONE" };
     }
@@ -362,6 +425,11 @@ export class AgentTaskQueue {
 
         // Skip walk-to-source, go directly to walk-to-dest
         this.phase = "WALK_TO_DEST";
+        break;
+      }
+
+      case "FOLLOW_PLAYER": {
+        this.phase = "FOLLOW_PLAYER"; // Use the new phase directly
         break;
       }
     }

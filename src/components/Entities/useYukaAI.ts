@@ -100,7 +100,19 @@ export function useYukaAI(
     obstacles.forEach((ob) => {
       const ent = new YUKA.GameEntity();
       ent.position.copy(ob.position as unknown as YUKA.Vector3);
-      ent.boundingRadius = ob.radius;
+
+      // FIX: If radius is 0 but it's an OBB (furniture), calculate enclosing sphere radius
+      if (ob.halfExtents && (ob.radius === 0 || !ob.radius)) {
+        // Use XZ plane diagonal for radius (ignore Y/height for navigation)
+        // box diagonal = sqrt(x*x + z*z)
+        const r = Math.sqrt(
+          ob.halfExtents.x * ob.halfExtents.x +
+            ob.halfExtents.z * ob.halfExtents.z,
+        );
+        ent.boundingRadius = r + 0.5; // Add small padding
+      } else {
+        ent.boundingRadius = ob.radius;
+      }
       yukaObstacles.push(ent);
     });
     const obstacleAvoidance = new YUKA.ObstacleAvoidanceBehavior(yukaObstacles);
@@ -167,7 +179,18 @@ export function useYukaAI(
       vehicle.position.y,
       vehicle.position.z,
     );
-    const steeringCmd: SteeringCommand = taskQueue.update(delta, vehiclePos);
+
+    // Get player position if available
+    let playerPos: THREE.Vector3 | undefined;
+    if (playerRef.current) {
+      playerPos = playerRef.current.position;
+    }
+
+    const steeringCmd: SteeringCommand = taskQueue.update(
+      delta,
+      vehiclePos,
+      playerPos,
+    );
     const hasManualTask = taskQueue.isActive();
 
     // Apply steering command from task queue

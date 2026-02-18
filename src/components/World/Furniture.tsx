@@ -349,6 +349,13 @@ export function ConferenceTable({
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((state) => state.addCollidableMesh);
+  const removeCollidableMesh = useGameStore(
+    (state) => state.removeCollidableMesh,
+  );
+
+  const groupRef = useRef<THREE.Group>(null);
+
   const posVec = useMemo(
     () => new THREE.Vector3(...position),
     [position[0], position[1], position[2]],
@@ -387,10 +394,32 @@ export function ConferenceTable({
 
     const obs = [top, ...legs];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+
+    if (groupRef.current) {
+      addCollidableMesh(groupRef.current);
+    }
+
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) {
+        removeCollidableMesh(groupRef.current.uuid);
+      }
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
-    <group position={position} rotation={[0, rotation, 0]} userData={userData}>
+    <group
+      ref={groupRef}
+      position={position}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
       {/* Main Rectangular Table Top - Visual */}
       <mesh ref={surfaceRef} position={[0, 4, 0]} castShadow receiveShadow>
         <boxGeometry args={[40, 0.8, 20]} />
@@ -466,6 +495,13 @@ export function OfficeDesk({
   // No useEffect shift needed - we position the group directly
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((state) => state.addCollidableMesh);
+  const removeCollidableMesh = useGameStore(
+    (state) => state.removeCollidableMesh,
+  );
+
+  const groupRef = useRef<THREE.Group>(null);
+
   const posVec = useMemo(
     () => new THREE.Vector3(...position),
     [position[0], position[1], position[2]],
@@ -502,10 +538,28 @@ export function OfficeDesk({
 
     const obs = [top, ...cabinets];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+
+    if (groupRef.current) {
+      addCollidableMesh(groupRef.current);
+    }
+
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) {
+        removeCollidableMesh(groupRef.current.uuid);
+      }
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
+      ref={groupRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}

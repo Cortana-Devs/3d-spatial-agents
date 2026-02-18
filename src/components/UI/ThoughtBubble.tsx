@@ -18,7 +18,10 @@ interface ThoughtLog {
   type: "THOUGHT" | "ACTION";
 }
 
-export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain, isInspected }) => {
+export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({
+  brain,
+  isInspected,
+}) => {
   const [currentThought, setCurrentThought] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -104,7 +107,7 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({ brain, isInspected
                 <Cpu size={14} color="#10b981" />
               )}
               <span className={styles.statusText}>
-                {isThinking ? "PROCESSING" : "NEURAL LINK"}
+                {isThinking ? "PROCESSING" : `NEURAL LINK [${brain.id}]`}
               </span>
             </div>
 
