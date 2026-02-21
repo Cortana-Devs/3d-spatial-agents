@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import AIManager from "../Systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
+import { useProceduralGait } from "./useProceduralGait";
 
 import { ClientBrain } from "../Systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-core";
@@ -53,8 +54,14 @@ export function useYukaAI(
   const toSafetyRef = useRef(new THREE.Vector3());
 
   // Animation smoothing
-  const smoothSpeed = useRef(0);
-  const walkTime = useRef(0);
+  const {
+    update: updateGait,
+    walkTime,
+    smoothSpeed,
+  } = useProceduralGait(joints, {
+    leanFactor: 0.08,
+    bankFactor: 0.05,
+  });
 
   // AI Brain
   const brainRef = useRef(new ClientBrain(id));
@@ -75,7 +82,7 @@ export function useYukaAI(
     // Create Yuka Vehicle
     const vehicle = new YUKA.Vehicle();
     (vehicle as any).id = id;
-    vehicle.maxSpeed = 5.5; // Natural Brisk Walk (was 12.0)
+    vehicle.maxSpeed = 5.5; // Adjusted higher as per user request
     vehicle.maxForce = 4.0; // Heavy Inertia for smooth turns (was 10.0)
     vehicle.mass = 2.0;
     vehicle.boundingRadius = 1.0; // TUNED: 1.0 fits the robot footprint perfectly (was 2.0)
@@ -514,30 +521,23 @@ export function useYukaAI(
     }
 
     // --- ANIMATION UPDATE (Procedural) ---
-    const rawSpeed = vehicle.velocity.length();
-    // Heavy smoothing for animation speed to remove jitter
-    smoothSpeed.current = THREE.MathUtils.lerp(
-      smoothSpeed.current,
-      rawSpeed,
-      0.05,
-    );
+    // Apply internal procedural gait engine. We must use real delta, NOT the 15x physical simulation dt.
+    const realDelta = Math.min(delta, 0.1);
+    updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta);
+
     const animSpeed = smoothSpeed.current;
 
-    let newState: "Idle" | "Walk" | "Run" | "Wave" = "Idle";
+    // Stop waving/chatting immediately if the agent starts moving (e.g. gets a new task)
+    if (animSpeed > 0.1) {
+      if (greetingState.current === "WAVING") greetingState.current = "NONE";
+      if (socialState.current === "CHATTING") socialState.current = "COOLDOWN";
+    }
 
+    let newState: "Idle" | "Walk" | "Run" | "Wave" = "Idle";
     if (greetingState.current === "WAVING") newState = "Wave";
     else if (animSpeed > 0.1) newState = "Walk";
 
     if (newState !== animationState) setAnimationState(newState);
-
-    // --- GAIT SYNC (Distance Based) ---
-    // Prevent Slipping: Walk cycle advances based on actual distance covered.
-    // Stride Length approx 0.7m.
-    // Cycle is 0 to 2PI (one full stride L+R).
-    // So 2PI = 1.4m (approx).
-    const strideLength = 1.4;
-    const distTraveled = animSpeed * dt;
-    walkTime.current += (distTraveled / strideLength) * Math.PI * 2;
 
     const j = joints.current;
     if (
@@ -616,37 +616,24 @@ export function useYukaAI(
         }
       }
 
-      // 2. Natural Posture & Sway (Refined)
-      const t = state.clock.elapsedTime;
-      const breathe = Math.sin(t * 1.5) * 0.02;
-      const sway = Math.sin(t * 0.8) * 0.02;
-
-      // 2. Leaning (Inertia & Speed)
-      // Lean forward when moving fast
-      const forwardLean = Math.min(animSpeed * 0.08, 0.3);
-      j.torso.rotation.x = THREE.MathUtils.lerp(
-        j.torso.rotation.x,
-        forwardLean,
-        0.05,
-      );
-
-      // 3. Banking (Turn Leaning)
-      // Calculate turn rate (delta rotation Y)
-      // Since we don't track prevRot easily here, use a lateral Sway based on walk cycle
-      // Real banking requires tracking deltaRot, but simple sway helps realism.
-      const walkSway = Math.sin(walkTime.current) * 0.05 * (animSpeed / 5.0);
-      j.torso.rotation.z = THREE.MathUtils.lerp(
-        j.torso.rotation.z,
-        sway + walkSway,
-        0.05,
-      );
-
       if (greetingState.current === "WAVING") {
         const waveSpeed = 12;
         const wave = Math.sin(state.clock.elapsedTime * waveSpeed) * 0.4;
+
+        // Override arm rotation for waving
+        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
+          j.rightArm.shoulder.rotation.x,
+          0,
+          0.1,
+        );
         j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.z,
           -2.5 + wave,
+          0.1,
+        );
+        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
+          j.rightArm.elbow.rotation.x,
+          0,
           0.1,
         );
         j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
@@ -654,87 +641,6 @@ export function useYukaAI(
           -0.8 + wave * 0.2,
           0.1,
         );
-
-        // Reset others
-        j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.leftArm.shoulder.rotation.x,
-          0,
-          lerpFactor,
-        );
-      } else {
-        // --- GAIT ENGINE ---
-        if (animSpeed < 0.1) {
-          // IDLE
-          j.torso.position.y = breathe;
-          // Neck is handled by Head Tracking block above
-
-          // Reset limbs
-          const f = 0.1;
-          j.leftHip.rotation.x = THREE.MathUtils.lerp(
-            j.leftHip.rotation.x,
-            0,
-            f,
-          );
-          j.rightHip.rotation.x = THREE.MathUtils.lerp(
-            j.rightHip.rotation.x,
-            0,
-            f,
-          );
-          j.leftKnee.rotation.x = THREE.MathUtils.lerp(
-            j.leftKnee.rotation.x,
-            0,
-            f,
-          );
-          j.rightKnee.rotation.x = THREE.MathUtils.lerp(
-            j.rightKnee.rotation.x,
-            0,
-            f,
-          );
-          j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-            j.leftArm.shoulder.rotation.x,
-            0,
-            f,
-          );
-          j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-            j.rightArm.shoulder.rotation.x,
-            0,
-            f,
-          );
-        } else {
-          // MOVING (Walk Cycle)
-          const legAmp = 0.6;
-          const kneeAmp = 0.4;
-          const armAmp = 0.7;
-
-          // Hips (Main Drive)
-          j.leftHip.rotation.x = Math.sin(walkTime.current) * legAmp;
-          j.rightHip.rotation.x = Math.sin(walkTime.current + Math.PI) * legAmp;
-
-          // Knees (Phase Delayed for natural lift)
-          // Knee bends when leg swings forward (lift) AND when pushing off?
-          // Simple natural walk: Knee bends on return (swing phase).
-          const leftKneePhase = Math.cos(walkTime.current);
-          const rightKneePhase = Math.cos(walkTime.current + Math.PI);
-
-          j.leftKnee.rotation.x = Math.max(0, leftKneePhase * kneeAmp + 0.1);
-          j.rightKnee.rotation.x = Math.max(0, rightKneePhase * kneeAmp + 0.1);
-
-          // Arms (Opposite to Legs, Phase Shifted slightly)
-          j.leftArm.shoulder.rotation.x =
-            Math.sin(walkTime.current + Math.PI - 0.2) * armAmp;
-          j.rightArm.shoulder.rotation.x =
-            Math.sin(walkTime.current - 0.2) * armAmp;
-
-          // Elbows (Dynamic Bend)
-          j.leftArm.elbow.rotation.x =
-            -0.5 - Math.max(0, Math.sin(walkTime.current + Math.PI)) * 0.5;
-          j.rightArm.elbow.rotation.x =
-            -0.5 - Math.max(0, Math.sin(walkTime.current)) * 0.5;
-
-          // Vertical Bounce (Double Frequency)
-          const bounce = Math.abs(Math.sin(walkTime.current)) * 0.08;
-          j.torso.position.y = bounce + 0.1;
-        }
       }
     }
 

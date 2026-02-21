@@ -79,16 +79,10 @@ export function useRobotController(
           inputRef.current.jump = true;
           break;
         case keyBindings.sprint:
+        case "ShiftRight":
+        case "ShiftLeft":
           inputRef.current.sneak = true;
-          break; // Sprint maps to 'sneak' internally for now? Or vice versa?
-        // Note: Original code mapped Shift to 'sneak'. If user wants 'Sprint', we should clarify.
-        // Assuming 'sneak' in state is actually used for sprinting based on speed constants (12 vs 5).
-        // Wait, walkSpeed=12, sneakSpeed=5. So Shift makes you SLOWER?
-        // "case 'ShiftLeft': case 'ShiftRight': inputRef.current.sneak = true; break;"
-        // And "const currentSpeed = s.isSneaking ? sneakSpeed : walkSpeed;"
-        // So holding Shift makes you sneak (slower).
-        // The prompt asked for "Sprint", but the code implements Sneak.
-        // I will map 'sprint' binding to 'sneak' input for now to preserve behavior, but label it as 'Sneak' in UI if possible, or just keep it as is.
+          break;
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -109,6 +103,8 @@ export function useRobotController(
           inputRef.current.jump = false;
           break;
         case keyBindings.sprint:
+        case "ShiftRight":
+        case "ShiftLeft":
           inputRef.current.sneak = false;
           break;
       }
@@ -122,9 +118,9 @@ export function useRobotController(
   }, [keyBindings]);
 
   // Physics Constants
-  const walkSpeed = 12.0;
-  const runSpeed = 20.0; // Faster than walk
-  const sneakSpeed = 5.0; // Optional, maybe Ctrl?
+  const walkSpeed = 3.5;
+  const runSpeed = 8.5; // Faster sprint for better contrast
+  const sneakSpeed = 1.5;
   const jumpForce = 20.0;
   const gravity = -50.0;
   const radius = 0.6; // TUNED: 0.6 perfectly fits the robot model footprint (was 0.8)
