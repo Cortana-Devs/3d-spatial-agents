@@ -219,10 +219,12 @@ class NavigationNetwork {
     }
 
     // Convert grid path to world positions — skip first cell (agent is already there)
+    // Use the agent's current Y so YUKA doesn't generate vertical steering forces
+    const pathY = from.y;
     const worldPath: THREE.Vector3[] = [];
     for (let i = 1; i < gridPath.length; i++) {
       const wp = this.gridToWorld(gridPath[i].col, gridPath[i].row);
-      worldPath.push(new THREE.Vector3(wp.x, 0, wp.z));
+      worldPath.push(new THREE.Vector3(wp.x, pathY, wp.z));
     }
 
     // Smooth: remove unnecessary intermediate waypoints using line-of-sight

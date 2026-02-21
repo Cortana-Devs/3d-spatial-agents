@@ -399,7 +399,8 @@ export function useYukaAI(
     }
 
     // --- PHYSICS (Gravity / Ground Detection) ---
-    if (collidableMeshes.length > 0 && frameRef.current % 2 === 0) {
+    // FIX: Runs every frame (was every-other-frame, causing missed ground + free-fall)
+    if (collidableMeshes.length > 0) {
       const raycaster = raycasterRef.current;
       const rayOrigin = rayOriginRef.current;
 
@@ -435,13 +436,17 @@ export function useYukaAI(
             0.5,
           );
         } else {
-          // Deep Water (Sink)
-          vehicle.position.y -= 5.0 * dt * 2;
+          // Deep Water (Sink) — FIX: use raw delta, NOT dt (was 15x too fast)
+          vehicle.position.y -= 5.0 * delta * 2;
         }
       } else {
-        // Void Check - if we are HIGH up, fall fast. If close to 0, maybe we just missed a raycast?
-        // Fall logic
-        vehicle.position.y -= 10.0 * dt;
+        // Void fall — FIX: use raw delta, NOT dt (was 15x too fast)
+        vehicle.position.y -= 10.0 * delta;
+      }
+
+      // Safety clamp: if agent fell too far below floor, snap back
+      if (vehicle.position.y < -5) {
+        vehicle.position.y = 0;
       }
     }
 
