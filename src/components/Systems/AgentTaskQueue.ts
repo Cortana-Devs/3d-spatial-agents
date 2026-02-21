@@ -60,6 +60,15 @@ export class AgentTaskQueue {
   // Path tracking — avoid re-pathfinding every frame
   private hasSetPath: boolean = false;
 
+  // Stuck detection + periodic re-path
+  private stuckTimer: number = 0;
+  private repathTimer: number = 0;
+  private lastPos: THREE.Vector3 = new THREE.Vector3();
+  private lastFollowTarget: THREE.Vector3 = new THREE.Vector3();
+  private static readonly STUCK_THRESHOLD = 3.0; // Seconds before re-path
+  private static readonly REPATH_INTERVAL = 5.0; // Periodic re-path interval
+  private static readonly STUCK_SPEED = 0.3; // Below this = stuck
+
   // Distances for phase transitions
   private static readonly ARRIVAL_DIST = 4.0; // Switch to fine approach
   private static readonly INTERACT_DIST = 3.0; // Close enough to pick/place
@@ -100,6 +109,8 @@ export class AgentTaskQueue {
     this.activeItemId = null;
     this.activeDestAreaId = null;
     this.hasSetPath = false;
+    this.stuckTimer = 0;
+    this.repathTimer = 0;
   }
 
   // --- MAIN UPDATE (called every frame from useYukaAI) ---
@@ -173,7 +184,32 @@ export class AgentTaskQueue {
         if (!this.hasSetPath) {
           const path = nav.findPath(vehiclePos, targetPos);
           this.hasSetPath = true;
+          this.stuckTimer = 0;
+          this.repathTimer = 0;
+          this.lastPos.copy(vehiclePos);
           return { type: "FOLLOW_PATH", path };
+        }
+
+        // Stuck detection: if barely moving for STUCK_THRESHOLD seconds, re-path
+        this.repathTimer += delta;
+        const movedDist = vehiclePos.distanceTo(this.lastPos);
+        if (movedDist < AgentTaskQueue.STUCK_SPEED * delta) {
+          this.stuckTimer += delta;
+        } else {
+          this.stuckTimer = 0;
+          this.lastPos.copy(vehiclePos);
+        }
+
+        if (
+          this.stuckTimer > AgentTaskQueue.STUCK_THRESHOLD ||
+          this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
+        ) {
+          console.log(
+            `[AgentTaskQueue:${this.agentId}] Re-pathing (stuck=${this.stuckTimer.toFixed(1)}s, elapsed=${this.repathTimer.toFixed(1)}s)`,
+          );
+          this.hasSetPath = false;
+          this.stuckTimer = 0;
+          this.repathTimer = 0;
         }
 
         return { type: "NONE" }; // Keep following existing path
@@ -250,7 +286,29 @@ export class AgentTaskQueue {
         if (!this.hasSetPath) {
           const path = nav.findPath(vehiclePos, area.position);
           this.hasSetPath = true;
+          this.stuckTimer = 0;
+          this.repathTimer = 0;
+          this.lastPos.copy(vehiclePos);
           return { type: "FOLLOW_PATH", path };
+        }
+
+        // Stuck detection (same logic as WALK_TO_SOURCE)
+        this.repathTimer += delta;
+        const movedDistD = vehiclePos.distanceTo(this.lastPos);
+        if (movedDistD < AgentTaskQueue.STUCK_SPEED * delta) {
+          this.stuckTimer += delta;
+        } else {
+          this.stuckTimer = 0;
+          this.lastPos.copy(vehiclePos);
+        }
+
+        if (
+          this.stuckTimer > AgentTaskQueue.STUCK_THRESHOLD ||
+          this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
+        ) {
+          this.hasSetPath = false;
+          this.stuckTimer = 0;
+          this.repathTimer = 0;
         }
 
         return { type: "NONE" }; // Keep following existing path
@@ -288,7 +346,6 @@ export class AgentTaskQueue {
       // ------------------------------------------------------------------
       case "FOLLOW_PLAYER": {
         if (!playerPos) {
-          // No player position available -> Completed or Idle?
           console.warn(
             `[AgentTaskQueue:${this.agentId}] Player position unknown`,
           );
@@ -297,44 +354,24 @@ export class AgentTaskQueue {
         }
 
         const distToPlayer = vehiclePos.distanceTo(playerPos);
-        const stopDistance = 2.5; // Stop a bit away from player
+        const stopDistance = 2.5;
 
         if (distToPlayer < stopDistance) {
-          // Close enough, stop but keep looking/waiting (don't complete task)
+          // Close enough, stop but keep task active
+          this.hasSetPath = false; // Reset so we re-path when player moves away
           return { type: "STOP" };
         }
 
-        // Re-pathfind occasionally or if target moved significantly?
-        // For simplicity, re-pathfind if we don't have a path or if it's been a while.
-        // Actually, let's use a simple distance check to re-pathfind.
-        // Or just let "FOLLOW_PATH" handle it until we reach near-end, then re-path.
+        // Re-path if: no path yet, player moved >5 units, or timer expired
+        const playerMoved = playerPos.distanceTo(this.lastFollowTarget);
+        this.phaseTimer += delta;
 
-        // Simpler approach:
-        // If we are far, pathfind to player.
-        // If we are close, we stop.
-        // We need to update path as player moves.
-
-        // Let's rely on hasSetPath reset.
-        // But we need to reset path if player moves too much from our current target.
-        // We can store lastTargetPos.
-
-        if (!this.hasSetPath) {
+        if (!this.hasSetPath || playerMoved > 5.0 || this.phaseTimer > 1.5) {
           const path = nav.findPath(vehiclePos, playerPos);
           this.hasSetPath = true;
-          return { type: "FOLLOW_PATH", path };
-        }
-
-        // If player moved significantly (e.g. > 2m) from where we last pathfound to?
-        // We don't have easy access to "last path target" here without storing state.
-        // Let's just re-path every few seconds? Or let useYukaAI handle it?
-        // AgentTaskQueue is updated every frame.
-        // We can add a timer for re-pathing.
-
-        this.phaseTimer += delta;
-        if (this.phaseTimer > 1.0) {
-          // Re-path every 1s
           this.phaseTimer = 0;
-          this.hasSetPath = false;
+          this.lastFollowTarget.copy(playerPos);
+          return { type: "FOLLOW_PATH", path };
         }
 
         return { type: "NONE" };

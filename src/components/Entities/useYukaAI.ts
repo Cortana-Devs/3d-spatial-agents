@@ -103,20 +103,20 @@ export function useYukaAI(
     // --- BEHAVIORS ---
 
     // 1. Obstacle Avoidance
+    // --- Rebuild navigation grid whenever obstacles change ---
+    NavigationNetwork.getInstance().rebuildGrid(obstacles);
+
     const yukaObstacles: YUKA.GameEntity[] = [];
     obstacles.forEach((ob) => {
       const ent = new YUKA.GameEntity();
       ent.position.copy(ob.position as unknown as YUKA.Vector3);
 
-      // FIX: If radius is 0 but it's an OBB (furniture), calculate enclosing sphere radius
+      // Conservative bounding radius: use the SMALLER of the two XZ half-extents
+      // plus padding. This avoids the old bug where the full XZ diagonal created
+      // a massively oversized exclusion sphere for long rectangular furniture.
       if (ob.halfExtents && (ob.radius === 0 || !ob.radius)) {
-        // Use XZ plane diagonal for radius (ignore Y/height for navigation)
-        // box diagonal = sqrt(x*x + z*z)
-        const r = Math.sqrt(
-          ob.halfExtents.x * ob.halfExtents.x +
-            ob.halfExtents.z * ob.halfExtents.z,
-        );
-        ent.boundingRadius = r + 0.5; // Add small padding
+        const r = Math.max(ob.halfExtents.x, ob.halfExtents.z) + 0.3;
+        ent.boundingRadius = r;
       } else {
         ent.boundingRadius = ob.radius;
       }
@@ -129,7 +129,7 @@ export function useYukaAI(
     // 2. Follow Path (Primary Movement)
     const followPath = new YUKA.FollowPathBehavior();
     followPath.active = false;
-    followPath.nextWaypointDistance = 2.0;
+    followPath.nextWaypointDistance = 0.8; // Tight threshold to prevent corner-cutting at doorways
     vehicle.steering.add(followPath); // Index 1
 
     // 3. Seek (Legacy / Short distance)
@@ -238,6 +238,8 @@ export function useYukaAI(
     }
 
     // --- WALL AVOIDANCE (Multi-Ray + Sliding) ---
+    // FIX: Uses raw `delta` instead of `dt` (which was delta*15, causing 15x overstrength)
+    // FIX: Clamps total push magnitude to prevent corner-squeeze teleports
     if (collidableMeshes.length > 0) {
       const speed = vehicle.velocity.length();
       if (speed > 0.1) {
@@ -261,18 +263,19 @@ export function useYukaAI(
           vehicle.position.z,
         );
 
-        // Check all feelers
+        // Accumulate total push to clamp later
+        let totalPushX = 0;
+        let totalPushZ = 0;
+
         for (const dir of directions) {
           raycaster.set(rayOrigin, dir);
-          raycaster.far = 3.0; // Increased range
+          raycaster.far = 3.0;
 
           const hits = raycaster.intersectObjects(collidableMeshes, true);
           if (hits.length > 0) {
             const hit = hits[0];
             const dist = hit.distance;
 
-            // Normal at hit point (approximate if not provided, but usually face.normal)
-            // If it's a box mesh, face normal is good.
             let normal = new THREE.Vector3();
             if (hit.face) {
               normal
@@ -280,7 +283,6 @@ export function useYukaAI(
                 .transformDirection(hit.object.matrixWorld)
                 .normalize();
             } else {
-              // Fallback: vector from hit to agent
               normal
                 .subVectors(
                   vehicle.position as unknown as THREE.Vector3,
@@ -290,27 +292,23 @@ export function useYukaAI(
               normal.y = 0;
             }
 
-            // 1. Repulsion force (Soft)
+            // 1. Repulsion force — use raw delta, NOT dt (=delta*15)
             const pushStrength = (3.0 - dist) * 40.0;
-            vehicle.velocity.x += normal.x * pushStrength * dt;
-            vehicle.velocity.z += normal.z * pushStrength * dt;
+            totalPushX += normal.x * pushStrength * delta;
+            totalPushZ += normal.z * pushStrength * delta;
 
-            // 2. Hard Velocity Slide (If very close)
-            // Project velocity onto the wall plane to slide
+            // 2. Hard Velocity Slide (very close to wall)
             if (dist < 1.5) {
               const vel = vehicle.velocity as unknown as THREE.Vector3;
-              // v_new = v - (v . n) * n
               const dot = vel.dot(normal);
               if (dot < 0) {
-                // Only if moving INTO the wall
                 vel.x -= normal.x * dot;
                 vel.z -= normal.z * dot;
-                // Friction
                 vel.multiplyScalar(0.9);
               }
             }
 
-            // 3. Hard Position Clamp (If clipping)
+            // 3. Hard Position Clamp (clipping)
             if (dist < 0.8) {
               const pushOut = normal.multiplyScalar(0.8 - dist);
               vehicle.position.x += pushOut.x;
@@ -318,6 +316,20 @@ export function useYukaAI(
             }
           }
         }
+
+        // Clamp total push magnitude to prevent teleports
+        const pushMag = Math.sqrt(
+          totalPushX * totalPushX + totalPushZ * totalPushZ,
+        );
+        const maxPush = 15.0;
+        if (pushMag > maxPush) {
+          const scale = maxPush / pushMag;
+          totalPushX *= scale;
+          totalPushZ *= scale;
+        }
+        vehicle.velocity.x += totalPushX;
+        vehicle.velocity.z += totalPushZ;
+
         raycaster.far = Infinity;
       }
     }
