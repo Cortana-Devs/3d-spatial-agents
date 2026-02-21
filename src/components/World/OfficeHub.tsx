@@ -17,7 +17,6 @@ import {
 } from "./Furniture";
 import { Elevator } from "./Elevator";
 import {
-  Printer,
   FireExtinguisher,
   FileFolder,
   Whiteboard,
@@ -695,26 +694,7 @@ export default function OfficeHub() {
                   name: `Office Desk ${String.fromCharCode(65 + 6 + r * 3 + c)}`,
                   interactable: true,
                 }}
-                initialItems={
-                  r === 0 && c === 0 ? ["printer-office"] : undefined
-                }
-              >
-                {/* Objects on desk surface (relative to desk position) */}
-                {r === 0 && c === 0 && (
-                  <Printer
-                    position={[4.4, 4, 0]}
-                    rotation={Math.PI / 2}
-                    userData={{
-                      type: "Prop",
-                      id: "printer-office",
-                      name: "Office Printer",
-                      interactable: true,
-                      description: "A standard office printer.",
-                      objectType: "printer",
-                    }}
-                  />
-                )}
-              </OfficeDesk>
+              />
               <OfficeChair
                 id={`chair-r-${r}-${c}`}
                 position={[

@@ -473,29 +473,41 @@ export function useRobotController(
       // Helper to add placing area rows
       const addPlacingAreaRows = () => {
         if (nearbyPlacingAreas.length > 0) {
-          nearbyPlacingAreas.forEach((area) => {
-            const cells: any[] = [];
+          const areaGroups = new Map<string, any>();
 
-            if (!area.currentItem) {
-              cells.push({
-                id: `slot-${area.id}`,
-                label: "Empty Slot",
-                type: "slot",
-                icon: "⬜",
-                meta: {
-                  areaId: area.id,
-                  areaName: area.name,
-                  offset: 0,
-                },
+          nearbyPlacingAreas.forEach((area) => {
+            if (area.currentItem) return;
+
+            const gId = area.groupId || area.id;
+            const gName = area.groupName || area.name;
+
+            if (!areaGroups.has(gId)) {
+              areaGroups.set(gId, {
+                id: gId,
+                label: gName,
+                cells: [],
               });
             }
 
-            if (cells.length > 0) {
-              grid.push({
-                id: area.id,
-                label: area.name,
-                cells: cells,
-              });
+            areaGroups.get(gId).cells.push({
+              id: `slot-${area.id}`,
+              label: "Empty Slot",
+              type: "slot",
+              icon: "⬜",
+              meta: {
+                areaId: area.id,
+                areaName: area.name,
+                offset: area.slotIndex || 0,
+              },
+            });
+          });
+
+          areaGroups.forEach((group) => {
+            if (group.cells.length > 0) {
+              group.cells.sort(
+                (a: any, b: any) => a.meta.offset - b.meta.offset,
+              );
+              grid.push(group);
             }
           });
         }

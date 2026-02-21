@@ -7,7 +7,6 @@ export interface WorldObject {
     | "file"
     | "laptop"
     | "pendrive"
-    | "printer"
     | "coffeecup"
     | "generic"
     | "sofa"
@@ -28,6 +27,9 @@ export interface WorldObject {
 export interface PlacingArea {
   id: string;
   name: string;
+  groupId?: string;
+  groupName?: string;
+  slotIndex?: number;
   position: THREE.Vector3;
   rotation: THREE.Quaternion; // world rotation of surface
   currentItem: string | null; // ID of placed WorldObject or null for empty slot

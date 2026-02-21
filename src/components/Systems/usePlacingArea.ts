@@ -56,6 +56,9 @@ export function usePlacingArea(
       InteractableRegistry.getInstance().registerPlacingArea({
         id: slotId,
         name: slotName,
+        groupId: areaData.id,
+        groupName: areaData.name,
+        slotIndex: i,
         position: slotPos,
         rotation: quat,
         currentItem,
