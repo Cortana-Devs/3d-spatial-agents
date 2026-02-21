@@ -343,17 +343,17 @@ export default function OfficeHub() {
       "Wall-Manager-North",
     );
     // Wall-East at X=-30 from Z=10 to Z=40
-    // Door gap: Z=25 (width 12) -> Gap 19 to 31
+    // Door gap: Z=25 (width 18) -> Gap 16 to 34
     createWall(
       hubCenter.x - 30,
       hubCenter.z + 10,
       hubCenter.x - 30,
-      hubCenter.z + 19,
+      hubCenter.z + 16,
       "Wall-Manager-East-1",
     );
     createWall(
       hubCenter.x - 30,
-      hubCenter.z + 31,
+      hubCenter.z + 34,
       hubCenter.x - 30,
       lobbyDividerZ,
       "Wall-Manager-East-2",
@@ -369,17 +369,17 @@ export default function OfficeHub() {
       "Wall-Break-North",
     );
     // Wall-West at X=30 from Z=10 to Z=40
-    // Narrow Door gap: Z=25 (width 8) -> Gap 21 to 29
+    // Door gap: Z=25 (width 18) -> Gap 16 to 34
     createWall(
       hubCenter.x + 30,
       hubCenter.z + 10,
       hubCenter.x + 30,
-      hubCenter.z + 21,
+      hubCenter.z + 16,
       "Wall-Break-West-1",
     );
     createWall(
       hubCenter.x + 30,
-      hubCenter.z + 29,
+      hubCenter.z + 34,
       hubCenter.x + 30,
       lobbyDividerZ,
       "Wall-Break-West-2",
@@ -1148,7 +1148,6 @@ export default function OfficeHub() {
         position={[hubCenter.x - 30, hubCenter.y, hubCenter.z + 25]}
         rotation={Math.PI / 2}
         label="Manager"
-        width={12}
         userData={{
           type: "Furniture",
           id: "door-manager",
@@ -1160,7 +1159,6 @@ export default function OfficeHub() {
         position={[hubCenter.x + 30, hubCenter.y, hubCenter.z + 25]}
         rotation={-Math.PI / 2}
         label="Break"
-        width={8} // Narrow Passage
         userData={{
           type: "Furniture",
           id: "door-break",

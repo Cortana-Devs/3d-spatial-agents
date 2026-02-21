@@ -621,13 +621,13 @@ export function OfficeDesk({
           id={userData?.id ? `${userData.id}-pc-slot` : "office-desk-pc-slot"}
           name="PC Slot"
           position={[0, 0, 0]}
+          initialItem={
+            userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"
+          }
         />
 
-        {/* Default Desktop PC if slot empty? 
-            For now, let's just place it. 
-            Ideally, we check if something is in the slot.
-            But simplified: we just render the PC here initially.
-            It will register itself.
+        {/* Default Desktop PC if slot empty?
+            For now, let's just place it.
         */}
         <DesktopPC
           id={userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"}
@@ -827,10 +827,12 @@ function PCPlacingSlot({
   id,
   name,
   position,
+  initialItem,
 }: {
   id: string;
   name: string;
   position: [number, number, number];
+  initialItem?: string;
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
   usePlacingArea(surfaceRef, {
@@ -838,7 +840,7 @@ function PCPlacingSlot({
     name,
     capacity: 1,
     dimensions: [5, 0.1, 3], // Approximate size of PC footprint area
-    // allowedTypes: ["pc"], // Removed: Generic Slot
+    initialItems: initialItem ? [initialItem] : undefined,
   });
 
   return (
@@ -1016,13 +1018,53 @@ export function OfficeDoor({
     }
   }, [interactionTarget, id, setInteractionTarget]);
 
-  // Manage Collision
-  // Manage Collision
+  // Manage Collision (Placing Obstacles for AI & Pathfinding)
   useEffect(() => {
-    // Single Box Obstacle for Door
-    // Width = doorWidth, Height = 29, Thickness = 2 (approx)
-    // Only exists when !isOpen
+    // 1. Static Pillars
+    // They are centered at local X = -8 and +8, width 2 (halfX = 1)
+    const rotQ = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotation,
+    );
+
+    const leftPillar = {
+      position: new THREE.Vector3(-8, 15, 0).applyQuaternion(rotQ).add(posVec),
+      radius: 0,
+      type: "wall" as const,
+      halfExtents: new THREE.Vector3(1, 15, 1.1),
+      rotation,
+    };
+    const rightPillar = {
+      position: new THREE.Vector3(8, 15, 0).applyQuaternion(rotQ).add(posVec),
+      radius: 0,
+      type: "wall" as const,
+      halfExtents: new THREE.Vector3(1, 15, 1.1),
+      rotation,
+    };
+
+    const staticObs = [leftPillar, rightPillar];
+    addObstacles(staticObs);
+    // REMOVED addCollidableMesh from groupRef to prevent downward raycasts snapping player to the roof.
+    // We only need the obstacle physics, not the floor-finding raycast.
+
+    // Actually, we DO need `addCollidableMesh` so the player can click the door to open it!
+    // But `groupRef` includes the top header and the sliding glass.
+    // The player's raycast for movement targets `collidableMeshes`.
+    // Wait, the player click interaction uses `interactionTarget`, which relies on `addInteractables`.
+    // The user's interaction raycaster checks `interactables`, not `collidableMeshes`!
+    // `collidableMeshes` is ONLY for the robot AI raycasting and player Y-snapping!
+    // Therefore, Doors should NEVER be in `collidableMeshes` unless we want robots to raycast against them.
+    // We will leave `addCollidableMesh` entirely OUT for the door.
+
+    return () => {
+      removeObstacles(staticObs);
+    };
+  }, [posVec, rotation, addObstacles, removeObstacles]);
+
+  // Manage Dynamic Collision (Sliding Pane)
+  useEffect(() => {
     if (!isOpen) {
+      // Represents the sliding glass door pane (width = 14)
       const obstacle = {
         position: posVec.clone().add(new THREE.Vector3(0, 14.5, 0)), // Centered vertically
         radius: 0,
@@ -1031,22 +1073,12 @@ export function OfficeDoor({
         rotation,
       };
       addObstacles([obstacle]);
-      if (groupRef.current) addCollidableMesh(groupRef.current);
+
       return () => {
         removeObstacles([obstacle]);
-        if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
       };
     }
-  }, [
-    isOpen,
-    posVec,
-    rotation,
-    addObstacles,
-    removeObstacles,
-    doorWidth,
-    addCollidableMesh,
-    removeCollidableMesh,
-  ]);
+  }, [isOpen, posVec, rotation, addObstacles, removeObstacles, doorWidth]);
 
   // Animation (Vertical Slide)
   useFrame((state, delta) => {

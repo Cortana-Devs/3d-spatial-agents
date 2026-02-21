@@ -174,9 +174,7 @@ export function TaskAssignmentPanel() {
   // Get placing areas with room
   const placingAreas = useMemo(() => {
     const reg = InteractableRegistry.getInstance();
-    return reg
-      .getAllPlacingAreas()
-      .filter((a) => a.currentItems.some((item) => !item));
+    return reg.getAllPlacingAreas().filter((a) => !a.currentItem);
   }, [step]);
 
   if (!isOpen) return null;
@@ -401,9 +399,7 @@ export function TaskAssignmentPanel() {
             </p>
           ) : (
             placingAreas.map((area) => {
-              const usedSlots = area.currentItems.filter(
-                (i: string | null) => i !== null,
-              ).length;
+              const usedSlots = area.currentItem ? 1 : 0;
               return (
                 <div
                   key={area.id}
@@ -439,7 +435,7 @@ export function TaskAssignmentPanel() {
                   <div>
                     <div>{area.name}</div>
                     <div style={{ fontSize: "11px", color: "#6080aa" }}>
-                      {usedSlots}/{area.capacity} slots used
+                      {usedSlots}/1 slots used
                     </div>
                   </div>
                 </div>

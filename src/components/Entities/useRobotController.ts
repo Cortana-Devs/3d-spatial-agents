@@ -280,7 +280,6 @@ export function useRobotController(
             const success = InteractableRegistry.getInstance().placeItemAt(
               selectedItem.id,
               areaId,
-              slotIdx,
             );
 
             if (success) {
@@ -415,7 +414,7 @@ export function useRobotController(
 
       const nearbyPlacingAreas = InteractableRegistry.getInstance()
         .getNearbyPlacingAreas(robotPos, 10)
-        .filter((a) => a.currentItems.some((item) => !item));
+        .filter((a) => !a.currentItem);
       // Calculate Camera Forward for Directional Bias
       const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
         camera.quaternion,
@@ -423,28 +422,20 @@ export function useRobotController(
       camForward.y = 0;
       camForward.normalize();
 
-      // Helper: Get distance to the closest EMPTY slot in an area
+      // Helper: Get distance to the empty slot
       const getMinSlotDist = (area: any) => {
-        let minDist = Infinity;
-        for (let i = 0; i < area.capacity; i++) {
-          if (!area.currentItems[i]) {
-            const pos = InteractableRegistry.getInstance().getSlotPosition(
-              area.id,
-              i,
-            );
-            if (pos) {
-              const d = pos.distanceToSquared(robotPos);
-              if (d < minDist) minDist = d;
-            }
+        if (!area.currentItem) {
+          const pos = InteractableRegistry.getInstance().getSlotPosition(
+            area.id,
+          );
+          if (pos) {
+            return pos.distanceToSquared(robotPos);
           }
         }
-        // If full or no slots, fall back to OBB distance (shouldn't happen due to filter)
-        if (minDist === Infinity)
-          return InteractableRegistry.getInstance().getDistanceToArea(
-            area.id,
-            robotPos,
-          );
-        return minDist;
+        return InteractableRegistry.getInstance().getDistanceToArea(
+          area.id,
+          robotPos,
+        );
       };
 
       // Sort areas by distance to CLOSEST SLOT
@@ -485,36 +476,19 @@ export function useRobotController(
           nearbyPlacingAreas.forEach((area) => {
             const cells: any[] = [];
 
-            // Collect and sort slots (Same logic as before)
-            const emptySlots: { index: number; pos: THREE.Vector3 }[] = [];
-            for (let i = 0; i < area.capacity; i++) {
-              if (!area.currentItems[i]) {
-                const pos = InteractableRegistry.getInstance().getSlotPosition(
-                  area.id,
-                  i,
-                );
-                if (pos) emptySlots.push({ index: i, pos });
-              }
-            }
-            emptySlots.sort(
-              (a, b) =>
-                a.pos.distanceToSquared(robotPos) -
-                b.pos.distanceToSquared(robotPos),
-            );
-
-            emptySlots.forEach((slot) => {
+            if (!area.currentItem) {
               cells.push({
-                id: `slot-${area.id}-${slot.index}`,
+                id: `slot-${area.id}`,
                 label: "Empty Slot",
                 type: "slot",
                 icon: "⬜",
                 meta: {
                   areaId: area.id,
                   areaName: area.name,
-                  offset: slot.index,
+                  offset: 0,
                 },
               });
-            });
+            }
 
             if (cells.length > 0) {
               grid.push({
@@ -573,8 +547,7 @@ export function useRobotController(
           const areaId = cell.meta.areaId;
           const area = interactableRegistry.getPlacingAreaById(areaId);
           if (area) {
-            const slotIdx = cell.meta.offset || 0;
-            targetPos = interactableRegistry.getSlotPosition(areaId, slotIdx);
+            targetPos = interactableRegistry.getSlotPosition(areaId);
           }
         } else if (cell && cell.type === "item") {
           targetType = "item";

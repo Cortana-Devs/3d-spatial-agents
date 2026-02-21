@@ -227,7 +227,7 @@ export class AgentTaskQueue {
           return { type: "STOP" };
         }
 
-        if (area.currentItems.length >= area.capacity) {
+        if (area.currentItem) {
           console.warn(
             `[AgentTaskQueue:${this.agentId}] Area ${this.activeDestAreaId} is full`,
           );

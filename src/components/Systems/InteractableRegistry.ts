@@ -30,10 +30,8 @@ export interface PlacingArea {
   name: string;
   position: THREE.Vector3;
   rotation: THREE.Quaternion; // world rotation of surface
-  capacity: number;
-  currentItems: (string | null)[]; // IDs of placed WorldObjects or null for empty slot
+  currentItem: string | null; // ID of placed WorldObject or null for empty slot
   dimensions: [number, number, number]; // width, height, depth of surface slab
-  // allowedTypes?: WorldObject["type"][]; // Deprecated: Any item can go anywhere
   meshRef?: THREE.Object3D;
 }
 
@@ -98,9 +96,8 @@ export class InteractableRegistry {
 
     // Remove from any placing area (Fixed Slot Logic)
     for (const area of this.placingAreas.values()) {
-      const idx = area.currentItems.indexOf(objectId);
-      if (idx !== -1) {
-        area.currentItems[idx] = null; // Mark slot as empty
+      if (area.currentItem === objectId) {
+        area.currentItem = null; // Mark slot as empty
         break;
       }
     }
@@ -130,6 +127,24 @@ export class InteractableRegistry {
 
   public registerPlacingArea(area: PlacingArea) {
     this.placingAreas.set(area.id, area);
+
+    // Auto-snap any objects initialized into this slot
+    if (area.currentItem) {
+      const obj = this.objects.get(area.currentItem);
+      if (obj) {
+        obj.position.copy(area.position);
+        if (obj.meshRef) {
+          if (obj.meshRef.parent) {
+            const localPos = obj.meshRef.parent.worldToLocal(
+              area.position.clone(),
+            );
+            obj.meshRef.position.copy(localPos);
+          } else {
+            obj.meshRef.position.copy(area.position);
+          }
+        }
+      }
+    }
   }
 
   public unregisterPlacingArea(id: string) {
@@ -158,72 +173,14 @@ export class InteractableRegistry {
     return nearby;
   }
 
-  public placeItemAt(
-    objectId: string,
-    areaId: string,
-    targetSlotIndex?: number,
-  ): boolean {
+  public placeItemAt(objectId: string, areaId: string): boolean {
     const obj = this.objects.get(objectId);
     const area = this.placingAreas.get(areaId);
     if (!obj || !area) return false;
 
-    // Determine target slot
-    let slotIndex = -1;
+    if (area.currentItem) return false; // Full
 
-    if (targetSlotIndex !== undefined) {
-      if (
-        targetSlotIndex >= 0 &&
-        targetSlotIndex < area.capacity &&
-        !area.currentItems[targetSlotIndex]
-      ) {
-        slotIndex = targetSlotIndex;
-      } else {
-        return false; // Invalid or occupied slot
-      }
-    } else {
-      // Find first empty slot
-      slotIndex = area.currentItems.findIndex((item) => !item);
-      if (slotIndex === -1) return false; // Full
-    }
-
-    // Constraint Check Removed: allowedTypes
-    // if (
-    //   area.allowedTypes &&
-    //   area.allowedTypes.length > 0 &&
-    //   !area.allowedTypes.includes(obj.type)
-    // )
-    //   return false;
-
-    const [w, h, d] = area.dimensions;
-
-    // Grid layout: Try to make it square-ish if possible, bounded by width
-    // Heuristic: Use sqrt of capacity to estimate columns, but clamping to width/2
-    const capacity = area.capacity || 100;
-
-    let optimalCols = Math.round(Math.sqrt(capacity * (w / d)));
-    optimalCols = Math.max(1, optimalCols); // At least 1 column
-
-    const maxPossibleCols = Math.max(1, Math.floor(w / 1.5)); // Assuming item width ~1.5
-    const cols = Math.min(optimalCols, maxPossibleCols, capacity);
-
-    const col = slotIndex % cols;
-    const row = Math.floor(slotIndex / cols);
-    const rows = Math.ceil(capacity / cols);
-
-    // Dynamic Spacing: Spread items evenly across the surface
-    const margin = 0.8; // Use 80% of space to avoid edges
-    const spacingX = (w * margin) / cols;
-    const safeSpacingZ = rows > 1 ? (d * margin) / rows : 0;
-
-    // Local offsets
-    const localX = (col - (cols - 1) / 2) * spacingX;
-    const localZ = rows > 1 ? (row - (rows - 1) / 2) * safeSpacingZ : 0;
-
-    // Build offset vector in local space, then rotate to world
-    const offset = new THREE.Vector3(localX, h / 2 + 0.15, localZ);
-    offset.applyQuaternion(area.rotation);
-
-    const placePos = area.position.clone().add(offset);
+    const placePos = area.position.clone();
 
     obj.carriedBy = null;
     obj.position.copy(placePos);
@@ -238,55 +195,15 @@ export class InteractableRegistry {
       obj.meshRef.visible = true;
     }
 
-    area.currentItems[slotIndex] = objectId;
+    area.currentItem = objectId;
     return true;
   }
 
-  public getSlotPosition(
-    areaId: string,
-    slotIndex: number,
-  ): THREE.Vector3 | null {
+  public getSlotPosition(areaId: string): THREE.Vector3 | null {
     const area = this.placingAreas.get(areaId);
     if (!area) return null;
 
-    const [w, h, d] = area.dimensions;
-
-    // Grid layout: Try to make it square-ish if possible, bounded by width
-    // Heuristic: Use sqrt of capacity to estimate columns, but clamping to width/2
-    // Grid layout: Try to respect the aspect ratio of the area
-    const capacity = area.capacity || 100;
-
-    // Idea: We want cols / rows approx equal to w / d
-    // cols * rows = capacity
-    // cols / rows = w / d
-    // => cols^2 = capacity * (w / d)
-    // => cols = sqrt(capacity * w / d)
-
-    let optimalCols = Math.round(Math.sqrt(capacity * (w / d)));
-    optimalCols = Math.max(1, optimalCols); // At least 1 column
-
-    // Clamp to available space (each item needs ~1 unit width?)
-    const maxPossibleCols = Math.max(1, Math.floor(w / 1.5));
-    const cols = Math.min(optimalCols, maxPossibleCols, capacity);
-
-    const col = slotIndex % cols;
-    const row = Math.floor(slotIndex / cols);
-    const rows = Math.ceil(capacity / cols);
-
-    // Dynamic Spacing: Spread items evenly across the surface
-    const margin = 0.8; // Use 80% of space to avoid edges
-    const spacingX = (w * margin) / cols;
-    const spacingZ = rows > 1 ? (d * margin) / rows : 0; // If 1 row, Z is 0 (centered)
-
-    // Local offsets
-    const localX = (col - (cols - 1) / 2) * spacingX;
-    const localZ = rows > 1 ? (row - (rows - 1) / 2) * spacingZ : 0;
-
-    // Build offset vector in local space, then rotate to world
-    const offset = new THREE.Vector3(localX, h / 2 + 0.15, localZ);
-    offset.applyQuaternion(area.rotation);
-
-    return area.position.clone().add(offset);
+    return area.position.clone();
   }
 
   // Calculate squared distance from a point to the CLOSEST point on the area's volume (OBB)
