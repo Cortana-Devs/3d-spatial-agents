@@ -700,8 +700,44 @@ export function StorageShelf({
 
   const levelLabels = ["Low", "Middle", "Top"];
 
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const groupRef = useRef<THREE.Group>(null);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    // StorageShelf: 80 x 12 x 5 — single box obstacle
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, h / 2, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(w / 2, h / 2, d / 2),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    if (groupRef.current) addCollidableMesh(groupRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
+
   return (
     <group
+      ref={groupRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -951,6 +987,8 @@ export function OfficeDoor({
   );
   const addObstacles = useGameStore((state) => state.addObstacles);
   const removeObstacles = useGameStore((state) => state.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
 
   const posVec = useMemo(
     () => new THREE.Vector3(position[0], position[1], position[2]),
@@ -993,9 +1031,22 @@ export function OfficeDoor({
         rotation,
       };
       addObstacles([obstacle]);
-      return () => removeObstacles([obstacle]);
+      if (groupRef.current) addCollidableMesh(groupRef.current);
+      return () => {
+        removeObstacles([obstacle]);
+        if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
+      };
     }
-  }, [isOpen, posVec, rotation, addObstacles, removeObstacles, doorWidth]);
+  }, [
+    isOpen,
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    doorWidth,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
 
   // Animation (Vertical Slide)
   useFrame((state, delta) => {
@@ -1155,6 +1206,9 @@ export function ReceptionDesk({
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const groupRef = useRef<THREE.Group>(null);
   const posVec = useMemo(
     () => new THREE.Vector3(...position),
     [position[0], position[1], position[2]],
@@ -1171,10 +1225,22 @@ export function ReceptionDesk({
       },
     ];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+    if (groupRef.current) addCollidableMesh(groupRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
+      ref={groupRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -1249,6 +1315,9 @@ export function ManagersDesk({
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const groupRef = useRef<THREE.Group>(null);
   const posVec = useMemo(
     () => new THREE.Vector3(...position),
     [position[0], position[1], position[2]],
@@ -1265,8 +1334,19 @@ export function ManagersDesk({
       },
     ];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+    if (groupRef.current) addCollidableMesh(groupRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   const darkWood = new THREE.MeshStandardMaterial({
     color: "#3e2723",
     roughness: 0.4,
@@ -1274,6 +1354,7 @@ export function ManagersDesk({
 
   return (
     <group
+      ref={groupRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
@@ -1345,6 +1426,9 @@ export function CupboardUnit({
   // Self-managed obstacle registration
   const addObstacles = useGameStore((state) => state.addObstacles);
   const removeObstacles = useGameStore((state) => state.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const groupRef = useRef<THREE.Group>(null);
 
   const posVec = useMemo(
     () => new THREE.Vector3(position[0], position[1], position[2]),
@@ -1363,11 +1447,23 @@ export function CupboardUnit({
       },
     ];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+    if (groupRef.current) addCollidableMesh(groupRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
 
   return (
     <group
+      ref={groupRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}

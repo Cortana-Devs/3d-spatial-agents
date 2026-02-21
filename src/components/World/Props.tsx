@@ -44,6 +44,38 @@ export function Printer({
 }) {
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 1.5, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(1.5, 1.5, 1.5),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    if (meshRef.current) addCollidableMesh(meshRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (meshRef.current) removeCollidableMesh(meshRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
       ref={meshRef}
@@ -188,6 +220,38 @@ export function Whiteboard({
 }) {
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 3, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(4, 3, 0.5),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    if (meshRef.current) addCollidableMesh(meshRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (meshRef.current) removeCollidableMesh(meshRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
       ref={meshRef}
@@ -409,6 +473,8 @@ export function SmallRack({
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
   const posVec = useMemo(
     () => new THREE.Vector3(...position),
     [position[0], position[1], position[2]],
@@ -425,8 +491,19 @@ export function SmallRack({
       },
     ];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+    if (meshRef.current) addCollidableMesh(meshRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (meshRef.current) removeCollidableMesh(meshRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
       ref={meshRef}
@@ -486,6 +563,37 @@ export function FlowerPot({
 }) {
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 1, 0)),
+        radius: 0.8,
+        type: "furniture" as const,
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    if (meshRef.current) addCollidableMesh(meshRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (meshRef.current) removeCollidableMesh(meshRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
       ref={meshRef}
@@ -527,6 +635,8 @@ export function Sofa({
   useInteractable(meshRef, userData);
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
   const posVec = useMemo(
     () => new THREE.Vector3(...position),
     [position[0], position[1], position[2]],
@@ -578,8 +688,19 @@ export function Sofa({
 
     const obs = [seat, backrest, armLeft, armRight];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+    if (meshRef.current) addCollidableMesh(meshRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (meshRef.current) removeCollidableMesh(meshRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
       ref={meshRef}
@@ -637,6 +758,38 @@ export function TV({
 }) {
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+  useEffect(() => {
+    const obs = [
+      {
+        position: posVec.clone().add(new THREE.Vector3(0, 3, 0)),
+        radius: 0,
+        type: "furniture" as const,
+        halfExtents: new THREE.Vector3(4, 3, 1),
+        rotation,
+      },
+    ];
+    addObstacles(obs);
+    if (meshRef.current) addCollidableMesh(meshRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (meshRef.current) removeCollidableMesh(meshRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
   return (
     <group
       ref={meshRef}
@@ -799,6 +952,9 @@ export function CoffeeStation({
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+  const groupRef = useRef<THREE.Group>(null);
   const posVec = useMemo(
     () => new THREE.Vector3(...position),
     [position[0], position[1], position[2]],
@@ -814,11 +970,23 @@ export function CoffeeStation({
       },
     ];
     addObstacles(obs);
-    return () => removeObstacles(obs);
-  }, [posVec, rotation, addObstacles, removeObstacles]);
+    if (groupRef.current) addCollidableMesh(groupRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
+    };
+  }, [
+    posVec,
+    rotation,
+    addObstacles,
+    removeObstacles,
+    addCollidableMesh,
+    removeCollidableMesh,
+  ]);
 
   return (
     <group
+      ref={groupRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
