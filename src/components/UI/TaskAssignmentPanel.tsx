@@ -4,7 +4,6 @@ import React, { useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { AgentTaskRegistry, type AgentTask } from "../Systems/AgentTaskQueue";
 import { InteractableRegistry } from "../Systems/InteractableRegistry";
-import NavigationNetwork from "../Systems/NavigationNetwork";
 import * as THREE from "three";
 
 // ============================================================================
@@ -12,27 +11,11 @@ import * as THREE from "three";
 // ============================================================================
 
 const ACTIONS = [
-  { id: "PICK_NEARBY", label: "📦 Pick Nearby Item", icon: "📦" },
+  { id: "PICK_NEARBY", label: "📦 Fetch Item", icon: "📦" },
   { id: "PLACE_INVENTORY", label: "📥 Place Carried Item", icon: "📥" },
   { id: "FOLLOW_PLAYER", label: "🏃 Follow Player", icon: "🏃" },
 ] as const;
 
-// ============================================================================
-// Navigation targets (derived from NavigationNetwork nodes)
-// ============================================================================
-
-const NAV_TARGETS: { label: string; position: THREE.Vector3 }[] = [
-  { label: "Lobby Center", position: new THREE.Vector3(0, 0, 60) },
-  { label: "Lobby Door", position: new THREE.Vector3(0, 0, 40) },
-  { label: "Open Office Center", position: new THREE.Vector3(0, 0, 10) },
-  { label: "Open Office Left", position: new THREE.Vector3(-50, 0, 10) },
-  { label: "Open Office Right", position: new THREE.Vector3(50, 0, 10) },
-  { label: "Corridor", position: new THREE.Vector3(0, 0, -10) },
-  { label: "Storage Doorway", position: new THREE.Vector3(-50, 0, -20) },
-  { label: "Conference Doorway", position: new THREE.Vector3(50, 0, -20) },
-  { label: "Storage Room Center", position: new THREE.Vector3(-50, 0, -50) },
-  { label: "Conference Room Center", position: new THREE.Vector3(50, 0, -50) },
-];
 
 // ============================================================================
 // Styles
@@ -165,10 +148,11 @@ export function TaskAssignmentPanel() {
     return registry.getAllAgentIds();
   }, [isOpen]); // Re-compute when panel opens
 
-  // Get pickable items
+  // Get pickable items — Fix #1: filter on step AND on dispatch
+  // Fix #2: also filter out items that are already claimed by another agent
   const pickableItems = useMemo(() => {
     const reg = InteractableRegistry.getInstance();
-    return reg.getAll().filter((o) => o.pickable && !o.carriedBy);
+    return reg.getAll().filter((o) => o.pickable && !o.carriedBy && !reg.isItemClaimed(o.id));
   }, [step]);
 
   // Get placing areas with room
@@ -278,27 +262,76 @@ export function TaskAssignmentPanel() {
         Select action for{" "}
         <strong style={{ color: "#80b0ff" }}>{selectedAgent}</strong>:
       </p>
-      {ACTIONS.map((action) => (
-        <div
-          key={action.id}
-          style={itemStyle(selectedAction === action.id)}
-          onClick={() => {
-            setAction(action.id);
-            setStep(2);
-          }}
-          onMouseEnter={(e) => {
-            if (selectedAction !== action.id)
-              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-          }}
-          onMouseLeave={(e) => {
-            if (selectedAction !== action.id)
-              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-          }}
-        >
-          <span style={{ fontSize: "18px" }}>{action.icon}</span>
-          <span>{action.label}</span>
-        </div>
-      ))}
+      {ACTIONS.map((action) => {
+        // Capacity check: Can't fetch if already carrying or if queue has a fetch without a place
+        let disabled = false;
+        let reason = "";
+
+        if (action.id === "PICK_NEARBY" && selectedAgent) {
+          const carriedItems =
+            InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
+          const hasPendingFetch = pendingTasks.some(
+            (t) => t.type === "PICK_NEARBY" || t.type === "FETCH_AND_PLACE",
+          );
+          const hasPendingPlace = pendingTasks.some(
+            (t) => t.type === "PLACE_INVENTORY",
+          );
+
+          if (carriedItems.length > 0 && !hasPendingPlace) {
+            disabled = true;
+            reason = "(Inventory Full)";
+          } else if (hasPendingFetch && !hasPendingPlace) {
+            // Simplified check for 1 slot
+            disabled = true;
+            reason = "(Queue Full)";
+          }
+        }
+
+        if (action.id === "PLACE_INVENTORY" && selectedAgent) {
+          const carriedItems =
+            InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
+          const hasPendingFetch = pendingTasks.some(
+            (t) => t.type === "PICK_NEARBY" || t.type === "FETCH_AND_PLACE",
+          );
+
+          if (carriedItems.length === 0 && !hasPendingFetch) {
+            disabled = true;
+            reason = "(Inventory Empty)";
+          }
+        }
+
+        return (
+          <div
+            key={action.id}
+            style={{
+              ...itemStyle(selectedAction === action.id),
+              opacity: disabled ? 0.4 : 1,
+              pointerEvents: disabled ? "none" : "auto",
+            }}
+            onClick={() => {
+              if (disabled) return;
+              setAction(action.id);
+              setStep(2);
+            }}
+            onMouseEnter={(e) => {
+              if (selectedAction !== action.id && !disabled)
+                e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            }}
+            onMouseLeave={(e) => {
+              if (selectedAction !== action.id && !disabled)
+                e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+            }}
+          >
+            <span style={{ fontSize: "18px" }}>{action.icon}</span>
+            <span>
+              {action.label}{" "}
+              <span style={{ fontSize: "11px", color: "#cc8800" }}>
+                {reason}
+              </span>
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -324,7 +357,10 @@ export function TaskAssignmentPanel() {
                 key={item.id}
                 style={itemStyle(false)}
                 onClick={() => {
-                  // Add GO_TO to walk to item, then PICK_NEARBY to pick it
+                  // Claim the item immediately to prevent other agents from targeting it (Fix #2)
+                  if (selectedAgent) {
+                    InteractableRegistry.getInstance().claimItem(item.id, selectedAgent);
+                  }
                   addTask({
                     type: "PICK_NEARBY",
                     itemId: item.id,
@@ -405,18 +441,10 @@ export function TaskAssignmentPanel() {
                   key={area.id}
                   style={itemStyle(false)}
                   onClick={() => {
-                    // Find the first carried item by this agent
-                    const carriedItems = selectedAgent
-                      ? InteractableRegistry.getInstance().getAllCarriedBy(
-                          selectedAgent,
-                        )
-                      : [];
+                    // Fix #3/#22: Don't capture itemId at queue time.
+                    // AgentTaskQueue.startNextTask() resolves it at execution time.
                     addTask({
                       type: "PLACE_INVENTORY",
-                      itemId:
-                        carriedItems.length > 0
-                          ? carriedItems[0].id
-                          : undefined,
                       destAreaId: area.id,
                     });
                     setStep(3);

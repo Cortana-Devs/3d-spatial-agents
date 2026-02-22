@@ -771,11 +771,12 @@ export default function OfficeHub() {
           name: "Reception Desk",
           interactable: true,
         }}
-        initialItems={["laptop-reception", "telephone-reception"]}
+        initialItemsLeft={["telephone-reception"]}
+        initialItemsMid={["laptop-reception"]}
       >
-        {/* Objects on reception counter — local coords, desk rotated π */}
+        {/* Objects on reception counter placed precisely in slots */}
         <Laptop
-          position={[0, 4.1, 0]}
+          position={[0, 4.21, -0.5]}
           rotation={0}
           userData={{
             type: "Prop",
@@ -787,7 +788,7 @@ export default function OfficeHub() {
           }}
         />
         <Telephone
-          position={[-4, 4.1, 0]}
+          position={[-5, 4.21, -0.5]}
           rotation={0}
           userData={{
             type: "Prop",
@@ -860,7 +861,6 @@ export default function OfficeHub() {
 
       {/* Elevator Removed */}
 
-      {/* 5. Manager's Office */}
       <ManagersDesk
         position={[hubCenter.x - 65, hubCenter.y, hubCenter.z + 25]}
         rotation={Math.PI / 2}
@@ -869,16 +869,13 @@ export default function OfficeHub() {
           id: "desk-manager",
           name: "Manager Desk",
         }}
-        initialItems={[
-          "file-manager-blue",
-          "laptop-manager",
-          "pendrive-manager",
-        ]}
+        initialItemsLeft={["file-manager-blue"]}
+        initialItemsMid={["laptop-manager"]}
+        initialItemsRight={["pendrive-manager"]}
       >
-        {/* Objects on Manager desk — local coords, desk rotated π/2 */}
-        {/* inverse(π/2): local_x = -wz, local_z = wx */}
+        {/* Objects on Manager desk placed in exact slot positions */}
         <FileFolder
-          position={[5, 4, -1]}
+          position={[-5, 4.1, -2]}
           color="blue"
           userData={{
             type: "Prop",
@@ -890,7 +887,7 @@ export default function OfficeHub() {
           }}
         />
         <Laptop
-          position={[0, 4, 0]}
+          position={[0, 4.1, -2]}
           rotation={-Math.PI}
           userData={{
             type: "Prop",
@@ -902,7 +899,7 @@ export default function OfficeHub() {
           }}
         />
         <PenDrive
-          position={[2, 4.1, -2]}
+          position={[5, 4.1, -2]}
           rotation={0.3}
           userData={{
             type: "Prop",

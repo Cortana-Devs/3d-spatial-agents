@@ -200,14 +200,18 @@ export function useYukaAI(
     );
     const hasManualTask = taskQueue.isActive();
 
+    // Fix #27: Always disable wander when a manual task is active
+    const bFollowPath = vehicle.steering
+      .behaviors[1] as YUKA.FollowPathBehavior;
+    const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior;
+    const bArrive = vehicle.steering.behaviors[3] as YUKA.ArriveBehavior;
+    const bWander = vehicle.steering.behaviors[4] as YUKA.WanderBehavior;
+    if (hasManualTask && bWander.active) {
+      bWander.active = false;
+    }
+
     // Apply steering command from task queue
     if (steeringCmd.type !== "NONE") {
-      const bFollowPath = vehicle.steering
-        .behaviors[1] as YUKA.FollowPathBehavior;
-      const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior;
-      const bArrive = vehicle.steering.behaviors[3] as YUKA.ArriveBehavior;
-      const bWander = vehicle.steering.behaviors[4] as YUKA.WanderBehavior;
-
       const resetBehaviors = () => {
         bFollowPath.active = false;
         bSeek.active = false;
@@ -234,6 +238,22 @@ export function useYukaAI(
       } else if (steeringCmd.type === "STOP") {
         resetBehaviors();
         vehicle.velocity.set(0, 0, 0);
+
+        // Fix #11/#23: Face the interaction target if provided
+        if (steeringCmd.faceTarget && groupRef.current) {
+          const toTarget = new THREE.Vector3(
+            steeringCmd.faceTarget.x - vehicle.position.x,
+            0,
+            steeringCmd.faceTarget.z - vehicle.position.z,
+          );
+          if (toTarget.lengthSq() > 0.01) {
+            const targetQuat = new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0, 0, 1),
+              toTarget.normalize(),
+            );
+            vehicle.rotation.copy(targetQuat as unknown as YUKA.Quaternion);
+          }
+        }
       }
     }
 
@@ -368,11 +388,12 @@ export function useYukaAI(
           vehicle.velocity.z *= 0.9;
         }
 
-        // Social Interaction
+        // Social Interaction — Fix #26: Skip if agent has an active task
         if (
           distSq < 25.0 &&
           socialState.current === "NONE" &&
-          greetingState.current === "NONE"
+          greetingState.current === "NONE" &&
+          !taskQueue.isBusy()
         ) {
           if (Math.random() < 0.01) {
             socialState.current = "CHATTING";
@@ -658,8 +679,55 @@ export function useYukaAI(
           -0.8 + wave * 0.2,
           0.1,
         );
+      } else if (taskQueue.getCurrentPhase() === "PICKING_UP") {
+        // Fix #18: Reach DOWN to pick up
+        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
+          j.rightArm.shoulder.rotation.x,
+          Math.PI / 3, // Reach forward-down
+          0.1,
+        );
+        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
+          j.rightArm.shoulder.rotation.z,
+          -0.3,
+          0.1,
+        );
+        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
+          j.rightArm.elbow.rotation.x,
+          -0.4, // Bend elbow to reach down
+          0.1,
+        );
+        j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
+          j.rightArm.elbow.rotation.z,
+          0,
+          0.1,
+        );
+      } else if (taskQueue.getCurrentPhase() === "PLACING") {
+        // Fix #18: Reach FORWARD to place
+        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
+          j.rightArm.shoulder.rotation.x,
+          Math.PI / 4, // Reach forward
+          0.1,
+        );
+        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
+          j.rightArm.shoulder.rotation.z,
+          -0.5,
+          0.1,
+        );
+        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
+          j.rightArm.elbow.rotation.x,
+          -0.2, // Slight bend
+          0.1,
+        );
+        j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
+          j.rightArm.elbow.rotation.z,
+          0,
+          0.1,
+        );
       }
     }
+
+    // Carried items are hidden (invisible) while being transported.
+    // They reappear at the destination when placed.
 
     // Update Minimap Position
     setAgentPosition(

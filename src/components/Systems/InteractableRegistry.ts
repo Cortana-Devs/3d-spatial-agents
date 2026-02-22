@@ -16,7 +16,9 @@ export interface WorldObject {
     | "tv"
     | "coffee_machine"
     | "telephone"
-    | "pc";
+    | "pc"
+    | "switch"
+    | "door";
   position: THREE.Vector3;
   description?: string;
   pickable: boolean;
@@ -37,10 +39,16 @@ export interface PlacingArea {
   meshRef?: THREE.Object3D;
 }
 
+// Reusable temp objects to avoid per-frame allocations
+const _tempWorldPos = new THREE.Vector3();
+const _tempQuat = new THREE.Quaternion();
+
 export class InteractableRegistry {
   private static instance: InteractableRegistry;
   private objects: Map<string, WorldObject> = new Map();
   private placingAreas: Map<string, PlacingArea> = new Map();
+  /** Track items that have been claimed (dispatched to an agent but not yet picked up) */
+  private claimedItems: Map<string, string> = new Map(); // itemId → agentId
 
   private constructor() {}
 
@@ -51,6 +59,68 @@ export class InteractableRegistry {
     return InteractableRegistry.instance;
   }
 
+  // --- WORLD POSITION HELPERS ---
+
+  /**
+   * Get the authoritative WORLD position of an object.
+   * Reads from the mesh's world matrix if available, otherwise falls back to stored position.
+   * Fix for issue #6: items parented to furniture groups had local-space positions.
+   */
+  public getWorldPosition(objectId: string): THREE.Vector3 | null {
+    const obj = this.objects.get(objectId);
+    if (!obj) return null;
+
+    if (obj.meshRef) {
+      // Update world matrix to ensure it's current
+      obj.meshRef.updateWorldMatrix(true, false);
+      obj.meshRef.getWorldPosition(_tempWorldPos);
+      return _tempWorldPos.clone();
+    }
+
+    return obj.position.clone();
+  }
+
+  /**
+   * Get the authoritative WORLD position of a placing area.
+   * Fix for issue #20: placing area position may be in local coordinates.
+   */
+  public getAreaWorldPosition(areaId: string): THREE.Vector3 | null {
+    const area = this.placingAreas.get(areaId);
+    if (!area) return null;
+
+    if (area.meshRef) {
+      area.meshRef.updateWorldMatrix(true, false);
+      area.meshRef.getWorldPosition(_tempWorldPos);
+      return _tempWorldPos.clone();
+    }
+
+    return area.position.clone();
+  }
+
+  // --- CLAIM SYSTEM (prevents two agents targeting the same item) ---
+
+  public claimItem(itemId: string, agentId: string): boolean {
+    if (this.claimedItems.has(itemId)) return false;
+    const obj = this.objects.get(itemId);
+    if (!obj || !obj.pickable || obj.carriedBy) return false;
+    this.claimedItems.set(itemId, agentId);
+    return true;
+  }
+
+  public unclaimItem(itemId: string, agentId: string): void {
+    if (this.claimedItems.get(itemId) === agentId) {
+      this.claimedItems.delete(itemId);
+    }
+  }
+
+  public isItemClaimed(itemId: string): boolean {
+    return this.claimedItems.has(itemId);
+  }
+
+  public getItemClaimant(itemId: string): string | null {
+    return this.claimedItems.get(itemId) || null;
+  }
+
   // --- WORLD OBJECTS ---
 
   public register(obj: WorldObject) {
@@ -59,6 +129,7 @@ export class InteractableRegistry {
 
   public unregister(id: string) {
     this.objects.delete(id);
+    this.claimedItems.delete(id);
   }
 
   public getById(id: string): WorldObject | undefined {
@@ -89,32 +160,50 @@ export class InteractableRegistry {
     return carried;
   }
 
+  /**
+   * Pick up an item. Reparents the mesh to the scene root so that
+   * carry-visual code doesn't fight against the original parent's transform.
+   * Fix for issues #13, #14, #15.
+   */
   public pickUp(objectId: string, actorId: string): boolean {
     const obj = this.objects.get(objectId);
     if (!obj || !obj.pickable || obj.carriedBy) return false;
 
     obj.carriedBy = actorId;
-    if (obj.meshRef) obj.meshRef.visible = false;
 
-    // Remove from any placing area (Fixed Slot Logic)
+    // Remove claim now that we actually have the item
+    this.claimedItems.delete(objectId);
+
+    // Remove from any placing area slot
     for (const area of this.placingAreas.values()) {
       if (area.currentItem === objectId) {
-        area.currentItem = null; // Mark slot as empty
+        area.currentItem = null;
         break;
       }
     }
+
+    // Hide the mesh while carried — it reappears on putDown/placeItemAt
+    if (obj.meshRef) {
+      obj.meshRef.visible = false;
+    }
+
     return true;
   }
 
+  /**
+   * Drop an item at a world position (fallback when placement fails).
+   */
   public putDown(objectId: string, worldPos: THREE.Vector3): boolean {
     const obj = this.objects.get(objectId);
     if (!obj || !obj.carriedBy) return false;
 
     obj.carriedBy = null;
     obj.position.copy(worldPos);
+
     if (obj.meshRef) {
-      // Convert world position to local parent coordinates
+      // Convert world position to local if the mesh has a parent
       if (obj.meshRef.parent) {
+        obj.meshRef.parent.updateWorldMatrix(true, false);
         const localPos = obj.meshRef.parent.worldToLocal(worldPos.clone());
         obj.meshRef.position.copy(localPos);
       } else {
@@ -122,6 +211,7 @@ export class InteractableRegistry {
       }
       obj.meshRef.visible = true;
     }
+
     return true;
   }
 
@@ -175,6 +265,10 @@ export class InteractableRegistry {
     return nearby;
   }
 
+  /**
+   * Place an item at a designated area.
+   * Converts world position to local coords for the mesh's current parent.
+   */
   public placeItemAt(objectId: string, areaId: string): boolean {
     const obj = this.objects.get(objectId);
     const area = this.placingAreas.get(areaId);
@@ -182,17 +276,34 @@ export class InteractableRegistry {
 
     if (area.currentItem) return false; // Full
 
-    const placePos = area.position.clone();
+    // Get world position of the area
+    let placePos: THREE.Vector3;
+    if (area.meshRef) {
+      area.meshRef.updateWorldMatrix(true, false);
+      placePos = new THREE.Vector3();
+      area.meshRef.getWorldPosition(placePos);
+    } else {
+      placePos = area.position.clone();
+    }
 
     obj.carriedBy = null;
     obj.position.copy(placePos);
+
     if (obj.meshRef) {
-      // Convert world position to local parent coordinates
+      // Convert world position to local if the mesh has a parent
       if (obj.meshRef.parent) {
+        obj.meshRef.parent.updateWorldMatrix(true, false);
         const localPos = obj.meshRef.parent.worldToLocal(placePos.clone());
         obj.meshRef.position.copy(localPos);
+
+        // Convert world rotation to local
+        const parentInverseQuat = new THREE.Quaternion();
+        obj.meshRef.parent.getWorldQuaternion(parentInverseQuat);
+        parentInverseQuat.invert();
+        obj.meshRef.quaternion.copy(parentInverseQuat.multiply(area.rotation));
       } else {
         obj.meshRef.position.copy(placePos);
+        obj.meshRef.quaternion.copy(area.rotation);
       }
       obj.meshRef.visible = true;
     }
@@ -202,10 +313,7 @@ export class InteractableRegistry {
   }
 
   public getSlotPosition(areaId: string): THREE.Vector3 | null {
-    const area = this.placingAreas.get(areaId);
-    if (!area) return null;
-
-    return area.position.clone();
+    return this.getAreaWorldPosition(areaId);
   }
 
   // Calculate squared distance from a point to the CLOSEST point on the area's volume (OBB)

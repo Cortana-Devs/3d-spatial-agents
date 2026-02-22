@@ -305,7 +305,7 @@ export function ConferenceTable({
   usePlacingArea(northRef, {
     id: userData?.id ? `${userData.id}-north` : "conf-table-north",
     name: userData?.name ? `${userData.name} North` : "Conference Table North",
-    capacity: 4,
+    capacity: 6, // 34×4 surface → fits 6 items across
     dimensions: [34, 0.8, 4],
     initialItems: initialItemsNorth,
   });
@@ -314,7 +314,7 @@ export function ConferenceTable({
   usePlacingArea(southRef, {
     id: userData?.id ? `${userData.id}-south` : "conf-table-south",
     name: userData?.name ? `${userData.name} South` : "Conference Table South",
-    capacity: 4,
+    capacity: 6, // 34×4 surface → fits 6 items across
     dimensions: [34, 0.8, 4],
     initialItems: initialItemsSouth,
   });
@@ -325,7 +325,7 @@ export function ConferenceTable({
     name: userData?.name
       ? `${userData.name} Center`
       : "Conference Table Center",
-    capacity: 4,
+    capacity: 8, // 34×6 center zone → fits 8 items (2 rows of 4)
     dimensions: [34, 0.8, 6],
     initialItems: initialItemsCenter || initialItems, // Fallback for backward compat
   });
@@ -334,7 +334,7 @@ export function ConferenceTable({
   usePlacingArea(eastRef, {
     id: userData?.id ? `${userData.id}-east` : "conf-table-east",
     name: userData?.name ? `${userData.name} East` : "Conference Table East",
-    capacity: 1,
+    capacity: 2, // 4×16 end zone → fits 2 items stacked
     dimensions: [4, 0.8, 16],
     initialItems: initialItemsEast,
   });
@@ -343,7 +343,7 @@ export function ConferenceTable({
   usePlacingArea(westRef, {
     id: userData?.id ? `${userData.id}-west` : "conf-table-west",
     name: userData?.name ? `${userData.name} West` : "Conference Table West",
-    capacity: 1,
+    capacity: 2, // 4×16 end zone → fits 2 items stacked
     dimensions: [4, 0.8, 16],
     initialItems: initialItemsWest,
   });
@@ -483,13 +483,25 @@ export function OfficeDesk({
   children?: React.ReactNode;
   initialItems?: string[];
 }) {
-  const surfaceRef = useRef<THREE.Mesh>(null);
-  usePlacingArea(surfaceRef, {
-    id: userData?.id || "office-desk",
-    name: userData?.name || "Office Desk",
-    capacity: 2, // Reduced from 4 to avoid crowding
-    dimensions: [10, 0.4, 3], // Only front half of desk
-    initialItems,
+  const deskId = userData?.id || "office-desk";
+  const deskName = userData?.name || "Office Desk";
+
+  // 2 individual placing slots on the black desk pad (left / right)
+  const padLeftRef = useRef<THREE.Mesh>(null);
+  const padRightRef = useRef<THREE.Mesh>(null);
+
+  // Pad is 10 wide × 3 deep. Left and right slots.
+  usePlacingArea(padLeftRef, {
+    id: `${deskId}-pad-left`,
+    name: `${deskName} Pad Left`,
+    capacity: 1,
+    dimensions: [3.0, 0.4, 2.5],
+  });
+  usePlacingArea(padRightRef, {
+    id: `${deskId}-pad-right`,
+    name: `${deskName} Pad Right`,
+    capacity: 1,
+    dimensions: [3.0, 0.4, 2.5],
   });
 
   // No useEffect shift needed - we position the group directly
@@ -564,11 +576,15 @@ export function OfficeDesk({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Placing Area Group (Logic + Visuals) */}
+      {/* Desk Pad Area — 2 individual placing slots */}
       <group position={[0, 3.8, 1.5]}>
-        {/* Logical Surface (Invisible Raycast Target) */}
-        <mesh visible={false} ref={surfaceRef}>
-          <boxGeometry args={[10, 0.4, 3]} />
+        {/* Left slot */}
+        <mesh ref={padLeftRef} position={[-3.3, 0, 0]} visible={false}>
+          <boxGeometry args={[3.0, 0.4, 2.5]} />
+        </mesh>
+        {/* Right slot */}
+        <mesh ref={padRightRef} position={[3.3, 0, 0]} visible={false}>
+          <boxGeometry args={[3.0, 0.4, 2.5]} />
         </mesh>
 
         {/* Visual Desk Pad (Black Mat) */}
@@ -614,24 +630,21 @@ export function OfficeDesk({
         <boxGeometry args={[8, 2.5, 0.2]} />
       </mesh>
 
-      {/* PC Placing Slot */}
+      {/* PC Placing Slot (back center) */}
       <group position={[0, 4.0, -1.5]}>
         {/* Invisible Slot Mesh */}
         <PCPlacingSlot
-          id={userData?.id ? `${userData.id}-pc-slot` : "office-desk-pc-slot"}
-          name="PC Slot"
+          id={`${deskId}-pc-slot`}
+          name={`${deskName} PC Slot`}
           position={[0, 0, 0]}
           initialItem={
             userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"
           }
         />
 
-        {/* Default Desktop PC if slot empty?
-            For now, let's just place it.
-        */}
         <DesktopPC
           id={userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"}
-          position={[0, 0, 0]} // Relative to this group which is already at PC location
+          position={[0, 0, 0]}
           rotation={0}
           userData={{
             type: "Prop",
@@ -663,7 +676,7 @@ function ShelfLevel({
   usePlacingArea(surfaceRef, {
     id,
     name,
-    capacity: 6,
+    capacity: 8, // 80×5 wide shelf → fits 8 items across
     dimensions,
   });
 
@@ -1220,22 +1233,47 @@ export function ReceptionDesk({
   rotation = 0,
   userData,
   children,
-  initialItems,
+  initialItemsLeft,
+  initialItemsMid,
+  initialItemsRight,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
   children?: React.ReactNode;
-  initialItems?: string[];
+  initialItemsLeft?: string[];
+  initialItemsMid?: string[];
+  initialItemsRight?: string[];
 }) {
-  const surfaceRef = useRef<THREE.Mesh>(null);
-  usePlacingArea(surfaceRef, {
-    id: userData?.id || "reception-desk",
-    name: userData?.name || "Reception Desk",
-    capacity: 3,
-    dimensions: [20, 0.2, 6],
-    initialItems,
+  const deskId = userData?.id || "reception-desk";
+  const deskName = userData?.name || "Reception Desk";
+
+  const padLeftRef = useRef<THREE.Mesh>(null);
+  const padMidRef = useRef<THREE.Mesh>(null);
+  const padRightRef = useRef<THREE.Mesh>(null);
+
+  usePlacingArea(padLeftRef, {
+    id: `${deskId}-pad-left`,
+    name: `${deskName} Left`,
+    capacity: 1,
+    dimensions: [4.0, 0.4, 2.5],
+    initialItems: initialItemsLeft,
   });
+  usePlacingArea(padMidRef, {
+    id: `${deskId}-pad-middle`,
+    name: `${deskName} Middle`,
+    capacity: 1,
+    dimensions: [4.0, 0.4, 2.5],
+    initialItems: initialItemsMid,
+  });
+  usePlacingArea(padRightRef, {
+    id: `${deskId}-pad-right`,
+    name: `${deskName} Right`,
+    capacity: 1,
+    dimensions: [4.0, 0.4, 2.5],
+    initialItems: initialItemsRight,
+  });
+
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
   const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
@@ -1277,7 +1315,7 @@ export function ReceptionDesk({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* L-Shape Main Section */}
+      {/* Rectangular Main Section */}
       <mesh
         position={[0, 2, 0]}
         castShadow
@@ -1288,31 +1326,38 @@ export function ReceptionDesk({
       >
         <boxGeometry args={[20, 4, 6]} />
       </mesh>
-      {/* Side Return (L-shape) */}
-      <mesh
-        position={[8, 2, 6]}
-        castShadow
-        receiveShadow
-        material={
-          new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })
-        }
-      >
-        <boxGeometry args={[4, 4, 8]} />
-      </mesh>
+
       {/* Counter Top */}
       <mesh
-        ref={surfaceRef}
         position={[0, 4.1, 0]}
         material={new THREE.MeshStandardMaterial({ color: "#444" })}
       >
         <boxGeometry args={[20, 0.2, 6]} />
       </mesh>
+
+      {/* Leather Pad */}
       <mesh
-        position={[8, 4.1, 6]}
-        material={new THREE.MeshStandardMaterial({ color: "#444" })}
+        position={[0, 4.21, -0.5]}
+        material={new THREE.MeshStandardMaterial({ color: "#111" })}
       >
-        <boxGeometry args={[4, 0.2, 8]} />
+        <boxGeometry args={[16.0, 0.02, 4.0]} />
       </mesh>
+
+      {/* 3 Placing Slots on the Pad */}
+      <group position={[0, 4.21, -0.5]}>
+        {/* Left slot */}
+        <mesh ref={padLeftRef} position={[-5, 0, 0]} visible={false}>
+          <boxGeometry args={[4.0, 0.4, 2.5]} />
+        </mesh>
+        {/* Middle slot */}
+        <mesh ref={padMidRef} position={[0, 0, 0]} visible={false}>
+          <boxGeometry args={[4.0, 0.4, 2.5]} />
+        </mesh>
+        {/* Right slot */}
+        <mesh ref={padRightRef} position={[5, 0, 0]} visible={false}>
+          <boxGeometry args={[4.0, 0.4, 2.5]} />
+        </mesh>
+      </group>
 
       {/* Front Panel Accents */}
       <mesh position={[0, 2, 3.1]} material={lightGlowMaterial}>
@@ -1329,21 +1374,47 @@ export function ManagersDesk({
   rotation = 0,
   userData,
   children,
-  initialItems,
+  initialItemsLeft,
+  initialItemsMid,
+  initialItemsRight,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
   children?: React.ReactNode;
-  initialItems?: string[];
+  initialItemsLeft?: string[];
+  initialItemsMid?: string[];
+  initialItemsRight?: string[];
 }) {
-  const surfaceRef = useRef<THREE.Mesh>(null);
-  usePlacingArea(surfaceRef, {
-    id: userData?.id || "managers-desk",
-    name: userData?.name || "Manager's Desk",
-    capacity: 3,
-    dimensions: [16, 0.5, 8],
-    initialItems,
+  const deskId = userData?.id || "managers-desk";
+  const deskName = userData?.name || "Manager's Desk";
+
+  // 3 individual placing slots on the leather pad (closer to chair side)
+  const padLeftRef = useRef<THREE.Mesh>(null);
+  const padMidRef = useRef<THREE.Mesh>(null);
+  const padRightRef = useRef<THREE.Mesh>(null);
+
+  // Pad is 15.6 wide x 3.5 deep. Placed at z=2.0
+  usePlacingArea(padLeftRef, {
+    id: `${deskId}-pad-left`,
+    name: `${deskName} Pad Left`,
+    capacity: 1,
+    dimensions: [4.0, 0.4, 2.5],
+    initialItems: initialItemsLeft,
+  });
+  usePlacingArea(padMidRef, {
+    id: `${deskId}-pad-middle`,
+    name: `${deskName} Pad Middle`,
+    capacity: 1,
+    dimensions: [4.0, 0.4, 2.5],
+    initialItems: initialItemsMid,
+  });
+  usePlacingArea(padRightRef, {
+    id: `${deskId}-pad-right`,
+    name: `${deskName} Pad Right`,
+    capacity: 1,
+    dimensions: [4.0, 0.4, 2.5],
+    initialItems: initialItemsRight,
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
@@ -1392,15 +1463,25 @@ export function ManagersDesk({
       userData={userData}
     >
       {/* Executive Desktop */}
-      <mesh
-        ref={surfaceRef}
-        position={[0, 3.8, 0]}
-        castShadow
-        receiveShadow
-        material={darkWood}
-      >
+      <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={darkWood}>
         <boxGeometry args={[16, 0.5, 8]} />
       </mesh>
+
+      {/* 3 Placing Slots */}
+      <group position={[0, 4.06, 0]}>
+        {/* Left slot (opposite side) */}
+        <mesh ref={padLeftRef} position={[5, 0, -2]} visible={false}>
+          <boxGeometry args={[4.0, 0.4, 2.5]} />
+        </mesh>
+        {/* Middle slot (aligned with left and right) */}
+        <mesh ref={padMidRef} position={[0, 0, -2]} visible={false}>
+          <boxGeometry args={[4.0, 0.4, 2.5]} />
+        </mesh>
+        {/* Right slot (opposite side) */}
+        <mesh ref={padRightRef} position={[-5, 0, -2]} visible={false}>
+          <boxGeometry args={[4.0, 0.4, 2.5]} />
+        </mesh>
+      </group>
       {/* Massive Legs/Cabinets */}
       <mesh
         position={[-6, 1.8, 0]}
@@ -1424,10 +1505,10 @@ export function ManagersDesk({
       </mesh>
       {/* Leather Pad */}
       <mesh
-        position={[0, 4.06, 1]}
+        position={[0, 4.06, -0.5]}
         material={new THREE.MeshStandardMaterial({ color: "#111" })}
       >
-        <boxGeometry args={[8, 0.02, 4]} />
+        <boxGeometry args={[15.6, 0.02, 6.0]} />
       </mesh>
       {children}
     </group>

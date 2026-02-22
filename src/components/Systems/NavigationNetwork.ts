@@ -23,7 +23,9 @@ class NavigationNetwork {
   // --- Grid data ---
   private grid: Uint8Array; // 0 = blocked, 1 = walkable
   private cellSize: number = 2.0;
-  private padding: number = 1.2; // Agent radius + safety margin
+  // A smaller padding allows agents to get closer to objects and doorways
+  // Agent's physical bounding radius is 1.0. Padding 1.2 might be too large.
+  private padding: number = 0.8;
 
   // World bounds (from wall_layout.md: 200 wide × 150 deep)
   private minX: number = -100;

@@ -40,6 +40,8 @@ export interface SteeringCommand {
   type: "FOLLOW_PATH" | "ARRIVE" | "STOP" | "NONE";
   path?: THREE.Vector3[];
   target?: THREE.Vector3;
+  /** When set, agent should rotate to face this point before interacting */
+  faceTarget?: THREE.Vector3;
 }
 
 // ============================================================================
@@ -63,17 +65,21 @@ export class AgentTaskQueue {
   // Stuck detection + periodic re-path
   private stuckTimer: number = 0;
   private repathTimer: number = 0;
-  private lastPos: THREE.Vector3 = new THREE.Vector3();
+  private lastPosXZ: { x: number; z: number } = { x: 0, z: 0 }; // Fix #9: 2D tracking
   private lastFollowTarget: THREE.Vector3 = new THREE.Vector3();
-  private static readonly STUCK_THRESHOLD = 3.0; // Seconds before re-path
-  private static readonly REPATH_INTERVAL = 5.0; // Periodic re-path interval
-  private static readonly STUCK_SPEED = 0.3; // Below this = stuck
+  private static readonly STUCK_THRESHOLD = 3.0;
+  private static readonly REPATH_INTERVAL = 5.0;
+  private static readonly STUCK_SPEED = 0.3;
+
+  // Fix #28: Max retries for permanently stuck agents
+  private retryCount: number = 0;
+  private static readonly MAX_RETRIES = 5;
 
   // Distances for phase transitions
-  private static readonly ARRIVAL_DIST = 4.0; // Switch to fine approach
-  private static readonly INTERACT_DIST = 3.0; // Close enough to pick/place
-  private static readonly PICKUP_DELAY = 0.5; // Seconds to pause before pickup
-  private static readonly PLACE_DELAY = 0.5; // Seconds to pause before placing
+  private static readonly ARRIVAL_DIST = 4.0;
+  private static readonly INTERACT_DIST = 3.8;
+  private static readonly PICKUP_DELAY = 0.5;
+  private static readonly PLACE_DELAY = 0.5;
 
   constructor(agentId: string) {
     this.agentId = agentId;
@@ -101,7 +107,19 @@ export class AgentTaskQueue {
     return this.phase !== "IDLE" && this.phase !== "COMPLETED";
   }
 
+  /** Check if the agent has a pending task active — used by social system to skip interactions */
+  public isBusy(): boolean {
+    return this.isActive() || this.queue.length > 0;
+  }
+
   public cancel(): void {
+    // Release any claimed items
+    if (this.activeItemId) {
+      InteractableRegistry.getInstance().unclaimItem(
+        this.activeItemId,
+        this.agentId,
+      );
+    }
     this.queue = [];
     this.currentTask = null;
     this.phase = "IDLE";
@@ -111,6 +129,7 @@ export class AgentTaskQueue {
     this.hasSetPath = false;
     this.stuckTimer = 0;
     this.repathTimer = 0;
+    this.retryCount = 0;
   }
 
   // --- MAIN UPDATE (called every frame from useYukaAI) ---
@@ -124,9 +143,12 @@ export class AgentTaskQueue {
       return { type: "NONE" };
     }
 
+    // Fix #29: Handle COMPLETED transition properly — start next task and
+    // continue processing in the same frame instead of returning early
     if (this.phase === "COMPLETED") {
       this.startNextTask();
       if (this.phase === "IDLE") return { type: "NONE" };
+      // Fall through to process the new phase this same frame
     }
 
     const registry = InteractableRegistry.getInstance();
@@ -141,19 +163,21 @@ export class AgentTaskQueue {
         let targetPos: THREE.Vector3 | null = null;
 
         if (this.currentTask?.type === "GO_TO") {
-          // GO_TO: navigate to a specific position
           targetPos = this.currentTask.targetPos || null;
         } else {
-          // FETCH_AND_PLACE: navigate to item
+          // FETCH/PICK: navigate to item using WORLD position (Fix #6)
           const item = registry.getById(this.activeItemId!);
           if (!item || item.carriedBy) {
             console.warn(
               `[AgentTaskQueue:${this.agentId}] Item ${this.activeItemId} no longer available`,
             );
+            registry.unclaimItem(this.activeItemId!, this.agentId);
             this.phase = "COMPLETED";
             return { type: "STOP" };
           }
-          targetPos = item.position;
+          // Use world position helper instead of raw item.position
+          targetPos =
+            registry.getWorldPosition(this.activeItemId!) || item.position;
         }
 
         if (!targetPos) {
@@ -161,52 +185,76 @@ export class AgentTaskQueue {
           return { type: "STOP" };
         }
 
-        const distToTarget = vehiclePos.distanceTo(targetPos);
+        // 2D distance check (Fix: already using Math.hypot)
+        const distToTarget = Math.hypot(
+          vehiclePos.x - targetPos.x,
+          vehiclePos.z - targetPos.z,
+        );
 
         if (distToTarget < AgentTaskQueue.INTERACT_DIST) {
           if (this.currentTask?.type === "GO_TO") {
-            // GO_TO completed
             console.log(
               `[AgentTaskQueue:${this.agentId}] Arrived at target position`,
             );
             this.phase = "COMPLETED";
             return { type: "STOP" };
           } else {
-            // Close enough to pick up
+            // Close enough to pick up — face the item first (Fix #11)
             this.phase = "PICKING_UP";
             this.phaseTimer = 0;
             this.hasSetPath = false;
-            return { type: "STOP" };
+            this.retryCount = 0;
+            return { type: "STOP", faceTarget: targetPos };
           }
         }
 
         // Navigate if we haven't set a path yet
         if (!this.hasSetPath) {
           const path = nav.findPath(vehiclePos, targetPos);
+          if (path.length <= 1) {
+            console.warn(
+              `[AgentTaskQueue:${this.agentId}] findPath returned ${path.length} nodes — path may be blocked`,
+            );
+          }
           this.hasSetPath = true;
           this.stuckTimer = 0;
           this.repathTimer = 0;
-          this.lastPos.copy(vehiclePos);
+          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
           return { type: "FOLLOW_PATH", path };
         }
 
-        // Stuck detection: if barely moving for STUCK_THRESHOLD seconds, re-path
+        // Fix #9: Stuck detection using 2D XZ distance (ignores Y oscillation from gravity)
         this.repathTimer += delta;
-        const movedDist = vehiclePos.distanceTo(this.lastPos);
-        if (movedDist < AgentTaskQueue.STUCK_SPEED * delta) {
+        const movedDist2D = Math.hypot(
+          vehiclePos.x - this.lastPosXZ.x,
+          vehiclePos.z - this.lastPosXZ.z,
+        );
+        if (movedDist2D < AgentTaskQueue.STUCK_SPEED * delta) {
           this.stuckTimer += delta;
         } else {
           this.stuckTimer = 0;
-          this.lastPos.copy(vehiclePos);
+          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
         }
 
         if (
           this.stuckTimer > AgentTaskQueue.STUCK_THRESHOLD ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
+          this.retryCount++;
           console.log(
-            `[AgentTaskQueue:${this.agentId}] Re-pathing (stuck=${this.stuckTimer.toFixed(1)}s, elapsed=${this.repathTimer.toFixed(1)}s)`,
+            `[AgentTaskQueue:${this.agentId}] Re-pathing (stuck=${this.stuckTimer.toFixed(1)}s, retry=${this.retryCount}/${AgentTaskQueue.MAX_RETRIES})`,
           );
+
+          // Fix #28: Abandon task if permanently stuck
+          if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
+            console.warn(
+              `[AgentTaskQueue:${this.agentId}] Abandoning task — permanently stuck after ${this.retryCount} retries`,
+            );
+            registry.unclaimItem(this.activeItemId!, this.agentId);
+            this.phase = "COMPLETED";
+            return { type: "STOP" };
+          }
+
           this.hasSetPath = false;
           this.stuckTimer = 0;
           this.repathTimer = 0;
@@ -229,18 +277,18 @@ export class AgentTaskQueue {
             );
 
             if (this.activeDestAreaId) {
-              // Move to destination
               this.phase = "WALK_TO_DEST";
               this.phaseTimer = 0;
               this.hasSetPath = false;
+              this.retryCount = 0;
             } else {
-              // No destination — just picked up, done
               this.phase = "COMPLETED";
             }
           } else {
             console.warn(
               `[AgentTaskQueue:${this.agentId}] Failed to pick up ${this.activeItemId}`,
             );
+            registry.unclaimItem(this.activeItemId!, this.agentId);
             this.phase = "COMPLETED";
           }
         }
@@ -252,66 +300,100 @@ export class AgentTaskQueue {
       // WALK_TO_DEST: Navigate to the placing area
       // ------------------------------------------------------------------
       case "WALK_TO_DEST": {
+        // Use world position for area (Fix #20)
+        const areaWorldPos = registry.getAreaWorldPosition(
+          this.activeDestAreaId!,
+        );
         const area = registry.getPlacingAreaById(this.activeDestAreaId!);
-        if (!area) {
+
+        if (!area || !areaWorldPos) {
           console.warn(
             `[AgentTaskQueue:${this.agentId}] Placing area ${this.activeDestAreaId} not found`,
           );
-          // Drop item on ground as fallback
-          registry.putDown(this.activeItemId!, vehiclePos.clone());
+          const dropPos = vehiclePos.clone();
+          dropPos.x += (Math.random() - 0.5) * 2;
+          dropPos.z += (Math.random() - 0.5) * 2;
+          registry.putDown(this.activeItemId!, dropPos);
           this.phase = "COMPLETED";
           return { type: "STOP" };
         }
 
-        if (area.currentItem) {
-          console.warn(
-            `[AgentTaskQueue:${this.agentId}] Area ${this.activeDestAreaId} is full`,
-          );
-          registry.putDown(this.activeItemId!, vehiclePos.clone());
-          this.phase = "COMPLETED";
-          return { type: "STOP" };
-        }
-
-        const distToArea = vehiclePos.distanceTo(area.position);
+        // Fix #19: Only check slot occupancy when close to arrival, not at the start
+        const distToArea = Math.hypot(
+          vehiclePos.x - areaWorldPos.x,
+          vehiclePos.z - areaWorldPos.z,
+        );
 
         if (distToArea < AgentTaskQueue.INTERACT_DIST) {
-          // Close enough to place
+          // Re-check slot occupancy right before placing (Fix #19)
+          if (area.currentItem) {
+            console.warn(
+              `[AgentTaskQueue:${this.agentId}] Area ${this.activeDestAreaId} is now full, dropping nearby`,
+            );
+            const dropPos = vehiclePos.clone();
+            dropPos.x += (Math.random() - 0.5) * 2;
+            dropPos.z += (Math.random() - 0.5) * 2;
+            registry.putDown(this.activeItemId!, dropPos);
+            this.phase = "COMPLETED";
+            return { type: "STOP" };
+          }
+
+          // Close enough to place — face the area first (Fix #23)
           this.phase = "PLACING";
           this.phaseTimer = 0;
           this.hasSetPath = false;
-          return { type: "STOP" };
+          this.retryCount = 0;
+          return { type: "STOP", faceTarget: areaWorldPos };
         }
 
         // Navigate if we haven't set a path yet
         if (!this.hasSetPath) {
-          const path = nav.findPath(vehiclePos, area.position);
+          const path = nav.findPath(vehiclePos, areaWorldPos);
           this.hasSetPath = true;
           this.stuckTimer = 0;
           this.repathTimer = 0;
-          this.lastPos.copy(vehiclePos);
+          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
           return { type: "FOLLOW_PATH", path };
         }
 
-        // Stuck detection (same logic as WALK_TO_SOURCE)
+        // Fix #9: 2D stuck detection
         this.repathTimer += delta;
-        const movedDistD = vehiclePos.distanceTo(this.lastPos);
+        const movedDistD = Math.hypot(
+          vehiclePos.x - this.lastPosXZ.x,
+          vehiclePos.z - this.lastPosXZ.z,
+        );
         if (movedDistD < AgentTaskQueue.STUCK_SPEED * delta) {
           this.stuckTimer += delta;
         } else {
           this.stuckTimer = 0;
-          this.lastPos.copy(vehiclePos);
+          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
         }
 
         if (
           this.stuckTimer > AgentTaskQueue.STUCK_THRESHOLD ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
+          this.retryCount++;
+
+          // Fix #28: Abandon and drop if permanently stuck
+          if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
+            console.warn(
+              `[AgentTaskQueue:${this.agentId}] Abandoning placement — stuck. Dropping item nearby.`,
+            );
+            const dropPos = vehiclePos.clone();
+            dropPos.x += (Math.random() - 0.5) * 2;
+            dropPos.z += (Math.random() - 0.5) * 2;
+            registry.putDown(this.activeItemId!, dropPos);
+            this.phase = "COMPLETED";
+            return { type: "STOP" };
+          }
+
           this.hasSetPath = false;
           this.stuckTimer = 0;
           this.repathTimer = 0;
         }
 
-        return { type: "NONE" }; // Keep following existing path
+        return { type: "NONE" };
       }
 
       // ------------------------------------------------------------------
@@ -331,9 +413,12 @@ export class AgentTaskQueue {
             );
           } else {
             console.warn(
-              `[AgentTaskQueue:${this.agentId}] Failed to place, dropping on ground`,
+              `[AgentTaskQueue:${this.agentId}] Failed to place, dropping nearby`,
             );
-            registry.putDown(this.activeItemId!, vehiclePos.clone());
+            const dropPos = vehiclePos.clone();
+            dropPos.x += (Math.random() - 0.5) * 2;
+            dropPos.z += (Math.random() - 0.5) * 2;
+            registry.putDown(this.activeItemId!, dropPos);
           }
           this.phase = "COMPLETED";
         }
@@ -357,12 +442,10 @@ export class AgentTaskQueue {
         const stopDistance = 2.5;
 
         if (distToPlayer < stopDistance) {
-          // Close enough, stop but keep task active
-          this.hasSetPath = false; // Reset so we re-path when player moves away
+          this.hasSetPath = false;
           return { type: "STOP" };
         }
 
-        // Re-path if: no path yet, player moved >5 units, or timer expired
         const playerMoved = playerPos.distanceTo(this.lastFollowTarget);
         this.phaseTimer += delta;
 
@@ -390,12 +473,16 @@ export class AgentTaskQueue {
       this.phase = "IDLE";
       this.activeItemId = null;
       this.activeDestAreaId = null;
+      this.retryCount = 0;
       return;
     }
 
     this.currentTask = this.queue.shift()!;
     this.phaseTimer = 0;
     this.hasSetPath = false;
+    this.retryCount = 0;
+
+    const registry = InteractableRegistry.getInstance();
 
     switch (this.currentTask.type) {
       case "FETCH_AND_PLACE": {
@@ -410,6 +497,9 @@ export class AgentTaskQueue {
           return;
         }
 
+        // Claim the item so other agents don't target it
+        registry.claimItem(this.activeItemId, this.agentId);
+
         this.phase = "WALK_TO_SOURCE";
         break;
       }
@@ -423,7 +513,6 @@ export class AgentTaskQueue {
           return;
         }
 
-        // For GO_TO, we reuse WALK_TO_SOURCE phase but target is a position
         this.activeItemId = null;
         this.activeDestAreaId = null;
         this.phase = "WALK_TO_SOURCE";
@@ -431,7 +520,6 @@ export class AgentTaskQueue {
       }
 
       case "PICK_NEARBY": {
-        // Walk to item then pick it up (no destination placement)
         this.activeItemId = this.currentTask.itemId || null;
         this.activeDestAreaId = null;
 
@@ -443,14 +531,32 @@ export class AgentTaskQueue {
           return;
         }
 
+        // Claim the item
+        registry.claimItem(this.activeItemId, this.agentId);
+
         this.phase = "WALK_TO_SOURCE";
         break;
       }
 
       case "PLACE_INVENTORY": {
-        // Walk to placing area and place carried item
-        this.activeItemId = this.currentTask.itemId || null;
         this.activeDestAreaId = this.currentTask.destAreaId || null;
+
+        // Fix #22: Resolve itemId at EXECUTION time, not queue time.
+        // If the task has no itemId, find the first item currently carried by this agent.
+        if (this.currentTask.itemId) {
+          this.activeItemId = this.currentTask.itemId;
+        } else {
+          const carried = registry.getAllCarriedBy(this.agentId);
+          if (carried.length > 0) {
+            this.activeItemId = carried[0].id;
+          } else {
+            console.warn(
+              `[AgentTaskQueue:${this.agentId}] PLACE_INVENTORY: no item to place`,
+            );
+            this.phase = "COMPLETED";
+            return;
+          }
+        }
 
         if (!this.activeDestAreaId) {
           console.warn(
@@ -460,13 +566,12 @@ export class AgentTaskQueue {
           return;
         }
 
-        // Skip walk-to-source, go directly to walk-to-dest
         this.phase = "WALK_TO_DEST";
         break;
       }
 
       case "FOLLOW_PLAYER": {
-        this.phase = "FOLLOW_PLAYER"; // Use the new phase directly
+        this.phase = "FOLLOW_PLAYER";
         break;
       }
     }
@@ -514,7 +619,7 @@ class AgentTaskRegistry {
     const queue = this.queues.get(agentId);
     if (!queue) return { taskCount: 0, phase: "IDLE" };
     return {
-      taskCount: queue.isActive() ? 1 : 0, // Simplified — active or not
+      taskCount: queue.isActive() ? 1 : 0,
       phase: queue.getCurrentPhase(),
     };
   }
