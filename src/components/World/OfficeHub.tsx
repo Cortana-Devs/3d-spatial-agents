@@ -763,7 +763,7 @@ export default function OfficeHub() {
 
       {/* 4. Reception Info Desk (Lobby) - Centered */}
       <ReceptionDesk
-        position={[hubCenter.x, hubCenter.y, hubCenter.z + 55]}
+        position={[hubCenter.x, hubCenter.y, hubCenter.z + 58]}
         rotation={Math.PI}
         userData={{
           type: "Furniture",
