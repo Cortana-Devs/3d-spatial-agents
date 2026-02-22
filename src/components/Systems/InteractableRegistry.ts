@@ -82,17 +82,14 @@ export class InteractableRegistry {
 
   /**
    * Get the authoritative WORLD position of a placing area.
-   * Fix for issue #20: placing area position may be in local coordinates.
+   * Uses the stored area.position which includes the correct vertical offset
+   * (h/2 + 0.15) computed during registration in usePlacingArea.
+   * Fix: meshRef.getWorldPosition() returns the mesh CENTER, not the surface
+   * top, which caused items to be embedded inside furniture surfaces.
    */
   public getAreaWorldPosition(areaId: string): THREE.Vector3 | null {
     const area = this.placingAreas.get(areaId);
     if (!area) return null;
-
-    if (area.meshRef) {
-      area.meshRef.updateWorldMatrix(true, false);
-      area.meshRef.getWorldPosition(_tempWorldPos);
-      return _tempWorldPos.clone();
-    }
 
     return area.position.clone();
   }
@@ -276,15 +273,9 @@ export class InteractableRegistry {
 
     if (area.currentItem) return false; // Full
 
-    // Get world position of the area
-    let placePos: THREE.Vector3;
-    if (area.meshRef) {
-      area.meshRef.updateWorldMatrix(true, false);
-      placePos = new THREE.Vector3();
-      area.meshRef.getWorldPosition(placePos);
-    } else {
-      placePos = area.position.clone();
-    }
+    // Use stored area.position which has the correct vertical offset
+    // (computed in usePlacingArea with h/2 + 0.15 so items sit ON TOP of surfaces)
+    const placePos = area.position.clone();
 
     obj.carriedBy = null;
     obj.position.copy(placePos);
