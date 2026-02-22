@@ -17,7 +17,6 @@ import {
 } from "./Furniture";
 import { Elevator } from "./Elevator";
 import {
-  FireExtinguisher,
   FileFolder,
   Whiteboard,
   ProjectorScreen,
@@ -212,30 +211,8 @@ export default function OfficeHub() {
     createWall(right, back, right, front, "Wall-East"); // East
     createWall(left, front, left, back, "Wall-West"); // West
 
-    // South Wall (Entrance)
-    // Entrance: x: -15 to +15
-    createWall(left, front, hubCenter.x - 15, front, "Wall-South-Left");
-    // Split Right Wall for Window
-    // Wall 15 to 40
-    createWall(
-      hubCenter.x + 15,
-      front,
-      hubCenter.x + 40,
-      front,
-      "Wall-South-Right-1",
-    );
-    // Window 40 to 80
-    createWall(
-      hubCenter.x + 40,
-      front,
-      hubCenter.x + 80,
-      front,
-      "Window-Lobby",
-      0.2,
-      true,
-    );
-    // Wall 80 to 100
-    createWall(hubCenter.x + 80, front, right, front, "Wall-South-Right-2");
+    // South Wall — full-width window
+    createWall(left, front, right, front, "Window-South", 0.2, true);
 
     // --- 2. Zoning ---
     // Z-Zones:
@@ -1067,17 +1044,6 @@ export default function OfficeHub() {
         />
       </CoffeeStation>
 
-      <FireExtinguisher
-        position={[hubCenter.x + 39, hubCenter.y + 2, hubCenter.z + 73.5]} // Near Window
-        rotation={0}
-        userData={{
-          type: "Prop",
-          id: "fire-extinguisher-1",
-          name: "Fire Extinguisher",
-          interactable: true,
-          description: "Safety first.",
-        }}
-      />
       {/* Projector Screen on Right Wall (East) of Conference Room */}
       <ProjectorScreen
         position={[hubCenter.x + 99, hubCenter.y, hubCenter.z - 47.5]}
