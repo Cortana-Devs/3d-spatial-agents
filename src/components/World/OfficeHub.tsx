@@ -615,7 +615,7 @@ export default function OfficeHub() {
           return (
             <group key={`desk-l-${r}-${c}`}>
               <OfficeDesk
-                position={[dx, hubCenter.y, dz]}
+                position={[dx, hubCenter.y, dz - 5]}
                 userData={{
                   type: "Furniture",
                   id: `desk-l-${r}-${c}`,
@@ -646,7 +646,7 @@ export default function OfficeHub() {
               </OfficeDesk>
               <OfficeChair
                 id={`chair-l-${r}-${c}`}
-                position={[dx, hubCenter.y, dz + 5]}
+                position={[dx, hubCenter.y, dz + 2]}
                 rotation={Math.PI}
                 userData={{
                   type: "Furniture",
@@ -655,7 +655,7 @@ export default function OfficeHub() {
                 }}
               />
               <Text
-                position={[dx - 5.5, hubCenter.y + 4.1, dz - 2.5]}
+                position={[dx - 5.5, hubCenter.y + 4.1, dz - 7.5]}
                 rotation={[-Math.PI / 2, 0, 0]}
                 fontSize={1}
                 color="black"
@@ -686,7 +686,7 @@ export default function OfficeHub() {
                 position={[
                   hubCenter.x + 20 + c * 20,
                   hubCenter.y,
-                  hubCenter.z + r * 30,
+                  hubCenter.z + r * 30 - 5,
                 ]}
                 userData={{
                   type: "Furniture",
@@ -700,7 +700,7 @@ export default function OfficeHub() {
                 position={[
                   hubCenter.x + 20 + c * 20,
                   hubCenter.y,
-                  hubCenter.z + r * 30 + 5,
+                  hubCenter.z + r * 30 + 2,
                 ]}
                 rotation={Math.PI}
                 userData={{
@@ -713,7 +713,7 @@ export default function OfficeHub() {
                 position={[
                   hubCenter.x + 20 + c * 20 - 5.5,
                   hubCenter.y + 4.1,
-                  hubCenter.z + r * 30 - 2.5,
+                  hubCenter.z + r * 30 - 7.5,
                 ]}
                 rotation={[-Math.PI / 2, 0, 0]}
                 fontSize={1}
