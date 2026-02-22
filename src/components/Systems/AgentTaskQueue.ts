@@ -73,15 +73,19 @@ export class AgentTaskQueue {
   private stuckTimer: number = 0;
   private repathTimer: number = 0;
   private stuckWindowPositions: { x: number; z: number; t: number }[] = [];
-  private static readonly STUCK_WINDOW = 1.5; // seconds of position history
+  private static readonly STUCK_WINDOW = 2.5; // seconds of position history (was 1.5 — too aggressive)
   private static readonly STUCK_MIN_DISTANCE = 1.0; // must move at least this much in the window
   private lastFollowTarget: THREE.Vector3 = new THREE.Vector3();
   private static readonly STUCK_THRESHOLD = 3.0;
-  private static readonly REPATH_INTERVAL = 5.0;
+  private static readonly REPATH_INTERVAL = 8.0; // was 5.0 — less aggressive re-pathing
 
   // Fix #28: Max retries for permanently stuck agents
   private retryCount: number = 0;
-  private static readonly MAX_RETRIES = 5;
+  private static readonly MAX_RETRIES = 8; // was 5 — more forgiving
+
+  // Fix #30: Global WALK_TO_DEST timeout — re-queue instead of drop
+  private destPhaseTimer: number = 0;
+  private static readonly DEST_PHASE_TIMEOUT = 60.0; // seconds
 
   // Distances for phase transitions
   private static readonly ARRIVAL_DIST = 4.0;
@@ -141,6 +145,7 @@ export class AgentTaskQueue {
     this.stuckTimer = 0;
     this.repathTimer = 0;
     this.retryCount = 0;
+    this.destPhaseTimer = 0;
     this.stuckWindowPositions = [];
   }
 
@@ -430,6 +435,9 @@ export class AgentTaskQueue {
       // Fix #12: Added close-approach logic (mirrors WALK_TO_SOURCE)
       // ------------------------------------------------------------------
       case "WALK_TO_DEST": {
+        // Fix #30: Global WALK_TO_DEST timeout — re-queue instead of drop
+        this.destPhaseTimer += delta;
+
         // Use world position for area (Fix #20)
         const areaWorldPos = registry.getAreaWorldPosition(
           this.activeDestAreaId!,
@@ -438,13 +446,19 @@ export class AgentTaskQueue {
 
         if (!area || !areaWorldPos) {
           console.warn(
-            `[AgentTaskQueue:${this.agentId}] Placing area ${this.activeDestAreaId} not found`,
+            `[AgentTaskQueue:${this.agentId}] Placing area ${this.activeDestAreaId} not found — re-queuing placement`,
           );
-          const dropPos = vehiclePos.clone();
-          dropPos.x += (Math.random() - 0.5) * 2;
-          dropPos.z += (Math.random() - 0.5) * 2;
-          registry.putDown(this.activeItemId!, dropPos);
-          this.phase = "COMPLETED";
+          // Fix #30: Re-queue instead of dropping on the floor
+          this.requeuePlacement();
+          return { type: "STOP" };
+        }
+
+        // Fix #30: Global timeout safety net
+        if (this.destPhaseTimer >= AgentTaskQueue.DEST_PHASE_TIMEOUT) {
+          console.warn(
+            `[AgentTaskQueue:${this.agentId}] WALK_TO_DEST timed out after ${AgentTaskQueue.DEST_PHASE_TIMEOUT}s — re-queuing placement`,
+          );
+          this.requeuePlacement();
           return { type: "STOP" };
         }
 
@@ -462,13 +476,10 @@ export class AgentTaskQueue {
           // Re-check slot occupancy right before placing (Fix #19)
           if (area.currentItem) {
             console.warn(
-              `[AgentTaskQueue:${this.agentId}] Area ${this.activeDestAreaId} is now full, dropping nearby`,
+              `[AgentTaskQueue:${this.agentId}] Area ${this.activeDestAreaId} is now full — re-queuing placement`,
             );
-            const dropPos = vehiclePos.clone();
-            dropPos.x += (Math.random() - 0.5) * 2;
-            dropPos.z += (Math.random() - 0.5) * 2;
-            registry.putDown(this.activeItemId!, dropPos);
-            this.phase = "COMPLETED";
+            // Fix #30: Re-queue instead of dropping
+            this.requeuePlacement();
             return { type: "STOP" };
           }
 
@@ -477,6 +488,7 @@ export class AgentTaskQueue {
           this.phaseTimer = 0;
           this.hasSetPath = false;
           this.retryCount = 0;
+          this.destPhaseTimer = 0;
           this.stuckWindowPositions = [];
           return { type: "STOP", faceTarget: areaWorldPos };
         }
@@ -511,18 +523,16 @@ export class AgentTaskQueue {
                   this.phaseTimer = 0;
                   this.hasSetPath = false;
                   this.retryCount = 0;
+                  this.destPhaseTimer = 0;
                   this.stuckWindowPositions = [];
                   return { type: "STOP", faceTarget: areaWorldPos };
                 }
               }
+              // Fix #30: Re-queue instead of dropping on the floor
               console.warn(
-                `[AgentTaskQueue:${this.agentId}] Abandoning placement — stuck. Dropping item nearby.`,
+                `[AgentTaskQueue:${this.agentId}] Stuck during close approach — re-queuing placement`,
               );
-              const dropPos = vehiclePos.clone();
-              dropPos.x += (Math.random() - 0.5) * 2;
-              dropPos.z += (Math.random() - 0.5) * 2;
-              registry.putDown(this.activeItemId!, dropPos);
-              this.phase = "COMPLETED";
+              this.requeuePlacement();
               return { type: "STOP" };
             }
 
@@ -571,16 +581,12 @@ export class AgentTaskQueue {
         ) {
           this.retryCount++;
 
-          // Fix #28: Abandon and drop if permanently stuck
+          // Fix #30: Re-queue instead of dropping on the floor
           if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
             console.warn(
-              `[AgentTaskQueue:${this.agentId}] Abandoning placement — stuck. Dropping item nearby.`,
+              `[AgentTaskQueue:${this.agentId}] Stuck during path-follow — re-queuing placement`,
             );
-            const dropPos = vehiclePos.clone();
-            dropPos.x += (Math.random() - 0.5) * 2;
-            dropPos.z += (Math.random() - 0.5) * 2;
-            registry.putDown(this.activeItemId!, dropPos);
-            this.phase = "COMPLETED";
+            this.requeuePlacement();
             return { type: "STOP" };
           }
 
@@ -664,6 +670,34 @@ export class AgentTaskQueue {
 
   // --- PRIVATE ---
 
+  // Fix #30: Re-queue the current placement task instead of dropping the item
+  private requeuePlacement(): void {
+    console.log(
+      `[AgentTaskQueue:${this.agentId}] Re-queuing placement of ${this.activeItemId} → ${this.activeDestAreaId}`,
+    );
+    const itemId = this.activeItemId;
+    const destAreaId = this.activeDestAreaId;
+
+    // Reset navigation state but keep holding the item
+    this.hasSetPath = false;
+    this.isCloseApproach = false;
+    this.approachPos = null;
+    this.retryCount = 0;
+    this.destPhaseTimer = 0;
+    this.stuckWindowPositions = [];
+    this.repathTimer = 0;
+
+    // Re-enqueue the same placement task
+    if (itemId && destAreaId) {
+      this.queue.unshift({
+        type: "PLACE_INVENTORY",
+        itemId,
+        destAreaId,
+      });
+    }
+    this.phase = "COMPLETED";
+  }
+
   private startNextTask(): void {
     if (this.queue.length === 0) {
       this.currentTask = null;
@@ -682,6 +716,7 @@ export class AgentTaskQueue {
     this.isCloseApproach = false;
     this.approachPos = null;
     this.retryCount = 0;
+    this.destPhaseTimer = 0;
     this.stuckWindowPositions = [];
 
     const registry = InteractableRegistry.getInstance();

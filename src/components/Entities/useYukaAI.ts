@@ -395,7 +395,13 @@ export function useYukaAI(
     }
 
     // --- SOCIAL UPDATES ---
-    if (socialState.current === "CHATTING") {
+    // Fix #30: Force-cancel social interactions if the agent has an active task.
+    // Otherwise a 5-second CHATTING freeze makes the stuck detector think the agent is stuck.
+    if (socialState.current === "CHATTING" && taskQueue.isBusy()) {
+      socialState.current = "NONE";
+      socialTimer.current = 0;
+      greetingState.current = "NONE";
+    } else if (socialState.current === "CHATTING") {
       socialTimer.current += delta;
       vehicle.velocity.set(0, 0, 0);
       if (socialTimer.current > 5.0) {
