@@ -250,9 +250,15 @@ class NavigationNetwork {
 
     let startCell = this.worldToGrid(from.x, from.z);
     let endCell = this.worldToGrid(to.x, to.z);
+    // Use the agent's current Y for all waypoints so YUKA doesn't
+    // generate vertical steering forces.
+    const pathY = from.y;
 
     // If start is blocked, find nearest walkable
     if (!this.isWalkable(startCell.col, startCell.row)) {
+      console.warn(
+        `[NavNetwork] Start cell (${startCell.col},${startCell.row}) is blocked — finding nearest walkable`,
+      );
       const alt = this.findNearestWalkable(
         startCell.col,
         startCell.row,
@@ -260,6 +266,7 @@ class NavigationNetwork {
         endCell.row,
       );
       if (!alt) {
+        console.warn(`[NavNetwork] No walkable cell near start!`);
         return {
           path: [],
           approachPos: to.clone(),
@@ -273,6 +280,9 @@ class NavigationNetwork {
     // and record the actual approach position for the caller.
     let approachPos = to.clone();
     if (!this.isWalkable(endCell.col, endCell.row)) {
+      console.warn(
+        `[NavNetwork] End cell (${endCell.col},${endCell.row}) is blocked — finding nearest walkable`,
+      );
       const alt = this.findNearestWalkable(
         endCell.col,
         endCell.row,
@@ -280,6 +290,7 @@ class NavigationNetwork {
         startCell.row,
       );
       if (!alt) {
+        console.warn(`[NavNetwork] No walkable cell near end!`);
         // Fix #3: return empty path instead of direct path into walls
         return {
           path: [],
@@ -290,7 +301,7 @@ class NavigationNetwork {
       endCell = alt;
       // Fix #2: The approach position is the center of the walkable cell we found
       const wp = this.gridToWorld(alt.col, alt.row);
-      approachPos = new THREE.Vector3(wp.x, 0, wp.z);
+      approachPos = new THREE.Vector3(wp.x, pathY, wp.z);
     }
 
     // Same cell → go direct
@@ -314,11 +325,11 @@ class NavigationNetwork {
     }
 
     // Convert grid path to world positions — skip first cell (agent is already there)
-    // Fix #10: Use Y=0 for all waypoints (single-floor assumption)
+    // Use agent's current Y for all waypoints to avoid YUKA vertical forces
     const worldPath: THREE.Vector3[] = [];
     for (let i = 1; i < gridPath.length; i++) {
       const wp = this.gridToWorld(gridPath[i].col, gridPath[i].row);
-      worldPath.push(new THREE.Vector3(wp.x, 0, wp.z));
+      worldPath.push(new THREE.Vector3(wp.x, pathY, wp.z));
     }
 
     // Fix #4: Smooth with agent-width-aware line-of-sight

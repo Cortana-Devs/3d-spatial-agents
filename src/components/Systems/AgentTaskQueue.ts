@@ -271,7 +271,10 @@ export class AgentTaskQueue {
             this.stuckTimer = 0;
             this.repathTimer = 0;
             this.stuckWindowPositions = [];
-            return { type: "ARRIVE", target: distCheckPos };
+            // Fix: Ensure ARRIVE target Y matches vehicle Y to prevent vertical YUKA forces
+            const arriveTarget = distCheckPos.clone();
+            arriveTarget.y = vehiclePos.y;
+            return { type: "ARRIVE", target: arriveTarget };
           }
 
           // Already in close approach — check for stuck using sliding window
@@ -310,7 +313,9 @@ export class AgentTaskQueue {
 
             this.repathTimer = 0;
             this.stuckWindowPositions = [];
-            return { type: "ARRIVE", target: distCheckPos };
+            const retryTarget = distCheckPos.clone();
+            retryTarget.y = vehiclePos.y;
+            return { type: "ARRIVE", target: retryTarget };
           }
 
           return { type: "NONE" }; // Let ARRIVE behavior continue
@@ -331,7 +336,7 @@ export class AgentTaskQueue {
             this.stuckTimer = 0;
             this.repathTimer = 0;
             this.stuckWindowPositions = [];
-            // Force a repath after a short delay
+            // Force a repath after a short delay (1 second)
             this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1.0;
             return { type: "STOP" };
           }
@@ -343,6 +348,8 @@ export class AgentTaskQueue {
           this.stuckTimer = 0;
           this.repathTimer = 0;
           this.stuckWindowPositions = [];
+          // Fix: Ensure approachPos Y matches vehicle to prevent vertical mismatch
+          if (this.approachPos) this.approachPos.y = vehiclePos.y;
           return { type: "FOLLOW_PATH", path: result.path };
         }
 
@@ -484,7 +491,9 @@ export class AgentTaskQueue {
             this.hasSetPath = true;
             this.repathTimer = 0;
             this.stuckWindowPositions = [];
-            return { type: "ARRIVE", target: distCheckPosDest };
+            const destArriveTarget = distCheckPosDest.clone();
+            destArriveTarget.y = vehiclePos.y;
+            return { type: "ARRIVE", target: destArriveTarget };
           }
 
           // Already in close approach — check stuck
@@ -519,7 +528,9 @@ export class AgentTaskQueue {
 
             this.repathTimer = 0;
             this.stuckWindowPositions = [];
-            return { type: "ARRIVE", target: distCheckPosDest };
+            const destRetryTarget = distCheckPosDest.clone();
+            destRetryTarget.y = vehiclePos.y;
+            return { type: "ARRIVE", target: destRetryTarget };
           }
 
           return { type: "NONE" };

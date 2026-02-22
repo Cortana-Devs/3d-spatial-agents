@@ -300,7 +300,9 @@ export function useYukaAI(
             }
 
             // 1. Repulsion force — use raw delta, NOT dt (=delta*15)
-            const pushStrength = (3.0 - dist) * 40.0;
+            // Dampen during close approach (ARRIVE active) to let agent converge
+            const basePush = (3.0 - dist) * 40.0;
+            const pushStrength = bArrive.active ? basePush * 0.4 : basePush;
             totalPushX += normal.x * pushStrength * delta;
             totalPushZ += normal.z * pushStrength * delta;
 
