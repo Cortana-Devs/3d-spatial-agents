@@ -16,7 +16,6 @@ const ACTIONS = [
   { id: "FOLLOW_PLAYER", label: "🏃 Follow Player", icon: "🏃" },
 ] as const;
 
-
 // ============================================================================
 // Styles
 // ============================================================================
@@ -152,7 +151,9 @@ export function TaskAssignmentPanel() {
   // Fix #2: also filter out items that are already claimed by another agent
   const pickableItems = useMemo(() => {
     const reg = InteractableRegistry.getInstance();
-    return reg.getAll().filter((o) => o.pickable && !o.carriedBy && !reg.isItemClaimed(o.id));
+    return reg
+      .getAll()
+      .filter((o) => o.pickable && !o.carriedBy && !reg.isItemClaimed(o.id));
   }, [step]);
 
   // Get placing areas with room
@@ -359,7 +360,10 @@ export function TaskAssignmentPanel() {
                 onClick={() => {
                   // Claim the item immediately to prevent other agents from targeting it (Fix #2)
                   if (selectedAgent) {
-                    InteractableRegistry.getInstance().claimItem(item.id, selectedAgent);
+                    InteractableRegistry.getInstance().claimItem(
+                      item.id,
+                      selectedAgent,
+                    );
                   }
                   addTask({
                     type: "PICK_NEARBY",
@@ -632,7 +636,7 @@ export function TaskAssignmentPanel() {
           textAlign: "center",
         }}
       >
-        Press <span style={{ color: "#6080aa" }}>P</span> to close • Click to
+        Press <span style={{ color: "#6080aa" }}>M</span> to close • Click to
         select
       </div>
     </div>

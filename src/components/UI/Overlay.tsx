@@ -55,8 +55,8 @@ export default function Overlay() {
         }
       }
 
-      // P key: Toggle Task Assignment Panel
-      if (e.code === "KeyP" && !isMenuOpen) {
+      // M key: Toggle Task Assignment Panel
+      if (e.code === "KeyM" && !isMenuOpen) {
         const isOpen = useGameStore.getState().isTaskPanelOpen;
         useGameStore.getState().setTaskPanelOpen(!isOpen);
         if (!isOpen) {
