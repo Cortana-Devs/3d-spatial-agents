@@ -3,6 +3,7 @@ import * as THREE from "three";
 import * as YUKA from "yuka";
 import { InteractableRegistry } from "./InteractableRegistry";
 import NavigationNetwork from "./NavigationNetwork";
+import type { PathResult } from "./NavigationNetwork";
 
 // ============================================================================
 // Task Types
@@ -61,15 +62,22 @@ export class AgentTaskQueue {
 
   // Path tracking — avoid re-pathfinding every frame
   private hasSetPath: boolean = false;
+  // Close approach: true when agent switched to ARRIVE for final approach to item
+  private isCloseApproach: boolean = false;
 
-  // Stuck detection + periodic re-path
+  // Fix #2b: The walkable approach position returned by findPathDetailed.
+  // Used for distance checks instead of raw item position (which may be in a blocked cell).
+  private approachPos: THREE.Vector3 | null = null;
+
+  // Fix #9: Cumulative stuck detection using sliding window
   private stuckTimer: number = 0;
   private repathTimer: number = 0;
-  private lastPosXZ: { x: number; z: number } = { x: 0, z: 0 }; // Fix #9: 2D tracking
+  private stuckWindowPositions: { x: number; z: number; t: number }[] = [];
+  private static readonly STUCK_WINDOW = 1.5; // seconds of position history
+  private static readonly STUCK_MIN_DISTANCE = 1.0; // must move at least this much in the window
   private lastFollowTarget: THREE.Vector3 = new THREE.Vector3();
   private static readonly STUCK_THRESHOLD = 3.0;
   private static readonly REPATH_INTERVAL = 5.0;
-  private static readonly STUCK_SPEED = 0.3;
 
   // Fix #28: Max retries for permanently stuck agents
   private retryCount: number = 0;
@@ -77,7 +85,8 @@ export class AgentTaskQueue {
 
   // Distances for phase transitions
   private static readonly ARRIVAL_DIST = 4.0;
-  private static readonly INTERACT_DIST = 3.8;
+  private static readonly INTERACT_DIST = 3.5; // Fix #6: Increased from 2.5 to 3.5 so ARRIVE can converge
+  private static readonly CLOSE_APPROACH_DIST = 6.0; // Switch from path-follow to ARRIVE for final approach
   private static readonly PICKUP_DELAY = 0.5;
   private static readonly PLACE_DELAY = 0.5;
 
@@ -127,10 +136,40 @@ export class AgentTaskQueue {
     this.activeItemId = null;
     this.activeDestAreaId = null;
     this.hasSetPath = false;
+    this.isCloseApproach = false;
+    this.approachPos = null;
     this.stuckTimer = 0;
     this.repathTimer = 0;
     this.retryCount = 0;
+    this.stuckWindowPositions = [];
   }
+
+  // --- Fix #9: Sliding-window stuck detection ---
+  private recordPosition(x: number, z: number, time: number): void {
+    this.stuckWindowPositions.push({ x, z, t: time });
+    // Trim old entries
+    const cutoff = time - AgentTaskQueue.STUCK_WINDOW;
+    while (
+      this.stuckWindowPositions.length > 0 &&
+      this.stuckWindowPositions[0].t < cutoff
+    ) {
+      this.stuckWindowPositions.shift();
+    }
+  }
+
+  private isStuckByWindow(): boolean {
+    if (this.stuckWindowPositions.length < 2) return false;
+    const first = this.stuckWindowPositions[0];
+    const last =
+      this.stuckWindowPositions[this.stuckWindowPositions.length - 1];
+    const elapsed = last.t - first.t;
+    if (elapsed < AgentTaskQueue.STUCK_WINDOW * 0.8) return false; // Need enough data
+    const dist = Math.hypot(last.x - first.x, last.z - first.z);
+    return dist < AgentTaskQueue.STUCK_MIN_DISTANCE;
+  }
+
+  // Keep a running clock for the window
+  private elapsedTime: number = 0;
 
   // --- MAIN UPDATE (called every frame from useYukaAI) ---
 
@@ -142,6 +181,8 @@ export class AgentTaskQueue {
     if (this.phase === "IDLE") {
       return { type: "NONE" };
     }
+
+    this.elapsedTime += delta;
 
     // Fix #29: Handle COMPLETED transition properly — start next task and
     // continue processing in the same frame instead of returning early
@@ -185,12 +226,17 @@ export class AgentTaskQueue {
           return { type: "STOP" };
         }
 
-        // 2D distance check (Fix: already using Math.hypot)
+        // Fix #2b: Use approach position for distance checks if available
+        const distCheckPos = this.approachPos || targetPos;
         const distToTarget = Math.hypot(
-          vehiclePos.x - targetPos.x,
-          vehiclePos.z - targetPos.z,
+          vehiclePos.x - distCheckPos.x,
+          vehiclePos.z - distCheckPos.z,
         );
 
+        // Record position for sliding-window stuck detection
+        this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
+
+        // --- ARRIVED: close enough to pick up ---
         if (distToTarget < AgentTaskQueue.INTERACT_DIST) {
           if (this.currentTask?.type === "GO_TO") {
             console.log(
@@ -199,50 +245,122 @@ export class AgentTaskQueue {
             this.phase = "COMPLETED";
             return { type: "STOP" };
           } else {
-            // Close enough to pick up — face the item first (Fix #11)
+            console.log(
+              `[AgentTaskQueue:${this.agentId}] Close enough (dist=${distToTarget.toFixed(2)}) — transitioning to PICKING_UP`,
+            );
             this.phase = "PICKING_UP";
             this.phaseTimer = 0;
             this.hasSetPath = false;
+            this.isCloseApproach = false;
             this.retryCount = 0;
+            this.stuckWindowPositions = [];
             return { type: "STOP", faceTarget: targetPos };
           }
         }
 
-        // Navigate if we haven't set a path yet
-        if (!this.hasSetPath) {
-          const path = nav.findPath(vehiclePos, targetPos);
-          if (path.length <= 1) {
-            console.warn(
-              `[AgentTaskQueue:${this.agentId}] findPath returned ${path.length} nodes — path may be blocked`,
+        // --- CLOSE APPROACH: switch to direct ARRIVE for precise homing ---
+        const isPickTask = this.currentTask?.type !== "GO_TO";
+        if (isPickTask && distToTarget < AgentTaskQueue.CLOSE_APPROACH_DIST) {
+          if (!this.isCloseApproach) {
+            // First time entering close approach — issue ARRIVE command once
+            console.log(
+              `[AgentTaskQueue:${this.agentId}] Entering close approach (dist=${distToTarget.toFixed(2)}) — switching to ARRIVE`,
             );
+            this.isCloseApproach = true;
+            this.hasSetPath = true;
+            this.stuckTimer = 0;
+            this.repathTimer = 0;
+            this.stuckWindowPositions = [];
+            return { type: "ARRIVE", target: distCheckPos };
           }
+
+          // Already in close approach — check for stuck using sliding window
+          this.repathTimer += delta;
+
+          const isStuck = this.isStuckByWindow();
+
+          // If stuck during close approach, re-issue ARRIVE with fresh target
+          if (isStuck || this.repathTimer > 3.0) {
+            this.retryCount++;
+            console.log(
+              `[AgentTaskQueue:${this.agentId}] Close-approach stuck (dist=${distToTarget.toFixed(2)}), re-issuing ARRIVE (retry=${this.retryCount})`,
+            );
+
+            if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
+              // Fix #6: Force pickup if we're reasonably close
+              if (distToTarget < AgentTaskQueue.CLOSE_APPROACH_DIST) {
+                console.log(
+                  `[AgentTaskQueue:${this.agentId}] Stuck but close enough (dist=${distToTarget.toFixed(2)}) — forcing PICKING_UP`,
+                );
+                this.phase = "PICKING_UP";
+                this.phaseTimer = 0;
+                this.hasSetPath = false;
+                this.isCloseApproach = false;
+                this.retryCount = 0;
+                this.stuckWindowPositions = [];
+                return { type: "STOP", faceTarget: targetPos };
+              }
+              console.warn(
+                `[AgentTaskQueue:${this.agentId}] Abandoning task — permanently stuck`,
+              );
+              registry.unclaimItem(this.activeItemId!, this.agentId);
+              this.phase = "COMPLETED";
+              return { type: "STOP" };
+            }
+
+            this.repathTimer = 0;
+            this.stuckWindowPositions = [];
+            return { type: "ARRIVE", target: distCheckPos };
+          }
+
+          return { type: "NONE" }; // Let ARRIVE behavior continue
+        }
+
+        // --- PATHFINDING: Navigate using grid A* ---
+        if (!this.hasSetPath) {
+          // Fix #2b: Use findPathDetailed to get the approachPos for blocked targets
+          const result = nav.findPathDetailed(vehiclePos, targetPos);
+          this.approachPos = result.approachPos;
+
+          if (!result.pathFound || result.path.length === 0) {
+            console.warn(
+              `[AgentTaskQueue:${this.agentId}] No path found to item — will retry`,
+            );
+            // Don't follow a direct line into walls; wait and retry
+            this.hasSetPath = true;
+            this.stuckTimer = 0;
+            this.repathTimer = 0;
+            this.stuckWindowPositions = [];
+            // Force a repath after a short delay
+            this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1.0;
+            return { type: "STOP" };
+          }
+
+          console.log(
+            `[AgentTaskQueue:${this.agentId}] Pathfinding to item (dist=${distToTarget.toFixed(2)}, path nodes=${result.path.length})`,
+          );
           this.hasSetPath = true;
           this.stuckTimer = 0;
           this.repathTimer = 0;
-          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
-          return { type: "FOLLOW_PATH", path };
+          this.stuckWindowPositions = [];
+          return { type: "FOLLOW_PATH", path: result.path };
         }
 
-        // Fix #9: Stuck detection using 2D XZ distance (ignores Y oscillation from gravity)
+        // Fix #9: Stuck detection using sliding window
         this.repathTimer += delta;
-        const movedDist2D = Math.hypot(
-          vehiclePos.x - this.lastPosXZ.x,
-          vehiclePos.z - this.lastPosXZ.z,
-        );
-        if (movedDist2D < AgentTaskQueue.STUCK_SPEED * delta) {
-          this.stuckTimer += delta;
-        } else {
-          this.stuckTimer = 0;
-          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
-        }
+
+        const isStuckWalk = this.isStuckByWindow();
 
         if (
-          this.stuckTimer > AgentTaskQueue.STUCK_THRESHOLD ||
+          (isStuckWalk &&
+            this.elapsedTime -
+              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+              AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
           this.retryCount++;
           console.log(
-            `[AgentTaskQueue:${this.agentId}] Re-pathing (stuck=${this.stuckTimer.toFixed(1)}s, retry=${this.retryCount}/${AgentTaskQueue.MAX_RETRIES})`,
+            `[AgentTaskQueue:${this.agentId}] Re-pathing (stuck=${isStuckWalk}, retry=${this.retryCount}/${AgentTaskQueue.MAX_RETRIES})`,
           );
 
           // Fix #28: Abandon task if permanently stuck
@@ -256,7 +374,8 @@ export class AgentTaskQueue {
           }
 
           this.hasSetPath = false;
-          this.stuckTimer = 0;
+          this.isCloseApproach = false;
+          this.stuckWindowPositions = [];
           this.repathTimer = 0;
         }
 
@@ -280,7 +399,10 @@ export class AgentTaskQueue {
               this.phase = "WALK_TO_DEST";
               this.phaseTimer = 0;
               this.hasSetPath = false;
+              this.isCloseApproach = false;
+              this.approachPos = null;
               this.retryCount = 0;
+              this.stuckWindowPositions = [];
             } else {
               this.phase = "COMPLETED";
             }
@@ -298,6 +420,7 @@ export class AgentTaskQueue {
 
       // ------------------------------------------------------------------
       // WALK_TO_DEST: Navigate to the placing area
+      // Fix #12: Added close-approach logic (mirrors WALK_TO_SOURCE)
       // ------------------------------------------------------------------
       case "WALK_TO_DEST": {
         // Use world position for area (Fix #20)
@@ -318,11 +441,15 @@ export class AgentTaskQueue {
           return { type: "STOP" };
         }
 
-        // Fix #19: Only check slot occupancy when close to arrival, not at the start
+        // Fix #2b: Use approach position for distance checks
+        const distCheckPosDest = this.approachPos || areaWorldPos;
         const distToArea = Math.hypot(
-          vehiclePos.x - areaWorldPos.x,
-          vehiclePos.z - areaWorldPos.z,
+          vehiclePos.x - distCheckPosDest.x,
+          vehiclePos.z - distCheckPosDest.z,
         );
+
+        // Record position for sliding-window stuck detection
+        this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
 
         if (distToArea < AgentTaskQueue.INTERACT_DIST) {
           // Re-check slot occupancy right before placing (Fix #19)
@@ -343,34 +470,92 @@ export class AgentTaskQueue {
           this.phaseTimer = 0;
           this.hasSetPath = false;
           this.retryCount = 0;
+          this.stuckWindowPositions = [];
           return { type: "STOP", faceTarget: areaWorldPos };
+        }
+
+        // Fix #12: Close approach for WALK_TO_DEST (mirrors WALK_TO_SOURCE)
+        if (distToArea < AgentTaskQueue.CLOSE_APPROACH_DIST) {
+          if (!this.isCloseApproach) {
+            console.log(
+              `[AgentTaskQueue:${this.agentId}] Dest close approach (dist=${distToArea.toFixed(2)}) — switching to ARRIVE`,
+            );
+            this.isCloseApproach = true;
+            this.hasSetPath = true;
+            this.repathTimer = 0;
+            this.stuckWindowPositions = [];
+            return { type: "ARRIVE", target: distCheckPosDest };
+          }
+
+          // Already in close approach — check stuck
+          this.repathTimer += delta;
+          const isStuckDest = this.isStuckByWindow();
+
+          if (isStuckDest || this.repathTimer > 3.0) {
+            this.retryCount++;
+
+            if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
+              if (distToArea < AgentTaskQueue.CLOSE_APPROACH_DIST) {
+                // Force place if close enough
+                if (!area.currentItem) {
+                  this.phase = "PLACING";
+                  this.phaseTimer = 0;
+                  this.hasSetPath = false;
+                  this.retryCount = 0;
+                  this.stuckWindowPositions = [];
+                  return { type: "STOP", faceTarget: areaWorldPos };
+                }
+              }
+              console.warn(
+                `[AgentTaskQueue:${this.agentId}] Abandoning placement — stuck. Dropping item nearby.`,
+              );
+              const dropPos = vehiclePos.clone();
+              dropPos.x += (Math.random() - 0.5) * 2;
+              dropPos.z += (Math.random() - 0.5) * 2;
+              registry.putDown(this.activeItemId!, dropPos);
+              this.phase = "COMPLETED";
+              return { type: "STOP" };
+            }
+
+            this.repathTimer = 0;
+            this.stuckWindowPositions = [];
+            return { type: "ARRIVE", target: distCheckPosDest };
+          }
+
+          return { type: "NONE" };
         }
 
         // Navigate if we haven't set a path yet
         if (!this.hasSetPath) {
-          const path = nav.findPath(vehiclePos, areaWorldPos);
+          const result = nav.findPathDetailed(vehiclePos, areaWorldPos);
+          this.approachPos = result.approachPos;
+
+          if (!result.pathFound || result.path.length === 0) {
+            console.warn(
+              `[AgentTaskQueue:${this.agentId}] No path found to area — will retry`,
+            );
+            this.hasSetPath = true;
+            this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1.0;
+            this.stuckWindowPositions = [];
+            return { type: "STOP" };
+          }
+
           this.hasSetPath = true;
           this.stuckTimer = 0;
           this.repathTimer = 0;
-          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
-          return { type: "FOLLOW_PATH", path };
+          this.stuckWindowPositions = [];
+          return { type: "FOLLOW_PATH", path: result.path };
         }
 
-        // Fix #9: 2D stuck detection
+        // Fix #9: Sliding-window stuck detection
         this.repathTimer += delta;
-        const movedDistD = Math.hypot(
-          vehiclePos.x - this.lastPosXZ.x,
-          vehiclePos.z - this.lastPosXZ.z,
-        );
-        if (movedDistD < AgentTaskQueue.STUCK_SPEED * delta) {
-          this.stuckTimer += delta;
-        } else {
-          this.stuckTimer = 0;
-          this.lastPosXZ = { x: vehiclePos.x, z: vehiclePos.z };
-        }
+        const isStuckDestWalk = this.isStuckByWindow();
 
         if (
-          this.stuckTimer > AgentTaskQueue.STUCK_THRESHOLD ||
+          (isStuckDestWalk &&
+            this.elapsedTime -
+              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+              AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
           this.retryCount++;
@@ -389,7 +574,8 @@ export class AgentTaskQueue {
           }
 
           this.hasSetPath = false;
-          this.stuckTimer = 0;
+          this.isCloseApproach = false;
+          this.stuckWindowPositions = [];
           this.repathTimer = 0;
         }
 
@@ -473,14 +659,19 @@ export class AgentTaskQueue {
       this.phase = "IDLE";
       this.activeItemId = null;
       this.activeDestAreaId = null;
+      this.approachPos = null;
       this.retryCount = 0;
+      this.stuckWindowPositions = [];
       return;
     }
 
     this.currentTask = this.queue.shift()!;
     this.phaseTimer = 0;
     this.hasSetPath = false;
+    this.isCloseApproach = false;
+    this.approachPos = null;
     this.retryCount = 0;
+    this.stuckWindowPositions = [];
 
     const registry = InteractableRegistry.getInstance();
 

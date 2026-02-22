@@ -10,11 +10,24 @@ export interface ObstacleData {
   radius?: number;
 }
 
+/**
+ * Result from findPath — includes the path AND the walkable approach
+ * position for the goal (which may differ from the raw target when
+ * the target is inside a carved obstacle).
+ */
+export interface PathResult {
+  path: THREE.Vector3[];
+  /** The walkable cell closest to the requested target.
+   *  Use this for distance checks instead of the raw target. */
+  approachPos: THREE.Vector3;
+  /** True if A* found a real path; false if fallback/direct was used. */
+  pathFound: boolean;
+}
+
 // ============================================================================
 // Grid-based Navigation Network
 // ============================================================================
-// Replaces the old 12-node hardcoded waypoint graph with a dynamic grid
-// that automatically carves out walls and furniture.
+// Dynamic grid that automatically carves out walls and furniture.
 // ============================================================================
 
 class NavigationNetwork {
@@ -24,7 +37,7 @@ class NavigationNetwork {
   private grid: Uint8Array; // 0 = blocked, 1 = walkable
   private cellSize: number = 2.0;
   // A smaller padding allows agents to get closer to objects and doorways
-  // Agent's physical bounding radius is 1.0. Padding 1.2 might be too large.
+  // Agent's physical bounding radius is 1.0.
   private padding: number = 0.8;
 
   // World bounds (from wall_layout.md: 200 wide × 150 deep)
@@ -36,8 +49,8 @@ class NavigationNetwork {
   private cols: number;
   private rows: number;
 
-  // Deduplication
-  private lastObstacleHash: number = -1;
+  // Fix #1: Proper content-based deduplication instead of count-only hash
+  private lastObstacleHash: string = "";
   private isBuilt: boolean = false;
 
   private constructor() {
@@ -95,12 +108,34 @@ class NavigationNetwork {
   // =========================================================================
 
   /**
+   * Fix #1: Build a content hash from obstacle positions + dimensions
+   * so the grid rebuilds when obstacles move, not just when count changes.
+   */
+  private computeObstacleHash(obstacles: ObstacleData[]): string {
+    // Fast hash: concatenate quantized positions and extents
+    let hash = `n=${obstacles.length};`;
+    for (const ob of obstacles) {
+      const px = (ob.position.x * 10) | 0;
+      const pz = (ob.position.z * 10) | 0;
+      if (ob.halfExtents) {
+        const hx = (ob.halfExtents.x * 10) | 0;
+        const hz = (ob.halfExtents.z * 10) | 0;
+        hash += `B${px},${pz},${hx},${hz};`;
+      } else if (ob.radius) {
+        const r = (ob.radius * 10) | 0;
+        hash += `S${px},${pz},${r};`;
+      }
+    }
+    return hash;
+  }
+
+  /**
    * Rebuild the navigation grid from obstacle data.
-   * Call whenever obstacles change. Uses count-based deduplication
-   * so multiple agents calling this won't cause redundant rebuilds.
+   * Call whenever obstacles change. Uses content-based deduplication
+   * so redundant rebuilds are skipped.
    */
   public rebuildGrid(obstacles: ObstacleData[]): void {
-    const hash = obstacles.length;
+    const hash = this.computeObstacleHash(obstacles);
     if (this.isBuilt && hash === this.lastObstacleHash) return;
     this.lastObstacleHash = hash;
 
@@ -132,6 +167,11 @@ class NavigationNetwork {
     console.log(
       `[NavNetwork] Grid built: ${walkable} walkable / ${this.grid.length} total cells`,
     );
+  }
+
+  /** Force a grid rebuild on the next call (e.g. when a door opens/closes). */
+  public invalidate(): void {
+    this.lastObstacleHash = "";
   }
 
   private carveOBB(
@@ -183,13 +223,29 @@ class NavigationNetwork {
 
   /**
    * Find a path from `from` to `to` using grid-based A*.
-   * Returns an array of THREE.Vector3 waypoints (first waypoint skipped,
-   * final target appended).
+   * Returns a PathResult containing:
+   *   - path: array of THREE.Vector3 waypoints
+   *   - approachPos: the walkable position nearest to `to` (use for distance checks)
+   *   - pathFound: whether A* succeeded
    */
   public findPath(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] {
+    const result = this.findPathDetailed(from, to);
+    return result.path;
+  }
+
+  /**
+   * Detailed path query that also returns the approach position.
+   * AgentTaskQueue should use this for object navigation so it can
+   * check distance to `approachPos` instead of the raw item position.
+   */
+  public findPathDetailed(from: THREE.Vector3, to: THREE.Vector3): PathResult {
     if (!this.isBuilt) {
       console.warn("[NavNetwork] Grid not built yet, returning direct path");
-      return [to.clone()];
+      return {
+        path: [to.clone()],
+        approachPos: to.clone(),
+        pathFound: false,
+      };
     }
 
     let startCell = this.worldToGrid(from.x, from.z);
@@ -197,45 +253,92 @@ class NavigationNetwork {
 
     // If start is blocked, find nearest walkable
     if (!this.isWalkable(startCell.col, startCell.row)) {
-      const alt = this.findNearestWalkable(startCell.col, startCell.row);
-      if (!alt) return [to.clone()];
+      const alt = this.findNearestWalkable(
+        startCell.col,
+        startCell.row,
+        endCell.col,
+        endCell.row,
+      );
+      if (!alt) {
+        return {
+          path: [],
+          approachPos: to.clone(),
+          pathFound: false,
+        };
+      }
       startCell = alt;
     }
 
-    // If end is blocked, find nearest walkable
+    // Fix #2: If end is blocked, find nearest walkable BIASED toward start
+    // and record the actual approach position for the caller.
+    let approachPos = to.clone();
     if (!this.isWalkable(endCell.col, endCell.row)) {
-      const alt = this.findNearestWalkable(endCell.col, endCell.row);
-      if (!alt) return [to.clone()];
+      const alt = this.findNearestWalkable(
+        endCell.col,
+        endCell.row,
+        startCell.col,
+        startCell.row,
+      );
+      if (!alt) {
+        // Fix #3: return empty path instead of direct path into walls
+        return {
+          path: [],
+          approachPos: to.clone(),
+          pathFound: false,
+        };
+      }
       endCell = alt;
+      // Fix #2: The approach position is the center of the walkable cell we found
+      const wp = this.gridToWorld(alt.col, alt.row);
+      approachPos = new THREE.Vector3(wp.x, 0, wp.z);
     }
 
     // Same cell → go direct
     if (startCell.col === endCell.col && startCell.row === endCell.row) {
-      return [to.clone()];
+      return {
+        path: [approachPos.clone()],
+        approachPos: approachPos.clone(),
+        pathFound: true,
+      };
     }
 
     // Run A*
     const gridPath = this.astar(startCell, endCell);
     if (!gridPath || gridPath.length === 0) {
-      return [to.clone()]; // Fallback: direct
+      // Fix #3: Return empty path instead of direct path into walls
+      return {
+        path: [],
+        approachPos: approachPos.clone(),
+        pathFound: false,
+      };
     }
 
     // Convert grid path to world positions — skip first cell (agent is already there)
-    // Use the agent's current Y so YUKA doesn't generate vertical steering forces
-    const pathY = from.y;
+    // Fix #10: Use Y=0 for all waypoints (single-floor assumption)
     const worldPath: THREE.Vector3[] = [];
     for (let i = 1; i < gridPath.length; i++) {
       const wp = this.gridToWorld(gridPath[i].col, gridPath[i].row);
-      worldPath.push(new THREE.Vector3(wp.x, pathY, wp.z));
+      worldPath.push(new THREE.Vector3(wp.x, 0, wp.z));
     }
 
-    // Smooth: remove unnecessary intermediate waypoints using line-of-sight
+    // Fix #4: Smooth with agent-width-aware line-of-sight
     const smoothed = this.smoothPath(worldPath);
 
-    // Append the actual final target position
-    smoothed.push(to.clone());
+    // Fix #11: Append approachPos (walkable) instead of raw target (may be blocked)
+    // Only append if it differs meaningfully from the last smoothed point
+    const lastSmoothed = smoothed[smoothed.length - 1];
+    if (
+      !lastSmoothed ||
+      lastSmoothed.distanceTo(approachPos) > this.cellSize * 0.5
+    ) {
+      smoothed.push(approachPos.clone());
+    }
 
-    return smoothed;
+    return {
+      path: smoothed,
+      approachPos: approachPos.clone(),
+      pathFound: true,
+    };
   }
 
   // =========================================================================
@@ -393,6 +496,7 @@ class NavigationNetwork {
 
   /**
    * Remove unnecessary intermediate waypoints using grid line-of-sight.
+   * Fix #4: Uses fat line-of-sight that accounts for agent width.
    */
   private smoothPath(path: THREE.Vector3[]): THREE.Vector3[] {
     if (path.length <= 2) return [...path];
@@ -404,7 +508,7 @@ class NavigationNetwork {
       let farthest = current + 1;
       // Try to skip ahead as far as possible
       for (let i = path.length - 1; i > current + 1; i--) {
-        if (this.hasGridLineOfSight(path[current], path[i])) {
+        if (this.hasFatLineOfSight(path[current], path[i])) {
           farthest = i;
           break;
         }
@@ -417,10 +521,11 @@ class NavigationNetwork {
   }
 
   /**
-   * Bresenham line-of-sight check on the grid.
-   * Returns true if every cell along the line is walkable.
+   * Fix #4: Fat line-of-sight check that tests cells in a corridor
+   * of width = 1 cell on each side of the Bresenham line.
+   * This prevents smoothing through gaps too narrow for the agent.
    */
-  private hasGridLineOfSight(a: THREE.Vector3, b: THREE.Vector3): boolean {
+  private hasFatLineOfSight(a: THREE.Vector3, b: THREE.Vector3): boolean {
     const cellA = this.worldToGrid(a.x, a.z);
     const cellB = this.worldToGrid(b.x, b.z);
 
@@ -435,8 +540,24 @@ class NavigationNetwork {
     const sy = y0 < y1 ? 1 : -1;
     let err = dx - dy;
 
+    // Perpendicular direction for width check
+    const len = Math.sqrt(dx * dx + dy * dy);
+    // Normal to the line (perpendicular offsets)
+    const nx = len > 0 ? -(y1 - y0) / len : 0;
+    const ny = len > 0 ? (x1 - x0) / len : 0;
+
     while (true) {
+      // Check center cell + 1-cell margin on each side of the line
       if (!this.isWalkable(x0, y0)) return false;
+
+      // Check offset cells for agent width clearance
+      const ox = Math.round(nx);
+      const oy = Math.round(ny);
+      if (ox !== 0 || oy !== 0) {
+        if (!this.isWalkable(x0 + ox, y0 + oy)) return false;
+        if (!this.isWalkable(x0 - ox, y0 - oy)) return false;
+      }
+
       if (x0 === x1 && y0 === y1) break;
 
       const e2 = 2 * err;
@@ -458,13 +579,20 @@ class NavigationNetwork {
   // =========================================================================
 
   /**
-   * BFS spiral outward to find the nearest walkable cell.
+   * Fix #7: BFS spiral outward to find the nearest walkable cell,
+   * biased toward a reference point (e.g., the agent's position when
+   * fixing a blocked goal, or the goal when fixing a blocked start).
    */
   private findNearestWalkable(
     col: number,
     row: number,
+    biasCol?: number,
+    biasRow?: number,
   ): { col: number; row: number } | null {
     const maxRadius = 25;
+    let bestCell: { col: number; row: number } | null = null;
+    let bestBiasDist = Infinity;
+
     for (let r = 1; r <= maxRadius; r++) {
       for (let dr = -r; dr <= r; dr++) {
         for (let dc = -r; dc <= r; dc++) {
@@ -473,12 +601,27 @@ class NavigationNetwork {
           const nc = col + dc;
           const nr = row + dr;
           if (this.isWalkable(nc, nr)) {
-            return { col: nc, row: nr };
+            if (biasCol !== undefined && biasRow !== undefined) {
+              // Pick the walkable cell closest to the bias point
+              const bDist =
+                (nc - biasCol) * (nc - biasCol) +
+                (nr - biasRow) * (nr - biasRow);
+              if (bDist < bestBiasDist) {
+                bestBiasDist = bDist;
+                bestCell = { col: nc, row: nr };
+              }
+            } else {
+              // No bias — return first found
+              return { col: nc, row: nr };
+            }
           }
         }
       }
+      // If we found any candidate on this ring, return it
+      // (don't search further rings, the ring is close enough)
+      if (bestCell) return bestCell;
     }
-    return null;
+    return bestCell;
   }
 
   /**

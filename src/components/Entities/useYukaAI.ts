@@ -102,57 +102,43 @@ export function useYukaAI(
 
     // --- BEHAVIORS ---
 
-    // 1. Obstacle Avoidance
     // --- Rebuild navigation grid whenever obstacles change ---
     NavigationNetwork.getInstance().rebuildGrid(obstacles);
 
-    const yukaObstacles: YUKA.GameEntity[] = [];
-    obstacles.forEach((ob) => {
-      const ent = new YUKA.GameEntity();
-      ent.position.copy(ob.position as unknown as YUKA.Vector3);
+    // Fix #5/#8: Removed YUKA ObstacleAvoidanceBehavior — wall avoidance is
+    // handled exclusively by the raycaster-based system below. Having both
+    // caused double-counted avoidance forces that overpowered path-following.
 
-      // Conservative bounding radius: use the SMALLER of the two XZ half-extents
-      // plus padding. This avoids the old bug where the full XZ diagonal created
-      // a massively oversized exclusion sphere for long rectangular furniture.
-      if (ob.halfExtents && (ob.radius === 0 || !ob.radius)) {
-        const r = Math.max(ob.halfExtents.x, ob.halfExtents.z) + 0.3;
-        ent.boundingRadius = r;
-      } else {
-        ent.boundingRadius = ob.radius;
-      }
-      yukaObstacles.push(ent);
-    });
-    const obstacleAvoidance = new YUKA.ObstacleAvoidanceBehavior(yukaObstacles);
-    obstacleAvoidance.weight = 5.0;
-    vehicle.steering.add(obstacleAvoidance); // Index 0
-
-    // 2. Follow Path (Primary Movement)
+    // 0. Follow Path (Primary Movement)
     const followPath = new YUKA.FollowPathBehavior();
     followPath.active = false;
-    followPath.nextWaypointDistance = 0.8; // Tight threshold to prevent corner-cutting at doorways
-    vehicle.steering.add(followPath); // Index 1
+    // Fix #13: Increased from 0.8 to 2.0 (matches cell size) so deflected
+    // agents don't loop back trying to reach a skipped waypoint.
+    followPath.nextWaypointDistance = 2.0;
+    vehicle.steering.add(followPath); // Index 0
 
-    // 3. Seek (Legacy / Short distance)
+    // 1. Seek (Legacy / Short distance)
     const seek = new YUKA.SeekBehavior(new YUKA.Vector3());
     seek.active = false;
-    vehicle.steering.add(seek); // Index 2
+    vehicle.steering.add(seek); // Index 1
 
-    // 4. Arrive (Final stopping)
+    // 2. Arrive (Final stopping)
     const arrive = new YUKA.ArriveBehavior(new YUKA.Vector3());
     arrive.active = false;
-    arrive.deceleration = 1.5;
-    arrive.tolerance = 0.5;
-    vehicle.steering.add(arrive); // Index 3
+    // Fix #6: Higher deceleration so agent gets closer before stopping
+    arrive.deceleration = 5.0;
+    arrive.tolerance = 0.3;
+    vehicle.steering.add(arrive); // Index 2
 
-    // 5. Wander (Idle)
+    // 3. Wander (Idle)
     const wander = new YUKA.WanderBehavior();
     wander.weight = 0.5;
-    vehicle.steering.add(wander); // Index 4
+    vehicle.steering.add(wander); // Index 3
 
-    // 6. Separation
+    // 4. Separation
     const separation = new YUKA.SeparationBehavior(aiManager.vehicles);
     separation.weight = 5.0;
-    vehicle.steering.add(separation); // Index 5
+    vehicle.steering.add(separation); // Index 4
 
     vehicleRef.current = vehicle;
     aiManager.addEntity(vehicle);
@@ -201,11 +187,12 @@ export function useYukaAI(
     const hasManualTask = taskQueue.isActive();
 
     // Fix #27: Always disable wander when a manual task is active
+    // Fix #5/#8: Updated indices after removing ObstacleAvoidanceBehavior
     const bFollowPath = vehicle.steering
-      .behaviors[1] as YUKA.FollowPathBehavior;
-    const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior;
-    const bArrive = vehicle.steering.behaviors[3] as YUKA.ArriveBehavior;
-    const bWander = vehicle.steering.behaviors[4] as YUKA.WanderBehavior;
+      .behaviors[0] as YUKA.FollowPathBehavior;
+    const bSeek = vehicle.steering.behaviors[1] as YUKA.SeekBehavior;
+    const bArrive = vehicle.steering.behaviors[2] as YUKA.ArriveBehavior;
+    const bWander = vehicle.steering.behaviors[3] as YUKA.WanderBehavior;
     if (hasManualTask && bWander.active) {
       bWander.active = false;
     }
@@ -482,8 +469,8 @@ export function useYukaAI(
         // Follow mode - handled above via task queue or legacy
       } else {
         let currentBehavior = "IDLE";
-        if (vehicle.steering.behaviors[2].active) currentBehavior = "SEEKING";
-        else if (vehicle.steering.behaviors[1].active)
+        if (vehicle.steering.behaviors[1].active) currentBehavior = "SEEKING";
+        else if (vehicle.steering.behaviors[0].active)
           currentBehavior = "WANDERING";
 
         const nearbyEntities: NearbyEntity[] = [];
@@ -511,13 +498,14 @@ export function useYukaAI(
           )
           .then((decision) => {
             if (decision) {
+              // Fix #5/#8: Updated indices after removing ObstacleAvoidanceBehavior
               const bFollowPath = vehicle.steering
-                .behaviors[1] as YUKA.FollowPathBehavior;
-              const bSeek = vehicle.steering.behaviors[2] as YUKA.SeekBehavior; // Keep legacy seek for short dist
+                .behaviors[0] as YUKA.FollowPathBehavior;
+              const bSeek = vehicle.steering.behaviors[1] as YUKA.SeekBehavior;
               const bArrive = vehicle.steering
-                .behaviors[3] as YUKA.ArriveBehavior;
+                .behaviors[2] as YUKA.ArriveBehavior;
               const bWander = vehicle.steering
-                .behaviors[4] as YUKA.WanderBehavior;
+                .behaviors[3] as YUKA.WanderBehavior;
 
               const resetBehaviors = () => {
                 bFollowPath.active = false;
