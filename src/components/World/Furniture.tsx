@@ -1534,6 +1534,7 @@ export function CupboardUnit({
 
   const levels = 3;
   const baseHeight = 0.5; // Solid base
+  const legHeight = 1.0; // Gap between floor and level 1 bottom
   const levelHeight = (h - baseHeight) / levels;
 
   // Self-managed obstacle registration
@@ -1549,13 +1550,14 @@ export function CupboardUnit({
   );
 
   useEffect(() => {
-    // Cupboard: 8 x 10 x 8 — single box obstacle
+    // Cupboard: 8 x (h + legHeight) x 8 — single box obstacle
+    const totalH = h + legHeight;
     const obs = [
       {
-        position: posVec.clone().add(new THREE.Vector3(0, 3.75, 0)),
+        position: posVec.clone().add(new THREE.Vector3(0, totalH / 2, 0)),
         radius: 0,
         type: "cupboard" as const,
-        halfExtents: new THREE.Vector3(4, 3.75, 4),
+        halfExtents: new THREE.Vector3(4, totalH / 2, 4),
         rotation,
       },
     ];
@@ -1587,9 +1589,26 @@ export function CupboardUnit({
         <meshStandardMaterial color="#111" roughness={0.5} />
       </mesh>
 
-      {/* Main Cabinet Body (Glass) - Sitting on Base */}
+      {/* Support Legs (4 corners) */}
+      {[
+        [-w / 2 + 0.4, -d / 2 + 0.4],
+        [w / 2 - 0.4, -d / 2 + 0.4],
+        [-w / 2 + 0.4, d / 2 - 0.4],
+        [w / 2 - 0.4, d / 2 - 0.4],
+      ].map(([lx, lz], li) => (
+        <mesh
+          key={`leg-${li}`}
+          position={[lx, baseHeight + legHeight / 2, lz]}
+          castShadow
+        >
+          <boxGeometry args={[0.4, legHeight, 0.4]} />
+          <meshStandardMaterial color="#222" metalness={0.6} roughness={0.3} />
+        </mesh>
+      ))}
+
+      {/* Main Cabinet Body (Glass) - Raised above legs */}
       <mesh
-        position={[0, baseHeight + (h - baseHeight) / 2, 0]}
+        position={[0, baseHeight + legHeight + (h - baseHeight) / 2, 0]}
         castShadow
         receiveShadow
       >
@@ -1608,7 +1627,7 @@ export function CupboardUnit({
       {/* Internal Placement Volume (Shared for all sides) */}
       {Array.from({ length: levels }).map((_, i) => {
         const levelNum = i + 1;
-        const yPos = baseHeight + levelHeight / 2 + i * levelHeight;
+        const yPos = baseHeight + legHeight + levelHeight / 2 + i * levelHeight;
         const levelId = userData?.id
           ? `${userData.id}-level-${levelNum}`
           : `cupboard-${label}-level-${levelNum}`;
@@ -1630,7 +1649,7 @@ export function CupboardUnit({
       {/* Glowing Number at Top (Rotating billboard style or 4-sided text?) */}
       {/* Let's make it 4-sided text so it's visible from all angles */}
       {/* Top Fascia & Integrated Numbers (Sitting on Top) */}
-      <group position={[0, h + 0.75, 0]}>
+      <group position={[0, h + legHeight + 0.75, 0]}>
         {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((rot, i) => (
           <group key={`fascia-${i}`} rotation={[0, rot, 0]}>
             <mesh position={[0, 0, d / 2 + 0.05]} receiveShadow>
@@ -1676,7 +1695,8 @@ export function CupboardUnit({
       {/* 3 Levels (Faces on 4 sides) */}
       {Array.from({ length: levels }).map((_, levelIndex) => {
         const levelNum = levelIndex + 1;
-        const yPos = baseHeight + levelHeight / 2 + levelIndex * levelHeight;
+        const yPos =
+          baseHeight + legHeight + levelHeight / 2 + levelIndex * levelHeight;
 
         return (
           <group key={`level-${levelIndex}`} position={[0, yPos, 0]}>
@@ -1752,11 +1772,17 @@ function CupboardLevel({
   name: string;
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
+  // Placing area is a thin slab on the bottom surface of the level
+  const slabDimensions: [number, number, number] = [
+    dimensions[0] - 0.4,
+    0.2,
+    dimensions[2] - 0.4,
+  ];
   usePlacingArea(surfaceRef, {
     id,
     name,
     capacity: 4,
-    dimensions,
+    dimensions: slabDimensions,
   });
 
   // Calculate generic 2x2 grid for slot visualization (matches 8x8 size approx)
@@ -1769,9 +1795,13 @@ function CupboardLevel({
 
   return (
     <group position={new THREE.Vector3(...position)}>
-      {/* Invisible Collision/Area Volume */}
-      <mesh ref={surfaceRef} visible={false}>
-        <boxGeometry args={dimensions} />
+      {/* Invisible Collision/Area Volume — on the bottom surface */}
+      <mesh
+        ref={surfaceRef}
+        position={[0, -dimensions[1] / 2 + 0.1, 0]}
+        visible={false}
+      >
+        <boxGeometry args={slabDimensions} />
       </mesh>
 
       {/* Visual Slot Markers (Projected on the shelf floor) */}
