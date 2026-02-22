@@ -135,7 +135,21 @@ export function CommandBar() {
         return;
       }
 
-      // 4. Dispatch tasks to agent queue
+      // 4. Pre-claim items (matching manual TaskAssignmentPanel flow exactly)
+      // Manual panel claims at selection time - we claim before dispatch
+      for (const task of result.tasks) {
+        if (task.type === "PICK_NEARBY" && task.itemId) {
+          InteractableRegistry.getInstance().claimItem(
+            task.itemId,
+            result.agentId,
+          );
+          console.log(
+            `[CommandBar] Pre-claimed item ${task.itemId} for ${result.agentId}`,
+          );
+        }
+      }
+
+      // 5. Dispatch tasks to agent queue
       const queue = AgentTaskRegistry.getInstance().getOrCreate(result.agentId);
       console.log(
         `[CommandBar] Dispatching ${result.tasks.length} task(s) to agent ${result.agentId}`,
