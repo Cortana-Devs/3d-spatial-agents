@@ -231,6 +231,10 @@ interface GameState {
   addPendingTask: (task: AgentTask) => void;
   clearPendingTasks: () => void;
   removePendingTask: (index: number) => void;
+
+  // Command Bar (NLP)
+  isCommandBarOpen: boolean;
+  setCommandBarOpen: (isOpen: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -437,4 +441,8 @@ export const useGameStore = create<GameState>((set) => ({
         (_, i) => i !== index,
       ),
     })),
+
+  // Command Bar (NLP)
+  isCommandBarOpen: false,
+  setCommandBarOpen: (isOpen) => set({ isCommandBarOpen: isOpen }),
 }));

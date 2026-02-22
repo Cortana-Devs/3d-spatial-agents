@@ -5,6 +5,7 @@ import { useGameStore } from "@/store/gameStore";
 import GameMenu from "./GameMenu";
 import { InspectorPanel } from "./InspectorPanel";
 import { TaskAssignmentPanel } from "./TaskAssignmentPanel";
+import { CommandBar } from "./CommandBar";
 
 export default function Overlay() {
   const debugText = useGameStore((state) => state.debugText);
@@ -62,6 +63,18 @@ export default function Overlay() {
         if (!isOpen) {
           document.exitPointerLock();
         }
+      }
+
+      // Slash key: Open NLP Command Bar
+      if (
+        e.key === "/" &&
+        !isMenuOpen &&
+        !useGameStore.getState().isTaskPanelOpen &&
+        !useGameStore.getState().isCommandBarOpen
+      ) {
+        e.preventDefault();
+        useGameStore.getState().setCommandBarOpen(true);
+        document.exitPointerLock();
       }
     };
 
@@ -550,6 +563,7 @@ export default function Overlay() {
       )}
       <InspectorPanel />
       <TaskAssignmentPanel />
+      <CommandBar />
     </>
   );
 }
