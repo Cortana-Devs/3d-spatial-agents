@@ -271,53 +271,79 @@ export function OfficeChair({
   );
 }
 
+// --- CONFERENCE PAD ---
+export function ConferencePad({
+  position,
+  rotation = 0,
+  baseId,
+  baseName,
+  initialItemLeft,
+  initialItemRight,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  baseId: string;
+  baseName: string;
+  initialItemLeft?: string;
+  initialItemRight?: string;
+}) {
+  const padLeftRef = useRef<THREE.Mesh>(null);
+  const padRightRef = useRef<THREE.Mesh>(null);
+
+  usePlacingArea(padLeftRef, {
+    id: `${baseId}-left`,
+    name: `${baseName} Left`,
+    capacity: 1,
+    dimensions: [3.5, 0.4, 3.5],
+    initialItems: initialItemLeft ? [initialItemLeft] : undefined,
+  });
+  usePlacingArea(padRightRef, {
+    id: `${baseId}-right`,
+    name: `${baseName} Right`,
+    capacity: 1,
+    dimensions: [3.5, 0.4, 3.5],
+    initialItems: initialItemRight ? [initialItemRight] : undefined,
+  });
+
+  return (
+    <group
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+    >
+      {/* Left slot */}
+      <mesh ref={padLeftRef} position={[-2, 0.05, 0]} visible={false}>
+        <boxGeometry args={[3.5, 0.1, 3.5]} />
+      </mesh>
+      {/* Right slot */}
+      <mesh ref={padRightRef} position={[2, 0.05, 0]} visible={false}>
+        <boxGeometry args={[3.5, 0.1, 3.5]} />
+      </mesh>
+      {/* Visual Desk Pad (Black Leather) */}
+      <mesh position={[0, 0, 0]} receiveShadow>
+        <boxGeometry args={[7.5, 0.05, 3.5]} />
+        <meshStandardMaterial color="#222222" roughness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
 export function ConferenceTable({
   position,
   rotation = 0,
   userData,
   children,
   initialItems,
-  initialItemsNorth,
-  initialItemsSouth,
   initialItemsCenter,
-  initialItemsEast,
-  initialItemsWest,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
   children?: React.ReactNode;
   initialItems?: string[];
-  initialItemsNorth?: string[];
-  initialItemsSouth?: string[];
   initialItemsCenter?: string[];
-  initialItemsEast?: string[];
-  initialItemsWest?: string[];
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null); // Kept for raycast or center
-  const northRef = useRef<THREE.Mesh>(null);
-  const southRef = useRef<THREE.Mesh>(null);
   const centerRef = useRef<THREE.Mesh>(null);
-  const eastRef = useRef<THREE.Mesh>(null);
-  const westRef = useRef<THREE.Mesh>(null);
-
-  // North Zone (Seats facing South)
-  usePlacingArea(northRef, {
-    id: userData?.id ? `${userData.id}-north` : "conf-table-north",
-    name: userData?.name ? `${userData.name} North` : "Conference Table North",
-    capacity: 6, // 34×4 surface → fits 6 items across
-    dimensions: [34, 0.8, 4],
-    initialItems: initialItemsNorth,
-  });
-
-  // South Zone (Seats facing North)
-  usePlacingArea(southRef, {
-    id: userData?.id ? `${userData.id}-south` : "conf-table-south",
-    name: userData?.name ? `${userData.name} South` : "Conference Table South",
-    capacity: 6, // 34×4 surface → fits 6 items across
-    dimensions: [34, 0.8, 4],
-    initialItems: initialItemsSouth,
-  });
 
   // Center Zone (Shared)
   usePlacingArea(centerRef, {
@@ -328,24 +354,6 @@ export function ConferenceTable({
     capacity: 8, // 34×6 center zone → fits 8 items (2 rows of 4)
     dimensions: [34, 0.8, 6],
     initialItems: initialItemsCenter || initialItems, // Fallback for backward compat
-  });
-
-  // East Zone (End Seat facing West)
-  usePlacingArea(eastRef, {
-    id: userData?.id ? `${userData.id}-east` : "conf-table-east",
-    name: userData?.name ? `${userData.name} East` : "Conference Table East",
-    capacity: 2, // 4×16 end zone → fits 2 items stacked
-    dimensions: [4, 0.8, 16],
-    initialItems: initialItemsEast,
-  });
-
-  // West Zone (End Seat facing East)
-  usePlacingArea(westRef, {
-    id: userData?.id ? `${userData.id}-west` : "conf-table-west",
-    name: userData?.name ? `${userData.name} West` : "Conference Table West",
-    capacity: 2, // 4×16 end zone → fits 2 items stacked
-    dimensions: [4, 0.8, 16],
-    initialItems: initialItemsWest,
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
@@ -426,30 +434,55 @@ export function ConferenceTable({
         <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
       </mesh>
 
-      {/* North Placing Area (Seats facing South) */}
-      <mesh ref={northRef} position={[0, 4.4, -6]} visible={false}>
-        <boxGeometry args={[34, 0.1, 4]} />
-      </mesh>
-
-      {/* South Placing Area (Seats facing North) */}
-      <mesh ref={southRef} position={[0, 4.4, 6]} visible={false}>
-        <boxGeometry args={[34, 0.1, 4]} />
-      </mesh>
-
       {/* Center Placing Area */}
       <mesh ref={centerRef} position={[0, 4.4, 0]} visible={false}>
         <boxGeometry args={[34, 0.1, 6]} />
       </mesh>
 
-      {/* East Placing Area (End Seat facing West) */}
-      <mesh ref={eastRef} position={[18, 4.4, 0]} visible={false}>
-        <boxGeometry args={[4, 0.1, 16]} />
-      </mesh>
+      {/* North Pads */}
+      {[-15, 0, 15].map((x, i) => (
+        <ConferencePad
+          key={`pad-n-${i}`}
+          position={[x, 4.425, -6.5]}
+          baseId={
+            userData?.id ? `${userData.id}-north-${i}` : `conf-north-${i}`
+          }
+          baseName={
+            userData?.name ? `${userData.name} North ${i}` : `Conf North ${i}`
+          }
+        />
+      ))}
 
-      {/* West Placing Area (End Seat facing East) */}
-      <mesh ref={westRef} position={[-18, 4.4, 0]} visible={false}>
-        <boxGeometry args={[4, 0.1, 16]} />
-      </mesh>
+      {/* South Pads */}
+      {[-15, 0, 15].map((x, i) => (
+        <ConferencePad
+          key={`pad-s-${i}`}
+          position={[x, 4.425, 6.5]}
+          rotation={Math.PI}
+          baseId={
+            userData?.id ? `${userData.id}-south-${i}` : `conf-south-${i}`
+          }
+          baseName={
+            userData?.name ? `${userData.name} South ${i}` : `Conf South ${i}`
+          }
+        />
+      ))}
+
+      {/* East Pad */}
+      <ConferencePad
+        position={[16, 4.425, 0]}
+        rotation={-Math.PI / 2}
+        baseId={userData?.id ? `${userData.id}-east` : `conf-east`}
+        baseName={userData?.name ? `${userData.name} East` : `Conf East`}
+      />
+
+      {/* West Pad */}
+      <ConferencePad
+        position={[-16, 4.425, 0]}
+        rotation={Math.PI / 2}
+        baseId={userData?.id ? `${userData.id}-west` : `conf-west`}
+        baseName={userData?.name ? `${userData.name} West` : `Conf West`}
+      />
 
       {/* Table Legs */}
       <mesh position={[-15, 2, -7.5]} castShadow material={metalMaterial}>
