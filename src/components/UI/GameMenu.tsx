@@ -298,7 +298,12 @@ export default function GameMenu() {
                             <ControlRow action="Jump" actionKey="jump" currentKey={keyBindings.jump} isListening={listeningFor === 'jump'} onListen={() => setListeningFor('jump')} />
                             <ControlRow action="Sprint / Sneak" actionKey="sprint" currentKey={keyBindings.sprint} isListening={listeningFor === 'sprint'} onListen={() => setListeningFor('sprint')} />
                             <ControlRow action="Interact / Sit" actionKey="interact" currentKey={keyBindings.interact} isListening={listeningFor === 'interact'} onListen={() => setListeningFor('interact')} />
+                            <ControlRow action="Pick Up Item" actionKey="pickUp" currentKey={keyBindings.pickUp} isListening={listeningFor === 'pickUp'} onListen={() => setListeningFor('pickUp')} />
+                            <ControlRow action="Place Item" actionKey="placeItem" currentKey={keyBindings.placeItem} isListening={listeningFor === 'placeItem'} onListen={() => setListeningFor('placeItem')} />
                             <ControlRow action="Toggle Menu" actionKey="menu" currentKey={keyBindings.menu} isListening={listeningFor === 'menu'} onListen={() => setListeningFor('menu')} />
+                            <ControlRow action="Task Panel" actionKey="taskPanel" currentKey={keyBindings.taskPanel} isListening={listeningFor === 'taskPanel'} onListen={() => setListeningFor('taskPanel')} />
+                            <ControlRow action="Command Bar" actionKey="commandBar" currentKey={keyBindings.commandBar} isListening={listeningFor === 'commandBar'} onListen={() => setListeningFor('commandBar')} />
+                            <ControlRow action="Debug Mode" actionKey="debugMode" currentKey={keyBindings.debugMode} isListening={listeningFor === 'debugMode'} onListen={() => setListeningFor('debugMode')} />
                         </div>
                     </div>
                 )}

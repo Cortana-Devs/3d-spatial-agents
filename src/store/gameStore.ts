@@ -149,6 +149,9 @@ interface GameState {
     pickUp: string;
     placeItem: string;
     menu: string;
+    taskPanel: string;
+    commandBar: string;
+    debugMode: string;
   };
   setKeyBinding: (action: string, key: string) => void;
 
@@ -319,6 +322,9 @@ export const useGameStore = create<GameState>((set) => ({
     pickUp: "KeyP",
     placeItem: "KeyT",
     menu: "Escape",
+    taskPanel: "KeyM",
+    commandBar: "Slash",
+    debugMode: "Backquote",
   },
   setKeyBinding: (action, key) =>
     set((state) => ({
