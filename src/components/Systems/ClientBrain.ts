@@ -9,19 +9,13 @@ export interface BrainState {
 }
 
 import { RateLimiter } from "@/lib/rateLimiter";
+import type { AgentTask } from "@/components/Systems/AgentTaskQueue";
 
 export interface AgentDecision {
-  action:
-    | "MOVE_TO"
-    | "WAIT"
-    | "WANDER"
-    | "FOLLOW"
-    | "INTERACT"
-    | "DROP"
-    | "PLACE_AT";
-  targetId?: string;
-  placeAreaId?: string;
-  target?: { x: number; y: number; z: number };
+  operation: "OBSERVE" | "INTERFERE_SCRIPT";
+  scriptId?: string;
+  priority?: number;
+  tasks?: AgentTask[];
   thought: string;
 }
 
@@ -123,8 +117,8 @@ export class ClientBrain {
           cleanText,
         );
         decision = {
-          action: "WAIT",
-          thought: cleanText,
+          operation: "OBSERVE",
+          thought: cleanText.substring(0, 100),
         };
       }
 

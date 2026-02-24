@@ -110,23 +110,48 @@ export function CommandBar() {
     setState("loading");
     setMessage("Parsing command...");
 
+    const tStart = performance.now();
+
     try {
       // 1. Build world context on the client
+      const t0 = performance.now();
       const ctx = buildWorldContext();
       const prompt = buildParserPrompt(trimmed, ctx);
-      console.log("[CommandBar] World context built:", {
-        itemCount: ctx.items.split("\n").length - 2,
-        areaCount: ctx.areas.split("\n").length - 2,
-        agentCount: ctx.agents.split("\n").length - 2,
-      });
+      const t1 = performance.now();
+
+      console.log(
+        `[Timeline] 1. World Context Built in ${(t1 - t0).toFixed(2)}ms`,
+        {
+          itemCount: ctx.items.split("\n").length - 2,
+          areaCount: ctx.areas.split("\n").length - 2,
+          agentCount: ctx.agents.split("\n").length - 2,
+        },
+      );
 
       // 2. Send to server action for LLM processing
-      console.log("[CommandBar] Sending to LLM...");
-      const rawResponse = await parseNaturalCommand(trimmed, prompt);
+      console.log("[Timeline] 2. Sending to LLM...");
+      const t2_start = performance.now();
+      const { rawResponse, serverLatency } = await parseNaturalCommand(
+        trimmed,
+        prompt,
+      );
+      const t2_end = performance.now();
+
+      const rtt = t2_end - t2_start;
+      const networkLatency = rtt - serverLatency;
+      console.log(
+        `[Timeline] 3. LLM Response Received (RTT: ${rtt.toFixed(2)}ms, Server: ${serverLatency.toFixed(2)}ms, Network: ${networkLatency.toFixed(2)}ms)`,
+      );
       console.log("[CommandBar] LLM raw response:", rawResponse);
 
       // 3. Validate response against live registry
+      const t3_start = performance.now();
       const result = validateAndResolve(rawResponse);
+      const t3_end = performance.now();
+
+      console.log(
+        `[Timeline] 4. Response Validated in ${(t3_end - t3_start).toFixed(2)}ms`,
+      );
       console.log("[CommandBar] Validation result:", result);
 
       if ("error" in result) {
@@ -136,7 +161,7 @@ export function CommandBar() {
       }
 
       // 4. Pre-claim items (matching manual TaskAssignmentPanel flow exactly)
-      // Manual panel claims at selection time - we claim before dispatch
+      const t4_start = performance.now();
       for (const task of result.tasks) {
         if (task.type === "PICK_NEARBY" && task.itemId) {
           InteractableRegistry.getInstance().claimItem(
@@ -163,6 +188,42 @@ export function CommandBar() {
       console.log(
         `[CommandBar] Agent ${result.agentId} queue active: ${queue.isActive()}, phase: ${queue.getCurrentPhase()}`,
       );
+      const t4_end = performance.now();
+      console.log(
+        `[Timeline] 5. Tasks Dispatched in ${(t4_end - t4_start).toFixed(2)}ms`,
+      );
+
+      const tTotal = t4_end - tStart;
+      console.log(`\n========================================`);
+      console.log(`🕒 NLP PARSING - FULL DURATION REPORT`);
+      console.log(`========================================`);
+      console.table([
+        {
+          Phase: "1. Context Building (Client)",
+          "Duration (ms)": parseFloat((t1 - t0).toFixed(2)),
+        },
+        {
+          Phase: "2. Network Latency up/down (Client)",
+          "Duration (ms)": parseFloat(networkLatency.toFixed(2)),
+        },
+        {
+          Phase: "3. LLM API Processing (Server)",
+          "Duration (ms)": parseFloat(serverLatency.toFixed(2)),
+        },
+        {
+          Phase: "4. Result Validation (Client)",
+          "Duration (ms)": parseFloat((t3_end - t3_start).toFixed(2)),
+        },
+        {
+          Phase: "5. Task Dispatching (Client)",
+          "Duration (ms)": parseFloat((t4_end - t4_start).toFixed(2)),
+        },
+        {
+          Phase: "TOTAL DURATION",
+          "Duration (ms)": parseFloat(tTotal.toFixed(2)),
+        },
+      ]);
+      console.log(`========================================\n`);
 
       setState("success");
       setMessage(`✅ ${result.explanation}`);

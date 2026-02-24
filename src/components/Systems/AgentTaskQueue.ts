@@ -1,9 +1,9 @@
-// @ts-nocheck
 import * as THREE from "three";
 import * as YUKA from "yuka";
 import { InteractableRegistry } from "./InteractableRegistry";
 import NavigationNetwork from "./NavigationNetwork";
 import type { PathResult } from "./NavigationNetwork";
+import { memoryStream } from "@/lib/memory/MemoryStream";
 
 // ============================================================================
 // Task Types
@@ -14,13 +14,18 @@ export type AgentTaskType =
   | "GO_TO"
   | "PICK_NEARBY"
   | "PLACE_INVENTORY"
-  | "FOLLOW_PLAYER";
+  | "FOLLOW_PLAYER"
+  | "WANDER"
+  | "WAIT";
 
 export interface AgentTask {
   type: AgentTaskType;
+  priority: number; // e.g., 0 = Subconscious Wander, 10 = LLM Script, 20 = Direct NLP User Command
+  scriptId?: string; // Groups tasks together as a block sequence
   itemId?: string; // For FETCH_AND_PLACE: which item to pick up
   destAreaId?: string; // For FETCH_AND_PLACE: where to place it
   targetPos?: THREE.Vector3; // For GO_TO: destination position
+  duration?: number; // For WAIT tasks
 }
 
 // ============================================================================
@@ -34,6 +39,8 @@ export type TaskPhase =
   | "WALK_TO_DEST" // Navigating to placing area
   | "PLACING" // Brief pause then place
   | "FOLLOW_PLAYER" // Following player
+  | "WANDER" // Wandering randomly or to a target
+  | "WAIT" // Waiting explicitly for a duration
   | "COMPLETED";
 
 // Return type: tells useYukaAI what steering to apply
@@ -102,9 +109,74 @@ export class AgentTaskQueue {
 
   public enqueue(task: AgentTask): void {
     this.queue.push(task);
+    // Sort queue by priority descending so highest priority is always next
+    this.queue.sort((a, b) => b.priority - a.priority);
+
+    // Provide preemption: If the new task has a higher priority than the currently running task
+    if (this.currentTask && task.priority > this.currentTask.priority) {
+      console.log(
+        `[AgentTaskQueue:${this.agentId}] Preempting task ${this.currentTask.type} (Pri: ${this.currentTask.priority}) for ${task.type} (Pri: ${task.priority})`,
+      );
+
+      // Handle gracefully suspending the exact current action before switching
+      if (this.activeItemId && this.phase === "WALK_TO_SOURCE") {
+        // We were walking to an item, release it for now so we don't hold the lock
+        InteractableRegistry.getInstance().unclaimItem(
+          this.activeItemId,
+          this.agentId,
+        );
+      }
+
+      // Re-queue the currently running task so it resumes later
+      this.queue.push(this.currentTask);
+      // Re-sort
+      this.queue.sort((a, b) => b.priority - a.priority);
+
+      // Immediately start the new high priority task
+      this.startNextTask();
+      return;
+    }
+
     // If idle, immediately start
     if (this.phase === "IDLE" || this.phase === "COMPLETED") {
       this.startNextTask();
+    }
+  }
+
+  public getScriptState() {
+    return {
+      currentScriptId: this.currentTask?.scriptId || null,
+      currentTask: this.currentTask?.type || null,
+      currentPriority: this.currentTask?.priority || 0,
+      queuedTasksCount: this.queue.length,
+    };
+  }
+
+  public cancelScript(scriptId: string, reason: string = "Cancelled"): void {
+    // Remove all tasks matching this scriptId from the queue
+    const initialLength = this.queue.length;
+    this.queue = this.queue.filter((t) => t.scriptId !== scriptId);
+
+    let cancelledActive = false;
+    // If the currently running task is part of this script, abort it
+    if (this.currentTask?.scriptId === scriptId) {
+      console.log(
+        `[AgentTaskQueue:${this.agentId}] Canceling active script: ${scriptId}`,
+      );
+      if (this.activeItemId) {
+        InteractableRegistry.getInstance().unclaimItem(
+          this.activeItemId,
+          this.agentId,
+        );
+      }
+      this.phase = "COMPLETED"; // Let the state machine naturally pull the next task
+      cancelledActive = true;
+    }
+
+    // Only fire an outcome if tasks were actually removed or stopped
+    if (cancelledActive || this.queue.length < initialLength) {
+      const outcome = `Script ${scriptId} was interrupted: ${reason}`;
+      memoryStream.add("SCRIPT_OUTCOME", outcome, [`script:${scriptId}`]);
     }
   }
 
@@ -193,7 +265,7 @@ export class AgentTaskQueue {
     // continue processing in the same frame instead of returning early
     if (this.phase === "COMPLETED") {
       this.startNextTask();
-      if (this.phase === "IDLE") return { type: "NONE" };
+      if ((this.phase as string) === "IDLE") return { type: "NONE" };
       // Fall through to process the new phase this same frame
     }
 
@@ -663,6 +735,85 @@ export class AgentTaskQueue {
         return { type: "NONE" };
       }
 
+      // ------------------------------------------------------------------
+      // WANDER: Pick a random nearby point and navigate to it
+      // ------------------------------------------------------------------
+      case "WANDER": {
+        // If we don't have a path yet, figure out a target
+        if (!this.hasSetPath) {
+          let targetPos = this.currentTask?.targetPos;
+
+          if (!targetPos) {
+            // Generate a random valid nav point within 10 units
+            targetPos = nav.getRandomPoint(vehiclePos, 10.0) || undefined;
+          }
+
+          if (!targetPos) {
+            this.phase = "COMPLETED";
+            return { type: "STOP" };
+          }
+
+          const result = nav.findPathDetailed(vehiclePos, targetPos);
+          if (!result.pathFound || result.path.length === 0) {
+            this.phase = "COMPLETED"; // Just finish and try another wander later
+            return { type: "STOP" };
+          }
+
+          this.hasSetPath = true;
+          this.repathTimer = 0;
+          this.stuckTimer = 0;
+          this.stuckWindowPositions = [];
+
+          // For wander target checking
+          if (!this.currentTask) return { type: "STOP" };
+          this.currentTask.targetPos = targetPos; // Save the generated random target
+
+          return { type: "FOLLOW_PATH", path: result.path };
+        }
+
+        // We are currently pathing for WANDER
+        this.repathTimer += delta;
+        const isStuckWalk = this.isStuckByWindow();
+
+        // If wandering agent gets stuck, just cancel the wander task smoothly
+        // Wait at least STUCK_THRESHOLD before bailing out
+        if (
+          (isStuckWalk &&
+            this.elapsedTime -
+              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+              AgentTaskQueue.STUCK_THRESHOLD) ||
+          this.repathTimer > AgentTaskQueue.REPATH_INTERVAL * 1.5
+        ) {
+          console.log(
+            `[AgentTaskQueue:${this.agentId}] WANDER stuck, completing early.`,
+          );
+          this.phase = "COMPLETED";
+          return { type: "STOP" };
+        }
+
+        // Check if we arrived at the end of the current path
+        const finalTarget = this.currentTask?.targetPos;
+        if (finalTarget && vehiclePos.distanceTo(finalTarget) < 1.5) {
+          this.phase = "COMPLETED";
+          return { type: "STOP" };
+        }
+
+        return { type: "NONE" };
+      }
+
+      // ------------------------------------------------------------------
+      // WAIT: Pause momentarily
+      // ------------------------------------------------------------------
+      case "WAIT": {
+        this.phaseTimer += delta;
+        const waitDuration = this.currentTask?.duration || 2.0;
+
+        if (this.phaseTimer >= waitDuration) {
+          this.phase = "COMPLETED";
+        }
+        return { type: "STOP" };
+      }
+
       default:
         return { type: "NONE" };
     }
@@ -691,6 +842,8 @@ export class AgentTaskQueue {
     if (itemId && destAreaId) {
       this.queue.unshift({
         type: "PLACE_INVENTORY",
+        priority: this.currentTask?.priority || 10,
+        scriptId: this.currentTask?.scriptId,
         itemId,
         destAreaId,
       });
@@ -699,6 +852,18 @@ export class AgentTaskQueue {
   }
 
   private startNextTask(): void {
+    // If we're transitioning from a script to idle or a different script, log it.
+    if (this.currentTask?.scriptId && this.currentTask.priority > 0) {
+      const nextTask = this.queue.length > 0 ? this.queue[0] : null;
+      if (!nextTask || nextTask.scriptId !== this.currentTask.scriptId) {
+        const outcome = `Script ${this.currentTask.scriptId} completed execution.`;
+        console.log(`[AgentTaskQueue:${this.agentId}] ${outcome}`);
+        memoryStream.add("SCRIPT_OUTCOME", outcome, [
+          `script:${this.currentTask.scriptId}`,
+        ]);
+      }
+    }
+
     if (this.queue.length === 0) {
       this.currentTask = null;
       this.phase = "IDLE";
@@ -809,6 +974,16 @@ export class AgentTaskQueue {
 
       case "FOLLOW_PLAYER": {
         this.phase = "FOLLOW_PLAYER";
+        break;
+      }
+
+      case "WANDER": {
+        this.phase = "WANDER";
+        break;
+      }
+
+      case "WAIT": {
+        this.phase = "WAIT";
         break;
       }
     }

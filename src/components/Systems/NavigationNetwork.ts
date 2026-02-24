@@ -656,6 +656,35 @@ class NavigationNetwork {
     }
     return data;
   }
+  /**
+   * Return a randomly selected walkable point within a max radius from the given origin.
+   */
+  public getRandomPoint(
+    origin: THREE.Vector3,
+    maxRadius: number,
+  ): THREE.Vector3 | null {
+    if (!this.isBuilt) return null;
+
+    const originCell = this.worldToGrid(origin.x, origin.z);
+    // Convert 10.0 world units to cells (cellSize = 2.0 -> 5 cells)
+    const radiusCells = Math.ceil(maxRadius / this.cellSize);
+
+    // Try a few times to find a random walkable cell
+    for (let i = 0; i < 20; i++) {
+      const dCol = Math.floor((Math.random() - 0.5) * 2 * radiusCells);
+      const dRow = Math.floor((Math.random() - 0.5) * 2 * radiusCells);
+
+      const candidateCol = originCell.col + dCol;
+      const candidateRow = originCell.row + dRow;
+
+      if (this.isWalkable(candidateCol, candidateRow)) {
+        const wp = this.gridToWorld(candidateCol, candidateRow);
+        return new THREE.Vector3(wp.x, origin.y, wp.z);
+      }
+    }
+
+    return null;
+  }
 }
 
 export default NavigationNetwork;

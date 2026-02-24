@@ -367,6 +367,7 @@ export function TaskAssignmentPanel() {
                   }
                   addTask({
                     type: "PICK_NEARBY",
+                    priority: 20,
                     itemId: item.id,
                   });
                   setStep(3);
@@ -407,6 +408,7 @@ export function TaskAssignmentPanel() {
             onClick={() => {
               addTask({
                 type: "FOLLOW_PLAYER",
+                priority: 20,
               });
               setStep(3);
               setAction(null);
@@ -449,6 +451,7 @@ export function TaskAssignmentPanel() {
                     // AgentTaskQueue.startNextTask() resolves it at execution time.
                     addTask({
                       type: "PLACE_INVENTORY",
+                      priority: 20,
                       destAreaId: area.id,
                     });
                     setStep(3);

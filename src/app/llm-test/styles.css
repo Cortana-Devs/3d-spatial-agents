@@ -1,0 +1,465 @@
+.container {
+  min-height: 100vh;
+  background-color: #0a0a16;
+  color: #e0e8ff;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.contentWrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  border-bottom: 1px solid rgba(100, 140, 255, 0.2);
+  padding-bottom: 16px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #80b0ff, #d0b0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.subtitle {
+  color: rgba(140, 160, 200, 0.8);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .mainGrid {
+    grid-template-columns: 350px 1fr;
+  }
+}
+
+/* Panels */
+.panel {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(100, 140, 255, 0.15);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.panel:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(100, 140, 255, 0.3);
+}
+
+.panelTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #a0c0ff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panelTitle span {
+  font-size: 20px;
+}
+
+/* Forms */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 11px;
+  color: rgba(160, 180, 220, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  color: #d0d8f0;
+  font-family: "Fira Code", "Courier New", monospace;
+  font-size: 12px;
+  resize: vertical;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  box-sizing: border-box;
+}
+
+.textarea:focus {
+  border-color: #80b0ff;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.textarea.items {
+  height: 120px;
+}
+.textarea.areas {
+  height: 120px;
+}
+.textarea.agents {
+  height: 80px;
+}
+
+/* Interactive Console */
+.consoleInputGroup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.commandInput {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(100, 140, 255, 0.25);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: #e0e8ff;
+  font-size: 15px;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.commandInput:focus {
+  border-color: #80b0ff;
+  box-shadow: 0 0 0 3px rgba(128, 176, 255, 0.15);
+}
+
+.simulateBtn {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0 24px;
+  height: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  transition:
+    transform 0.1s,
+    filter 0.2s,
+    box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.simulateBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.6);
+}
+
+.simulateBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.simulateBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #4b5563, #6b7280);
+  box-shadow: none;
+}
+
+/* Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Results section */
+.resultsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .resultsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.resultBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 380px;
+}
+
+.resultBox.promptBox {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+  margin-bottom: 12px;
+}
+
+.promptBox .resultHeader {
+  border-bottom-color: rgba(148, 163, 184, 0.1);
+}
+
+.resultTitle {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6ee7b7;
+  margin: 0;
+}
+
+.promptBox .resultTitle {
+  color: #cbd5e1;
+}
+
+.badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #a7f3d0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.promptBox .badge {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+
+.preOutput {
+  flex: 1;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 0;
+  font-family: "Fira Code", "Courier New", monospace;
+  font-size: 12px;
+  color: #a7f3d0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.promptBox .preOutput {
+  color: #e2e8f0;
+}
+
+.emptyState {
+  height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(100, 140, 255, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.emptyStateText {
+  color: rgba(160, 180, 220, 0.6);
+  font-size: 14px;
+}
+
+/* Tabs */
+.tabBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(100, 140, 255, 0.1);
+  color: #a0b0d0;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tabBtn:hover {
+  background: rgba(100, 140, 255, 0.1);
+}
+
+.tabBtn.active {
+  background: rgba(100, 140, 255, 0.15);
+  border-color: rgba(100, 140, 255, 0.4);
+  color: #e0e8ff;
+}
+
+/* Logging Feed */
+.logsList {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 550px;
+}
+
+.logRow {
+  display: flex;
+  align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 16px;
+  transition: background 0.2s;
+}
+
+.logRow:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.logTime {
+  font-size: 11px;
+  color: #607090;
+  font-family: "Fira Code", "Courier New", monospace;
+  min-width: 80px;
+}
+
+.logAgent {
+  display: flex;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.logContent {
+  flex: 1;
+}
+
+.thoughtStream {
+  font-size: 14px;
+  color: #e0e8ff;
+  line-height: 1.4;
+}
+
+.thoughtAction {
+  color: #80b0ff;
+  font-weight: 600;
+  margin-right: 8px;
+  font-size: 13px;
+}
+
+.rawContent {
+  font-size: 12px;
+  color: #a0b0d0;
+  font-family: "Fira Code", "Courier New", monospace;
+}
+
+/* Custom Scrollbar for Pre and Textareas */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 140, 255, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 140, 255, 0.5);
+}
+
+/* Log Details Expander */
+.logDetails {
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-family: "Fira Code", "Courier New", monospace;
+  font-size: 12px;
+  color: #a0b0d0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logDetails pre {
+  margin: 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 140, 255, 0.1);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: #c0d0f0;
+}
+
+.logDetails strong {
+  color: #e0e8ff;
+  font-size: 13px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.expandBtn {
+  background: transparent;
+  border: none;
+  color: rgba(160, 180, 220, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.expandBtn:hover {
+  background: rgba(100, 140, 255, 0.15);
+  color: #80b0ff;
+}
+
+.logRowContainer {
+  display: flex;
+  flex-direction: column;
+}

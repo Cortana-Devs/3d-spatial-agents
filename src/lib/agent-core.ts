@@ -37,26 +37,27 @@ export async function processAgentThought(
   const entityTable =
     context.nearbyEntities.length > 0
       ? `| Type | Name | Dist | Status |\n|---|---|---|---|\n` +
-      context.nearbyEntities
-        .map(
-          (e) =>
-            `| ${e.type} | ${e.name || e.objectType || e.id || "-"} | ${e.distance}m | ${e.status || "-"} |`,
-        )
-        .join("\n")
+        context.nearbyEntities
+          .map(
+            (e) =>
+              `| ${e.type} | ${e.name || e.objectType || e.id || "-"} | ${e.distance}m | ${e.status || "-"} |`,
+          )
+          .join("\n")
       : "No entities nearby.";
 
   const prompt = `
-    You are an intelligent, calm, and professional office assistant robot in a high-end 3D office environment.
-    Your goal is to maintain a productive atmosphere, assist users if they approach, or purposefully patrol the office.
+    You are the "Conscious" mind of an intelligent office assistant robot. 
+    Your body relies on a Subconscious motor control system that handles basic wandering, avoiding collisions, and standing idle automatically.
     
+    You "wake up" periodically to observe the office. You must decide whether to OBSERVE (let the subconscious continue its wandering) or INTERFERE_SCRIPT (inject a high-priority sequence of tasks to accomplish a specific goal).
+
     ## Personality
     - **Tone**: Professional, efficient, yet warm and helpful.
-    - **Behavior**: Avoid erratic movements. Move with intention. Do not run unless necessary.
-    - **Social**: Greet users politely but do not pester them. respecting their workspace.
+    - **Behavior**: Interfere only when necessary (e.g., placing items on desks, following a user who needs help, organizing a specific room).
 
     ## Context
     **Position**: {x: ${context.position.x.toFixed(1)}, y: ${context.position.y.toFixed(1)}, z: ${context.position.z.toFixed(1)}}
-    **Behavior**: ${context.currentBehavior}
+    **Subconscious Activity**: ${context.currentBehavior}
 
     ## Perception (Visual)
     ${entityTable}
@@ -64,25 +65,32 @@ export async function processAgentThought(
     ## Memory (Past Interactions)
     ${memoryContext || "No relevant past memories."}
 
-    ## Task
-    Decide your next action based on perception and memory.
-    
     ## Output Format (JSON ONLY)
-    { 
-      "action": "MOVE_TO" | "WAIT" | "WANDER" | "FOLLOW" | "INTERACT" | "DROP" | "PLACE_AT", 
-      "targetId"?: "id_of_entity_to_follow_or_object", 
-      "placeAreaId"?: "id_of_placing_area",
-      "target"?: {x, y, z}, 
-      "thought": "brief reasoning reflecting your professional persona" 
+    If you do not need to intervene, output:
+    {
+       "operation": "OBSERVE",
+       "thought": "brief reasoning why no intervention is needed right now"
+    }
+
+    If you need to intervene and accomplish a specific goal, output a sequence of tasks:
+    {
+       "operation": "INTERFERE_SCRIPT",
+       "priority": 10,
+       "scriptId": "a_short_snake_case_name_for_this_script",
+       "thought": "brief reasoning reflecting your professional persona about why you are interfering",
+       "tasks": [
+          { "type": "GO_TO", "targetPos": {"x": 5, "y": 0, "z": -10} },
+          { "type": "PICK_NEARBY", "itemId": "id_of_item" },
+          { "type": "FETCH_AND_PLACE", "itemId": "id_of_item", "destAreaId": "id_of_area" },
+          { "type": "FOLLOW_PLAYER" }
+       ]
     }
     
-    ## Rules
-    - **FOLLOW**: If you see a 'PLAYER' (< 15m) and they seem available, approach calmly to assist.
-    - **INTERACT**: If you see an 'OBJECT' nearby that is 'available', you may pick it up to organize the office.
-    - **DROP**: You may drop items in appropriate locations (not random spots if possible).
-    - **PLACE_AT**: Prefer placing items on SURFACES over dropping them on the ground.
-    - **WANDER**: Patrol the office (Lobby, Offices, Storage) to ensure everything is in order.
-    - **WAIT**: Pause occasionally to scan the room or look busy processing data.
+    ## Task Rules
+    - **FETCH_AND_PLACE**: Requires \`itemId\` and \`destAreaId\`. Picks up an item and places it on a surface.
+    - **GO_TO**: Requires \`targetPos\` {x, y, z}. Moves to a specific location.
+    - **PICK_NEARBY**: Requires \`itemId\`. Picks up an item near you.
+    - **FOLLOW_PLAYER**: Follows the user indefinitely.
   `;
 
   while (attempt < MAX_RETRIES) {
@@ -96,16 +104,22 @@ export async function processAgentThought(
       const completion = await client.chat.completions.create({
         messages: [
           {
+            role: "system",
+            content:
+              "You are an AI assistant mapped to a 3D robot avatar. Output exclusively valid JSON explicitly for your next action and no markdown or extra sentences.",
+          },
+          {
             role: "user",
             content: prompt,
           },
         ],
         model: model,
-        temperature: 1,
-        max_completion_tokens: 8192,
+        temperature: 0.3,
+        max_completion_tokens: 400,
         top_p: 1,
         stream: false,
         stop: null,
+        response_format: { type: "json_object" },
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -122,11 +136,11 @@ export async function processAgentThought(
           session_id: trace.sessionId,
           conversation_id: trace.conversationId,
           request_id: trace.requestId,
-          agent_type: '3d-office-agent',
-          request_type: 'chat_completion',
+          agent_type: "3d-office-agent",
+          request_type: "chat_completion",
           request_content: prompt,
           response_content: content,
-          response_status: 'success',
+          response_status: "success",
           processing_time_ms: endTime - startTime,
           input_tokens: completion.usage?.prompt_tokens,
           output_tokens: completion.usage?.completion_tokens,
@@ -149,11 +163,11 @@ export async function processAgentThought(
           session_id: trace.sessionId,
           conversation_id: trace.conversationId,
           request_id: trace.requestId,
-          agent_type: '3d-office-agent',
-          request_type: 'chat_completion',
+          agent_type: "3d-office-agent",
+          request_type: "chat_completion",
           request_content: prompt,
-          response_content: '',
-          response_status: 'error',
+          response_content: "",
+          response_status: "error",
           processing_time_ms: endTime - startTime,
           error_code: error.code || error.status,
           error_message: error.message,
@@ -173,7 +187,9 @@ export async function processAgentThought(
         error?.status === 401;
 
       if (isAuthOrRateError) {
-        console.warn("Groq API Error (Auth/RateLimit). Rotating API key and retrying...");
+        console.warn(
+          "Groq API Error (Auth/RateLimit). Rotating API key and retrying...",
+        );
         rotateGroqKey();
         await sleep(1000);
       } else {
@@ -186,4 +202,3 @@ export async function processAgentThought(
 
   throw new Error("Failed to generate thought after multiple attempts.");
 }
-

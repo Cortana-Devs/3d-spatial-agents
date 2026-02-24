@@ -233,6 +233,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
           parsed.agentId = item.carriedBy; // override agent to the one holding it
           validatedTasks.push({
             type: "PLACE_INVENTORY",
+            priority: 20,
             itemId: t.itemId,
             destAreaId: resolvedAreaId,
           });
@@ -242,10 +243,12 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
         // Otherwise: standard PICK_NEARBY + PLACE_INVENTORY sequence
         validatedTasks.push({
           type: "PICK_NEARBY",
+          priority: 20,
           itemId: t.itemId,
         });
         validatedTasks.push({
           type: "PLACE_INVENTORY",
+          priority: 20,
           itemId: t.itemId,
           destAreaId: resolvedAreaId,
         });
@@ -260,7 +263,11 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
         if (!item) {
           return { error: `Item "${t.itemId}" not found in the scene.` };
         }
-        validatedTasks.push({ type: "PICK_NEARBY", itemId: t.itemId });
+        validatedTasks.push({
+          type: "PICK_NEARBY",
+          priority: 20,
+          itemId: t.itemId,
+        });
         break;
       }
 
@@ -280,6 +287,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
         }
         validatedTasks.push({
           type: "PLACE_INVENTORY",
+          priority: 20,
           destAreaId: resolvedAreaId,
         });
         break;
@@ -289,6 +297,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
         if (t.targetX !== undefined && t.targetZ !== undefined) {
           validatedTasks.push({
             type: "GO_TO",
+            priority: 20,
             targetPos: new THREE.Vector3(t.targetX, 0, t.targetZ),
           });
         } else {
@@ -298,7 +307,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
       }
 
       case "FOLLOW_PLAYER": {
-        validatedTasks.push({ type: "FOLLOW_PLAYER" });
+        validatedTasks.push({ type: "FOLLOW_PLAYER", priority: 20 });
         break;
       }
 

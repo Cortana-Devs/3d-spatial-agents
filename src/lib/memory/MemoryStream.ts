@@ -16,7 +16,7 @@ const DEFAULT_CONFIG: MemoryConfig = {
 export class MemoryStream {
   private isCompacting = false;
 
-  constructor(private config: MemoryConfig = DEFAULT_CONFIG) { }
+  constructor(private config: MemoryConfig = DEFAULT_CONFIG) {}
 
   async init() {
     // Any async setup if needed, IDB open is handled in adapter lazy-load
@@ -142,11 +142,14 @@ export class MemoryStream {
 
       if (oldest.length === 0) return;
 
-      // Simple text block for LLM
       const textToSummarize = oldest
         .map(
           (m) =>
-            `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.type}: ${m.content}`,
+            `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.type}: ${
+              m.content.length > 200
+                ? m.content.substring(0, 200) + "..."
+                : m.content
+            }`,
         )
         .join("\n");
 

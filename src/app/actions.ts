@@ -112,7 +112,7 @@ export async function parseNaturalCommand(
   command: string,
   worldContext: string,
   sessionId?: string,
-): Promise<string> {
+): Promise<{ rawResponse: string; serverLatency: number }> {
   const requestId = crypto.randomUUID();
   const effectiveSessionId =
     sessionId || "unknown-session-" + crypto.randomUUID().slice(0, 8);
@@ -137,10 +137,12 @@ export async function parseNaturalCommand(
       model,
       temperature: 0.2,
       max_completion_tokens: 500,
+      response_format: { type: "json_object" },
     });
 
     const content = completion.choices[0]?.message?.content?.trim();
     const endTime = Date.now();
+    const serverLatency = endTime - startTime;
 
     await logAgentInteraction({
       timestamp: new Date().toISOString(),
@@ -151,25 +153,29 @@ export async function parseNaturalCommand(
       request_content: command,
       response_content: content || "",
       response_status: content ? "success" : "error",
-      processing_time_ms: endTime - startTime,
+      processing_time_ms: serverLatency,
       input_tokens: completion.usage?.prompt_tokens,
       output_tokens: completion.usage?.completion_tokens,
       model_version: model,
     });
 
     if (!content) {
-      return JSON.stringify({
-        agentId: null,
-        tasks: [],
-        explanation: "",
-        error: "Empty response from LLM.",
-      });
+      return {
+        rawResponse: JSON.stringify({
+          agentId: null,
+          tasks: [],
+          explanation: "",
+          error: "Empty response from LLM.",
+        }),
+        serverLatency,
+      };
     }
 
-    return content;
+    return { rawResponse: content, serverLatency };
   } catch (error: any) {
     console.error("NLP Parse Error:", error);
 
+    const errorLatency = Date.now() - startTime;
     await logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
@@ -179,17 +185,20 @@ export async function parseNaturalCommand(
       request_content: command,
       response_content: "",
       response_status: "error",
-      processing_time_ms: Date.now() - startTime,
+      processing_time_ms: errorLatency,
       error_code: error.code || error.status,
       error_message: error.message,
       model_version: model,
     });
 
-    return JSON.stringify({
-      agentId: null,
-      tasks: [],
-      explanation: "",
-      error: `LLM API Error: ${error.message}`,
-    });
+    return {
+      rawResponse: JSON.stringify({
+        agentId: null,
+        tasks: [],
+        explanation: "",
+        error: `LLM API Error: ${error.message}`,
+      }),
+      serverLatency: errorLatency,
+    };
   }
 }

@@ -506,48 +506,45 @@ export function useYukaAI(
           )
           .then((decision) => {
             if (decision) {
-              // Fix #5/#8: Updated indices after removing ObstacleAvoidanceBehavior
-              const bFollowPath = vehicle.steering
-                .behaviors[0] as YUKA.FollowPathBehavior;
-              const bSeek = vehicle.steering.behaviors[1] as YUKA.SeekBehavior;
-              const bArrive = vehicle.steering
-                .behaviors[2] as YUKA.ArriveBehavior;
-              const bWander = vehicle.steering
-                .behaviors[3] as YUKA.WanderBehavior;
-
-              const resetBehaviors = () => {
-                bFollowPath.active = false;
-                bSeek.active = false;
-                bArrive.active = false;
-                bWander.active = false;
-              };
-
-              // Simple handling of MOVE_TO / FOLLOW for now to keep it robust
-              if (decision.action === "MOVE_TO" && decision.target) {
-                resetBehaviors();
-                // Use Pathfinding
-                const target = new THREE.Vector3(
-                  decision.target.x,
-                  decision.target.y,
-                  decision.target.z,
-                );
-                const path = NavigationNetwork.getInstance().findPath(
-                  vehicle.position as unknown as THREE.Vector3,
-                  target,
+              // The conscious brain has made a decision
+              if (
+                decision.operation === "INTERFERE_SCRIPT" &&
+                decision.tasks &&
+                decision.tasks.length > 0
+              ) {
+                console.log(
+                  `[useYukaAI:${id}] Brain initiating script: ${decision.scriptId}`,
                 );
 
-                const yukaPath = new YUKA.Path();
-                path.forEach((p) =>
-                  yukaPath.add(new YUKA.Vector3(p.x, p.y, p.z)),
+                // Generate a fallback script ID if LLM omitted it
+                const scriptId = decision.scriptId || `script_${Date.now()}`;
+                const priority = decision.priority || 10;
+
+                // Cancel any existing script with the same ID to prevent duplicates
+                taskQueue.cancelScript(
+                  scriptId,
+                  "Replaced by new brain decision",
                 );
-                bFollowPath.path = yukaPath;
-                bFollowPath.active = true;
-              } else if (decision.action === "WANDER") {
-                resetBehaviors();
-                bWander.active = true;
-              } else if (decision.action === "WAIT") {
-                resetBehaviors();
-                vehicle.velocity.multiplyScalar(0.5);
+
+                // Inject the tasks into the priority queue
+                decision.tasks.forEach((task) => {
+                  taskQueue.enqueue({
+                    ...task,
+                    priority,
+                    scriptId,
+                  });
+                });
+              } else if (decision.operation === "OBSERVE") {
+                // The LLM chose not to interfere.
+                // We don't need to do anything, but let's ensure the subconscious is at least wandering
+                // if the queue is completely empty.
+                if (taskQueue.getCurrentPhase() === "IDLE") {
+                  taskQueue.enqueue({
+                    type: "WANDER",
+                    priority: 0,
+                    scriptId: "subconscious_wander",
+                  });
+                }
               }
             }
           });
