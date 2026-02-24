@@ -1,4 +1,4 @@
-// @ts-nocheck
+// Fix #2: Removed @ts-nocheck — targeted @ts-ignore used on Yuka↔Three casts below
 import { useEffect, useRef, useState } from "react";
 import * as YUKA from "yuka";
 import * as THREE from "three";
@@ -13,6 +13,18 @@ import { InteractableRegistry } from "../Systems/InteractableRegistry";
 import NavigationNetwork from "../Systems/NavigationNetwork";
 import { AgentTaskRegistry } from "../Systems/AgentTaskQueue";
 import type { SteeringCommand } from "../Systems/AgentTaskQueue";
+import { findAlternativeArea } from "@/lib/nlp-parser";
+
+// Fix #1/#3: World bounds for clamping LLM-generated coordinates
+const WORLD_BOUNDS = { minX: -100, maxX: 100, minZ: -75, maxZ: 75 };
+
+function clampToWorldBounds(pos: { x: number; y: number; z: number }) {
+  return {
+    x: Math.max(WORLD_BOUNDS.minX, Math.min(WORLD_BOUNDS.maxX, pos.x)),
+    y: pos.y,
+    z: Math.max(WORLD_BOUNDS.minZ, Math.min(WORLD_BOUNDS.maxZ, pos.z)),
+  };
+}
 
 export function useYukaAI(
   id: string,
@@ -475,6 +487,14 @@ export function useYukaAI(
       // SKIP BRAIN IF FOLLOWING (Manual Override)
       if (followingAgentId === id) {
         // Follow mode - handled above via task queue or legacy
+      } else if (
+        taskQueue.isBusy() &&
+        (taskQueue.getCurrentTask()?.priority ?? 0) > 0
+      ) {
+        // SKIP BRAIN: A conscious script is actively running — don't poll LLM
+        console.log(
+          `[useYukaAI:${id}] Brain gate: SKIPPING (busy, priority=${taskQueue.getCurrentTask()?.priority}, phase=${taskQueue.getCurrentPhase()})`,
+        );
       } else {
         let currentBehavior = "IDLE";
         if (vehicle.steering.behaviors[1].active) currentBehavior = "SEEKING";
@@ -497,15 +517,80 @@ export function useYukaAI(
             });
         }
 
+        // Fix A: Perception: Nearby pickable items (within 15 meters)
+        const registry = InteractableRegistry.getInstance();
+        const nearbyItems = registry.getNearby(
+          vehicle.position as unknown as THREE.Vector3,
+          15,
+        );
+        for (const item of nearbyItems) {
+          if (!item.pickable) continue;
+          const d = vehicle.position.distanceTo(
+            item.position as unknown as YUKA.Vector3,
+          );
+          nearbyEntities.push({
+            type: "OBJECT",
+            id: item.id,
+            distance: d,
+            objectType: item.type,
+            name: item.name,
+            status: item.carriedBy
+              ? `carried by ${item.carriedBy}`
+              : item.placedInArea
+                ? `on ${registry.getPlacingAreaById(item.placedInArea)?.name || "surface"}`
+                : registry.isItemClaimed(item.id)
+                  ? "claimed"
+                  : "on floor",
+          });
+        }
+
+        // Fix A: Perception: Nearby placing areas (within 15 meters)
+        const nearbyAreas = registry.getNearbyPlacingAreas(
+          vehicle.position as unknown as THREE.Vector3,
+          15,
+        );
+        for (const area of nearbyAreas) {
+          const d = vehicle.position.distanceTo(
+            area.position as unknown as YUKA.Vector3,
+          );
+          nearbyEntities.push({
+            type: "AREA",
+            id: area.id,
+            distance: d,
+            name: area.name,
+            status: area.currentItem ? "occupied" : "empty",
+          });
+        }
+
+        // Fix B: Include task queue state so the LLM knows what it's currently doing
+        const scriptState = taskQueue.getScriptState();
+
         // Update Brain
         brain
           .update(
             vehicle.position as unknown as THREE.Vector3,
             nearbyEntities,
             currentBehavior,
+            {
+              ...scriptState,
+              phase: taskQueue.getCurrentPhase(),
+            },
           )
           .then((decision) => {
             if (decision) {
+              // Fix #1: Guard — if a higher-priority task arrived while we were thinking, skip
+              const currentPri = taskQueue.getCurrentTask()?.priority ?? -1;
+              const decisionPri = decision.priority || 10;
+              console.log(
+                `[useYukaAI:${id}] Brain decision: op=${decision.operation}, scriptId=${decision.scriptId}, tasks=${decision.tasks?.length ?? 0}, currentPri=${currentPri}, decisionPri=${decisionPri}`,
+              );
+              if (taskQueue.isBusy() && currentPri >= decisionPri) {
+                console.log(
+                  `[useYukaAI:${id}] Skipping brain decision (priority ${decisionPri}) — active task has priority ${currentPri}`,
+                );
+                return;
+              }
+
               // The conscious brain has made a decision
               if (
                 decision.operation === "INTERFERE_SCRIPT" &&
@@ -528,11 +613,81 @@ export function useYukaAI(
 
                 // Inject the tasks into the priority queue
                 decision.tasks.forEach((task) => {
-                  taskQueue.enqueue({
-                    ...task,
-                    priority,
-                    scriptId,
-                  });
+                  if (
+                    task.type === "FETCH_AND_PLACE" &&
+                    task.itemId &&
+                    task.destAreaId
+                  ) {
+                    const registry = InteractableRegistry.getInstance();
+                    const item = registry.getById(task.itemId);
+                    if (!item) {
+                      console.warn(
+                        `[useYukaAI:${id}] Item ${task.itemId} not found`,
+                      );
+                      return;
+                    }
+
+                    if (item.carriedBy && item.carriedBy !== id) {
+                      console.warn(
+                        `[useYukaAI:${id}] Item ${task.itemId} is carried by ${item.carriedBy}, aborting fetch.`,
+                      );
+                      return;
+                    }
+
+                    // Smart area resolution
+                    let resolvedAreaId = task.destAreaId;
+                    const area = registry.getPlacingAreaById(resolvedAreaId);
+                    if (area && area.currentItem) {
+                      const alt = findAlternativeArea(resolvedAreaId, registry);
+                      if (alt) {
+                        resolvedAreaId = alt;
+                        console.log(
+                          `[useYukaAI:${id}] Area ${task.destAreaId} is full, using alternative ${alt}`,
+                        );
+                      } else {
+                        console.warn(
+                          `[useYukaAI:${id}] All slots for ${task.destAreaId} are full.`,
+                        );
+                      }
+                    }
+
+                    if (item.carriedBy === id) {
+                      taskQueue.enqueue({
+                        type: "PLACE_INVENTORY",
+                        priority,
+                        scriptId,
+                        destAreaId: resolvedAreaId,
+                      });
+                    } else {
+                      taskQueue.enqueue({
+                        type: "PICK_NEARBY",
+                        priority,
+                        scriptId,
+                        itemId: task.itemId,
+                      });
+                      taskQueue.enqueue({
+                        type: "PLACE_INVENTORY",
+                        priority,
+                        scriptId,
+                        destAreaId: resolvedAreaId,
+                      });
+                    }
+                  } else {
+                    // Fix #3: Clamp LLM-generated coordinates to world bounds
+                    if (task.type === "GO_TO" && task.targetPos) {
+                      const clamped = clampToWorldBounds(task.targetPos);
+                      task.targetPos = new THREE.Vector3(
+                        clamped.x,
+                        clamped.y,
+                        clamped.z,
+                      );
+                    }
+                    taskQueue.enqueue({
+                      ...task,
+                      priority,
+                      scriptId,
+                    });
+                  }
                 });
               } else if (decision.operation === "OBSERVE") {
                 // The LLM chose not to interfere.

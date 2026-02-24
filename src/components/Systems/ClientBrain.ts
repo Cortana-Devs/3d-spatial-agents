@@ -46,6 +46,7 @@ export class ClientBrain {
     position: THREE.Vector3,
     nearbyEntities: NearbyEntity[],
     currentBehavior: string,
+    taskState?: AgentContext["taskState"],
   ): Promise<AgentDecision | null> {
     // Rate Limiting Check
     if (this.state.isThinking || !this.rateLimiter.tryConsume()) {
@@ -64,6 +65,7 @@ export class ClientBrain {
       position: { x: position.x, y: position.y, z: position.z },
       nearbyEntities: nearbyEntities,
       currentBehavior: currentBehavior,
+      taskState,
     };
 
     try {
@@ -79,6 +81,11 @@ export class ClientBrain {
         if (e.id) tags.push(`id:${e.id}`);
         return tags;
       });
+
+      // Fix C: Include script-related tags so SCRIPT_OUTCOME memories surface
+      if (taskState?.currentScriptId) {
+        contextTags.push(`script:${taskState.currentScriptId}`);
+      }
 
       const relevantMemories = await memoryStream.retrieve({
         tags: contextTags,

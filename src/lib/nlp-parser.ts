@@ -115,7 +115,7 @@ export interface NLPError {
  * originally requested area. For example if the LLM picks "desk-a-slot-0"
  * which is occupied, this will try to find "desk-a-slot-1" which is empty.
  */
-function findAlternativeArea(
+export function findAlternativeArea(
   requestedAreaId: string,
   registry: InteractableRegistry,
 ): string | null {

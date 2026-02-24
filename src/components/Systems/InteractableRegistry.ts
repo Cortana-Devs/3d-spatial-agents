@@ -23,6 +23,7 @@ export interface WorldObject {
   description?: string;
   pickable: boolean;
   carriedBy: string | null; // null = on ground, 'player' or agent-id
+  placedInArea?: string | null; // ID of the PlacingArea this item sits on, or null if on floor
   meshRef?: THREE.Object3D;
 }
 
@@ -175,6 +176,7 @@ export class InteractableRegistry {
     for (const area of this.placingAreas.values()) {
       if (area.currentItem === objectId) {
         area.currentItem = null;
+        if (obj) obj.placedInArea = null;
         break;
       }
     }
@@ -195,6 +197,7 @@ export class InteractableRegistry {
     if (!obj || !obj.carriedBy) return false;
 
     obj.carriedBy = null;
+    obj.placedInArea = null; // since it goes on the ground
     obj.position.copy(worldPos);
 
     if (obj.meshRef) {
@@ -221,6 +224,7 @@ export class InteractableRegistry {
     if (area.currentItem) {
       const obj = this.objects.get(area.currentItem);
       if (obj) {
+        obj.placedInArea = area.id;
         obj.position.copy(area.position);
         if (obj.meshRef) {
           if (obj.meshRef.parent) {
@@ -278,6 +282,7 @@ export class InteractableRegistry {
     const placePos = area.position.clone();
 
     obj.carriedBy = null;
+    obj.placedInArea = areaId;
     obj.position.copy(placePos);
 
     if (obj.meshRef) {

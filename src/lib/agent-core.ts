@@ -14,6 +14,14 @@ export interface AgentContext {
   position: { x: number; y: number; z: number };
   nearbyEntities: NearbyEntity[];
   currentBehavior: string;
+  /** Current task queue state — undefined if no queue is available */
+  taskState?: {
+    currentScriptId: string | null;
+    currentTask: string | null;
+    currentPriority: number;
+    queuedTasksCount: number;
+    phase: string;
+  };
 }
 
 export interface TraceOptions {
@@ -36,11 +44,11 @@ export async function processAgentThought(
   // Context Compression: Convert entities to Markdown Table
   const entityTable =
     context.nearbyEntities.length > 0
-      ? `| Type | Name | Dist | Status |\n|---|---|---|---|\n` +
+      ? `| Type | ID | Name | Dist | Status |\n|---|---|---|---|---|\n` +
         context.nearbyEntities
           .map(
             (e) =>
-              `| ${e.type} | ${e.name || e.objectType || e.id || "-"} | ${e.distance}m | ${e.status || "-"} |`,
+              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.status || "-"} |`,
           )
           .join("\n")
       : "No entities nearby.";
@@ -58,6 +66,7 @@ export async function processAgentThought(
     ## Context
     **Position**: {x: ${context.position.x.toFixed(1)}, y: ${context.position.y.toFixed(1)}, z: ${context.position.z.toFixed(1)}}
     **Subconscious Activity**: ${context.currentBehavior}
+    **Task Queue**: ${context.taskState ? `Phase: ${context.taskState.phase}, Script: ${context.taskState.currentScriptId || "none"}, Task: ${context.taskState.currentTask || "none"}, Priority: ${context.taskState.currentPriority}, Queued: ${context.taskState.queuedTasksCount}` : "No active tasks"}
 
     ## Perception (Visual)
     ${entityTable}
@@ -79,18 +88,23 @@ export async function processAgentThought(
        "scriptId": "a_short_snake_case_name_for_this_script",
        "thought": "brief reasoning reflecting your professional persona about why you are interfering",
        "tasks": [
-          { "type": "GO_TO", "targetPos": {"x": 5, "y": 0, "z": -10} },
-          { "type": "PICK_NEARBY", "itemId": "id_of_item" },
-          { "type": "FETCH_AND_PLACE", "itemId": "id_of_item", "destAreaId": "id_of_area" },
-          { "type": "FOLLOW_PLAYER" }
+          { "type": "FETCH_AND_PLACE", "itemId": "id_of_item", "destAreaId": "id_of_area" }
        ]
     }
+    
+    IMPORTANT: Provide ONLY the specific tasks required for your goal. Do NOT output a sequence of every possible task type.
     
     ## Task Rules
     - **FETCH_AND_PLACE**: Requires \`itemId\` and \`destAreaId\`. Picks up an item and places it on a surface.
     - **GO_TO**: Requires \`targetPos\` {x, y, z}. Moves to a specific location.
     - **PICK_NEARBY**: Requires \`itemId\`. Picks up an item near you.
     - **FOLLOW_PLAYER**: Follows the user indefinitely.
+    - **IMPORTANT**: Do NOT issue new scripts if your Task Queue already shows an active script running. Wait for it to complete first. If you see "Phase: WALK_TO_SOURCE" or similar, your previous script is still executing.
+
+    ## Organization Rules
+    If you observe an object whose status is "on floor", it is misplaced! You MUST prioritize using \`FETCH_AND_PLACE\` to move it to a logically appropriate empty AREA.
+    Example: Place a monitor, laptop, or coffeecup on a desk. Place a file on a shelf or desk. 
+    Explain your reasoning for the placement in your "thought".
   `;
 
   while (attempt < MAX_RETRIES) {
