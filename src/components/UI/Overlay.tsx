@@ -57,7 +57,7 @@ export default function Overlay() {
       }
 
       // M key: Toggle Task Assignment Panel
-      if (e.code === "KeyM" && !isMenuOpen) {
+      if (e.code === keyBindings.taskPanel && !isMenuOpen) {
         const isOpen = useGameStore.getState().isTaskPanelOpen;
         useGameStore.getState().setTaskPanelOpen(!isOpen);
         if (!isOpen) {
@@ -67,7 +67,7 @@ export default function Overlay() {
 
       // Slash key: Open NLP Command Bar
       if (
-        e.key === "/" &&
+        e.code === keyBindings.commandBar &&
         !isMenuOpen &&
         !useGameStore.getState().isTaskPanelOpen &&
         !useGameStore.getState().isCommandBarOpen

@@ -9,6 +9,7 @@ export default function DebugCrosshair() {
   const { camera, scene } = useThree();
   const active = useGameStore((s) => s.isDebugMode);
   const setActive = useGameStore((s) => s.setDebugMode);
+  const keyBindings = useGameStore((s) => s.keyBindings);
   const [hitPoint, setHitPoint] = useState<THREE.Vector3 | null>(null);
 
   // Use store efficiently
@@ -20,16 +21,15 @@ export default function DebugCrosshair() {
   const centerRef = useRef(new THREE.Vector2(0, 0));
   const raycaster = useRef(new THREE.Raycaster());
 
-  // Toggle Key Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "`" || e.key === "~") {
+      if (e.code === keyBindings.debugMode) {
         setActive(!useGameStore.getState().isDebugMode);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [keyBindings]);
 
   // Wireframe Toggle Logic
   useEffect(() => {
