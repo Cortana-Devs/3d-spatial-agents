@@ -4,21 +4,21 @@ export interface WorldObject {
   id: string;
   name: string;
   type:
-    | "file"
-    | "laptop"
-    | "pendrive"
-    | "coffeecup"
-    | "generic"
-    | "sofa"
-    | "chair"
-    | "whiteboard"
-    | "projector_screen"
-    | "tv"
-    | "coffee_machine"
-    | "telephone"
-    | "pc"
-    | "switch"
-    | "door";
+  | "file"
+  | "laptop"
+  | "pendrive"
+  | "coffeecup"
+  | "generic"
+  | "sofa"
+  | "chair"
+  | "whiteboard"
+  | "projector_screen"
+  | "tv"
+  | "coffee_machine"
+  | "telephone"
+  | "pc"
+  | "switch"
+  | "door";
   position: THREE.Vector3;
   description?: string;
   pickable: boolean;
@@ -51,7 +51,7 @@ export class InteractableRegistry {
   /** Track items that have been claimed (dispatched to an agent but not yet picked up) */
   private claimedItems: Map<string, string> = new Map(); // itemId → agentId
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): InteractableRegistry {
     if (!InteractableRegistry.instance) {
@@ -132,6 +132,31 @@ export class InteractableRegistry {
 
   public getById(id: string): WorldObject | undefined {
     return this.objects.get(id);
+  }
+
+  /**
+   * Fallback lookup by display name (case-insensitive).
+   * Used when the LLM returns an item's human-readable name instead of its registry ID.
+   * e.g. "Desktop PC" → finds the object with id "desktop-pc".
+   */
+  public getByName(name: string): WorldObject | undefined {
+    const lower = name.toLowerCase();
+    for (const obj of this.objects.values()) {
+      if (obj.name.toLowerCase() === lower) return obj;
+    }
+    return undefined;
+  }
+
+  /**
+   * Fallback lookup for placing areas by display name (case-insensitive).
+   * e.g. "Reception Desk Right" → finds area with id "reception-desk-pad-right".
+   */
+  public getAreaByName(name: string): PlacingArea | undefined {
+    const lower = name.toLowerCase();
+    for (const area of this.placingAreas.values()) {
+      if (area.name.toLowerCase() === lower) return area;
+    }
+    return undefined;
   }
 
   public getAll(): WorldObject[] {

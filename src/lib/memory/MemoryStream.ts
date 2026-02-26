@@ -16,7 +16,7 @@ const DEFAULT_CONFIG: MemoryConfig = {
 export class MemoryStream {
   private isCompacting = false;
 
-  constructor(private config: MemoryConfig = DEFAULT_CONFIG) {}
+  constructor(private config: MemoryConfig = DEFAULT_CONFIG) { }
 
   async init() {
     // Any async setup if needed, IDB open is handled in adapter lazy-load
@@ -109,6 +109,21 @@ export class MemoryStream {
   }
 
   /**
+   * Wipes ALL memories from IndexedDB and writes a single SESSION_START anchor
+   * so agents immediately know they are beginning a fresh observation cycle.
+   * Call this after a loop has accumulated stale memories.
+   */
+  async reset(): Promise<void> {
+    await memoryStorage.clearAll();
+    await this.add(
+      "OBSERVATION",
+      "SESSION_START: All previous memories have been cleared. Begin fresh observation from current state. Do not reference any earlier session.",
+      ["session", "reset"],
+    );
+    console.log("[MemoryStream] ✓ All memories cleared. Fresh session started.");
+  }
+
+  /**
    * Checks if memory limit is reached and triggers compaction if needed.
    */
   private async checkCompaction(sessionId?: string) {
@@ -145,10 +160,9 @@ export class MemoryStream {
       const textToSummarize = oldest
         .map(
           (m) =>
-            `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.type}: ${
-              m.content.length > 200
-                ? m.content.substring(0, 200) + "..."
-                : m.content
+            `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.type}: ${m.content.length > 200
+              ? m.content.substring(0, 200) + "..."
+              : m.content
             }`,
         )
         .join("\n");

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import GameMenu from "./GameMenu";
 import { InspectorPanel } from "./InspectorPanel";
 import { TaskAssignmentPanel } from "./TaskAssignmentPanel";
 import { CommandBar } from "./CommandBar";
+import { memoryStream } from "@/lib/memory/MemoryStream";
 
 export default function Overlay() {
   const debugText = useGameStore((state) => state.debugText);
@@ -34,6 +35,10 @@ export default function Overlay() {
   );
   const interactionGrid = useGameStore((state) => state.interactionGrid);
   const gridSelection = useGameStore((state) => state.gridSelection);
+
+  // Memory-reset toast
+  const [resetToast, setResetToast] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,6 +81,16 @@ export default function Overlay() {
         useGameStore.getState().setCommandBarOpen(true);
         document.exitPointerLock();
       }
+
+      // Ctrl+Shift+M: Flush all agent memories (dev tool)
+      if (e.code === "KeyM" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        memoryStream.reset().then(() => {
+          setResetToast(true);
+          if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+          toastTimerRef.current = setTimeout(() => setResetToast(false), 3000);
+        });
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -84,6 +99,35 @@ export default function Overlay() {
 
   return (
     <>
+      {/* Memory Reset Toast */}
+      {resetToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(76, 175, 80, 0.92)",
+            backdropFilter: "blur(12px)",
+            color: "white",
+            padding: "10px 22px",
+            borderRadius: "10px",
+            fontFamily: "Inter, system-ui, sans-serif",
+            fontSize: "14px",
+            fontWeight: 600,
+            zIndex: 9999,
+            pointerEvents: "none",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span>🧹</span>
+          <span>Agent memories cleared — fresh session started</span>
+        </div>
+      )}
+
       {/* Teleport Fade Overlay */}
       <div
         style={{

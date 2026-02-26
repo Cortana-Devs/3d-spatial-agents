@@ -56,6 +56,15 @@ class IDBAdapter {
         return (await db).count(STORE_NAME);
     }
 
+    /** Wipes every record from the store in a single transaction. */
+    async clearAll(): Promise<void> {
+        const db = this.getDb();
+        if (!db) return;
+        const tx = (await db).transaction(STORE_NAME, 'readwrite');
+        await tx.objectStore(STORE_NAME).clear();
+        await tx.done;
+    }
+
     // Efficiently get oldest N memories for pruning
     async getOldest(count: number): Promise<MemoryObject[]> {
         const db = this.getDb();

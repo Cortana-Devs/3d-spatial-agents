@@ -473,8 +473,8 @@ export class AgentTaskQueue {
         if (
           (isStuckWalk &&
             this.elapsedTime -
-              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
-              AgentTaskQueue.STUCK_THRESHOLD) ||
+            (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+            AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
           this.retryCount++;
@@ -715,8 +715,8 @@ export class AgentTaskQueue {
         if (
           (isStuckDestWalk &&
             this.elapsedTime -
-              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
-              AgentTaskQueue.STUCK_THRESHOLD) ||
+            (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+            AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
           this.retryCount++;
@@ -851,8 +851,8 @@ export class AgentTaskQueue {
         if (
           (isStuckWalk &&
             this.elapsedTime -
-              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
-              AgentTaskQueue.STUCK_THRESHOLD) ||
+            (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+            AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL * 1.5
         ) {
           console.log(
@@ -924,9 +924,17 @@ export class AgentTaskQueue {
       if (!nextTask || nextTask.scriptId !== this.currentTask.scriptId) {
         const outcome = `Script ${this.currentTask.scriptId} completed execution.`;
         console.log(`[AgentTaskQueue:${this.agentId}] ${outcome}`);
-        memoryStream.add("SCRIPT_OUTCOME", outcome, [
-          `script:${this.currentTask.scriptId}`,
-        ]);
+        // Fix #Loop-3: Include entity tags (item ID + "entity:object") so this
+        // SCRIPT_OUTCOME memory is actually retrieved during the next brain tick.
+        // Previously was tagged only with script:X which never matched perception tags.
+        const outcomeTags: string[] = [`script:${this.currentTask.scriptId}`];
+        if (this.activeItemId) {
+          outcomeTags.push(`id:${this.activeItemId}`, "entity:object");
+        }
+        if (this.activeDestAreaId) {
+          outcomeTags.push(`id:${this.activeDestAreaId}`, "entity:area");
+        }
+        memoryStream.add("SCRIPT_OUTCOME", outcome, outcomeTags);
       }
     }
 
@@ -1067,7 +1075,7 @@ class AgentTaskRegistry {
   private static instance: AgentTaskRegistry;
   private queues: Map<string, AgentTaskQueue> = new Map();
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): AgentTaskRegistry {
     if (!AgentTaskRegistry.instance) {

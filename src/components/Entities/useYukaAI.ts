@@ -14,6 +14,7 @@ import NavigationNetwork from "../Systems/NavigationNetwork";
 import { AgentTaskRegistry } from "../Systems/AgentTaskQueue";
 import type { SteeringCommand } from "../Systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
+import { memoryStream } from "@/lib/memory/MemoryStream";
 
 // Fix #1/#3: World bounds for clamping LLM-generated coordinates
 const WORLD_BOUNDS = { minX: -100, maxX: 100, minZ: -75, maxZ: 75 };
@@ -79,6 +80,12 @@ export function useYukaAI(
   const brainRef = useRef(new ClientBrain(id));
   // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
   const brainIntervalRef = useRef(300 + Math.floor(Math.random() * 100));
+
+  // Fix #Loop-5: Deduplicate repeated same-script decisions — prevent re-queuing
+  // the exact same scriptId within a cooldown window (30s).
+  const lastScriptIdRef = useRef<string>("");
+  const lastScriptTimeRef = useRef<number>(0);
+  const SCRIPT_COOLDOWN_MS = 30_000;
 
   // --- TASK QUEUE (Manual Task Assignment) ---
   const taskQueueRef = useRef(AgentTaskRegistry.getInstance().getOrCreate(id));
@@ -517,49 +524,85 @@ export function useYukaAI(
             });
         }
 
-        // Fix A: Perception: Nearby pickable items (within 15 meters)
+        // Perception: Nearby pickable items — ONLY show items on the floor.
+        // Items already placed on a surface are hidden from the agent brain to
+        // prevent "re-organize" loops. Perception = source of truth for what needs fixing.
         const registry = InteractableRegistry.getInstance();
         const nearbyItems = registry.getNearby(
           vehicle.position as unknown as THREE.Vector3,
           15,
         );
+
+        const floorItems: typeof nearbyItems = [];
         for (const item of nearbyItems) {
           if (!item.pickable) continue;
-          const d = vehicle.position.distanceTo(
-            item.position as unknown as YUKA.Vector3,
-          );
+          // Only surface items that are on the floor (not carried, not placed on a surface)
+          const isOnFloor = !item.carriedBy && !item.placedInArea;
+          const isClaimed = registry.isItemClaimed(item.id);
+          if (!isOnFloor) continue; // ← key change: skip placed/carried items entirely
+
           nearbyEntities.push({
             type: "OBJECT",
             id: item.id,
-            distance: d,
+            distance: vehicle.position.distanceTo(
+              item.position as unknown as YUKA.Vector3,
+            ),
             objectType: item.type,
             name: item.name,
-            status: item.carriedBy
-              ? `carried by ${item.carriedBy}`
-              : item.placedInArea
-                ? `on ${registry.getPlacingAreaById(item.placedInArea)?.name || "surface"}`
-                : registry.isItemClaimed(item.id)
-                  ? "claimed"
-                  : "on floor",
+            status: isClaimed ? "on floor (claimed)" : "on floor",
           });
+          floorItems.push(item);
         }
 
-        // Fix A: Perception: Nearby placing areas (within 15 meters)
-        const nearbyAreas = registry.getNearbyPlacingAreas(
-          vehicle.position as unknown as THREE.Vector3,
-          15,
-        );
-        for (const area of nearbyAreas) {
-          const d = vehicle.position.distanceTo(
-            area.position as unknown as YUKA.Vector3,
+        // Perception: For each on-floor item, include empty areas sorted by proximity
+        // to the ITEM (not the agent) so the LLM always gets relevant, valid targets.
+        const seenAreaIds = new Set<string>();
+        for (const floorItem of floorItems) {
+          const allAreas = registry.getAllPlacingAreas();
+          const emptyAreas = allAreas
+            .filter((a) => !a.currentItem) // only empty slots
+            .map((a) => ({
+              area: a,
+              distToItem: floorItem.position.distanceTo(
+                a.position as unknown as THREE.Vector3,
+              ),
+            }))
+            .sort((a, b) => a.distToItem - b.distToItem)
+            .slice(0, 3); // show the 3 nearest empty areas per floor item
+
+          for (const { area, distToItem } of emptyAreas) {
+            if (seenAreaIds.has(area.id)) continue;
+            seenAreaIds.add(area.id);
+            nearbyEntities.push({
+              type: "AREA",
+              id: area.id,
+              distance: distToItem,
+              name: area.name,
+              status: "empty",
+            });
+          }
+        }
+
+        // If no floor items, also show nearby areas (for context / follow tasks etc.)
+        // but suppress them when there are floor items to keep the prompt focused.
+        if (floorItems.length === 0) {
+          const nearbyAreas = registry.getNearbyPlacingAreas(
+            vehicle.position as unknown as THREE.Vector3,
+            15,
           );
-          nearbyEntities.push({
-            type: "AREA",
-            id: area.id,
-            distance: d,
-            name: area.name,
-            status: area.currentItem ? "occupied" : "empty",
-          });
+          for (const area of nearbyAreas) {
+            if (seenAreaIds.has(area.id)) continue;
+            seenAreaIds.add(area.id);
+            nearbyEntities.push({
+              type: "AREA",
+              id: area.id,
+              distance: vehicle.position.distanceTo(
+                area.position as unknown as YUKA.Vector3,
+              ),
+              name: area.name,
+              status: area.currentItem ? "occupied" : "empty",
+            });
+          }
         }
 
         // Fix B: Include task queue state so the LLM knows what it's currently doing
@@ -605,11 +648,39 @@ export function useYukaAI(
                 const scriptId = decision.scriptId || `script_${Date.now()}`;
                 const priority = decision.priority || 10;
 
-                // Cancel any existing script with the same ID to prevent duplicates
+                // Fix #Loop-5: Skip if this same scriptId was fired recently (cooldown)
+                const now = Date.now();
+                if (
+                  scriptId === lastScriptIdRef.current &&
+                  now - lastScriptTimeRef.current < SCRIPT_COOLDOWN_MS
+                ) {
+                  console.log(
+                    `[useYukaAI:${id}] Skipping duplicate script "${scriptId}" (cooldown: ${Math.round((SCRIPT_COOLDOWN_MS - (now - lastScriptTimeRef.current)) / 1000)}s remaining)`,
+                  );
+                  return;
+                }
+
+                // Fix #Loop-2: Guard against cancelling a mid-carry script.
+                // Only cancel if the script is queued but not actively executing.
+                const activeScriptId = taskQueue.getCurrentTask()?.scriptId;
+                if (activeScriptId === scriptId) {
+                  // Same scriptId is MID-EXECUTION — do NOT cancel and re-issue,
+                  // that would drop the carried item on the floor.
+                  console.log(
+                    `[useYukaAI:${id}] Brain suppressed: script "${scriptId}" is mid-execution — will not cancel`,
+                  );
+                  return;
+                }
+
+                // Safe to cancel queued (not yet running) copies of this script
                 taskQueue.cancelScript(
                   scriptId,
                   "Replaced by new brain decision",
                 );
+
+                // Record injection time for cooldown tracking
+                lastScriptIdRef.current = scriptId;
+                lastScriptTimeRef.current = Date.now();
 
                 // Inject the tasks into the priority queue
                 decision.tasks.forEach((task) => {
@@ -619,25 +690,72 @@ export function useYukaAI(
                     task.destAreaId
                   ) {
                     const registry = InteractableRegistry.getInstance();
-                    const item = registry.getById(task.itemId);
+                    let item = registry.getById(task.itemId);
+                    // Fallback: LLM may return the item's display name instead of its ID
+                    // e.g. "Desktop PC" instead of "desktop-pc"
+                    let resolvedItemId = task.itemId;
+                    if (!item) {
+                      const byName = registry.getByName(task.itemId);
+                      if (byName) {
+                        console.log(
+                          `[useYukaAI:${id}] Resolved item name "${task.itemId}" → id "${byName.id}"`,
+                        );
+                        item = byName;
+                        resolvedItemId = byName.id;
+                      }
+                    }
                     if (!item) {
                       console.warn(
-                        `[useYukaAI:${id}] Item ${task.itemId} not found`,
+                        `[useYukaAI:${id}] Item ${task.itemId} not found — LLM used a hallucinated ID`,
                       );
+                      // Fix #Loop-4: Write a failure memory so the LLM gets a negative
+                      // signal instead of silence. Use local tags derived from the item ID.
+                      memoryStream
+                        .add(
+                          "ACTION",
+                          `FAILED: Item '${task.itemId}' not found. The ID was invalid — this item does not exist in the registry. Do not use this ID again.`,
+                          [`id:${task.itemId}`, "entity:object"],
+                        )
+                        .catch(() => { });
                       return;
                     }
 
                     if (item.carriedBy && item.carriedBy !== id) {
                       console.warn(
-                        `[useYukaAI:${id}] Item ${task.itemId} is carried by ${item.carriedBy}, aborting fetch.`,
+                        `[useYukaAI:${id}] Item ${resolvedItemId} is carried by ${item.carriedBy}, aborting fetch.`,
                       );
                       return;
                     }
 
-                    // Smart area resolution
+                    // Smart area resolution — with name fallback for LLM hallucinations
                     let resolvedAreaId = task.destAreaId;
-                    const area = registry.getPlacingAreaById(resolvedAreaId);
-                    if (area && area.currentItem) {
+                    let area = registry.getPlacingAreaById(resolvedAreaId);
+                    // Fallback: try matching by display name
+                    if (!area) {
+                      const byName = registry.getAreaByName(task.destAreaId);
+                      if (byName) {
+                        console.log(
+                          `[useYukaAI:${id}] Resolved area name "${task.destAreaId}" → id "${byName.id}"`,
+                        );
+                        area = byName;
+                        resolvedAreaId = byName.id;
+                      }
+                    }
+                    if (!area) {
+                      // Fix #Loop-4: Area ID is hallucinated — write failure memory
+                      console.warn(
+                        `[useYukaAI:${id}] Area '${task.destAreaId}' not found — LLM used a hallucinated area ID`,
+                      );
+                      memoryStream
+                        .add(
+                          "ACTION",
+                          `FAILED: Area '${task.destAreaId}' does not exist in the registry. Do not use this area ID again.`,
+                          [`id:${task.destAreaId}`, "entity:area"],
+                        )
+                        .catch(() => { });
+                      return;
+                    }
+                    if (area.currentItem) {
                       const alt = findAlternativeArea(resolvedAreaId, registry);
                       if (alt) {
                         resolvedAreaId = alt;
@@ -663,7 +781,7 @@ export function useYukaAI(
                         type: "PICK_NEARBY",
                         priority,
                         scriptId,
-                        itemId: task.itemId,
+                        itemId: resolvedItemId,
                       });
                       taskQueue.enqueue({
                         type: "PLACE_INVENTORY",

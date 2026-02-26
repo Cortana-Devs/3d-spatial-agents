@@ -44,13 +44,13 @@ export async function processAgentThought(
   // Context Compression: Convert entities to Markdown Table
   const entityTable =
     context.nearbyEntities.length > 0
-      ? `| Type | ID | Name | Dist | Status |\n|---|---|---|---|---|\n` +
-        context.nearbyEntities
-          .map(
-            (e) =>
-              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.status || "-"} |`,
-          )
-          .join("\n")
+      ? `| Type | ID (use this) | DisplayName | Dist | Status |\n|---|---|---|---|---|\n` +
+      context.nearbyEntities
+        .map(
+          (e) =>
+            `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.status || "-"} |`,
+        )
+        .join("\n")
       : "No entities nearby.";
 
   const prompt = `
@@ -102,9 +102,15 @@ export async function processAgentThought(
     - **IMPORTANT**: Do NOT issue new scripts if your Task Queue already shows an active script running. Wait for it to complete first. If you see "Phase: WALK_TO_SOURCE" or similar, your previous script is still executing.
 
     ## Organization Rules
-    If you observe an object whose status is "on floor", it is misplaced! You MUST prioritize using \`FETCH_AND_PLACE\` to move it to a logically appropriate empty AREA.
-    Example: Place a monitor, laptop, or coffeecup on a desk. Place a file on a shelf or desk. 
-    Explain your reasoning for the placement in your "thought".
+    You will ONLY see OBJECT entries for items that are on the floor — items already on a surface are invisible to you. If you see any OBJECT entry in the table, it is misplaced and MUST be placed on a surface immediately.
+    
+    When placing a floor item: use the AREA entry with the **smallest distance** value and status "empty" from the table. That is the physically nearest empty slot.
+    Use ONLY a single FETCH_AND_PLACE task — do NOT add unnecessary GO_TO steps before it. The motor system navigates automatically.
+
+    ## ID Rules
+    CRITICAL: Copy item id and area id values character-for-character from the Perception table.
+    The "ID (use this)" column is the system ID. The "DisplayName" column is human-readable only — never use it as an ID.
+    The system silently ignores any \`itemId\` or \`destAreaId\` not found in the table.
   `;
 
   while (attempt < MAX_RETRIES) {
@@ -188,6 +194,12 @@ export async function processAgentThought(
           model_version: model,
           user_id: trace.userId,
         });
+      }
+
+      // Fix #Loop-7: "No Groq API keys available" is a config error, not transient.
+      // Don't retry — it will never succeed and burns 3× the log quota.
+      if (error.message === "No Groq API keys available.") {
+        throw error;
       }
 
       // Check for 429 (Rate Limit) or 401 (Invalid Key) to trigger rotation
