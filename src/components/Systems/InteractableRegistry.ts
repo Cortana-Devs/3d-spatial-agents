@@ -26,6 +26,7 @@ export interface WorldObject {
   placedInArea?: string | null; // ID of the PlacingArea this item sits on, or null if on floor
   homeAreaId?: string | null; // ID of the default PlacingArea this item belongs to
   meshRef?: THREE.Object3D;
+  isOpen?: boolean; // Used for doors
 }
 
 export interface PlacingArea {

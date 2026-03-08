@@ -9,7 +9,7 @@ import type { AgentTask } from "@/components/Systems/AgentTaskQueue";
 export interface Obstacle {
   position: THREE.Vector3;
   radius: number;
-  type?: "wall" | "furniture" | "cupboard";
+  type?: "wall" | "furniture" | "cupboard" | "door";
   // OBB (Oriented Bounding Box) fields — if halfExtents is set, render as box
   halfExtents?: THREE.Vector3; // half-width, half-height, half-depth
   rotation?: number; // Y-axis rotation in radians
@@ -80,6 +80,7 @@ interface GameState {
     name?: string;
     description?: string;
     meshRef?: THREE.Object3D;
+    isOpen?: boolean;
   }[];
   addInteractables: (
     items: {
@@ -107,6 +108,7 @@ interface GameState {
       name?: string;
       description?: string;
       meshRef?: THREE.Object3D;
+      isOpen?: boolean;
     }[],
   ) => void;
   removeInteractables: (ids: string[]) => void;
@@ -250,9 +252,12 @@ interface GameState {
   setChatOpen: (isOpen: boolean) => void;
   chatAgentId: string | null;
   setChatAgentId: (id: string | null) => void;
-  chatMessages: { role: "user" | "agent"; text: string }[];
-  addChatMessage: (msg: { role: "user" | "agent"; text: string }) => void;
-  clearChatMessages: () => void;
+  chatMessages: Record<string, { role: "user" | "agent"; text: string }[]>;
+  addChatMessage: (
+    agentId: string,
+    msg: { role: "user" | "agent"; text: string },
+  ) => void;
+  clearChatMessages: (agentId: string) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -488,8 +493,16 @@ export const useGameStore = create<GameState>((set) => ({
   setChatOpen: (isOpen) => set({ isChatOpen: isOpen }),
   chatAgentId: null,
   setChatAgentId: (id) => set({ chatAgentId: id }),
-  chatMessages: [],
-  addChatMessage: (msg) =>
-    set((state) => ({ chatMessages: [...state.chatMessages, msg] })),
-  clearChatMessages: () => set({ chatMessages: [] }),
+  chatMessages: {},
+  addChatMessage: (agentId, msg) =>
+    set((state) => ({
+      chatMessages: {
+        ...state.chatMessages,
+        [agentId]: [...(state.chatMessages[agentId] || []), msg],
+      },
+    })),
+  clearChatMessages: (agentId) =>
+    set((state) => ({
+      chatMessages: { ...state.chatMessages, [agentId]: [] },
+    })),
 }));

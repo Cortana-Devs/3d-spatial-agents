@@ -148,6 +148,8 @@ class NavigationNetwork {
 
     // Carve out obstacle footprints
     for (const ob of obstacles) {
+      if ((ob as any).type === "door") continue; // AI pathfinding ignores doors
+
       if (ob.halfExtents) {
         // OBB obstacle: block the rectangle + padding
         this.carveOBB(ob.position, ob.halfExtents);

@@ -16,7 +16,8 @@ export type AgentTaskType =
   | "PLACE_INVENTORY"
   | "FOLLOW_PLAYER"
   | "WANDER"
-  | "WAIT";
+  | "WAIT"
+  | "INTERACT";
 
 export interface AgentTask {
   type: AgentTaskType;
@@ -41,6 +42,8 @@ export type TaskPhase =
   | "FOLLOW_PLAYER" // Following player
   | "WANDER" // Wandering randomly or to a target
   | "WAIT" // Waiting explicitly for a duration
+  | "INTERACTING" // Brief pause to interact
+  | "INTERACTING_DOOR" // Temporarily open a door on the navigation path
   | "COMPLETED";
 
 // Return type: tells useYukaAI what steering to apply
@@ -100,6 +103,11 @@ export class AgentTaskQueue {
   private static readonly CLOSE_APPROACH_DIST = 6.0; // Switch from path-follow to ARRIVE for final approach
   private static readonly PICKUP_DELAY = 0.5;
   private static readonly PLACE_DELAY = 0.5;
+
+  // Door Navigation State
+  private savedPhase: TaskPhase | null = null;
+  private activeDoorId: string | null = null;
+  private doorsToClose: { id: string; pos: THREE.Vector3 }[] = [];
 
   constructor(agentId: string) {
     this.agentId = agentId;
@@ -307,7 +315,82 @@ export class AgentTaskQueue {
     const registry = InteractableRegistry.getInstance();
     const nav = NavigationNetwork.getInstance();
 
+    // --- AUTO-CLOSE PAST DOORS ---
+    if (this.doorsToClose.length > 0) {
+      this.doorsToClose = this.doorsToClose.filter((door) => {
+        if (vehiclePos.distanceToSquared(door.pos) > 12.0 * 12.0) {
+          window.dispatchEvent(
+            new CustomEvent("agent-interact", {
+              detail: {
+                agentId: this.agentId,
+                targetId: door.id,
+                action: "close",
+              },
+            }),
+          );
+          return false;
+        }
+        return true;
+      });
+    }
+
+    // --- INTERCEPT CLOSED DOORS ON PATH ---
+    if (
+      this.phase === "WALK_TO_SOURCE" ||
+      this.phase === "WALK_TO_DEST" ||
+      this.phase === "WANDER" ||
+      this.phase === "FOLLOW_PLAYER"
+    ) {
+      const nearbyDoors = registry
+        .getAll()
+        .filter((o) => o.type === "door" && !o.isOpen);
+      for (const door of nearbyDoors) {
+        if (vehiclePos.distanceToSquared(door.position) < 8.0 * 8.0) {
+          this.savedPhase = this.phase;
+          this.phase = "INTERACTING_DOOR";
+          this.activeDoorId = door.id;
+          this.phaseTimer = 0;
+          this.hasSetPath = false; // Force repath after door opens to resume
+
+          // Explicitly open the door
+          window.dispatchEvent(
+            new CustomEvent("agent-interact", {
+              detail: {
+                agentId: this.agentId,
+                targetId: door.id,
+                action: "open",
+              },
+            }),
+          );
+
+          // Track it so we can close it when we move away
+          const tracking = this.doorsToClose.find((d) => d.id === door.id);
+          if (!tracking) {
+            this.doorsToClose.push({ id: door.id, pos: door.position.clone() });
+          }
+
+          return { type: "STOP", faceTarget: door.position };
+        }
+      }
+    }
+
     switch (this.phase) {
+      // ------------------------------------------------------------------
+      // INTERACTING_DOOR: Wait for door to slide open before resuming
+      // ------------------------------------------------------------------
+      case "INTERACTING_DOOR": {
+        this.phaseTimer += delta;
+        const door = this.activeDoorId
+          ? registry.getById(this.activeDoorId)
+          : null;
+        if (!door || door.isOpen || this.phaseTimer > 1.5) {
+          this.phase = this.savedPhase || "IDLE";
+          this.savedPhase = null;
+          this.activeDoorId = null;
+          return { type: "NONE" };
+        }
+        return { type: "STOP", faceTarget: door.position };
+      }
       // ------------------------------------------------------------------
       // WALK_TO_SOURCE: Navigate to the item's location
       // ------------------------------------------------------------------
@@ -418,7 +501,18 @@ export class AgentTaskQueue {
 
         // --- ARRIVED: close enough to pick up ---
         if (distToTarget < AgentTaskQueue.INTERACT_DIST) {
-          if (this.currentTask?.type === "GO_TO") {
+          if (this.currentTask?.type === "INTERACT") {
+            console.log(
+              `[AgentTaskQueue:${this.agentId}] Arrived at interaction target`,
+            );
+            this.phase = "INTERACTING";
+            this.phaseTimer = 0;
+            this.hasSetPath = false;
+            this.isCloseApproach = false;
+            this.retryCount = 0;
+            this.stuckWindowPositions = [];
+            return { type: "STOP", faceTarget: targetPos };
+          } else if (this.currentTask?.type === "GO_TO") {
             console.log(
               `[AgentTaskQueue:${this.agentId}] Arrived at target position`,
             );
@@ -593,6 +687,31 @@ export class AgentTaskQueue {
             registry.unclaimItem(this.activeItemId!, this.agentId);
             this.phase = "COMPLETED";
           }
+        }
+
+        return { type: "STOP" };
+      }
+
+      // ------------------------------------------------------------------
+      // INTERACTING: Pause briefly, then trigger interaction
+      // ------------------------------------------------------------------
+      case "INTERACTING": {
+        this.phaseTimer += delta;
+
+        if (this.phaseTimer >= AgentTaskQueue.PICKUP_DELAY) {
+          console.log(
+            `[AgentTaskQueue:${this.agentId}] Triggering interaction for ${this.activeItemId}`,
+          );
+
+          if (this.activeItemId) {
+            window.dispatchEvent(
+              new CustomEvent("agent-interact", {
+                detail: { agentId: this.agentId, targetId: this.activeItemId },
+              }),
+            );
+          }
+
+          this.phase = "COMPLETED";
         }
 
         return { type: "STOP" };
@@ -1070,6 +1189,22 @@ export class AgentTaskQueue {
 
         // Claim the item
         registry.claimItem(this.activeItemId, this.agentId);
+
+        this.phase = "WALK_TO_SOURCE";
+        break;
+      }
+
+      case "INTERACT": {
+        this.activeItemId = this.currentTask.itemId || null;
+        this.activeDestAreaId = null;
+
+        if (!this.activeItemId) {
+          console.warn(
+            `[AgentTaskQueue:${this.agentId}] INTERACT requires itemId`,
+          );
+          this.phase = "COMPLETED";
+          return;
+        }
 
         this.phase = "WALK_TO_SOURCE";
         break;

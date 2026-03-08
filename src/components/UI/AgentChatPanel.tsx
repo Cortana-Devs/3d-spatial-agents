@@ -10,10 +10,14 @@ import { findAlternativeArea } from "@/lib/nlp-parser";
 import * as THREE from "three";
 import styles from "./AgentChatPanel.module.css";
 
+const EMPTY_ARRAY: { role: "user" | "agent"; text: string }[] = [];
+
 export const AgentChatPanel: React.FC = () => {
   const isChatOpen = useGameStore((state) => state.isChatOpen);
   const chatAgentId = useGameStore((state) => state.chatAgentId);
-  const chatMessages = useGameStore((state) => state.chatMessages);
+  const chatMessages = useGameStore((state) =>
+    chatAgentId ? state.chatMessages[chatAgentId] || EMPTY_ARRAY : EMPTY_ARRAY,
+  );
   const addChatMessage = useGameStore((state) => state.addChatMessage);
   const setChatOpen = useGameStore((state) => state.setChatOpen);
   const setChatAgentId = useGameStore((state) => state.setChatAgentId);
@@ -45,13 +49,13 @@ export const AgentChatPanel: React.FC = () => {
     const handleSuccess = (e: any) => {
       const { agentId, message } = e.detail;
       if (agentId === chatAgentId) {
-        addChatMessage({ role: "agent", text: message });
+        addChatMessage(agentId, { role: "agent", text: message });
       }
     };
     const handleFailure = (e: any) => {
       const { agentId, message } = e.detail;
       if (agentId === chatAgentId) {
-        addChatMessage({ role: "agent", text: `⚠️ ${message}` });
+        addChatMessage(agentId, { role: "agent", text: `⚠️ ${message}` });
       }
     };
     window.addEventListener("agent-task-success", handleSuccess);
@@ -62,11 +66,11 @@ export const AgentChatPanel: React.FC = () => {
     };
   }, [chatAgentId, addChatMessage]);
 
-  // Handle close — cleanup all state
   const handleClose = () => {
     setChatOpen(false);
     setChatAgentId(null);
-    clearChatMessages();
+    // DO NOT CLEAR MESSAGES ON CLOSE to retain history.
+    // clearChatMessages(chatAgentId);
     setNearbyAgentId(null);
     setChatPromptVisible(false);
   };
@@ -115,7 +119,7 @@ export const AgentChatPanel: React.FC = () => {
             console.warn(
               `[AgentChat] Item "${task.itemId}" not found, skipping`,
             );
-            useGameStore.getState().addChatMessage({
+            useGameStore.getState().addChatMessage(agentId, {
               role: "agent",
               text: `I'm sorry, I couldn't find an item called "${task.itemId}".`,
             });
@@ -126,7 +130,7 @@ export const AgentChatPanel: React.FC = () => {
             console.warn(
               `[AgentChat] Item "${task.itemId}" is not pickable, skipping`,
             );
-            useGameStore.getState().addChatMessage({
+            useGameStore.getState().addChatMessage(agentId, {
               role: "agent",
               text: `I'm sorry, I cannot pick up ${item.name || task.itemId}. It is too heavy or attached to the floor.`,
             });
@@ -148,7 +152,7 @@ export const AgentChatPanel: React.FC = () => {
             console.warn(
               `[AgentChat] Area "${task.destAreaId}" not found, skipping`,
             );
-            useGameStore.getState().addChatMessage({
+            useGameStore.getState().addChatMessage(agentId, {
               role: "agent",
               text: `I'm sorry, I don't see a destination called "${task.destAreaId}".`,
             });
@@ -172,7 +176,7 @@ export const AgentChatPanel: React.FC = () => {
               console.warn(
                 `[AgentChat] All slots occupied for ${resolvedAreaId}`,
               );
-              useGameStore.getState().addChatMessage({
+              useGameStore.getState().addChatMessage(agentId, {
                 role: "agent",
                 text: `I'm sorry, there is no empty space left at "${task.destAreaId}".`,
               });
@@ -235,7 +239,7 @@ export const AgentChatPanel: React.FC = () => {
               console.warn(
                 `[AgentChat] Item "${task.itemId}" not found for PICK_NEARBY, skipping`,
               );
-              useGameStore.getState().addChatMessage({
+              useGameStore.getState().addChatMessage(agentId, {
                 role: "agent",
                 text: `I'm sorry, I couldn't find an item called "${task.itemId}".`,
               });
@@ -256,7 +260,7 @@ export const AgentChatPanel: React.FC = () => {
     if (!trimmed || isThinking || !chatAgentId) return;
 
     // Add user message
-    addChatMessage({ role: "user", text: trimmed });
+    addChatMessage(chatAgentId, { role: "user", text: trimmed });
     setInputValue("");
     setIsThinking(true);
 
@@ -269,7 +273,8 @@ export const AgentChatPanel: React.FC = () => {
         : buildWorldContext();
       const worldContextStr = `ITEMS:\n${ctx.items}\n\nPLACING AREAS:\n${ctx.areas}\n\nAGENTS:\n${ctx.agents}`;
 
-      const currentMessages = useGameStore.getState().chatMessages;
+      const currentMessages =
+        useGameStore.getState().chatMessages[chatAgentId] || [];
       const response = await chatWithAgent(
         chatAgentId,
         trimmed,
@@ -278,7 +283,7 @@ export const AgentChatPanel: React.FC = () => {
       );
 
       // Add agent's reply to chat
-      addChatMessage({ role: "agent", text: response.reply });
+      addChatMessage(chatAgentId, { role: "agent", text: response.reply });
 
       // If the LLM returned tasks, inject them into the agent's queue
       if (response.tasks && response.tasks.length > 0) {
@@ -289,7 +294,7 @@ export const AgentChatPanel: React.FC = () => {
         processTasks(chatAgentId, response.tasks);
       }
     } catch (err) {
-      addChatMessage({
+      addChatMessage(chatAgentId, {
         role: "agent",
         text: "Sorry, I'm having trouble responding right now.",
       });

@@ -1047,18 +1047,39 @@ export function OfficeDoor({
         type: "door",
         position: posVec,
         rotation: new THREE.Quaternion(),
+        isOpen: isOpen,
       },
     ]);
     return () => removeInteractables([id]);
-  }, [id, posVec, addInteractables, removeInteractables]);
+  }, [id, posVec, addInteractables, removeInteractables, isOpen]);
 
-  // Handle Interaction
+  // Handle Interaction (Player)
   useEffect(() => {
     if (interactionTarget === id) {
       setIsOpen((prev) => !prev);
       setInteractionTarget(null);
     }
   }, [interactionTarget, id, setInteractionTarget]);
+
+  // Handle Interaction (Agent Explicit Navigation)
+  useEffect(() => {
+    const handleAgentInteract = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail.targetId === id) {
+        if (customEvent.detail.action === "open") {
+          setIsOpen(true);
+        } else if (customEvent.detail.action === "close") {
+          setIsOpen(false);
+        } else {
+          setIsOpen((prev) => !prev);
+        }
+      }
+    };
+    window.addEventListener("agent-interact", handleAgentInteract);
+    return () => {
+      window.removeEventListener("agent-interact", handleAgentInteract);
+    };
+  }, [id]);
 
   // Manage Collision (Placing Obstacles for AI & Pathfinding)
   useEffect(() => {
@@ -1085,42 +1106,26 @@ export function OfficeDoor({
     };
 
     const staticObs = [leftPillar, rightPillar];
-    addObstacles(staticObs);
-    // REMOVED addCollidableMesh from groupRef to prevent downward raycasts snapping player to the roof.
-    // We only need the obstacle physics, not the floor-finding raycast.
 
-    // Actually, we DO need `addCollidableMesh` so the player can click the door to open it!
-    // But `groupRef` includes the top header and the sliding glass.
-    // The player's raycast for movement targets `collidableMeshes`.
-    // Wait, the player click interaction uses `interactionTarget`, which relies on `addInteractables`.
-    // The user's interaction raycaster checks `interactables`, not `collidableMeshes`!
-    // `collidableMeshes` is ONLY for the robot AI raycasting and player Y-snapping!
-    // Therefore, Doors should NEVER be in `collidableMeshes` unless we want robots to raycast against them.
-    // We will leave `addCollidableMesh` entirely OUT for the door.
+    // Dynamic Sliding Pane (blocks Player & physics if closed, but NavigationNetwork ignores "door" type)
+    const dynamicObs = [];
+    if (!isOpen) {
+      dynamicObs.push({
+        position: new THREE.Vector3(0, 15, 0).applyQuaternion(rotQ).add(posVec),
+        radius: 0,
+        type: "door" as const,
+        halfExtents: new THREE.Vector3(7, 15, 0.5),
+        rotation,
+      });
+    }
+
+    const allObs = [...staticObs, ...dynamicObs];
+    addObstacles(allObs);
 
     return () => {
-      removeObstacles(staticObs);
+      removeObstacles(allObs);
     };
-  }, [posVec, rotation, addObstacles, removeObstacles]);
-
-  // Manage Dynamic Collision (Sliding Pane)
-  useEffect(() => {
-    if (!isOpen) {
-      // Represents the sliding glass door pane (width = 14)
-      const obstacle = {
-        position: posVec.clone().add(new THREE.Vector3(0, 14.5, 0)), // Centered vertically
-        radius: 0,
-        type: "wall" as const,
-        halfExtents: new THREE.Vector3(doorWidth / 2, 14.5, 1),
-        rotation,
-      };
-      addObstacles([obstacle]);
-
-      return () => {
-        removeObstacles([obstacle]);
-      };
-    }
-  }, [isOpen, posVec, rotation, addObstacles, removeObstacles, doorWidth]);
+  }, [posVec, rotation, isOpen, addObstacles, removeObstacles]);
 
   // Animation (Vertical Slide)
   useFrame((state, delta) => {

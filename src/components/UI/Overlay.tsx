@@ -58,7 +58,7 @@ export default function Overlay() {
       }, 4000);
 
       // Also add to chat log so the user can review why it failed
-      gameStore.addChatMessage({ role: "agent", text: message });
+      gameStore.addChatMessage(agentId, { role: "agent", text: message });
     };
 
     const handleTaskSuccess = (e: any) => {
@@ -147,12 +147,14 @@ export default function Overlay() {
           if (agentId) {
             useGameStore.getState().setChatPromptVisible(false);
             useGameStore.getState().setChatAgentId(agentId);
-            useGameStore.getState().clearChatMessages();
-            // Add initial greeting from agent
-            useGameStore.getState().addChatMessage({
-              role: "agent",
-              text: `Hello! I'm ${agentId}, your office assistant. How can I help you today?`,
-            });
+            const history = useGameStore.getState().chatMessages[agentId] || [];
+            if (history.length === 0) {
+              // Add initial greeting from agent
+              useGameStore.getState().addChatMessage(agentId, {
+                role: "agent",
+                text: `Hello! I'm ${agentId}, your office assistant. How can I help you today?`,
+              });
+            }
             useGameStore.getState().setChatOpen(true);
             document.exitPointerLock();
           }

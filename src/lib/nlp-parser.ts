@@ -23,8 +23,10 @@ export function buildWorldContext(
   const registry = InteractableRegistry.getInstance();
   const taskRegistry = AgentTaskRegistry.getInstance();
 
-  // A=available, C=carried, X=claimed. LLM should only pick (A) items.
-  let allItems = registry.getAll().filter((o) => o.pickable);
+  // A=available, C=carried, X=claimed. LLM should only pick (A) items. (Doors are also exposed)
+  let allItems = registry
+    .getAll()
+    .filter((o) => o.pickable || o.type === "door");
   if (origin && radius) {
     const rSq = radius * radius;
     allItems = allItems.filter(
@@ -104,9 +106,9 @@ ${ctx.areas}
 AGENTS:
 ${ctx.agents}
 
-TASKS: FETCH_AND_PLACE(itemId,destAreaId), PICK_NEARBY(itemId), PLACE_INVENTORY(destAreaId), FOLLOW_PLAYER()
+TASKS: FETCH_AND_PLACE(itemId,destAreaId), PICK_NEARBY(itemId), PLACE_INVENTORY(destAreaId), FOLLOW_PLAYER(), INTERACT(itemId)
 
-RULES: Use EXACT IDs from tables. Only pick items marked (A). destAreaId MUST be an (E) empty slot. Pick IDLE agent. "move X to Y"=FETCH_AND_PLACE. "clean up"=FETCH_AND_PLACE for items with Location=OnFloor to their HomeArea. "pick up X"=PICK_NEARBY. "follow me"=FOLLOW_PLAYER.
+RULES: Use EXACT IDs from tables. Only pick items marked (A). destAreaId MUST be an (E) empty slot. Pick IDLE agent. "move X to Y"=FETCH_AND_PLACE. "clean up"=FETCH_AND_PLACE for items with Location=OnFloor to their HomeArea. "pick up X"=PICK_NEARBY. "follow me"=FOLLOW_PLAYER. "open/close X" = INTERACT(itemId).
 
 COMMAND: "${command}"
 
@@ -307,6 +309,27 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
           type: "PICK_NEARBY",
           priority: 20,
           itemId: t.itemId,
+        });
+        break;
+      }
+
+      case "INTERACT": {
+        if (!t.itemId) {
+          return { error: `INTERACT requires itemId.` };
+        }
+        const cleanedItemId = t.itemId.replace(/\s*\([A-Z]\)$/i, "").trim();
+        let item = registry.getById(cleanedItemId);
+        if (!item) item = registry.getByName(cleanedItemId);
+
+        if (!item) {
+          return {
+            error: `Item or Door "${t.itemId}" not found in the scene.`,
+          };
+        }
+        validatedTasks.push({
+          type: "INTERACT",
+          priority: 20,
+          itemId: item.id,
         });
         break;
       }
