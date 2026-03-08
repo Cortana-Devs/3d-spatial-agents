@@ -56,6 +56,15 @@ export function useYukaAI(
   const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
   const socialCheckTimer = useRef(0);
 
+  // Player Proximity Chat State
+  const playerProximityState = useRef<
+    "NONE" | "GREETING" | "CHATTING" | "COOLDOWN"
+  >("NONE");
+  const playerProximityCooldown = useRef(0);
+  const PLAYER_GREET_DISTANCE = 6.0;
+  const PLAYER_LEAVE_DISTANCE = 10.0;
+  const PLAYER_COOLDOWN_TIME = 15.0;
+
   // Optimization Refs
   const raycasterRef = useRef(new THREE.Raycaster());
   const rayOriginRef = useRef(new THREE.Vector3());
@@ -366,6 +375,139 @@ export function useYukaAI(
     // --- PHYSICS CONSTRAINT ---
     vehicle.velocity.y = 0; // Lock Y velocity to prevent pitching
 
+    // --- PLAYER PROXIMITY CHAT ---
+    // Check if the player is nearby and trigger greeting/chat flow
+    const brain = brainRef.current;
+    if (playerRef.current && !hasManualTask) {
+      const distToPlayer = vehicle.position.distanceTo(
+        playerRef.current.position as unknown as YUKA.Vector3,
+      );
+      const storeState = useGameStore.getState();
+
+      if (playerProximityState.current === "NONE") {
+        // Trigger greeting when player enters range
+        if (
+          distToPlayer < PLAYER_GREET_DISTANCE &&
+          !storeState.nearbyAgentId &&
+          !storeState.isChatOpen &&
+          socialState.current === "NONE"
+        ) {
+          playerProximityState.current = "GREETING";
+          greetingState.current = "WAVING";
+          vehicle.velocity.set(0, 0, 0);
+
+          // Face the player
+          if (groupRef.current && playerRef.current) {
+            const toPlayer = new THREE.Vector3(
+              playerRef.current.position.x - vehicle.position.x,
+              0,
+              playerRef.current.position.z - vehicle.position.z,
+            );
+            if (toPlayer.lengthSq() > 0.01) {
+              const targetQuat = new THREE.Quaternion().setFromUnitVectors(
+                new THREE.Vector3(0, 0, 1),
+                toPlayer.normalize(),
+              );
+              vehicle.rotation.copy(targetQuat as unknown as YUKA.Quaternion);
+            }
+          }
+
+          storeState.setNearbyAgentId(id);
+          storeState.setChatPromptVisible(true);
+
+          // Update brain thought to reflect greeting
+          brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). Greeting and offering assistance.`;
+          brain.state.lastThoughtTime = Date.now();
+        }
+      } else if (playerProximityState.current === "GREETING") {
+        // Keep the agent stopped and facing the player while greeting
+        vehicle.velocity.set(0, 0, 0);
+
+        // Check if prompt was dismissed (N pressed)
+        if (!storeState.chatPromptVisible && !storeState.isChatOpen) {
+          playerProximityState.current = "COOLDOWN";
+          playerProximityCooldown.current = 0;
+          greetingState.current = "NONE";
+          storeState.setNearbyAgentId(null);
+
+          brain.state.thought = "Player declined assistance. Resuming patrol.";
+          brain.state.lastThoughtTime = Date.now();
+        }
+        // Check if chat was opened (Y pressed)
+        else if (storeState.isChatOpen && storeState.chatAgentId === id) {
+          playerProximityState.current = "CHATTING";
+          greetingState.current = "NONE";
+
+          brain.state.thought =
+            "Engaged in conversation with the user. Standing by for instructions.";
+          brain.state.lastThoughtTime = Date.now();
+        }
+        // Check if player walked away
+        else if (distToPlayer > PLAYER_LEAVE_DISTANCE) {
+          playerProximityState.current = "COOLDOWN";
+          playerProximityCooldown.current = 0;
+          greetingState.current = "NONE";
+          storeState.setChatPromptVisible(false);
+          storeState.setNearbyAgentId(null);
+
+          brain.state.thought =
+            "Player walked away before responding. Resuming patrol.";
+          brain.state.lastThoughtTime = Date.now();
+        }
+      } else if (playerProximityState.current === "CHATTING") {
+        // Agent stays idle while chatting
+        vehicle.velocity.set(0, 0, 0);
+
+        // Face the player continuously during chat
+        if (groupRef.current && playerRef.current) {
+          const toPlayer = new THREE.Vector3(
+            playerRef.current.position.x - vehicle.position.x,
+            0,
+            playerRef.current.position.z - vehicle.position.z,
+          );
+          if (toPlayer.lengthSq() > 0.01) {
+            const targetQuat = new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0, 0, 1),
+              toPlayer.normalize(),
+            );
+            groupRef.current.quaternion.slerp(targetQuat, 0.05);
+            vehicle.rotation.copy(
+              groupRef.current.quaternion as unknown as YUKA.Quaternion,
+            );
+          }
+        }
+
+        // Update brain thought when tasks are active from chat
+        if (taskQueue.isBusy()) {
+          const currentTask = taskQueue.getCurrentTask();
+          const phase = taskQueue.getCurrentPhase();
+          brain.state.thought = `Executing task from chat: ${currentTask?.type || "unknown"} (Phase: ${phase})`;
+          brain.state.lastThoughtTime = Date.now();
+        }
+
+        // Check if chat was closed
+        if (!storeState.isChatOpen || storeState.chatAgentId !== id) {
+          playerProximityState.current = "COOLDOWN";
+          playerProximityCooldown.current = 0;
+          storeState.setNearbyAgentId(null);
+
+          // Show task status in thought if tasks were assigned
+          if (taskQueue.isBusy()) {
+            brain.state.thought = `Chat ended. Executing assigned task: ${taskQueue.getCurrentTask()?.type || "pending"}.`;
+          } else {
+            brain.state.thought = "Chat ended. Resuming normal operations.";
+          }
+          brain.state.lastThoughtTime = Date.now();
+        }
+      } else if (playerProximityState.current === "COOLDOWN") {
+        playerProximityCooldown.current += delta;
+        if (playerProximityCooldown.current > PLAYER_COOLDOWN_TIME) {
+          playerProximityState.current = "NONE";
+          playerProximityCooldown.current = 0;
+        }
+      }
+    }
+
     // --- THROTTLED SOCIAL INTERACTION (Robot vs Robot) ---
     // Hard collision is now handled by YUKA's SeparationBehavior to avoid O(N^2) every frame.
     socialCheckTimer.current += delta;
@@ -471,10 +613,14 @@ export function useYukaAI(
     }
 
     // --- BRAIN UPDATE ---
-    const brain = brainRef.current;
     // SKIP BRAIN IF MANUAL TASK IS ACTIVE (Task Queue Override)
     if (hasManualTask) {
       // Skip LLM brain entirely — manual tasks control steering
+    } else if (
+      playerProximityState.current === "GREETING" ||
+      playerProximityState.current === "CHATTING"
+    ) {
+      // SKIP BRAIN: Agent is interacting with player — thoughts are set by proximity state machine
     } else if (frameRef.current % brainIntervalRef.current === 0) {
       // SKIP BRAIN IF FOLLOWING (Manual Override)
       if (followingAgentId === id) {
@@ -544,8 +690,20 @@ export function useYukaAI(
         const seenAreaIds = new Set<string>();
         for (const floorItem of floorItems) {
           const allAreas = registry.getAllPlacingAreas();
+
+          // Identify home area if it's currently empty
+          let homeArea = null;
+          if (floorItem.homeAreaId) {
+            const potentialHome = registry.getPlacingAreaById(
+              floorItem.homeAreaId,
+            );
+            if (potentialHome && !potentialHome.currentItem) {
+              homeArea = potentialHome;
+            }
+          }
+
           const emptyAreas = allAreas
-            .filter((a) => !a.currentItem) // only empty slots
+            .filter((a) => !a.currentItem && a.id !== homeArea?.id) // only empty slots, exclude home (will add it explicitly)
             .map((a) => ({
               area: a,
               distToItem: floorItem.position.distanceTo(
@@ -555,15 +713,26 @@ export function useYukaAI(
             .sort((a, b) => a.distToItem - b.distToItem)
             .slice(0, 3); // show the 3 nearest empty areas per floor item
 
+          // Prepend home area if available
+          if (homeArea) {
+            emptyAreas.unshift({
+              area: homeArea,
+              distToItem: floorItem.position.distanceTo(
+                homeArea.position as unknown as THREE.Vector3,
+              ),
+            });
+          }
+
           for (const { area, distToItem } of emptyAreas) {
             if (seenAreaIds.has(area.id)) continue;
             seenAreaIds.add(area.id);
+            const isHome = area.id === floorItem.homeAreaId;
             nearbyEntities.push({
               type: "AREA",
               id: area.id,
               distance: distToItem,
               name: area.name,
-              status: "empty",
+              status: isHome ? "empty (home)" : "empty",
             });
           }
         }
@@ -708,6 +877,14 @@ export function useYukaAI(
                     if (item.carriedBy && item.carriedBy !== id) {
                       console.warn(
                         `[useYukaAI:${id}] Item ${resolvedItemId} is carried by ${item.carriedBy}, aborting fetch.`,
+                      );
+                      return;
+                    }
+
+                    // Guard: skip items already placed on a surface — they're not misplaced
+                    if (item.placedInArea) {
+                      console.log(
+                        `[useYukaAI:${id}] Item ${resolvedItemId} is already placed in area "${item.placedInArea}" — skipping FETCH_AND_PLACE`,
                       );
                       return;
                     }

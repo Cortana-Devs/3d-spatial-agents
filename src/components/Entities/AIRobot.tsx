@@ -3,6 +3,7 @@ import React, { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useYukaAI } from "./useYukaAI";
 import { ThoughtBubble } from "../UI/ThoughtBubble";
+import { AgentChatPrompt } from "../UI/AgentChatPrompt";
 import { ErrorBoundary } from "../UI/ErrorBoundary";
 import { useGameStore } from "@/store/gameStore";
 
@@ -21,10 +22,17 @@ export default function AIRobot({
   const groupRef = useRef<THREE.Group>(null);
   const joints = useRef<any>({});
 
-  const { vehicle, brain, animationState } = useYukaAI(id, groupRef, playerRef, joints);
+  const { vehicle, brain, animationState } = useYukaAI(
+    id,
+    groupRef,
+    playerRef,
+    joints,
+  );
   const isMenuOpen = useGameStore((state) => state.isMenuOpen);
   const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
-  const setInspectedAgentId = useGameStore((state) => state.setInspectedAgentId);
+  const setInspectedAgentId = useGameStore(
+    (state) => state.setInspectedAgentId,
+  );
 
   const handleClick = (e: any) => {
     if (isMenuOpen) {
@@ -47,6 +55,7 @@ export default function AIRobot({
       onClick={handleClick}
     >
       <ThoughtBubble brain={brain} isInspected={inspectedAgentId === id} />
+      <AgentChatPrompt agentId={id} />
       {/* We use the same procedural model as Robot.tsx */}
       <ProceduralRobotModel joints={joints} id={id} />
     </group>
@@ -198,8 +207,20 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
         </group>
 
         {/* Legs */}
-        <Leg side="left" joints={joints} suitMat={suitMat} skinMat={skinMat} shoeMat={shoeMat} />
-        <Leg side="right" joints={joints} suitMat={suitMat} skinMat={skinMat} shoeMat={shoeMat} />
+        <Leg
+          side="left"
+          joints={joints}
+          suitMat={suitMat}
+          skinMat={skinMat}
+          shoeMat={shoeMat}
+        />
+        <Leg
+          side="right"
+          joints={joints}
+          suitMat={suitMat}
+          skinMat={skinMat}
+          shoeMat={shoeMat}
+        />
       </group>
     </group>
   );
@@ -274,7 +295,7 @@ function Leg({
   joints,
   suitMat,
   skinMat,
-  shoeMat
+  shoeMat,
 }: {
   side: "left" | "right";
   joints: React.MutableRefObject<any>;

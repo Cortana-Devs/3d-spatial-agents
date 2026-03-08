@@ -45,12 +45,12 @@ export async function processAgentThought(
   const entityTable =
     context.nearbyEntities.length > 0
       ? `| Type | ID (use this) | DisplayName | Dist | Status |\n|---|---|---|---|---|\n` +
-      context.nearbyEntities
-        .map(
-          (e) =>
-            `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.status || "-"} |`,
-        )
-        .join("\n")
+        context.nearbyEntities
+          .map(
+            (e) =>
+              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.status || "-"} |`,
+          )
+          .join("\n")
       : "No entities nearby.";
 
   const prompt = `
@@ -104,7 +104,7 @@ export async function processAgentThought(
     ## Organization Rules
     You will ONLY see OBJECT entries for items that are on the floor — items already on a surface are invisible to you. If you see any OBJECT entry in the table, it is misplaced and MUST be placed on a surface immediately.
     
-    When placing a floor item: use the AREA entry with the **smallest distance** value and status "empty" from the table. That is the physically nearest empty slot.
+    When placing a floor item: prioritize using the AREA entry with status 'empty (home)' as this is its correct designated slot. If no home slot is available, fall back to the AREA entry with the smallest distance value and status 'empty'.
     Use ONLY a single FETCH_AND_PLACE task — do NOT add unnecessary GO_TO steps before it. The motor system navigates automatically.
 
     ## ID Rules

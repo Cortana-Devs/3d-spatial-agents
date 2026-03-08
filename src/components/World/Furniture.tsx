@@ -529,6 +529,7 @@ export function OfficeDesk({
     name: `${deskName} Pad Left`,
     capacity: 1,
     dimensions: [3.0, 0.4, 2.5],
+    initialItems: initialItems,
   });
   usePlacingArea(padRightRef, {
     id: `${deskId}-pad-right`,
@@ -944,12 +945,7 @@ export function DesktopPC({
           id,
           type: "pc",
           position: worldPos, // Use calculated World Position
-          rotation: rotQuat, // Rotation might also need world rotation if nested?
-          // For now, local rotation relative to parent (desk)
-          // might be enough if standard interaction doesn't depend heavily on orientation
-          // checking InteractableRegistry... it just stores it.
-          // But wait, if I pick it up, does it matter?
-          // Let's stick to worldPos for distance check.
+          rotation: rotQuat,
           pickable: true,
           name: "Desktop PC",
           description: "A high-performance workstation.",

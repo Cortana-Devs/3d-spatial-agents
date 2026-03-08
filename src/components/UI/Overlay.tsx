@@ -6,6 +6,7 @@ import GameMenu from "./GameMenu";
 import { InspectorPanel } from "./InspectorPanel";
 import { TaskAssignmentPanel } from "./TaskAssignmentPanel";
 import { CommandBar } from "./CommandBar";
+import { AgentChatPanel } from "./AgentChatPanel";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 
 export default function Overlay() {
@@ -39,6 +40,49 @@ export default function Overlay() {
   // Memory-reset toast
   const [resetToast, setResetToast] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Agent task failure listener
+  useEffect(() => {
+    const handleTaskFailed = (e: any) => {
+      const { agentId, message } = e.detail;
+      const gameStore = useGameStore.getState();
+
+      gameStore.setInteractionNotification(`[${agentId}] ⚠️ ${message}`);
+
+      setTimeout(() => {
+        if (
+          useGameStore.getState().interactionNotification?.includes(agentId)
+        ) {
+          useGameStore.getState().setInteractionNotification(null);
+        }
+      }, 4000);
+
+      // Also add to chat log so the user can review why it failed
+      gameStore.addChatMessage({ role: "agent", text: message });
+    };
+
+    const handleTaskSuccess = (e: any) => {
+      const { agentId, message } = e.detail;
+      const gameStore = useGameStore.getState();
+
+      gameStore.setInteractionNotification(`[${agentId}] ✅ ${message}`);
+
+      setTimeout(() => {
+        if (
+          useGameStore.getState().interactionNotification?.includes(agentId)
+        ) {
+          useGameStore.getState().setInteractionNotification(null);
+        }
+      }, 4000);
+    };
+
+    window.addEventListener("agent-task-failed", handleTaskFailed);
+    window.addEventListener("agent-task-success", handleTaskSuccess);
+    return () => {
+      window.removeEventListener("agent-task-failed", handleTaskFailed);
+      window.removeEventListener("agent-task-success", handleTaskSuccess);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -90,6 +134,34 @@ export default function Overlay() {
           if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
           toastTimerRef.current = setTimeout(() => setResetToast(false), 3000);
         });
+      }
+
+      // Y/N keys: Agent Chat Prompt Response
+      const chatPromptVisible = useGameStore.getState().chatPromptVisible;
+      const isChatOpen = useGameStore.getState().isChatOpen;
+
+      if (chatPromptVisible && !isChatOpen) {
+        if (e.code === "KeyY") {
+          e.preventDefault();
+          const agentId = useGameStore.getState().nearbyAgentId;
+          if (agentId) {
+            useGameStore.getState().setChatPromptVisible(false);
+            useGameStore.getState().setChatAgentId(agentId);
+            useGameStore.getState().clearChatMessages();
+            // Add initial greeting from agent
+            useGameStore.getState().addChatMessage({
+              role: "agent",
+              text: `Hello! I'm ${agentId}, your office assistant. How can I help you today?`,
+            });
+            useGameStore.getState().setChatOpen(true);
+            document.exitPointerLock();
+          }
+        }
+        if (e.code === "KeyN") {
+          e.preventDefault();
+          useGameStore.getState().setChatPromptVisible(false);
+          // nearbyAgentId is left set — useYukaAI will see this and set cooldown
+        }
       }
     };
 
@@ -608,6 +680,7 @@ export default function Overlay() {
       <InspectorPanel />
       <TaskAssignmentPanel />
       <CommandBar />
+      <AgentChatPanel />
     </>
   );
 }

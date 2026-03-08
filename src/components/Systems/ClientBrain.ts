@@ -23,12 +23,15 @@ import { memoryStream } from "@/lib/memory/MemoryStream";
 
 // ... (BrainState and RateLimiter imports remain)
 
+// Module-level flag: ensures memoryStream.reset() is called exactly once
+// across all ClientBrain instances (multiple agents share the singleton).
+let _memoryResetDone = false;
+
 export class ClientBrain {
   public state: BrainState;
   private rateLimiter: RateLimiter;
   public id: string;
   private sessionId: string;
-  private memoryInitialized = false;
 
   constructor(id: string = "agent-01") {
     this.id = id;
@@ -55,9 +58,9 @@ export class ClientBrain {
 
     this.state.isThinking = true;
 
-    if (!this.memoryInitialized) {
-      await memoryStream.init();
-      this.memoryInitialized = true;
+    if (!_memoryResetDone) {
+      await memoryStream.reset();
+      _memoryResetDone = true;
     }
 
     // Construct Context

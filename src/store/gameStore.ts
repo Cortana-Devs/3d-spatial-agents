@@ -238,6 +238,21 @@ interface GameState {
   // Command Bar (NLP)
   isCommandBarOpen: boolean;
   setCommandBarOpen: (isOpen: boolean) => void;
+
+  // Agent Chat Proximity State
+  nearbyAgentId: string | null;
+  setNearbyAgentId: (id: string | null) => void;
+  chatPromptVisible: boolean;
+  setChatPromptVisible: (visible: boolean) => void;
+
+  // Chat Panel State
+  isChatOpen: boolean;
+  setChatOpen: (isOpen: boolean) => void;
+  chatAgentId: string | null;
+  setChatAgentId: (id: string | null) => void;
+  chatMessages: { role: "user" | "agent"; text: string }[];
+  addChatMessage: (msg: { role: "user" | "agent"; text: string }) => void;
+  clearChatMessages: () => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -461,4 +476,20 @@ export const useGameStore = create<GameState>((set) => ({
   // Command Bar (NLP)
   isCommandBarOpen: false,
   setCommandBarOpen: (isOpen) => set({ isCommandBarOpen: isOpen }),
+
+  // Agent Chat Proximity State
+  nearbyAgentId: null,
+  setNearbyAgentId: (id) => set({ nearbyAgentId: id }),
+  chatPromptVisible: false,
+  setChatPromptVisible: (visible) => set({ chatPromptVisible: visible }),
+
+  // Chat Panel State
+  isChatOpen: false,
+  setChatOpen: (isOpen) => set({ isChatOpen: isOpen }),
+  chatAgentId: null,
+  setChatAgentId: (id) => set({ chatAgentId: id }),
+  chatMessages: [],
+  addChatMessage: (msg) =>
+    set((state) => ({ chatMessages: [...state.chatMessages, msg] })),
+  clearChatMessages: () => set({ chatMessages: [] }),
 }));

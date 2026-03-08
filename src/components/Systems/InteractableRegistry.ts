@@ -4,26 +4,27 @@ export interface WorldObject {
   id: string;
   name: string;
   type:
-  | "file"
-  | "laptop"
-  | "pendrive"
-  | "coffeecup"
-  | "generic"
-  | "sofa"
-  | "chair"
-  | "whiteboard"
-  | "projector_screen"
-  | "tv"
-  | "coffee_machine"
-  | "telephone"
-  | "pc"
-  | "switch"
-  | "door";
+    | "file"
+    | "laptop"
+    | "pendrive"
+    | "coffeecup"
+    | "generic"
+    | "sofa"
+    | "chair"
+    | "whiteboard"
+    | "projector_screen"
+    | "tv"
+    | "coffee_machine"
+    | "telephone"
+    | "pc"
+    | "switch"
+    | "door";
   position: THREE.Vector3;
   description?: string;
   pickable: boolean;
   carriedBy: string | null; // null = on ground, 'player' or agent-id
   placedInArea?: string | null; // ID of the PlacingArea this item sits on, or null if on floor
+  homeAreaId?: string | null; // ID of the default PlacingArea this item belongs to
   meshRef?: THREE.Object3D;
 }
 
@@ -51,7 +52,7 @@ export class InteractableRegistry {
   /** Track items that have been claimed (dispatched to an agent but not yet picked up) */
   private claimedItems: Map<string, string> = new Map(); // itemId → agentId
 
-  private constructor() { }
+  private constructor() {}
 
   public static getInstance(): InteractableRegistry {
     if (!InteractableRegistry.instance) {
@@ -123,6 +124,30 @@ export class InteractableRegistry {
 
   public register(obj: WorldObject) {
     this.objects.set(obj.id, obj);
+
+    // Reverse auto-snap: If a placing area already registered with this item
+    // as its currentItem (race: area mounted before item), link them now.
+    if (!obj.placedInArea && !obj.carriedBy) {
+      for (const area of this.placingAreas.values()) {
+        if (area.currentItem === obj.id) {
+          obj.placedInArea = area.id;
+          obj.homeAreaId = area.id;
+          obj.position.copy(area.position);
+          if (obj.meshRef) {
+            if (obj.meshRef.parent) {
+              obj.meshRef.parent.updateWorldMatrix(true, false);
+              const localPos = obj.meshRef.parent.worldToLocal(
+                area.position.clone(),
+              );
+              obj.meshRef.position.copy(localPos);
+            } else {
+              obj.meshRef.position.copy(area.position);
+            }
+          }
+          break;
+        }
+      }
+    }
   }
 
   public unregister(id: string) {
@@ -135,27 +160,148 @@ export class InteractableRegistry {
   }
 
   /**
-   * Fallback lookup by display name (case-insensitive).
-   * Used when the LLM returns an item's human-readable name instead of its registry ID.
-   * e.g. "Desktop PC" → finds the object with id "desktop-pc".
+   * Computes the Levenshtein distance between two strings
    */
-  public getByName(name: string): WorldObject | undefined {
-    const lower = name.toLowerCase();
-    for (const obj of this.objects.values()) {
-      if (obj.name.toLowerCase() === lower) return obj;
+  private levenshteinDistance(a: string, b: string): number {
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    const arr = [];
+    for (let i = 0; i <= b.length; i++) {
+      arr[i] = [i];
+      for (let j = 1; j <= a.length; j++) {
+        arr[i][j] =
+          i === 0
+            ? j
+            : Math.min(
+                arr[i - 1][j] + 1,
+                arr[i][j - 1] + 1,
+                arr[i - 1][j - 1] + (a[j - 1] === b[i - 1] ? 0 : 1),
+              );
+      }
     }
-    return undefined;
+    return arr[b.length][a.length];
   }
 
   /**
-   * Fallback lookup for placing areas by display name (case-insensitive).
+   * Fallback lookup by display name using exact, substring, and fuzzy matching.
+   * e.g. "Desktop PC" → finds the object with id "desktop-pc".
+   */
+  public getByName(name: string): WorldObject | undefined {
+    const lower = name.toLowerCase().trim();
+
+    // 1. Exact Name Match
+    for (const obj of this.objects.values()) {
+      if (obj.name?.toLowerCase() === lower) return obj;
+    }
+
+    // 2. Exact ID Match (sometimes the LLM hallucinates IDs as names)
+    for (const obj of this.objects.values()) {
+      if (obj.id?.toLowerCase() === lower) return obj;
+    }
+
+    // 3. Substring Match (e.g. "Red File" matches "Red File Folder")
+    for (const obj of this.objects.values()) {
+      if (
+        obj.name?.toLowerCase().includes(lower) ||
+        lower.includes(obj.name?.toLowerCase() || "")
+      )
+        return obj;
+    }
+
+    // 4. Fuzzy Levenshtein Match
+    let bestMatch: WorldObject | undefined = undefined;
+    let minDistance = Infinity;
+
+    for (const obj of this.objects.values()) {
+      const objName = obj.name || "";
+      const dist = this.levenshteinDistance(lower, objName.toLowerCase());
+      // Only consider it a match if it's reasonably close (< 50% length difference)
+      if (
+        dist < minDistance &&
+        dist < Math.max(lower.length, objName.length) * 0.5
+      ) {
+        minDistance = dist;
+        bestMatch = obj;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  /**
+   * Fallback lookup for placing areas by display name using exact, substring, and fuzzy matching.
    * e.g. "Reception Desk Right" → finds area with id "reception-desk-pad-right".
    */
   public getAreaByName(name: string): PlacingArea | undefined {
-    const lower = name.toLowerCase();
+    const lower = name.toLowerCase().trim();
+
+    // 1. Exact Match
     for (const area of this.placingAreas.values()) {
-      if (area.name.toLowerCase() === lower) return area;
+      if (area.name?.toLowerCase() === lower) return area;
     }
+
+    // 2. Exact ID Match
+    for (const area of this.placingAreas.values()) {
+      if (area.id?.toLowerCase() === lower) return area;
+    }
+
+    // 3. Substring Match
+    for (const area of this.placingAreas.values()) {
+      if (
+        area.name?.toLowerCase().includes(lower) ||
+        lower.includes(area.name?.toLowerCase() || "")
+      )
+        return area;
+    }
+
+    // 4. Fuzzy Levenshtein Match
+    let bestMatch: PlacingArea | undefined = undefined;
+    let minDistance = Infinity;
+
+    for (const area of this.placingAreas.values()) {
+      const areaName = area.name || "";
+      const dist = this.levenshteinDistance(lower, areaName.toLowerCase());
+      if (
+        dist < minDistance &&
+        dist < Math.max(lower.length, areaName.length) * 0.5
+      ) {
+        minDistance = dist;
+        bestMatch = area;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  /**
+   * Finds any empty slot belonging to a specific furniture group name.
+   * e.g. If the LLM just says "office_desk_h", this returns the first empty slot on that desk.
+   */
+  public getEmptyAreaByGroup(groupName: string): PlacingArea | undefined {
+    // Strip trailing slot numbers just in case
+    const baseGroup = groupName
+      .replace(/\s*(left|right|middle|slot\s*\d+)$/i, "")
+      .trim()
+      .toLowerCase();
+
+    // First try exact groupName match
+    for (const area of this.placingAreas.values()) {
+      if (
+        !area.currentItem &&
+        area.groupName &&
+        area.groupName.toLowerCase() === baseGroup
+      ) {
+        return area;
+      }
+    }
+
+    // Fall back to fuzzy name matching if groupName isn't strictly set
+    for (const area of this.placingAreas.values()) {
+      if (!area.currentItem && area.name.toLowerCase().includes(baseGroup)) {
+        return area;
+      }
+    }
+
     return undefined;
   }
 
@@ -250,6 +396,7 @@ export class InteractableRegistry {
       const obj = this.objects.get(area.currentItem);
       if (obj) {
         obj.placedInArea = area.id;
+        obj.homeAreaId = area.id;
         obj.position.copy(area.position);
         if (obj.meshRef) {
           if (obj.meshRef.parent) {

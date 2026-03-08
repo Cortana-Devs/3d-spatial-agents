@@ -253,6 +253,38 @@ export class AgentTaskQueue {
 
   // --- MAIN UPDATE (called every frame from useYukaAI) ---
 
+  /**
+   * Dispatches a global event when a task fails so the UI can notify the user
+   */
+  private notifyFailure(message: string) {
+    if (
+      this.currentTask &&
+      !this.currentTask.scriptId?.startsWith("subconscious_")
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("agent-task-failed", {
+          detail: { agentId: this.agentId, message },
+        }),
+      );
+    }
+  }
+
+  /**
+   * Dispatches a global event when a task succeeds so the UI can notify the user
+   */
+  private notifySuccess(message: string) {
+    if (
+      this.currentTask &&
+      !this.currentTask.scriptId?.startsWith("subconscious_")
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("agent-task-success", {
+          detail: { agentId: this.agentId, message },
+        }),
+      );
+    }
+  }
+
   public update(
     delta: number,
     vehiclePos: THREE.Vector3,
@@ -324,10 +356,14 @@ export class AgentTaskQueue {
             console.warn(
               `[AgentTaskQueue:${this.agentId}] Item ${this.activeItemId} carried by ${item.carriedBy} — aborting`,
             );
+            this.notifyFailure(
+              `Someone else is already carrying ${this.activeItemId}.`,
+            );
             registry.unclaimItem(this.activeItemId!, this.agentId);
             this.phase = "COMPLETED";
             return { type: "STOP" };
           }
+
           // Use world position helper instead of raw item.position
           targetPos =
             registry.getWorldPosition(this.activeItemId!) || item.position;
@@ -433,8 +469,8 @@ export class AgentTaskQueue {
               `[AgentTaskQueue:${this.agentId}] Close-approach stuck (dist=${distToTarget.toFixed(2)}), re-issuing ARRIVE (retry=${this.retryCount})`,
             );
 
-            if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
-              // Fix #6: Force pickup if we're reasonably close
+            if (this.retryCount >= AgentTaskQueue.MAX_RETRIES / 2) {
+              // Force pickup if we're reasonably close — don't wait for all retries
               if (distToTarget < AgentTaskQueue.CLOSE_APPROACH_DIST) {
                 console.log(
                   `[AgentTaskQueue:${this.agentId}] Stuck but close enough (dist=${distToTarget.toFixed(2)}) — forcing PICKING_UP`,
@@ -447,8 +483,17 @@ export class AgentTaskQueue {
                 this.stuckWindowPositions = [];
                 return { type: "STOP", faceTarget: targetPos };
               }
+            }
+
+            if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
               console.warn(
                 `[AgentTaskQueue:${this.agentId}] Abandoning task — permanently stuck`,
+              );
+              const itemName = this.activeItemId
+                ? registry.getById(this.activeItemId)?.name || this.activeItemId
+                : "the item";
+              this.notifyFailure(
+                `I couldn't reach ${itemName} — the path is blocked by furniture.`,
               );
               registry.unclaimItem(this.activeItemId!, this.agentId);
               this.phase = "COMPLETED";
@@ -473,8 +518,8 @@ export class AgentTaskQueue {
         if (
           (isStuckWalk &&
             this.elapsedTime -
-            (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
-            AgentTaskQueue.STUCK_THRESHOLD) ||
+              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+              AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
           this.retryCount++;
@@ -486,6 +531,9 @@ export class AgentTaskQueue {
           if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
             console.warn(
               `[AgentTaskQueue:${this.agentId}] Abandoning task — permanently stuck after ${this.retryCount} retries`,
+            );
+            this.notifyFailure(
+              `I got stuck on the way to ${this.activeItemId ? registry.getById(this.activeItemId)?.name || this.activeItemId : "the item"} — the path seems blocked.`,
             );
             registry.unclaimItem(this.activeItemId!, this.agentId);
             this.phase = "COMPLETED";
@@ -541,6 +589,7 @@ export class AgentTaskQueue {
             console.warn(
               `[AgentTaskQueue:${this.agentId}] Failed to pick up ${this.activeItemId}`,
             );
+            this.notifyFailure(`I couldn't pick up the item.`);
             registry.unclaimItem(this.activeItemId!, this.agentId);
             this.phase = "COMPLETED";
           }
@@ -715,8 +764,8 @@ export class AgentTaskQueue {
         if (
           (isStuckDestWalk &&
             this.elapsedTime -
-            (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
-            AgentTaskQueue.STUCK_THRESHOLD) ||
+              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+              AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
         ) {
           this.retryCount++;
@@ -757,6 +806,12 @@ export class AgentTaskQueue {
             console.log(
               `[AgentTaskQueue:${this.agentId}] Placed ${this.activeItemId} at ${this.activeDestAreaId}`,
             );
+            // Notify UI of successful placement
+            const item = registry.getById(this.activeItemId!);
+            const area = registry.getPlacingAreaById(this.activeDestAreaId!);
+            const itemLabel = item?.name || this.activeItemId;
+            const areaLabel = area?.name || this.activeDestAreaId;
+            this.notifySuccess(`Done! I placed ${itemLabel} at ${areaLabel}.`);
           } else {
             console.warn(
               `[AgentTaskQueue:${this.agentId}] Failed to place, dropping nearby`,
@@ -765,6 +820,9 @@ export class AgentTaskQueue {
             dropPos.x += (Math.random() - 0.5) * 2;
             dropPos.z += (Math.random() - 0.5) * 2;
             registry.putDown(this.activeItemId!, dropPos);
+            this.notifyFailure(
+              `I couldn't place the item at the destination, so I set it down nearby.`,
+            );
           }
           this.phase = "COMPLETED";
         }
@@ -851,8 +909,8 @@ export class AgentTaskQueue {
         if (
           (isStuckWalk &&
             this.elapsedTime -
-            (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
-            AgentTaskQueue.STUCK_THRESHOLD) ||
+              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+              AgentTaskQueue.STUCK_THRESHOLD) ||
           this.repathTimer > AgentTaskQueue.REPATH_INTERVAL * 1.5
         ) {
           console.log(
@@ -1075,7 +1133,7 @@ class AgentTaskRegistry {
   private static instance: AgentTaskRegistry;
   private queues: Map<string, AgentTaskQueue> = new Map();
 
-  private constructor() { }
+  private constructor() {}
 
   public static getInstance(): AgentTaskRegistry {
     if (!AgentTaskRegistry.instance) {

@@ -93,13 +93,15 @@ export function CommandBar() {
     return () => window.removeEventListener("keydown", handleKey, true);
   }, [isOpen, close]);
 
-  // Auto-close after success
+  // We no longer auto-close after success to allow the user to review the result
+  /*
   useEffect(() => {
     if (state === "success") {
       const timer = setTimeout(() => close(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [state, close]);
+  */
 
   if (!isOpen) return null;
 
@@ -113,9 +115,10 @@ export function CommandBar() {
     const tStart = performance.now();
 
     try {
-      // 1. Build world context on the client
+      // 1. Build world context on the client (filter to 40m radius around player)
       const t0 = performance.now();
-      const ctx = buildWorldContext();
+      const playerPos = useGameStore.getState().playerPosition;
+      const ctx = buildWorldContext(playerPos, 40);
       const prompt = buildParserPrompt(trimmed, ctx);
       const t1 = performance.now();
 

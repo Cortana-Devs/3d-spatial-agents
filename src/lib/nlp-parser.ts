@@ -16,29 +16,47 @@ export interface WorldContext {
   agents: string;
 }
 
-export function buildWorldContext(): WorldContext {
+export function buildWorldContext(
+  origin?: THREE.Vector3,
+  radius?: number,
+): WorldContext {
   const registry = InteractableRegistry.getInstance();
   const taskRegistry = AgentTaskRegistry.getInstance();
 
-  // --- Items: ALL pickable objects with status markers ---
   // A=available, C=carried, X=claimed. LLM should only pick (A) items.
-  const allItems = registry.getAll().filter((o) => o.pickable);
+  let allItems = registry.getAll().filter((o) => o.pickable);
+  if (origin && radius) {
+    const rSq = radius * radius;
+    allItems = allItems.filter(
+      (item) => item.position.distanceToSquared(origin) < rSq,
+    );
+  }
+
   const itemRows = allItems.map((item) => {
     const status = item.carriedBy
       ? "C"
       : registry.isItemClaimed(item.id)
         ? "X"
         : "A";
-    return `${item.id}|${item.name}|${item.type}|${status}`;
+    const loc = item.placedInArea ? "Placed" : "OnFloor";
+    const home = item.homeAreaId || "none";
+    return `${item.id}|${item.name}|${item.type}|${status}|${loc}|Home:${home}`;
   });
   const items =
     itemRows.length > 0
-      ? `A=available,C=carried,X=claimed. Only pick (A) items.\nID|Name|Type|Status\n${itemRows.join("\n")}`
+      ? `A=available,C=carried,X=claimed. Only pick (A) items.\nID|Name|Type|Status|Location|HomeArea\n${itemRows.join("\n")}`
       : "No pickable items.";
 
   // --- Placing Areas: ALL areas, grouped by furniture for token efficiency ---
   // Format: "Furniture Name: id(E), id(O)" where E=empty, O=occupied
-  const allAreas = registry.getAllPlacingAreas();
+  let allAreas = registry.getAllPlacingAreas();
+  if (origin && radius) {
+    const rSq = radius * radius;
+    allAreas = allAreas.filter(
+      (area) => area.position.distanceToSquared(origin) < rSq,
+    );
+  }
+
   const grouped = new Map<string, { id: string; empty: boolean }[]>();
   for (const area of allAreas) {
     // Group by base furniture name (strip slot suffixes like "Left", "Right", "Middle")
@@ -88,7 +106,7 @@ ${ctx.agents}
 
 TASKS: FETCH_AND_PLACE(itemId,destAreaId), PICK_NEARBY(itemId), PLACE_INVENTORY(destAreaId), FOLLOW_PLAYER()
 
-RULES: Use EXACT IDs from tables. Only pick items marked (A). destAreaId MUST be an (E) empty slot. Pick IDLE agent. "move X to Y"=FETCH_AND_PLACE. "pick up X"=PICK_NEARBY. "follow me"=FOLLOW_PLAYER.
+RULES: Use EXACT IDs from tables. Only pick items marked (A). destAreaId MUST be an (E) empty slot. Pick IDLE agent. "move X to Y"=FETCH_AND_PLACE. "clean up"=FETCH_AND_PLACE for items with Location=OnFloor to their HomeArea. "pick up X"=PICK_NEARBY. "follow me"=FOLLOW_PLAYER.
 
 COMMAND: "${command}"
 
@@ -111,9 +129,9 @@ export interface NLPError {
 }
 
 /**
- * Finds an alternative empty placing area that has a similar name to the
- * originally requested area. For example if the LLM picks "desk-a-slot-0"
- * which is occupied, this will try to find "desk-a-slot-1" which is empty.
+ * Finds an alternative empty placing area that belongs to the same
+ * furniture group as the requested area. Uses groupId/groupName for
+ * reliable matching, with a name-based fallback.
  */
 export function findAlternativeArea(
   requestedAreaId: string,
@@ -122,23 +140,40 @@ export function findAlternativeArea(
   const requestedArea = registry.getPlacingAreaById(requestedAreaId);
   if (!requestedArea) return null;
 
-  // Extract the base name for fuzzy matching (e.g. "Office Desk A" from "Office Desk A Left")
-  const baseName = requestedArea.name
-    .replace(/(Left|Right|Middle|Slot \d+)$/i, "")
-    .trim();
-
   const allAreas = registry.getAllPlacingAreas();
-  for (const area of allAreas) {
-    if (area.id === requestedAreaId) continue; // skip the occupied one
-    if (area.currentItem) continue; // skip other occupied ones
-    // Check if this area belongs to the same group/desk
-    if (
-      area.name.includes(baseName) ||
-      (area.groupName && area.groupName === requestedArea.groupName)
-    ) {
-      return area.id;
+
+  // Primary: Match by groupId (set by usePlacingArea — most reliable)
+  if (requestedArea.groupId) {
+    for (const area of allAreas) {
+      if (area.id === requestedAreaId) continue;
+      if (area.currentItem) continue;
+      if (area.groupId === requestedArea.groupId) return area.id;
     }
   }
+
+  // Secondary: Match by groupName
+  if (requestedArea.groupName) {
+    for (const area of allAreas) {
+      if (area.id === requestedAreaId) continue;
+      if (area.currentItem) continue;
+      if (area.groupName && area.groupName === requestedArea.groupName)
+        return area.id;
+    }
+  }
+
+  // Tertiary: Name-based fallback — strip trailing slot identifiers AND numbers
+  const baseName = requestedArea.name
+    .replace(/\s*(Left|Right|Middle|Slot\s*\d+|\d+)$/i, "")
+    .trim();
+
+  if (baseName) {
+    for (const area of allAreas) {
+      if (area.id === requestedAreaId) continue;
+      if (area.currentItem) continue;
+      if (area.name.startsWith(baseName)) return area.id;
+    }
+  }
+
   return null;
 }
 
@@ -204,18 +239,40 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
             error: `FETCH_AND_PLACE requires itemId and destAreaId, got: ${JSON.stringify(t)}`,
           };
         }
-        const item = registry.getById(t.itemId);
+
+        let cleanedItemId = t.itemId.replace(/\s*\([A-Z]\)$/i, "").trim();
+        let item = registry.getById(cleanedItemId);
+        if (!item) item = registry.getByName(cleanedItemId);
+
         if (!item) {
           return { error: `Item "${t.itemId}" not found in the scene.` };
         }
 
-        // Smart area resolution: if occupied, find alternative on same surface
-        let resolvedAreaId = t.destAreaId;
-        const area = registry.getPlacingAreaById(resolvedAreaId);
+        if (!item.pickable) {
+          return {
+            error: `I cannot pick up "${item.name || t.itemId}" because it is fixed to the floor or too heavy.`,
+          };
+        }
+
+        let cleanedAreaId = t.destAreaId.replace(/\s*\([A-Z]\)$/i, "").trim();
+        let area = registry.getPlacingAreaById(cleanedAreaId);
+        // Try empty group slot BEFORE name match
+        if (!area) area = registry.getEmptyAreaByGroup(cleanedAreaId);
+        if (!area) area = registry.getAreaByName(cleanedAreaId);
+
         if (!area) {
           return {
             error: `Placing area "${t.destAreaId}" not found in the scene.`,
           };
+        }
+
+        let resolvedAreaId = area.id;
+        // Staleness check: verify occupant actually exists
+        if (area.currentItem) {
+          const occupant = registry.getById(area.currentItem);
+          if (!occupant || occupant.placedInArea !== area.id) {
+            area.currentItem = null;
+          }
         }
         if (area.currentItem) {
           const alt = findAlternativeArea(resolvedAreaId, registry);
@@ -228,28 +285,11 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
           }
         }
 
-        // If item is already carried → assign PLACE_INVENTORY to the carrying agent
-        if (item.carriedBy) {
-          parsed.agentId = item.carriedBy; // override agent to the one holding it
-          validatedTasks.push({
-            type: "PLACE_INVENTORY",
-            priority: 20,
-            itemId: t.itemId,
-            destAreaId: resolvedAreaId,
-          });
-          break;
-        }
-
-        // Otherwise: standard PICK_NEARBY + PLACE_INVENTORY sequence
+        // Output atomic FETCH_AND_PLACE sequence
         validatedTasks.push({
-          type: "PICK_NEARBY",
+          type: "FETCH_AND_PLACE",
           priority: 20,
-          itemId: t.itemId,
-        });
-        validatedTasks.push({
-          type: "PLACE_INVENTORY",
-          priority: 20,
-          itemId: t.itemId,
+          itemId: item.id,
           destAreaId: resolvedAreaId,
         });
         break;
@@ -279,6 +319,13 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
         const area = registry.getPlacingAreaById(resolvedAreaId);
         if (!area) {
           return { error: `Placing area "${t.destAreaId}" not found.` };
+        }
+        // Staleness check
+        if (area.currentItem) {
+          const occupant = registry.getById(area.currentItem);
+          if (!occupant || occupant.placedInArea !== area.id) {
+            area.currentItem = null;
+          }
         }
         if (area.currentItem) {
           const alt = findAlternativeArea(resolvedAreaId, registry);
