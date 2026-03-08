@@ -57,6 +57,10 @@ export function useRobotController(
   const prevPlacingIds = useRef<string>("");
   const prevActivePlacingId = useRef<string | null>(null);
 
+  const lastGridUpdatePos = useRef(new THREE.Vector3(0, 0, 0));
+  const gridUpdateTimer = useRef(0);
+  const lastPlayerPosLog = useRef(new THREE.Vector3(0, 0, 0));
+
   const keyBindings = useGameStore((state) => state.keyBindings);
 
   // Input Handling
@@ -130,7 +134,7 @@ export function useRobotController(
 
   // Gait Engine
   const gait = useProceduralGait(joints, {
-    strideLength: 1.8,
+    strideLength: 6.0,
     leanFactor: 0.1,
     bankFactor: 0.08,
   });
@@ -405,189 +409,205 @@ export function useRobotController(
     const s = state.current;
 
     // Interaction Prompts & Grid Construction
+    gridUpdateTimer.current += delta;
+    const distSinceGridUpdate = lastGridUpdatePos.current.distanceTo(
+      mesh.position,
+    );
+    const shouldUpdateGrid =
+      gridUpdateTimer.current > 0.25 || distSinceGridUpdate > 0.5;
+
     if (!isSitting) {
-      // Build interaction grid
-      const robotPos = mesh.position;
-      const nearbyInteractables = InteractableRegistry.getInstance()
-        .getNearby(robotPos, 10)
-        .filter((o) => o.pickable && !o.carriedBy);
+      if (shouldUpdateGrid) {
+        gridUpdateTimer.current = 0;
+        lastGridUpdatePos.current.copy(mesh.position);
 
-      const nearbyPlacingAreas = InteractableRegistry.getInstance()
-        .getNearbyPlacingAreas(robotPos, 10)
-        .filter((a) => !a.currentItem);
-      // Calculate Camera Forward for Directional Bias
-      const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
-        camera.quaternion,
-      );
-      camForward.y = 0;
-      camForward.normalize();
+        // Build interaction grid
+        const robotPos = mesh.position;
+        const nearbyInteractables = InteractableRegistry.getInstance()
+          .getNearby(robotPos, 10)
+          .filter((o) => o.pickable && !o.carriedBy);
 
-      // Helper: Get distance to the empty slot
-      const getMinSlotDist = (area: any) => {
-        if (!area.currentItem) {
-          const pos = InteractableRegistry.getInstance().getSlotPosition(
-            area.id,
-          );
-          if (pos) {
-            return pos.distanceToSquared(robotPos);
-          }
-        }
-        return InteractableRegistry.getInstance().getDistanceToArea(
-          area.id,
-          robotPos,
+        const nearbyPlacingAreas = InteractableRegistry.getInstance()
+          .getNearbyPlacingAreas(robotPos, 10)
+          .filter((a) => !a.currentItem);
+        // Calculate Camera Forward for Directional Bias
+        const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+          camera.quaternion,
         );
-      };
+        camForward.y = 0;
+        camForward.normalize();
 
-      // Sort areas by distance to CLOSEST SLOT
-      nearbyPlacingAreas.sort((a, b) => {
-        return getMinSlotDist(a) - getMinSlotDist(b);
-      });
-
-      const grid: any[] = [];
-
-      // Helper to add nearby items row
-      const addNearbyItemsRow = () => {
-        if (nearbyInteractables.length > 0) {
-          // Sort items by distance
-          nearbyInteractables.sort(
-            (a, b) =>
-              a.position.distanceToSquared(robotPos) -
-              b.position.distanceToSquared(robotPos),
+        // Helper: Get distance to the empty slot
+        const getMinSlotDist = (area: any) => {
+          if (!area.currentItem) {
+            const pos = InteractableRegistry.getInstance().getSlotPosition(
+              area.id,
+            );
+            if (pos) {
+              return pos.distanceToSquared(robotPos);
+            }
+          }
+          return InteractableRegistry.getInstance().getDistanceToArea(
+            area.id,
+            robotPos,
           );
+        };
 
-          grid.push({
-            id: "floor",
-            label: "Pickup Items",
-            cells: nearbyInteractables.map((item) => ({
-              id: item.id,
-              label: item.name,
-              type: "item",
-              icon: "🔹",
-              meta: item,
-              interactableId: item.id,
-            })),
-          });
-        }
-      };
+        // Sort areas by distance to CLOSEST SLOT
+        nearbyPlacingAreas.sort((a, b) => {
+          return getMinSlotDist(a) - getMinSlotDist(b);
+        });
 
-      // Helper to add placing area rows
-      const addPlacingAreaRows = () => {
-        if (nearbyPlacingAreas.length > 0) {
-          const areaGroups = new Map<string, any>();
+        const grid: any[] = [];
 
-          nearbyPlacingAreas.forEach((area) => {
-            if (area.currentItem) return;
+        // Helper to add nearby items row
+        const addNearbyItemsRow = () => {
+          if (nearbyInteractables.length > 0) {
+            // Sort items by distance
+            nearbyInteractables.sort(
+              (a, b) =>
+                a.position.distanceToSquared(robotPos) -
+                b.position.distanceToSquared(robotPos),
+            );
 
-            const gId = area.groupId || area.id;
-            const gName = area.groupName || area.name;
-
-            if (!areaGroups.has(gId)) {
-              areaGroups.set(gId, {
-                id: gId,
-                label: gName,
-                cells: [],
-              });
-            }
-
-            areaGroups.get(gId).cells.push({
-              id: `slot-${area.id}`,
-              label: "Empty Slot",
-              type: "slot",
-              icon: "⬜",
-              meta: {
-                areaId: area.id,
-                areaName: area.name,
-                offset: area.slotIndex || 0,
-              },
+            grid.push({
+              id: "floor",
+              label: "Pickup Items",
+              cells: nearbyInteractables.map((item) => ({
+                id: item.id,
+                label: item.name,
+                type: "item",
+                icon: "🔹",
+                meta: item,
+                interactableId: item.id,
+              })),
             });
-          });
-
-          areaGroups.forEach((group) => {
-            if (group.cells.length > 0) {
-              group.cells.sort(
-                (a: any, b: any) => a.meta.offset - b.meta.offset,
-              );
-              grid.push(group);
-            }
-          });
-        }
-      };
-
-      // Determine which group has the single CLOSEST entity
-      let minItemDist = Infinity;
-      if (nearbyInteractables.length > 0) {
-        for (const item of nearbyInteractables) {
-          const d = item.position.distanceToSquared(robotPos);
-          if (d < minItemDist) minItemDist = d;
-        }
-      }
-
-      let minAreaDist = Infinity;
-      if (nearbyPlacingAreas.length > 0) {
-        // Use Distance to Closest SLOT, not Area Volume
-        minAreaDist = getMinSlotDist(nearbyPlacingAreas[0]);
-      }
-
-      // STRICT Nearest First Logic (Item vs Slot)
-      if (minItemDist < minAreaDist) {
-        // Closest thing is an Item
-        addNearbyItemsRow();
-        addPlacingAreaRows();
-      } else {
-        // Closest thing is a Slot
-        addPlacingAreaRows();
-        addNearbyItemsRow();
-      }
-
-      useGameStore.getState().setInteractionGrid(grid);
-
-      // Update Placing Target Visualization
-      const curSel = useGameStore.getState().gridSelection;
-      let targetPos: THREE.Vector3 | null = null;
-      let targetType: "item" | "slot" | null = null;
-      let targetId: string | undefined;
-
-      const interactableRegistry = InteractableRegistry.getInstance();
-
-      if (grid.length > 0 && curSel.row >= 0 && curSel.row < grid.length) {
-        const row = grid[curSel.row];
-        const cell = row.cells[curSel.col];
-
-        if (cell && cell.type === "slot") {
-          targetType = "slot";
-          targetId = cell.id;
-          const areaId = cell.meta.areaId;
-          const area = interactableRegistry.getPlacingAreaById(areaId);
-          if (area) {
-            targetPos = interactableRegistry.getSlotPosition(areaId);
           }
-        } else if (cell && cell.type === "item") {
-          targetType = "item";
-          targetId = cell.id;
-          const obj = interactableRegistry.getById(cell.id);
-          if (obj) {
-            targetPos = obj.position.clone();
-            if (obj.meshRef) {
-              const bbox = new THREE.Box3().setFromObject(obj.meshRef);
-              targetPos.y = bbox.max.y + 0.2;
-            } else {
-              targetPos.y += 0.5;
-            }
+        };
+
+        // Helper to add placing area rows
+        const addPlacingAreaRows = () => {
+          if (nearbyPlacingAreas.length > 0) {
+            const areaGroups = new Map<string, any>();
+
+            nearbyPlacingAreas.forEach((area) => {
+              if (area.currentItem) return;
+
+              const gId = area.groupId || area.id;
+              const gName = area.groupName || area.name;
+
+              if (!areaGroups.has(gId)) {
+                areaGroups.set(gId, {
+                  id: gId,
+                  label: gName,
+                  cells: [],
+                });
+              }
+
+              areaGroups.get(gId).cells.push({
+                id: `slot-${area.id}`,
+                label: "Empty Slot",
+                type: "slot",
+                icon: "⬜",
+                meta: {
+                  areaId: area.id,
+                  areaName: area.name,
+                  offset: area.slotIndex || 0,
+                },
+              });
+            });
+
+            areaGroups.forEach((group) => {
+              if (group.cells.length > 0) {
+                group.cells.sort(
+                  (a: any, b: any) => a.meta.offset - b.meta.offset,
+                );
+                grid.push(group);
+              }
+            });
+          }
+        };
+
+        // Determine which group has the single CLOSEST entity
+        let minItemDist = Infinity;
+        if (nearbyInteractables.length > 0) {
+          for (const item of nearbyInteractables) {
+            const d = item.position.distanceToSquared(robotPos);
+            if (d < minItemDist) minItemDist = d;
           }
         }
-      }
 
-      // Ensure specific type is compatible with store
-      useGameStore
-        .getState()
-        .setPlacingTargetPos(targetPos, targetType || undefined, targetId);
+        let minAreaDist = Infinity;
+        if (nearbyPlacingAreas.length > 0) {
+          // Use Distance to Closest SLOT, not Area Volume
+          minAreaDist = getMinSlotDist(nearbyPlacingAreas[0]);
+        }
 
-      if (grid.length > 0 && useGameStore.getState().gridSelection.row === -1) {
-        useGameStore.getState().setGridSelection({ row: 0, col: 0 });
-      } else if (grid.length === 0) {
-        useGameStore.getState().setGridSelection({ row: -1, col: -1 });
-      }
-    } else {
+        // STRICT Nearest First Logic (Item vs Slot)
+        if (minItemDist < minAreaDist) {
+          // Closest thing is an Item
+          addNearbyItemsRow();
+          addPlacingAreaRows();
+        } else {
+          // Closest thing is a Slot
+          addPlacingAreaRows();
+          addNearbyItemsRow();
+        }
+
+        useGameStore.getState().setInteractionGrid(grid);
+
+        // Update Placing Target Visualization
+        const curSel = useGameStore.getState().gridSelection;
+        let targetPos: THREE.Vector3 | null = null;
+        let targetType: "item" | "slot" | null = null;
+        let targetId: string | undefined;
+
+        const interactableRegistry = InteractableRegistry.getInstance();
+
+        if (grid.length > 0 && curSel.row >= 0 && curSel.row < grid.length) {
+          const row = grid[curSel.row];
+          const cell = row.cells[curSel.col];
+
+          if (cell && cell.type === "slot") {
+            targetType = "slot";
+            targetId = cell.id;
+            const areaId = cell.meta.areaId;
+            const area = interactableRegistry.getPlacingAreaById(areaId);
+            if (area) {
+              targetPos = interactableRegistry.getSlotPosition(areaId);
+            }
+          } else if (cell && cell.type === "item") {
+            targetType = "item";
+            targetId = cell.id;
+            const obj = interactableRegistry.getById(cell.id);
+            if (obj) {
+              targetPos = obj.position.clone();
+              if (obj.meshRef) {
+                const bbox = new THREE.Box3().setFromObject(obj.meshRef);
+                targetPos.y = bbox.max.y + 0.2;
+              } else {
+                targetPos.y += 0.5;
+              }
+            }
+          }
+        }
+
+        // Ensure specific type is compatible with store
+        useGameStore
+          .getState()
+          .setPlacingTargetPos(targetPos, targetType || undefined, targetId);
+
+        if (
+          grid.length > 0 &&
+          useGameStore.getState().gridSelection.row === -1
+        ) {
+          useGameStore.getState().setGridSelection({ row: 0, col: 0 });
+        } else if (grid.length === 0) {
+          useGameStore.getState().setGridSelection({ row: -1, col: -1 });
+        }
+      } // end if (shouldUpdateGrid)
+    } else if (shouldUpdateGrid) {
+      gridUpdateTimer.current = 0;
       useGameStore.getState().setInteractionGrid([]);
       useGameStore.getState().setGridSelection({ row: -1, col: -1 });
       useGameStore.getState().setPlacingTargetPos(null);
@@ -772,12 +792,15 @@ export function useRobotController(
       }
     }
 
-    setPlayerPosition(mesh.position.clone());
+    if (lastPlayerPosLog.current.distanceToSquared(mesh.position) > 0.01) {
+      lastPlayerPosLog.current.copy(mesh.position);
+      setPlayerPosition(mesh.position.clone());
+    }
 
     const playerVel = isMoving
       ? new THREE.Vector3().copy(moveDir).multiplyScalar(currentSpeed)
       : new THREE.Vector3(0, 0, 0);
-    const playerStride = isSprinting ? 2.5 : 1.8;
+    const playerStride = isSprinting ? 7.5 : 6.0;
 
     gait.update(playerVel, dt, {
       strideLength: playerStride,

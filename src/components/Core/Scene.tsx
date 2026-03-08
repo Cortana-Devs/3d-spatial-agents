@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import "@/lib/bvh-setup";
 import { Stats, AdaptiveEvents, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import OfficeHub from "../World/OfficeHub";

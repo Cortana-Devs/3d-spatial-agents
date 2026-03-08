@@ -251,8 +251,18 @@ export const useGameStore = create<GameState>((set) => ({
   setIsNight: (isNight) => set({ isNight }),
 
   collidableMeshes: [],
-  addCollidableMesh: (mesh) =>
-    set((state) => ({ collidableMeshes: [...state.collidableMeshes, mesh] })),
+  addCollidableMesh: (mesh) => {
+    mesh.traverse((child) => {
+      if (
+        child instanceof THREE.Mesh &&
+        child.geometry &&
+        !child.geometry.boundsTree
+      ) {
+        child.geometry.computeBoundsTree();
+      }
+    });
+    set((state) => ({ collidableMeshes: [...state.collidableMeshes, mesh] }));
+  },
   removeCollidableMesh: (uuid) =>
     set((state) => ({
       collidableMeshes: state.collidableMeshes.filter((m) => m.uuid !== uuid),

@@ -54,6 +54,7 @@ export function useYukaAI(
   const socialTimer = useRef(0);
   const socialTarget = useRef<YUKA.Vehicle | null>(null);
   const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
+  const socialCheckTimer = useRef(0);
 
   // Optimization Refs
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -365,49 +366,33 @@ export function useYukaAI(
     // --- PHYSICS CONSTRAINT ---
     vehicle.velocity.y = 0; // Lock Y velocity to prevent pitching
 
-    // --- HARD COLLISION (Robot vs Robot) ---
-    const vehicles = aiManager.vehicles;
-    const myPos = vehicle.position;
-    const minSeparation = 2.5;
+    // --- THROTTLED SOCIAL INTERACTION (Robot vs Robot) ---
+    // Hard collision is now handled by YUKA's SeparationBehavior to avoid O(N^2) every frame.
+    socialCheckTimer.current += delta;
+    if (socialCheckTimer.current > 0.25) {
+      socialCheckTimer.current = 0;
 
-    for (const other of vehicles) {
-      if (other !== vehicle) {
-        const distSq = myPos.squaredDistanceTo(other.position);
+      const vehicles = aiManager.vehicles;
+      const myPos = vehicle.position;
 
-        if (distSq < minSeparation * minSeparation) {
-          const dist = Math.sqrt(distSq);
-          const overlap = minSeparation - dist;
-          let pushX = 0,
-            pushZ = 0;
+      for (const other of vehicles) {
+        if (other !== vehicle) {
+          const distSq = myPos.squaredDistanceTo(other.position);
 
-          if (dist > 0.001) {
-            const dx = (myPos.x - other.position.x) / dist;
-            const dz = (myPos.z - other.position.z) / dist;
-            pushX = dx * overlap * 0.5;
-            pushZ = dz * overlap * 0.5;
-          } else {
-            pushX = (Math.random() - 0.5) * 0.1;
-            pushZ = (Math.random() - 0.5) * 0.1;
-          }
-
-          vehicle.position.x += pushX;
-          vehicle.position.z += pushZ;
-          vehicle.velocity.x *= 0.9;
-          vehicle.velocity.z *= 0.9;
-        }
-
-        // Social Interaction — Fix #26: Skip if agent has an active task
-        if (
-          distSq < 25.0 &&
-          socialState.current === "NONE" &&
-          greetingState.current === "NONE" &&
-          !taskQueue.isBusy()
-        ) {
-          if (Math.random() < 0.01) {
-            socialState.current = "CHATTING";
-            socialTarget.current = other;
-            socialTimer.current = 0;
-            greetingState.current = "WAVING";
+          // Social Interaction — Fix #26: Skip if agent has an active task
+          if (
+            distSq < 25.0 &&
+            socialState.current === "NONE" &&
+            greetingState.current === "NONE" &&
+            !taskQueue.isBusy()
+          ) {
+            // Increased probability to 0.05 since we check 4x a second instead of 60x
+            if (Math.random() < 0.05) {
+              socialState.current = "CHATTING";
+              socialTarget.current = other;
+              socialTimer.current = 0;
+              greetingState.current = "WAVING";
+            }
           }
         }
       }
@@ -716,7 +701,7 @@ export function useYukaAI(
                           `FAILED: Item '${task.itemId}' not found. The ID was invalid — this item does not exist in the registry. Do not use this ID again.`,
                           [`id:${task.itemId}`, "entity:object"],
                         )
-                        .catch(() => { });
+                        .catch(() => {});
                       return;
                     }
 
@@ -752,7 +737,7 @@ export function useYukaAI(
                           `FAILED: Area '${task.destAreaId}' does not exist in the registry. Do not use this area ID again.`,
                           [`id:${task.destAreaId}`, "entity:area"],
                         )
-                        .catch(() => { });
+                        .catch(() => {});
                       return;
                     }
                     if (area.currentItem) {
@@ -827,7 +812,10 @@ export function useYukaAI(
     // --- ANIMATION UPDATE (Procedural) ---
     // Apply internal procedural gait engine. We must use real delta, NOT the 15x physical simulation dt.
     const realDelta = Math.min(delta, 0.1);
-    updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta);
+    const strideLength = 5.5; // AI agents need a longer stride for a relaxed walk
+    updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta, {
+      strideLength,
+    });
 
     const animSpeed = smoothSpeed.current;
 
