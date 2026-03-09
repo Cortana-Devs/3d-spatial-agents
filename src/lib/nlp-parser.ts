@@ -138,6 +138,7 @@ export interface NLPError {
 export function findAlternativeArea(
   requestedAreaId: string,
   registry: InteractableRegistry,
+  locallyClaimedSlots?: Set<string>,
 ): string | null {
   const requestedArea = registry.getPlacingAreaById(requestedAreaId);
   if (!requestedArea) return null;
@@ -148,7 +149,7 @@ export function findAlternativeArea(
   if (requestedArea.groupId) {
     for (const area of allAreas) {
       if (area.id === requestedAreaId) continue;
-      if (area.currentItem) continue;
+      if (area.currentItem || locallyClaimedSlots?.has(area.id)) continue;
       if (area.groupId === requestedArea.groupId) return area.id;
     }
   }
@@ -157,21 +158,21 @@ export function findAlternativeArea(
   if (requestedArea.groupName) {
     for (const area of allAreas) {
       if (area.id === requestedAreaId) continue;
-      if (area.currentItem) continue;
+      if (area.currentItem || locallyClaimedSlots?.has(area.id)) continue;
       if (area.groupName && area.groupName === requestedArea.groupName)
         return area.id;
     }
   }
 
-  // Tertiary: Name-based fallback — strip trailing slot identifiers AND numbers
+  // Tertiary: Name-based fallback — strip trailing slot identifiers AND numbers AND Pad/PC modifiers
   const baseName = requestedArea.name
-    .replace(/\s*(Left|Right|Middle|Slot\s*\d+|\d+)$/i, "")
+    .replace(/\s*(Left|Right|Middle|Pad|PC Slot|Slot\s*\d+|\d+)$/gi, "")
     .trim();
 
   if (baseName) {
     for (const area of allAreas) {
       if (area.id === requestedAreaId) continue;
-      if (area.currentItem) continue;
+      if (area.currentItem || locallyClaimedSlots?.has(area.id)) continue;
       if (area.name.startsWith(baseName)) return area.id;
     }
   }
@@ -230,6 +231,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
 
   // Validate and convert tasks
   const validatedTasks: AgentTask[] = [];
+  const locallyClaimedSlots = new Set<string>();
 
   for (const t of parsed.tasks) {
     const taskType = t.type as AgentTaskType;
@@ -269,15 +271,26 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
         }
 
         let resolvedAreaId = area.id;
+        let isOccupied = false;
         // Staleness check: verify occupant actually exists
         if (area.currentItem) {
           const occupant = registry.getById(area.currentItem);
           if (!occupant || occupant.placedInArea !== area.id) {
             area.currentItem = null;
+          } else {
+            isOccupied = true;
           }
         }
-        if (area.currentItem) {
-          const alt = findAlternativeArea(resolvedAreaId, registry);
+        if (locallyClaimedSlots.has(resolvedAreaId)) {
+          isOccupied = true;
+        }
+
+        if (isOccupied) {
+          const alt = findAlternativeArea(
+            resolvedAreaId,
+            registry,
+            locallyClaimedSlots,
+          );
           if (alt) {
             resolvedAreaId = alt;
           } else {
@@ -286,6 +299,8 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
             };
           }
         }
+
+        locallyClaimedSlots.add(resolvedAreaId);
 
         // Output atomic FETCH_AND_PLACE sequence
         validatedTasks.push({
@@ -343,18 +358,32 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
         if (!area) {
           return { error: `Placing area "${t.destAreaId}" not found.` };
         }
+
+        let isOccupied = false;
         // Staleness check
         if (area.currentItem) {
           const occupant = registry.getById(area.currentItem);
           if (!occupant || occupant.placedInArea !== area.id) {
             area.currentItem = null;
+          } else {
+            isOccupied = true;
           }
         }
-        if (area.currentItem) {
-          const alt = findAlternativeArea(resolvedAreaId, registry);
+        if (locallyClaimedSlots.has(resolvedAreaId)) {
+          isOccupied = true;
+        }
+
+        if (isOccupied) {
+          const alt = findAlternativeArea(
+            resolvedAreaId,
+            registry,
+            locallyClaimedSlots,
+          );
           if (alt) resolvedAreaId = alt;
           else return { error: `All slots on "${area.name}" are occupied.` };
         }
+
+        locallyClaimedSlots.add(resolvedAreaId);
         validatedTasks.push({
           type: "PLACE_INVENTORY",
           priority: 20,

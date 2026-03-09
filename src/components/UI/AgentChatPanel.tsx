@@ -103,6 +103,9 @@ export const AgentChatPanel: React.FC = () => {
     const registry = InteractableRegistry.getInstance();
     const queue = AgentTaskRegistry.getInstance().getOrCreate(agentId);
 
+    // Track slots claimed in this run to avoid mapping two items to the same slot
+    const locallyClaimedSlots = new Set<string>();
+
     for (const task of tasks) {
       switch (task.type) {
         case "FETCH_AND_PLACE": {
@@ -160,17 +163,29 @@ export const AgentChatPanel: React.FC = () => {
           }
 
           let resolvedAreaId = area.id;
+          let isOccupied = false;
+
           if (area.currentItem) {
             // Staleness check: verify the item actually still exists/occupies the slot
             const occupant = registry.getById(area.currentItem);
             if (!occupant || occupant.placedInArea !== area.id) {
               // Stale reference — the item was moved, clear the slot
               area.currentItem = null;
+            } else {
+              isOccupied = true;
             }
           }
 
-          if (area.currentItem) {
-            const alt = findAlternativeArea(resolvedAreaId, registry);
+          if (locallyClaimedSlots.has(resolvedAreaId)) {
+            isOccupied = true;
+          }
+
+          if (isOccupied) {
+            const alt = findAlternativeArea(
+              resolvedAreaId,
+              registry,
+              locallyClaimedSlots,
+            );
             if (alt) resolvedAreaId = alt;
             else {
               console.warn(
@@ -183,6 +198,8 @@ export const AgentChatPanel: React.FC = () => {
               break;
             }
           }
+
+          locallyClaimedSlots.add(resolvedAreaId);
 
           // AgentTaskQueue will claim the item when the task actually starts
 
