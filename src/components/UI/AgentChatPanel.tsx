@@ -8,6 +8,7 @@ import { AgentTaskRegistry } from "@/components/Systems/AgentTaskQueue";
 import { InteractableRegistry } from "@/components/Systems/InteractableRegistry";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import * as THREE from "three";
+import { memoryStream } from "@/lib/memory/MemoryStream";
 import styles from "./AgentChatPanel.module.css";
 
 const EMPTY_ARRAY: { role: "user" | "agent"; text: string }[] = [];
@@ -265,6 +266,108 @@ export const AgentChatPanel: React.FC = () => {
           break;
         }
 
+        case "READ_FILE": {
+          if (task.itemId) {
+            let cleanedItemId = String(task.itemId)
+              .replace(/\s*\([A-Z]\)$/i, "")
+              .trim();
+            let item =
+              registry.getById(cleanedItemId) ||
+              registry.getByName(cleanedItemId);
+
+            if (item) {
+              queue.enqueue({
+                type: "READ_FILE",
+                priority: 20,
+                itemId: item.id,
+              });
+              console.log(`[AgentChat] Dispatched READ_FILE: ${item.id}`);
+            } else {
+              console.warn(
+                `[AgentChat] Item "${task.itemId}" not found for READ_FILE, skipping`,
+              );
+              useGameStore.getState().addChatMessage(agentId, {
+                role: "agent",
+                text: `I'm sorry, I couldn't find a file called "${task.itemId}".`,
+              });
+            }
+          }
+          break;
+        }
+
+        case "WRITE_FILE": {
+          // @ts-ignore
+          if (task.itemId && task.content) {
+            let cleanedItemId = String(task.itemId)
+              .replace(/\s*\([A-Z]\)$/i, "")
+              .trim();
+            let item =
+              registry.getById(cleanedItemId) ||
+              registry.getByName(cleanedItemId);
+
+            if (item) {
+              queue.enqueue({
+                type: "WRITE_FILE",
+                priority: 20,
+                itemId: item.id,
+                // @ts-ignore
+                content: task.content,
+              });
+              console.log(`[AgentChat] Dispatched WRITE_FILE: ${item.id}`);
+            } else {
+              console.warn(
+                `[AgentChat] Item "${task.itemId}" not found for WRITE_FILE, skipping`,
+              );
+              useGameStore.getState().addChatMessage(agentId, {
+                role: "agent",
+                text: `I'm sorry, I couldn't find a file called "${task.itemId}".`,
+              });
+            }
+          }
+          break;
+        }
+
+        case "COPY_FILE": {
+          // @ts-ignore
+          if (task.itemId && task.sourceItemId) {
+            let cleanedItemId = String(task.itemId)
+              .replace(/\s*\([A-Z]\)$/i, "")
+              .trim();
+            // @ts-ignore
+            let cleanedSourceItemId = String(task.sourceItemId)
+              .replace(/\s*\([A-Z]\)$/i, "")
+              .trim();
+
+            let item =
+              registry.getById(cleanedItemId) ||
+              registry.getByName(cleanedItemId);
+            let sourceItem =
+              registry.getById(cleanedSourceItemId) ||
+              registry.getByName(cleanedSourceItemId);
+
+            if (item && sourceItem) {
+              queue.enqueue({
+                type: "COPY_FILE",
+                priority: 20,
+                itemId: item.id,
+                sourceItemId: sourceItem.id,
+              });
+              console.log(
+                `[AgentChat] Dispatched COPY_FILE: ${sourceItem.id} -> ${item.id}`,
+              );
+            } else {
+              console.warn(
+                `[AgentChat] Items not found for COPY_FILE, skipping`,
+              );
+              useGameStore.getState().addChatMessage(agentId, {
+                role: "agent",
+                text: `I'm sorry, I couldn't find one of the files you asked to copy.`,
+              });
+            }
+          }
+          break;
+        }
+
         default:
           console.warn(`[AgentChat] Unknown task type: ${task.type}`);
       }
@@ -288,7 +391,14 @@ export const AgentChatPanel: React.FC = () => {
       const ctx = agentPos
         ? buildWorldContext(agentPos, 150)
         : buildWorldContext();
-      const worldContextStr = `ITEMS:\n${ctx.items}\n\nPLACING AREAS:\n${ctx.areas}\n\nAGENTS:\n${ctx.agents}`;
+
+      const recentMemories = await memoryStream.retrieve({ limit: 20 });
+      const memoryContextStr =
+        recentMemories.length > 0
+          ? `\n\nRECENT MEMORIES:\n${recentMemories.map((m) => `- [${m.type}] ${m.content}`).join("\n")}`
+          : "";
+
+      const worldContextStr = `ITEMS:\n${ctx.items}\n\nPLACING AREAS:\n${ctx.areas}\n\nAGENTS:\n${ctx.agents}${memoryContextStr}`;
 
       const currentMessages =
         useGameStore.getState().chatMessages[chatAgentId] || [];

@@ -402,8 +402,12 @@ export function useRobotController(
 
   useFrame((stateRoot, delta) => {
     if (isMenuOpen || isMenuPanelOpen) return;
-    // Block player controls while chatting with an agent
-    if (useGameStore.getState().isChatOpen) return;
+    // Block player controls while chatting with an agent or editing a file
+    if (
+      useGameStore.getState().isChatOpen ||
+      useGameStore.getState().isFileEditorOpen
+    )
+      return;
     if (!groupRef.current) return;
     const camera = stateRoot.camera;
     const mesh = groupRef.current;

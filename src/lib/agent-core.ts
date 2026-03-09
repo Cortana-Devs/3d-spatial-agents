@@ -99,7 +99,14 @@ export async function processAgentThought(
     - **GO_TO**: Requires \`targetPos\` {x, y, z}. Moves to a specific location.
     - **PICK_NEARBY**: Requires \`itemId\`. Picks up an item near you.
     - **FOLLOW_PLAYER**: Follows the user indefinitely.
+    - **READ_FILE**: Requires \`itemId\`. Reads the text from a document. Use this when instructed or when investigating a file. You must face it before you read.
+    - **WRITE_FILE**: Requires \`itemId\` and \`content\`. Writes the text in \`content\` into the document. 
+    - **COPY_FILE**: Requires \`sourceItemId\` and \`itemId\` (destination). Copies the entire text perfectly from one file into another.
     - **IMPORTANT**: Do NOT issue new scripts if your Task Queue already shows an active script running. Wait for it to complete first. If you see "Phase: WALK_TO_SOURCE" or similar, your previous script is still executing.
+
+    ## Advanced Behaviors
+    - CRITICAL: You cannot read a file and write/copy its contents in the exact same response because you don't know the contents yet! If asked to copy a file, you must FIRST output ONLY a READ_FILE task. Once you have read it and know the contents, the user can ask you to WRITE_FILE.
+    - Note: you must hold a file to read/write it. If you aren't holding it, the system will automatically make you pick it up and return it when you're done.
 
     ## Organization Rules
     You will ONLY see OBJECT entries for items that are on the floor — items already on a surface are invisible to you. If you see any OBJECT entry in the table, it is misplaced and MUST be placed on a surface immediately.

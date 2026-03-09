@@ -17,7 +17,10 @@ export type AgentTaskType =
   | "FOLLOW_PLAYER"
   | "WANDER"
   | "WAIT"
-  | "INTERACT";
+  | "INTERACT"
+  | "READ_FILE"
+  | "WRITE_FILE"
+  | "COPY_FILE";
 
 export interface AgentTask {
   type: AgentTaskType;
@@ -27,6 +30,8 @@ export interface AgentTask {
   destAreaId?: string; // For FETCH_AND_PLACE: where to place it
   targetPos?: THREE.Vector3; // For GO_TO: destination position
   duration?: number; // For WAIT tasks
+  content?: string; // For WRITE_FILE
+  sourceItemId?: string; // For COPY_FILE
 }
 
 // ============================================================================
@@ -44,6 +49,9 @@ export type TaskPhase =
   | "WAIT" // Waiting explicitly for a duration
   | "INTERACTING" // Brief pause to interact
   | "INTERACTING_DOOR" // Temporarily open a door on the navigation path
+  | "READING_FILE" // Pause to read file contents
+  | "WRITING_FILE" // Pause to edit file contents
+  | "COPYING_FILE" // Pause to copy file contents from another file
   | "COMPLETED";
 
 // Return type: tells useYukaAI what steering to apply
@@ -69,6 +77,7 @@ export class AgentTaskQueue {
   // Track current item being carried for FETCH_AND_PLACE
   private activeItemId: string | null = null;
   private activeDestAreaId: string | null = null;
+  private originalAreaId: string | null = null; // Fix: remember where we got a file from to put it back
 
   // Path tracking — avoid re-pathfinding every frame
   private hasSetPath: boolean = false;
@@ -222,6 +231,7 @@ export class AgentTaskQueue {
     this.phaseTimer = 0;
     this.activeItemId = null;
     this.activeDestAreaId = null;
+    this.originalAreaId = null;
     this.hasSetPath = false;
     this.isCloseApproach = false;
     this.approachPos = null;
@@ -412,12 +422,22 @@ export class AgentTaskQueue {
             return { type: "STOP" };
           }
 
-          // If WE are already carrying this item, skip straight to WALK_TO_DEST
+          // If WE are already carrying this item, skip straight to WALK_TO_DEST or Action
           if (item.carriedBy === this.agentId) {
             console.log(
-              `[AgentTaskQueue:${this.agentId}] Already carrying ${this.activeItemId} — skipping to WALK_TO_DEST (destAreaId=${this.activeDestAreaId})`,
+              `[AgentTaskQueue:${this.agentId}] Already carrying ${this.activeItemId} — skipping navigation`,
             );
-            if (this.activeDestAreaId) {
+            if (this.currentTask?.type === "READ_FILE") {
+              this.phase = "READING_FILE";
+              this.phaseTimer = 0;
+              this.originalAreaId = null; // Already held it, so don't auto return
+              return { type: "STOP" };
+            } else if (this.currentTask?.type === "WRITE_FILE") {
+              this.phase = "WRITING_FILE";
+              this.phaseTimer = 0;
+              this.originalAreaId = null;
+              return { type: "STOP" };
+            } else if (this.activeDestAreaId) {
               this.phase = "WALK_TO_DEST";
               this.phaseTimer = 0;
               this.hasSetPath = false;
@@ -499,7 +519,6 @@ export class AgentTaskQueue {
         // Record position for sliding-window stuck detection
         this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
 
-        // --- ARRIVED: close enough to pick up ---
         if (distToTarget < AgentTaskQueue.INTERACT_DIST) {
           if (this.currentTask?.type === "INTERACT") {
             console.log(
@@ -522,6 +541,14 @@ export class AgentTaskQueue {
             console.log(
               `[AgentTaskQueue:${this.agentId}] Close enough (dist=${distToTarget.toFixed(2)}) — transitioning to PICKING_UP`,
             );
+            // Save original area to return the file later if we're picking it up just to read/write
+            if (
+              this.currentTask?.type === "READ_FILE" ||
+              this.currentTask?.type === "WRITE_FILE"
+            ) {
+              const itemToPick = registry.getById(this.activeItemId!);
+              this.originalAreaId = itemToPick?.placedInArea || null;
+            }
             this.phase = "PICKING_UP";
             this.phaseTimer = 0;
             this.hasSetPath = false;
@@ -664,10 +691,19 @@ export class AgentTaskQueue {
           const success = registry.pickUp(this.activeItemId!, this.agentId);
           if (success) {
             console.log(
-              `[AgentTaskQueue:${this.agentId}] Picked up ${this.activeItemId} (destAreaId=${this.activeDestAreaId})`,
+              `[AgentTaskQueue:${this.agentId}] Picked up ${this.activeItemId}`,
             );
 
-            if (this.activeDestAreaId) {
+            if (this.currentTask?.type === "READ_FILE") {
+              this.phase = "READING_FILE";
+              this.phaseTimer = 0;
+            } else if (this.currentTask?.type === "WRITE_FILE") {
+              this.phase = "WRITING_FILE";
+              this.phaseTimer = 0;
+            } else if (this.currentTask?.type === "COPY_FILE") {
+              this.phase = "COPYING_FILE";
+              this.phaseTimer = 0;
+            } else if (this.activeDestAreaId) {
               this.phase = "WALK_TO_DEST";
               this.phaseTimer = 0;
               this.hasSetPath = false;
@@ -714,6 +750,134 @@ export class AgentTaskQueue {
           this.phase = "COMPLETED";
         }
 
+        return { type: "STOP" };
+      }
+
+      // ------------------------------------------------------------------
+      // READING_FILE: Pause briefly, then read file and save to memory
+      // ------------------------------------------------------------------
+      case "READING_FILE": {
+        this.phaseTimer += delta;
+
+        if (this.phaseTimer >= 2.0) {
+          // simulate 2 seconds of reading
+          if (this.activeItemId) {
+            const { fileContents } =
+              require("@/store/gameStore").useGameStore.getState();
+            const text = fileContents[this.activeItemId] || "";
+            const itemName =
+              registry.getById(this.activeItemId)?.name || this.activeItemId;
+            this.notifySuccess(`Read file: ${itemName}`);
+
+            memoryStream.add(
+              "OBSERVATION",
+              `I read the document "${itemName}". Its contents are: \n\n${text}`,
+              [`id:${this.activeItemId}`, "entity:object", "action:read"],
+            );
+          }
+          if (this.originalAreaId && this.activeItemId) {
+            this.queue.unshift({
+              type: "PLACE_INVENTORY",
+              priority: this.currentTask?.priority ?? 10,
+              scriptId: this.currentTask?.scriptId,
+              itemId: this.activeItemId,
+              destAreaId: this.originalAreaId,
+            });
+            this.originalAreaId = null; // consume it
+          }
+          this.phase = "COMPLETED";
+        }
+        return { type: "STOP" };
+      }
+
+      // ------------------------------------------------------------------
+      // WRITING_FILE: Pause briefly, then write content to the file
+      // ------------------------------------------------------------------
+      case "WRITING_FILE": {
+        this.phaseTimer += delta;
+
+        if (this.phaseTimer >= 2.0) {
+          // simulate 2 seconds of typing
+          if (this.activeItemId && this.currentTask?.content) {
+            const { setFileContent } =
+              require("@/store/gameStore").useGameStore.getState();
+            setFileContent(this.activeItemId, this.currentTask.content);
+
+            const itemName =
+              registry.getById(this.activeItemId)?.name || this.activeItemId;
+            this.notifySuccess(`Wrote to file: ${itemName}`);
+
+            memoryStream.add(
+              "ACTION",
+              `I updated the document "${itemName}" with new text: \n\n${this.currentTask.content}`,
+              [`id:${this.activeItemId}`, "entity:object", "action:write"],
+            );
+          }
+          if (this.originalAreaId && this.activeItemId) {
+            this.queue.unshift({
+              type: "PLACE_INVENTORY",
+              priority: this.currentTask?.priority ?? 10,
+              scriptId: this.currentTask?.scriptId,
+              itemId: this.activeItemId,
+              destAreaId: this.originalAreaId,
+            });
+            this.originalAreaId = null; // consume it
+          }
+          this.phase = "COMPLETED";
+        }
+        return { type: "STOP" };
+      }
+
+      // ------------------------------------------------------------------
+      // COPYING_FILE: Pause briefly, read source text, then write to dest
+      // ------------------------------------------------------------------
+      case "COPYING_FILE": {
+        this.phaseTimer += delta;
+
+        if (this.phaseTimer >= 2.0) {
+          // simulate 2 seconds of typing
+          if (this.activeItemId && this.currentTask?.sourceItemId) {
+            const { fileContents, setFileContent } =
+              require("@/store/gameStore").useGameStore.getState();
+
+            const sourceText =
+              fileContents[this.currentTask.sourceItemId] ||
+              "(This file is completely blank)";
+            setFileContent(this.activeItemId, sourceText);
+
+            const destItemName =
+              registry.getById(this.activeItemId)?.name || this.activeItemId;
+            const sourceItemName =
+              registry.getById(this.currentTask.sourceItemId)?.name ||
+              this.currentTask.sourceItemId;
+
+            this.notifySuccess(
+              `Copied text from ${sourceItemName} to ${destItemName}`,
+            );
+
+            memoryStream.add(
+              "ACTION",
+              `I copied the contents from "${sourceItemName}" into the document "${destItemName}". The copied text was: \n\n${sourceText}`,
+              [
+                `id:${this.activeItemId}`,
+                `id:${this.currentTask.sourceItemId}`,
+                "entity:object",
+                "action:copy",
+              ],
+            );
+          }
+          if (this.originalAreaId && this.activeItemId) {
+            this.queue.unshift({
+              type: "PLACE_INVENTORY",
+              priority: this.currentTask?.priority ?? 10,
+              scriptId: this.currentTask?.scriptId,
+              itemId: this.activeItemId,
+              destAreaId: this.originalAreaId,
+            });
+            this.originalAreaId = null; // consume it
+          }
+          this.phase = "COMPLETED";
+        }
         return { type: "STOP" };
       }
 
@@ -1194,13 +1358,15 @@ export class AgentTaskQueue {
         break;
       }
 
+      case "READ_FILE":
+      case "WRITE_FILE":
       case "INTERACT": {
         this.activeItemId = this.currentTask.itemId || null;
         this.activeDestAreaId = null;
 
         if (!this.activeItemId) {
           console.warn(
-            `[AgentTaskQueue:${this.agentId}] INTERACT requires itemId`,
+            `[AgentTaskQueue:${this.agentId}] ${this.currentTask.type} requires itemId`,
           );
           this.phase = "COMPLETED";
           return;

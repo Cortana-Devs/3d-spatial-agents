@@ -139,6 +139,14 @@ interface GameState {
   interactionTarget: string | null;
   setInteractionTarget: (id: string | null) => void;
 
+  // File System State
+  isFileEditorOpen: boolean;
+  setFileEditorOpen: (isOpen: boolean) => void;
+  activeFileId: string | null;
+  setActiveFileId: (id: string | null) => void;
+  fileContents: Record<string, string>;
+  setFileContent: (id: string, content: string) => void;
+
   // Key Bindings
   keyBindings: {
     forward: string;
@@ -337,8 +345,20 @@ export const useGameStore = create<GameState>((set) => ({
   isMenuPanelOpen: false,
   setMenuPanelOpen: (isOpen) => set({ isMenuPanelOpen: isOpen }),
 
+  // Interaction State
   interactionTarget: null,
   setInteractionTarget: (id) => set({ interactionTarget: id }),
+
+  // File System State
+  isFileEditorOpen: false,
+  setFileEditorOpen: (isOpen) => set({ isFileEditorOpen: isOpen }),
+  activeFileId: null,
+  setActiveFileId: (id) => set({ activeFileId: id }),
+  fileContents: {},
+  setFileContent: (id, content) =>
+    set((state) => ({
+      fileContents: { ...state.fileContents, [id]: content },
+    })),
 
   // Key Bindings
   keyBindings: {

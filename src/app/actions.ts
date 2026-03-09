@@ -127,7 +127,14 @@ export async function parseNaturalCommand(
         {
           role: "system",
           content:
-            "You are a command parser for a 3D office environment. You parse natural language commands into structured JSON task objects. Always output valid JSON only, no markdown fences.",
+            "You are a command parser for a 3D office environment. You parse natural language commands into structured JSON task objects. Always output valid JSON only, no markdown fences.\n" +
+            "Available task types:\n" +
+            "- FETCH_AND_PLACE: Requires itemId, destAreaId\n" +
+            "- GO_TO: Requires targetPos {x,y,z}\n" +
+            "- PICK_NEARBY: Requires itemId\n" +
+            "- FOLLOW_PLAYER\n" +
+            "- READ_FILE: Requires itemId. Reads a document.\n" +
+            "- WRITE_FILE: Requires itemId, content. Writes to a document.",
         },
         {
           role: "user",
@@ -254,13 +261,20 @@ You MUST respond with valid JSON in this exact format:
 If the user is just chatting (no action needed):
 {"reply": "your conversational response here"}
 
-If the user asks you to DO something (move item, go somewhere, follow, tidy up):
-{"reply": "brief acknowledgment of what you're about to do", "tasks": [{"type": "FETCH_AND_PLACE", "itemId": "exact-item-id", "destAreaId": "exact-area-id"}]}
+If the user asks you to DO something (move item, go somewhere, follow, read file, write/copy file):
+{"reply": "brief acknowledgment of what you're about to do", "tasks": [{"type": "VALID_TASK_TYPE", "itemId": "exact-item-id", "...other optional fields...": "..."}]}
 
 ## Available Task Types
 - FETCH_AND_PLACE: Pick up an item and place it. Requires "itemId" and "destAreaId". Use EXACT IDs from the World State.
 - FOLLOW_PLAYER: Follow the user. No extra fields needed.
 - GO_TO: Move to a location. Requires "targetX" and "targetZ" (coordinates).
+- READ_FILE: Read the text from a document. Requires "itemId".
+- WRITE_FILE: Write text to a document. Requires "itemId" and "content" (the text to write).
+- COPY_FILE: Copy the entire contents of one document perfectly into another document. Requires "sourceItemId" and "itemId" (destination).
+
+## Advanced Behaviors
+- CRITICAL: You cannot read a file and write/copy its contents in the exact same response because you don't know the contents yet! If asked to copy a file, you must FIRST output ONLY a READ_FILE task. Once you have read it and know the contents, the user can ask you to WRITE_FILE.
+- Note: you must hold a file to read/write it. If you aren't holding it, the system will automatically make you pick it up and return it when you're done.
 
 ## CRITICAL RULES
 - Use ONLY item IDs and area IDs that appear in the World State below

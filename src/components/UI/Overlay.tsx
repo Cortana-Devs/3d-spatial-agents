@@ -8,6 +8,7 @@ import { TaskAssignmentPanel } from "./TaskAssignmentPanel";
 import { CommandBar } from "./CommandBar";
 import { AgentChatPanel } from "./AgentChatPanel";
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import { FileEditorModal } from "./FileEditorModal";
 
 export default function Overlay() {
   const debugText = useGameStore((state) => state.debugText);
@@ -450,7 +451,7 @@ export default function Overlay() {
             minWidth: "200px",
             maxWidth: "280px",
             zIndex: 150,
-            pointerEvents: "none",
+            pointerEvents: "auto",
             backdropFilter: "blur(4px)",
           }}
         >
@@ -484,6 +485,15 @@ export default function Overlay() {
             return (
               <div
                 key={item.id}
+                onClick={() => {
+                  if (item.type === "file") {
+                    useGameStore.getState().setActiveFileId(item.id);
+                    useGameStore.getState().setFileEditorOpen(true);
+                    if (document.pointerLockElement) {
+                      document.exitPointerLock();
+                    }
+                  }
+                }}
                 style={{
                   padding: "4px 8px",
                   marginBottom: "2px",
@@ -498,6 +508,7 @@ export default function Overlay() {
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
+                  cursor: item.type === "file" ? "pointer" : "default",
                 }}
               >
                 <span>{isSelected ? "▶" : " "}</span>
@@ -683,6 +694,7 @@ export default function Overlay() {
       <TaskAssignmentPanel />
       <CommandBar />
       <AgentChatPanel />
+      <FileEditorModal />
     </>
   );
 }
