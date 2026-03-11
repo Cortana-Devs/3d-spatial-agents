@@ -409,15 +409,23 @@ function LabArm({
         >
           <cylinderGeometry args={[0.18, 0.22, 1.2, 10]} />
         </mesh>
-        {/* Hand */}
-        <mesh
-          position={[0, -1.3, 0]}
-          material={mats.skin}
-          castShadow
-          rotation={[Math.PI / 2, 0, 0]}
-        >
-          <capsuleGeometry args={[0.12, 0.15, 8, 8]} />
-        </mesh>
+        {/* Hand with Fingers */}
+        <group position={[0, -1.3, 0]}>
+          {/* Palm */}
+          <mesh material={mats.skin} castShadow position={[0, -0.05, 0]}>
+            <boxGeometry args={[0.2, 0.25, 0.12]} />
+          </mesh>
+          {/* Thumb */}
+          <mesh material={mats.skin} castShadow position={[-dir * 0.12, -0.05, 0.05]} rotation={[Math.PI / 8, 0, -dir * Math.PI / 6]}>
+            <capsuleGeometry args={[0.04, 0.1, 8, 8]} />
+          </mesh>
+          {/* Fingers */}
+          {[-0.07, 0, 0.07].map((x, i) => (
+            <mesh key={`finger-${i}`} material={mats.skin} castShadow position={[x, -0.22 - (i === 1 ? 0.02 : 0), 0]}>
+              <capsuleGeometry args={[0.035, 0.12 + (i === 1 ? 0.04 : 0), 8, 8]} />
+            </mesh>
+          ))}
+        </group>
       </group>
     </group>
   );
