@@ -6,7 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 
 export function useWorkerAI(
     groupRef: React.RefObject<THREE.Group | null>,
-    system: any, // passed from OfficeHub containing box state
+    system: any, // passed from ResearchLabHub containing box state
     id: string,
     carryPointRef: React.RefObject<THREE.Group | null>
 ) {

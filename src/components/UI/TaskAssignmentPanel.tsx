@@ -243,7 +243,7 @@ export function TaskAssignmentPanel() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600 }}>{id}</div>
                 <div style={{ fontSize: "11px", color: "#6080aa" }}>
-                  AI Office Assistant
+                  AI Research Lab Assistant
                 </div>
               </div>
               <span style={statusBadgeStyle(status.phase)}>{status.phase}</span>

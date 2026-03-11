@@ -276,7 +276,7 @@ export class InteractableRegistry {
 
   /**
    * Finds any empty slot belonging to a specific furniture group name.
-   * e.g. If the LLM just says "office_desk_h", this returns the first empty slot on that desk.
+   * e.g. If the LLM just says "lab_desk_h", this returns the first empty slot on that desk.
    */
   public getEmptyAreaByGroup(groupName: string): PlacingArea | undefined {
     // Strip trailing slot numbers just in case

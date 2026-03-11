@@ -19,7 +19,7 @@ red-folder-1|Financial Reports|item|C
 cup-3|Coffee Mug|prop|A`;
 
 const DEFAULT_AREAS = `E=empty, O=occupied. Only use IDs marked (E).
-Office Desk A: desk-a-0(E), desk-a-1(O)
+Lab Desk A: desk-a-0(E), desk-a-1(O)
 Conference Table: conf-1(E), conf-2(E), conf-3(O)
 Shelf 1: shelf-1-t(E), shelf-1-b(O)`;
 
@@ -29,7 +29,7 @@ agent-intern|BUSY`;
 
 export default function LLMTestingDashboard() {
   const [command, setCommand] = useState(
-    "move Manager Laptop to Office Desk A",
+    "move Manager Laptop to Lab Desk A",
   );
   const [items, setItems] = useState(DEFAULT_ITEMS);
   const [areas, setAreas] = useState(DEFAULT_AREAS);
@@ -316,11 +316,11 @@ export default function LLMTestingDashboard() {
                   All
                 </button>
                 <button
-                  onClick={() => setLogFilter("3d-office-agent")}
-                  className={`tabBtn ${logFilter === "3d-office-agent" ? "active" : ""}`}
+                  onClick={() => setLogFilter("3d-lab-agent")}
+                  className={`tabBtn ${logFilter === "3d-lab-agent" ? "active" : ""}`}
                   style={{ padding: "6px 12px", fontSize: "11px" }}
                 >
-                  3D Office Agents
+                  3D Lab Agents
                 </button>
                 <button
                   onClick={() => setLogFilter("memory-reflector")}

@@ -127,7 +127,7 @@ export async function parseNaturalCommand(
         {
           role: "system",
           content:
-            "You are a command parser for a 3D office environment. You parse natural language commands into structured JSON task objects. Always output valid JSON only, no markdown fences.\n" +
+            "You are a command parser for a 3D research lab environment. You parse natural language commands into structured JSON task objects. Always output valid JSON only, no markdown fences.\n" +
             "Available task types:\n" +
             "- FETCH_AND_PLACE: Requires itemId, destAreaId\n" +
             "- GO_TO: Requires targetPos {x,y,z}\n" +
@@ -211,7 +211,7 @@ export async function parseNaturalCommand(
 }
 
 // ============================================================================
-// Agent Chat — conversational chat between player and an AI office assistant
+// Agent Chat — conversational chat between player and an AI research lab assistant
 // Now ACTION-AWARE: returns both a reply AND optional task commands
 // ============================================================================
 
@@ -248,7 +248,7 @@ export async function chatWithAgent(
     [
       {
         role: "system",
-        content: `You are ${agentId}, an intelligent office assistant robot in a 3D virtual office. You are having a face-to-face conversation with a user.
+        content: `You are ${agentId}, an intelligent research lab assistant robot in a 3D virtual research lab. You are having a face-to-face conversation with a user.
 
 ## Personality
 - Professional yet warm, like a helpful coworker

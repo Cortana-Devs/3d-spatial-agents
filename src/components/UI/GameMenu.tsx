@@ -188,7 +188,7 @@ export default function GameMenu() {
                     }}>
                         <Minimap />
                         <p style={{ margin: '8px 0 0', fontSize: '12px', opacity: 0.5, color: 'white' }}>
-                            Office Layout • {new Date().toLocaleTimeString()}
+                            Research Lab Layout • {new Date().toLocaleTimeString()}
                         </p>
                     </div>
                 )}

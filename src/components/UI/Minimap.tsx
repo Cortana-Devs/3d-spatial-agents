@@ -13,9 +13,9 @@ export function Minimap() {
     const mapSize = 250; // Size of the canvas in pixels
     const worldScale = 3.0; // Pixels per world unit (higher = more zoomed in)
 
-    // Center map on player? Or static office view?
-    // Let's do Static Office View centered on 0,0 for now, as office is built around origin.
-    // Office bounds approx -20 to 20 X, -10 to 60 Z based on Robot initial pos [0, 5, 65] (Lobby?)
+    // Center map on player? Or static lab view?
+    // Let's do Static Lab View centered on 0,0 for now, as lab is built around origin.
+    // Lab bounds approx -20 to 20 X, -10 to 60 Z based on Robot initial pos [0, 5, 65] (Lobby?)
     // Actually, Robot starts at [0, 5, 65].
     // Let's center on the average interactable position or just 0,0.
     // Better: Center on Player, but clamped?

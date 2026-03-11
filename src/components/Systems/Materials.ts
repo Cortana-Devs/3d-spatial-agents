@@ -17,10 +17,10 @@ export const createMaterials = () => {
     tile: new THREE.MeshStandardMaterial({
       map: tileTex,
       bumpMap: TextureGenerator.generateTexture("tileBump"),
-      bumpScale: 0.02, // Subtle depth for grout lines
-      roughness: 0.2, // Shiny tiles
-      metalness: 0.1,
-      color: 0xffffff,
+      bumpScale: 0.01,
+      roughness: 0.15,
+      metalness: 0.05,
+      color: 0xd8dee8,
     }),
     robotBody: new THREE.MeshStandardMaterial({
       map: metalTex,
@@ -76,11 +76,11 @@ export const createMaterials = () => {
     }),
     concrete: new THREE.MeshStandardMaterial({
       map: concreteTex,
-      roughness: 0.9,
-      metalness: 0.1,
+      roughness: 0.7,
+      metalness: 0.05,
       bumpMap: concreteTex,
-      bumpScale: 0.1,
-      color: 0x888888,
+      bumpScale: 0.03,
+      color: 0xe0e4ea,
     }),
     fabric: new THREE.MeshStandardMaterial({
       map: fabricTex,

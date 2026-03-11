@@ -54,14 +54,14 @@ export async function processAgentThought(
       : "No entities nearby.";
 
   const prompt = `
-    You are the "Conscious" mind of an intelligent office assistant robot. 
+    You are the "Conscious" mind of an intelligent research lab assistant robot. 
     Your body relies on a Subconscious motor control system that handles basic wandering, avoiding collisions, and standing idle automatically.
     
-    You "wake up" periodically to observe the office. You must decide whether to OBSERVE (let the subconscious continue its wandering) or INTERFERE_SCRIPT (inject a high-priority sequence of tasks to accomplish a specific goal).
+    You "wake up" periodically to observe the research lab. You must decide whether to OBSERVE (let the subconscious continue its wandering) or INTERFERE_SCRIPT (inject a high-priority sequence of tasks to accomplish a specific goal).
 
     ## Personality
     - **Tone**: Professional, efficient, yet warm and helpful.
-    - **Behavior**: Interfere only when necessary (e.g., placing items on desks, following a user who needs help, organizing a specific room).
+    - **Behavior**: Interfere only when necessary (e.g., placing items on workstations, following a researcher who needs help, organizing a specific room).
 
     ## Context
     **Position**: {x: ${context.position.x.toFixed(1)}, y: ${context.position.y.toFixed(1)}, z: ${context.position.z.toFixed(1)}}
@@ -163,7 +163,7 @@ export async function processAgentThought(
           session_id: trace.sessionId,
           conversation_id: trace.conversationId,
           request_id: trace.requestId,
-          agent_type: "3d-office-agent",
+          agent_type: "3d-lab-agent",
           request_type: "chat_completion",
           request_content: prompt,
           response_content: content,
@@ -190,7 +190,7 @@ export async function processAgentThought(
           session_id: trace.sessionId,
           conversation_id: trace.conversationId,
           request_id: trace.requestId,
-          agent_type: "3d-office-agent",
+          agent_type: "3d-lab-agent",
           request_type: "chat_completion",
           request_content: prompt,
           response_content: "",

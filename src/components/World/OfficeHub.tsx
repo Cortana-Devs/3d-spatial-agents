@@ -38,7 +38,7 @@ interface Box {
   claimedBy?: string; // ID of robot
 }
 
-export default function OfficeHub() {
+export default function ResearchLabHub() {
   const addCollidableMesh = useGameStore((state) => state.addCollidableMesh);
   const removeCollidableMesh = useGameStore(
     (state) => state.removeCollidableMesh,
@@ -64,7 +64,7 @@ export default function OfficeHub() {
   // --- LIGHTING STATE ---
   const [lights, setLights] = useState({
     lobby: true,
-    office: true,
+    lab: true,
     conf: true,
     storage: false, // Storage starts dark for effect
   });
@@ -217,7 +217,7 @@ export default function OfficeHub() {
     // --- 2. Zoning ---
     // Z-Zones:
     // Back (North): z < -20 (Rooms: Conference & Storage)
-    // Mid (Center): z > -20 && z < 40 (Open Office)
+    // Mid (Center): z > -20 && z < 40 (Open Lab)
     // Front (South): z > 40 (Lobby)
 
     const roomDividerZ = hubCenter.z - 20;
@@ -309,7 +309,7 @@ export default function OfficeHub() {
       0.5,
     );
 
-    // C. Manager's Office (South-West Corner: X < -30, Z > 10)
+    // C. PI Office (South-West Corner: X < -30, Z > 10)
     // Wall-North at Z=10 from X=-100 to X=-30
     createWall(
       left,
@@ -376,7 +376,7 @@ export default function OfficeHub() {
 
     // --- 3. FURNITURE ---
     // NOTE: All furniture obstacles are now managed by their individual React components
-    // (OfficeChair, OfficeDesk, ConferenceTable, Sofa, ManagersDesk, ReceptionDesk, CupboardUnit, etc.)
+    // (OfficeChair, OfficeDesk, ConferenceTable, Sofa, ManagersDesk, ReceptionDesk, CupboardUnit, etc. — component names kept for compatibility)
     // Do NOT add createFurniture() calls here — they would create duplicate colliders.
 
     return {
@@ -416,11 +416,11 @@ export default function OfficeHub() {
         userData={{
           type: "Structure",
           id: "ground-main",
-          name: "Office Ground",
+          name: "Lab Ground",
         }}
       >
         <boxGeometry args={[bWidth + 10, 5, bDepth + 10]} />
-        <meshStandardMaterial color="#222222" />
+        <meshStandardMaterial color="#2a2f38" />
       </mesh>
 
       {/* Enclosed Building Structure */}
@@ -435,7 +435,7 @@ export default function OfficeHub() {
             userData={{
               type: "Structure",
               id: f.name || `floor-${i}`,
-              name: "Office Floor",
+              name: "Lab Floor",
             }}
           >
             <boxGeometry args={f.args} />
@@ -451,7 +451,7 @@ export default function OfficeHub() {
           userData={{
             type: "Structure",
             id: "ceiling-main",
-            name: "Office Ceiling",
+            name: "Lab Ceiling",
           }}
         >
           <boxGeometry args={ceiling.args} />
@@ -482,10 +482,10 @@ export default function OfficeHub() {
               object={
                 w.isWindow
                   ? new THREE.MeshPhysicalMaterial({
-                      color: 0x88ccff,
+                      color: 0xc0dff0,
                       metalness: 0,
                       roughness: 0,
-                      transmission: 0.9,
+                      transmission: 0.92,
                       transparent: true,
                       thickness: 0.5,
                     })
@@ -578,7 +578,7 @@ export default function OfficeHub() {
         }}
       />
 
-      {/* 2. Workstations (Open Office) */}
+      {/* 2. Workstations (Open Lab) */}
       {/* Left Block */}
       {[0, 1].map((r) =>
         [0, 1, 2].map((c) => {
@@ -596,7 +596,7 @@ export default function OfficeHub() {
                 userData={{
                   type: "Furniture",
                   id: `desk-l-${r}-${c}`,
-                  name: `Office Desk ${String.fromCharCode(65 + r * 3 + c)}`,
+                  name: `Lab Desk ${String.fromCharCode(65 + r * 3 + c)}`,
                   interactable: true,
                 }}
                 initialItems={r === 0 && c === 0 ? ["red-file-01"] : undefined}
@@ -628,7 +628,7 @@ export default function OfficeHub() {
                 userData={{
                   type: "Furniture",
                   id: `chair-l-${r}-${c}`,
-                  name: "Office Chair",
+                  name: "Lab Chair",
                 }}
               />
               <Text
@@ -668,7 +668,7 @@ export default function OfficeHub() {
                 userData={{
                   type: "Furniture",
                   id: `desk-r-${r}-${c}`,
-                  name: `Office Desk ${String.fromCharCode(65 + 6 + r * 3 + c)}`,
+                  name: `Lab Desk ${String.fromCharCode(65 + 6 + r * 3 + c)}`,
                   interactable: true,
                 }}
               />
@@ -683,7 +683,7 @@ export default function OfficeHub() {
                 userData={{
                   type: "Furniture",
                   id: `chair-r-${r}-${c}`,
-                  name: "Office Chair",
+                  name: "Lab Chair",
                 }}
               />
               <Text
@@ -1114,8 +1114,8 @@ export default function OfficeHub() {
         position={[hubCenter.x + 30.1, hubCenter.y + 4, hubCenter.z + 16]}
         rotation={Math.PI / 2}
         id="switch-break-1"
-        isOn={lights.office} // Example
-        onToggle={() => toggleLight("office")}
+        isOn={lights.lab} // Example
+        onToggle={() => toggleLight("lab")}
         userData={{ type: "Device", id: "switch-break", name: "Light Switch" }}
       />
 
@@ -1152,12 +1152,12 @@ export default function OfficeHub() {
       >
         <Text
           fontSize={15}
-          color="#00aaff"
+          color="#00c8a0"
           anchorX="center"
           anchorY="middle"
           rotation={[0, Math.PI, 0]}
         >
-          OFFICE HQ
+          RESEARCH LAB
         </Text>
       </group>
 
@@ -1180,33 +1180,33 @@ export default function OfficeHub() {
       <CeilingLight
         position={[hubCenter.x, hubCenter.y + 28, hubCenter.z + 55]}
         isOn={true}
-        color="#ffeedd"
-        intensity={1000}
+        color="#e8f0ff"
+        intensity={1200}
         distance={80}
         userData={{ type: "Device", id: "light-lobby", name: "Lobby Light" }}
       />
 
-      {/* 2. OPEN OFFICE */}
+      {/* 2. OPEN LAB */}
       <CeilingLight
         position={[hubCenter.x, hubCenter.y + 28, hubCenter.z + 10]}
         isOn={true}
-        color="#ffffff"
-        intensity={1500}
+        color="#f0f4ff"
+        intensity={1800}
         distance={100}
-        userData={{ type: "Device", id: "light-office", name: "Office Light" }}
+        userData={{ type: "Device", id: "light-lab", name: "Lab Light" }}
       />
 
-      {/* 3. CONFERENCE ROOM */}
+      {/* 3. MEETING ROOM */}
       <CeilingLight
         position={[hubCenter.x + 50, hubCenter.y + 28, hubCenter.z - 45]}
         isOn={true}
-        color="#fff0e0"
-        intensity={1200}
+        color="#f0f4ff"
+        intensity={1400}
         distance={60}
         userData={{
           type: "Device",
           id: "light-conf",
-          name: "Conference Light",
+          name: "Meeting Room Light",
         }}
       />
 
@@ -1214,8 +1214,8 @@ export default function OfficeHub() {
       <CeilingLight
         position={[hubCenter.x - 50, hubCenter.y + 28, hubCenter.z - 50]}
         isOn={true}
-        color="#e0e0ff"
-        intensity={800}
+        color="#e8ecff"
+        intensity={1000}
         distance={60}
         userData={{
           type: "Device",
@@ -1223,6 +1223,335 @@ export default function OfficeHub() {
           name: "Storage Light",
         }}
       />
+
+      {/* ============ LAB WALL ART ============ */}
+
+      {/* 1. PERIODIC TABLE — West wall, Open Lab area */}
+      <group position={[-99, hubCenter.y + 16, 5]} rotation={[0, Math.PI / 2, 0]}>
+        {/* Frame */}
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[16, 10, 0.1]} />
+          <meshStandardMaterial color="#1a1a2e" />
+        </mesh>
+        {/* Background */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[15.4, 9.4, 0.05]} />
+          <meshStandardMaterial color="#f0f4f8" />
+        </mesh>
+        {/* Title */}
+        <Text position={[0, 4.0, 0.04]} fontSize={0.8} color="#1a1a2e" anchorX="center">
+          PERIODIC TABLE OF ELEMENTS
+        </Text>
+        {/* Mini element grid (representative colored blocks) */}
+        {Array.from({ length: 8 }).map((_, row) =>
+          Array.from({ length: 14 }).map((_, col) => {
+            const colors = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c", "#e67e22", "#34495e"];
+            return (
+              <mesh
+                key={`pt-${row}-${col}`}
+                position={[-6.2 + col * 0.95, 2.5 - row * 0.95, 0.04]}
+              >
+                <boxGeometry args={[0.8, 0.8, 0.02]} />
+                <meshStandardMaterial color={colors[(row + col) % colors.length]} />
+              </mesh>
+            );
+          }),
+        )}
+      </group>
+
+      {/* 2. DNA DOUBLE HELIX — East wall, Open Lab area */}
+      <group position={[99, hubCenter.y + 16, 5]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[10, 14, 0.1]} />
+          <meshStandardMaterial color="#1a1a2e" />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[9.4, 13.4, 0.05]} />
+          <meshStandardMaterial color="#0d1b2a" />
+        </mesh>
+        <Text position={[0, 6.0, 0.04]} fontSize={0.65} color="#00c8a0" anchorX="center">
+          MOLECULAR BIOLOGY
+        </Text>
+        <Text position={[0, 5.2, 0.04]} fontSize={0.4} color="#5588aa" anchorX="center">
+          DNA Double Helix Structure
+        </Text>
+        {/* DNA helix backbone strands */}
+        {Array.from({ length: 20 }).map((_, i) => {
+          const t = i * 0.55 - 5;
+          const x1 = Math.sin(t * 0.8) * 2.5;
+          const x2 = Math.sin(t * 0.8 + Math.PI) * 2.5;
+          return (
+            <group key={`dna-${i}`}>
+              {/* Left strand node */}
+              <mesh position={[x1, t, 0.04]}>
+                <sphereGeometry args={[0.25, 8, 8]} />
+                <meshStandardMaterial color="#00aacc" emissive="#004455" emissiveIntensity={0.3} />
+              </mesh>
+              {/* Right strand node */}
+              <mesh position={[x2, t, 0.04]}>
+                <sphereGeometry args={[0.25, 8, 8]} />
+                <meshStandardMaterial color="#cc4488" emissive="#440022" emissiveIntensity={0.3} />
+              </mesh>
+              {/* Base pair connecting bar */}
+              {i % 2 === 0 && (
+                <mesh position={[(x1 + x2) / 2, t, 0.04]} rotation={[0, 0, Math.atan2(0, x2 - x1)]}>
+                  <boxGeometry args={[Math.abs(x2 - x1) - 0.3, 0.12, 0.02]} />
+                  <meshStandardMaterial color="#55ddaa" />
+                </mesh>
+              )}
+            </group>
+          );
+        })}
+      </group>
+
+      {/* 3. LAB SAFETY — Storage room, North wall */}
+      <group position={[-60, hubCenter.y + 16, -74]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[10, 12, 0.1]} />
+          <meshStandardMaterial color="#222222" />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[9.4, 11.4, 0.05]} />
+          <meshStandardMaterial color="#ffd700" />
+        </mesh>
+        <Text position={[0, 4.8, 0.04]} fontSize={0.8} color="#1a1a1a" anchorX="center" fontWeight="bold">
+          LAB SAFETY
+        </Text>
+        <Text position={[0, 3.8, 0.04]} fontSize={0.45} color="#333333" anchorX="center">
+          GUIDELINES
+        </Text>
+        {/* Warning triangle */}
+        <mesh position={[0, 1.5, 0.04]} rotation={[0, 0, 0]}>
+          <coneGeometry args={[2, 3.5, 3]} />
+          <meshStandardMaterial color="#ff6600" />
+        </mesh>
+        <Text position={[0, 1.2, 0.08]} fontSize={1.5} color="#1a1a1a" anchorX="center">
+          !
+        </Text>
+        {/* Safety rules text */}
+        <Text position={[0, -1.5, 0.04]} fontSize={0.35} color="#1a1a1a" anchorX="center">
+          Always wear PPE
+        </Text>
+        <Text position={[0, -2.2, 0.04]} fontSize={0.35} color="#1a1a1a" anchorX="center">
+          Handle chemicals with care
+        </Text>
+        <Text position={[0, -2.9, 0.04]} fontSize={0.35} color="#1a1a1a" anchorX="center">
+          Report all incidents
+        </Text>
+        <Text position={[0, -3.6, 0.04]} fontSize={0.35} color="#1a1a1a" anchorX="center">
+          Know emergency exits
+        </Text>
+      </group>
+
+      {/* 4. BRAIN / NEUROSCIENCE — Meeting room divider wall (south face) */}
+      <group position={[70, hubCenter.y + 16, -19]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[10, 10, 0.1]} />
+          <meshStandardMaterial color="#1a1a2e" />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[9.4, 9.4, 0.05]} />
+          <meshStandardMaterial color="#0a0f1a" />
+        </mesh>
+        <Text position={[0, 4.0, 0.04]} fontSize={0.6} color="#ff6688" anchorX="center">
+          NEUROSCIENCE
+        </Text>
+        <Text position={[0, 3.3, 0.04]} fontSize={0.35} color="#6688aa" anchorX="center">
+          Functional Brain Mapping
+        </Text>
+        {/* Simplified brain shape — overlapping hemispheres */}
+        <mesh position={[-1.2, 0, 0.04]} scale={[1.3, 1.5, 0.1]}>
+          <sphereGeometry args={[2, 16, 16]} />
+          <meshStandardMaterial color="#e8a0b0" emissive="#331122" emissiveIntensity={0.2} />
+        </mesh>
+        <mesh position={[1.2, 0, 0.04]} scale={[1.3, 1.5, 0.1]}>
+          <sphereGeometry args={[2, 16, 16]} />
+          <meshStandardMaterial color="#a0b8e8" emissive="#112233" emissiveIntensity={0.2} />
+        </mesh>
+        {/* Brain stem */}
+        <mesh position={[0, -2.8, 0.04]}>
+          <cylinderGeometry args={[0.4, 0.6, 1.5, 8]} />
+          <meshStandardMaterial color="#c8a8b8" />
+        </mesh>
+        {/* Region labels */}
+        <Text position={[-1.5, 1.5, 0.08]} fontSize={0.25} color="#ffffff" anchorX="center">
+          Frontal
+        </Text>
+        <Text position={[1.5, 1.5, 0.08]} fontSize={0.25} color="#ffffff" anchorX="center">
+          Parietal
+        </Text>
+        <Text position={[0, -1.0, 0.08]} fontSize={0.25} color="#ffffff" anchorX="center">
+          Temporal
+        </Text>
+      </group>
+
+      {/* 5. ATOM MODEL — Lobby west wall */}
+      <group position={[-99, hubCenter.y + 16, 55]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[10, 10, 0.1]} />
+          <meshStandardMaterial color="#1a1a2e" />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[9.4, 9.4, 0.05]} />
+          <meshStandardMaterial color="#050a15" />
+        </mesh>
+        <Text position={[0, 4.0, 0.04]} fontSize={0.55} color="#44ccff" anchorX="center">
+          ATOMIC STRUCTURE
+        </Text>
+        {/* Nucleus */}
+        <mesh position={[0, 0, 0.06]}>
+          <sphereGeometry args={[0.9, 12, 12]} />
+          <meshStandardMaterial color="#ff4444" emissive="#660000" emissiveIntensity={0.5} />
+        </mesh>
+        {/* Electron orbits */}
+        {[0, Math.PI / 3, -Math.PI / 3].map((tilt, i) => (
+          <group key={`orbit-${i}`} rotation={[tilt, 0, i * 0.7]}>
+            <mesh position={[0, 0, 0.05]}>
+              <torusGeometry args={[3, 0.04, 8, 48]} />
+              <meshStandardMaterial color="#4488ff" emissive="#224488" emissiveIntensity={0.4} />
+            </mesh>
+            {/* Electron */}
+            <mesh position={[3 * Math.cos(i * 2.1), 3 * Math.sin(i * 2.1), 0.06]}>
+              <sphereGeometry args={[0.25, 8, 8]} />
+              <meshStandardMaterial color="#44ddff" emissive="#22aadd" emissiveIntensity={0.8} />
+            </mesh>
+          </group>
+        ))}
+        <Text position={[0, -4.0, 0.04]} fontSize={0.3} color="#4488aa" anchorX="center">
+          Bohr Model Representation
+        </Text>
+      </group>
+
+      {/* 6. CHEMICAL FORMULAS — Open lab divider wall, left side (south face) */}
+      <group position={[-25, hubCenter.y + 16, -19]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[12, 8, 0.1]} />
+          <meshStandardMaterial color="#222222" />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[11.4, 7.4, 0.05]} />
+          <meshStandardMaterial color="#1a2030" />
+        </mesh>
+        <Text position={[0, 3.0, 0.04]} fontSize={0.5} color="#44ddaa" anchorX="center">
+          KEY EQUATIONS
+        </Text>
+        <Text position={[0, 1.8, 0.04]} fontSize={0.45} color="#e0e8ff" anchorX="center">
+          E = mc²
+        </Text>
+        <Text position={[0, 0.8, 0.04]} fontSize={0.4} color="#c0d0e0" anchorX="center">
+          ΔG = ΔH - TΔS
+        </Text>
+        <Text position={[0, -0.2, 0.04]} fontSize={0.4} color="#c0d0e0" anchorX="center">
+          PV = nRT
+        </Text>
+        <Text position={[0, -1.2, 0.04]} fontSize={0.4} color="#c0d0e0" anchorX="center">
+          F = ma
+        </Text>
+        <Text position={[0, -2.2, 0.04]} fontSize={0.38} color="#c0d0e0" anchorX="center">
+          ∇ × E = -∂B/∂t
+        </Text>
+      </group>
+
+      {/* 7. RESEARCH DATA CHART — PI Office north wall */}
+      <group position={[-65, hubCenter.y + 16, 11]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[12, 9, 0.1]} />
+          <meshStandardMaterial color="#1a1a2e" />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[11.4, 8.4, 0.05]} />
+          <meshStandardMaterial color="#f5f7fa" />
+        </mesh>
+        <Text position={[0, 3.5, 0.04]} fontSize={0.5} color="#2c3e50" anchorX="center">
+          RESEARCH PROGRESS 2026
+        </Text>
+        {/* Bar chart */}
+        {[
+          { x: -4, h: 3.0, c: "#3498db", l: "Q1" },
+          { x: -2, h: 4.5, c: "#2ecc71", l: "Q2" },
+          { x: 0, h: 3.8, c: "#e74c3c", l: "Q3" },
+          { x: 2, h: 5.2, c: "#f39c12", l: "Q4" },
+          { x: 4, h: 4.0, c: "#9b59b6", l: "YTD" },
+        ].map((bar) => (
+          <group key={bar.l}>
+            <mesh position={[bar.x, -3.5 + bar.h / 2, 0.04]}>
+              <boxGeometry args={[1.2, bar.h, 0.02]} />
+              <meshStandardMaterial color={bar.c} />
+            </mesh>
+            <Text position={[bar.x, -3.8, 0.04]} fontSize={0.3} color="#555555" anchorX="center">
+              {bar.l}
+            </Text>
+          </group>
+        ))}
+        {/* Y-axis */}
+        <mesh position={[-5.2, -1.0, 0.04]}>
+          <boxGeometry args={[0.04, 6, 0.01]} />
+          <meshStandardMaterial color="#888888" />
+        </mesh>
+        {/* X-axis */}
+        <mesh position={[0, -3.5, 0.04]}>
+          <boxGeometry args={[10.5, 0.04, 0.01]} />
+          <meshStandardMaterial color="#888888" />
+        </mesh>
+      </group>
+
+      {/* 8. BENZENE RING / ORGANIC CHEMISTRY — Break room north wall */}
+      <group position={[80, hubCenter.y + 16, 11]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0, -0.06]}>
+          <boxGeometry args={[10, 10, 0.1]} />
+          <meshStandardMaterial color="#1a1a2e" />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[9.4, 9.4, 0.05]} />
+          <meshStandardMaterial color="#0a1520" />
+        </mesh>
+        <Text position={[0, 4.0, 0.04]} fontSize={0.55} color="#55ddaa" anchorX="center">
+          ORGANIC CHEMISTRY
+        </Text>
+        <Text position={[0, 3.2, 0.04]} fontSize={0.32} color="#5588aa" anchorX="center">
+          Molecular Structures
+        </Text>
+        {/* Benzene ring — 6 nodes connected */}
+        {Array.from({ length: 6 }).map((_, i) => {
+          const angle = (i * Math.PI * 2) / 6 - Math.PI / 2;
+          const r = 2.2;
+          const nx = Math.cos(angle) * r;
+          const ny = Math.sin(angle) * r;
+          const nextAngle = ((i + 1) * Math.PI * 2) / 6 - Math.PI / 2;
+          const nnx = Math.cos(nextAngle) * r;
+          const nny = Math.sin(nextAngle) * r;
+          const mx = (nx + nnx) / 2;
+          const my = (ny + nny) / 2;
+          const bondLen = Math.sqrt((nnx - nx) ** 2 + (nny - ny) ** 2);
+          const bondAngle = Math.atan2(nny - ny, nnx - nx);
+          return (
+            <group key={`benz-${i}`}>
+              {/* Carbon node */}
+              <mesh position={[nx, ny, 0.04]}>
+                <sphereGeometry args={[0.3, 8, 8]} />
+                <meshStandardMaterial color="#44ccaa" emissive="#226655" emissiveIntensity={0.3} />
+              </mesh>
+              {/* Bond */}
+              <mesh position={[mx, my, 0.04]} rotation={[0, 0, bondAngle]}>
+                <boxGeometry args={[bondLen - 0.4, 0.1, 0.02]} />
+                <meshStandardMaterial color="#88eedd" />
+              </mesh>
+              {/* C label */}
+              <Text position={[nx * 1.35, ny * 1.35, 0.06]} fontSize={0.25} color="#88ccbb" anchorX="center">
+                C
+              </Text>
+            </group>
+          );
+        })}
+        {/* Inner circle for aromatic ring */}
+        <mesh position={[0, 0, 0.05]}>
+          <torusGeometry args={[1.3, 0.04, 8, 32]} />
+          <meshStandardMaterial color="#44aa88" emissive="#226655" emissiveIntensity={0.3} />
+        </mesh>
+        <Text position={[0, -3.8, 0.04]} fontSize={0.28} color="#5588aa" anchorX="center">
+          Benzene (C₆H₆)
+        </Text>
+      </group>
 
       {/* Placed Boxes (Construction) */}
       {placedBoxes.map((pos, i) => (

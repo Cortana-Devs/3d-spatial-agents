@@ -153,7 +153,7 @@ export default function Overlay() {
               // Add initial greeting from agent
               useGameStore.getState().addChatMessage(agentId, {
                 role: "agent",
-                text: `Hello! I'm ${agentId}, your office assistant. How can I help you today?`,
+                text: `Hello! I'm ${agentId}, your research lab assistant. How can I help you today?`,
               });
             }
             useGameStore.getState().setChatOpen(true);

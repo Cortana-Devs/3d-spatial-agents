@@ -95,7 +95,7 @@ export function buildWorldContext(
 // ============================================================================
 
 export function buildParserPrompt(command: string, ctx: WorldContext): string {
-  return `Parse this office command into JSON.
+  return `Parse this research lab command into JSON.
 
 ITEMS (available to pick up):
 ${ctx.items}

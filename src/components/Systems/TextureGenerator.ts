@@ -93,25 +93,23 @@ export class TextureGenerator {
         g = base;
         b = base;
       } else if (type === "tile" || type === "tileBump") {
-        const checkSize = 32; // Pixels per tile
-        const grout = 2; // Grout width
+        const checkSize = 64;
+        const grout = 1;
         const xMod = x % checkSize;
         const yMod = y % checkSize;
         const isGrout = xMod < grout || yMod < grout;
 
         if (isGrout) {
-          // Grout is Gray in Diffuse, Black in Bump (Low)
-          const val = type === "tileBump" ? 0 : 180;
+          const val = type === "tileBump" ? 0 : 160;
           r = val;
-          g = val;
-          b = val;
+          g = val + 2;
+          b = val + 5;
         } else {
-          const noise = Math.random() * 10;
-          // Tile is White in Diffuse, White in Bump (High)
-          const base = type === "tileBump" ? 255 : (230 + noise);
-          r = base;
+          const noise = Math.random() * 6;
+          const base = type === "tileBump" ? 255 : (205 + noise);
+          r = base - 5;
           g = base;
-          b = base;
+          b = base + 8;
         }
       }
 

@@ -5,29 +5,30 @@ import { useGameStore } from "@/store/gameStore";
 import { Text, Text3D, Center } from "@react-three/drei";
 import { usePlacingArea } from "../Systems/usePlacingArea";
 
-// Materials shared locally or we could import standard ones
 const woodMaterial = new THREE.MeshStandardMaterial({
-  color: "#5a3a2a",
-  roughness: 0.6,
+  color: "#e8e8e8",
+  roughness: 0.35,
+  metalness: 0.02,
 });
 const metalMaterial = new THREE.MeshStandardMaterial({
-  color: "#333333",
-  roughness: 0.3,
-  metalness: 0.6,
+  color: "#b8bcc4",
+  roughness: 0.2,
+  metalness: 0.8,
 });
 const whitePlastic = new THREE.MeshStandardMaterial({
-  color: "#eeeeee",
-  roughness: 0.2,
+  color: "#f0f2f5",
+  roughness: 0.25,
+  metalness: 0.02,
 });
 const glassMaterial = new THREE.MeshPhysicalMaterial({
-  color: "#aaddff",
-  transmission: 0.9,
-  opacity: 0.5,
+  color: "#c8e0f0",
+  transmission: 0.92,
+  opacity: 0.4,
   transparent: true,
-  roughness: 0.1,
+  roughness: 0.05,
 });
-const lightGlowMaterial = new THREE.MeshBasicMaterial({ color: "#ffffee" });
-const lightOffMaterial = new THREE.MeshStandardMaterial({ color: "#444444" });
+const lightGlowMaterial = new THREE.MeshBasicMaterial({ color: "#f0f4ff" });
+const lightOffMaterial = new THREE.MeshStandardMaterial({ color: "#555555" });
 
 // --- CEILING LIGHT ---
 export interface CeilingLightProps {
@@ -51,7 +52,7 @@ export function CeilingLight({
       {/* Fixture Base */}
       <mesh position={[0, 0.5, 0]} castShadow>
         <cylinderGeometry args={[2, 2, 1, 16]} />
-        <meshStandardMaterial color="#333" />
+        <meshStandardMaterial color="#d0d4da" roughness={0.3} metalness={0.4} />
       </mesh>
       {/* Bulb / Diffuser */}
       <mesh position={[0, -0.5, 0]}>
@@ -242,30 +243,23 @@ export function OfficeChair({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Seat */}
-      <mesh
-        position={[0, 2.2, 0]}
-        castShadow
-        receiveShadow
-        material={woodMaterial}
-      >
-        <boxGeometry args={[3, 0.4, 3]} />
+      {/* Seat — dark cushion */}
+      <mesh position={[0, 2.2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[3, 0.5, 3]} />
+        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
       </mesh>
-      {/* Backrest */}
-      <mesh
-        position={[0, 4.0, -1.4]}
-        castShadow
-        receiveShadow
-        material={woodMaterial}
-      >
-        <boxGeometry args={[3, 3.5, 0.4]} />
+      {/* Backrest — dark cushion with slight curve */}
+      <mesh position={[0, 4.0, -1.4]} castShadow receiveShadow>
+        <boxGeometry args={[3, 3.5, 0.5]} />
+        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
       </mesh>
-      {/* Legs (Central column + base) */}
+      {/* Chrome gas cylinder */}
       <mesh position={[0, 1.0, 0]} castShadow material={metalMaterial}>
-        <cylinderGeometry args={[0.3, 0.3, 2.0, 8]} />
+        <cylinderGeometry args={[0.25, 0.25, 2.0, 8]} />
       </mesh>
-      <mesh position={[0, 0.2, 0]} castShadow material={metalMaterial}>
-        <cylinderGeometry args={[1.5, 1.5, 0.4, 8]} />
+      {/* 5-star base */}
+      <mesh position={[0, 0.15, 0]} castShadow material={metalMaterial}>
+        <cylinderGeometry args={[1.5, 1.5, 0.3, 5]} />
       </mesh>
     </group>
   );
@@ -318,10 +312,10 @@ export function ConferencePad({
       <mesh ref={padRightRef} position={[2, 0.05, 0]} visible={false}>
         <boxGeometry args={[3.5, 0.1, 3.5]} />
       </mesh>
-      {/* Visual Desk Pad (Black Leather) */}
+      {/* Visual Desk Pad (Lab mat) */}
       <mesh position={[0, 0, 0]} receiveShadow>
         <boxGeometry args={[7.5, 0.05, 3.5]} />
-        <meshStandardMaterial color="#222222" roughness={0.8} />
+        <meshStandardMaterial color="#3a5a6e" roughness={0.7} />
       </mesh>
     </group>
   );
@@ -428,10 +422,10 @@ export function ConferenceTable({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Main Rectangular Table Top - Visual */}
+      {/* Main Rectangular Table Top — lab surface */}
       <mesh ref={surfaceRef} position={[0, 4, 0]} castShadow receiveShadow>
         <boxGeometry args={[40, 0.8, 20]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
+        <meshStandardMaterial color="#eef0f4" roughness={0.2} metalness={0.05} />
       </mesh>
 
       {/* Center Placing Area */}
@@ -516,8 +510,8 @@ export function OfficeDesk({
   children?: React.ReactNode;
   initialItems?: string[];
 }) {
-  const deskId = userData?.id || "office-desk";
-  const deskName = userData?.name || "Office Desk";
+  const deskId = userData?.id || "lab-desk";
+  const deskName = userData?.name || "Lab Desk";
 
   // 2 individual placing slots on the black desk pad (left / right)
   const padLeftRef = useRef<THREE.Mesh>(null);
@@ -553,7 +547,7 @@ export function OfficeDesk({
     [position[0], position[1], position[2]],
   );
   useEffect(() => {
-    // Office Desk: Split into Top and 2 Side Cabinets
+    // Desk: Split into Top and 2 Side Cabinets
     // Top: [12, 0.4, 6] at Y=3.8
     const top = {
       position: posVec.clone().add(new THREE.Vector3(0, 3.8, 0)),
@@ -621,10 +615,10 @@ export function OfficeDesk({
           <boxGeometry args={[3.0, 0.4, 2.5]} />
         </mesh>
 
-        {/* Visual Desk Pad (Black Mat) */}
+        {/* Visual Desk Pad (Lab anti-static mat) */}
         <mesh position={[0, 0.205, 0]} receiveShadow>
           <boxGeometry args={[10.2, 0.05, 3.2]} />
-          <meshStandardMaterial color="#222222" roughness={0.8} />
+          <meshStandardMaterial color="#3a5a6e" roughness={0.7} />
         </mesh>
       </group>
 
@@ -637,31 +631,19 @@ export function OfficeDesk({
       >
         <boxGeometry args={[12, 0.4, 6]} />
       </mesh>
-      {/* Legs / Cabinets sides */}
-      <mesh
-        position={[-5, 1.8, 0]}
-        castShadow
-        receiveShadow
-        material={woodMaterial}
-      >
+      {/* Cabinets — light gray laminate */}
+      <mesh position={[-5, 1.8, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.8, 3.6, 5]} />
+        <meshStandardMaterial color="#d0d4da" roughness={0.35} metalness={0.02} />
       </mesh>
-      <mesh
-        position={[5, 1.8, 0]}
-        castShadow
-        receiveShadow
-        material={woodMaterial}
-      >
+      <mesh position={[5, 1.8, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.8, 3.6, 5]} />
+        <meshStandardMaterial color="#d0d4da" roughness={0.35} metalness={0.02} />
       </mesh>
-      {/* Back Panel */}
-      <mesh
-        position={[0, 2.5, -2.0]}
-        castShadow
-        receiveShadow
-        material={woodMaterial}
-      >
+      {/* Back Panel — light lab panel */}
+      <mesh position={[0, 2.5, -2.0]} castShadow receiveShadow>
         <boxGeometry args={[8, 2.5, 0.2]} />
+        <meshStandardMaterial color="#c8ccd2" roughness={0.4} />
       </mesh>
 
       {/* PC Placing Slot (back center) */}

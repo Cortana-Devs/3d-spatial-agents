@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "@/lib/bvh-setup";
 import { Stats, AdaptiveEvents, Environment } from "@react-three/drei";
 import * as THREE from "three";
-import OfficeHub from "../World/OfficeHub";
+import ResearchLabHub from "../World/OfficeHub";
 import Robot from "../Entities/Robot";
 import AIRobot from "../Entities/AIRobot";
 import YukaSystem from "../Systems/YukaSystem";
@@ -213,7 +213,7 @@ export default function Scene() {
         {/* <ambientLight intensity={0.2} /> */}
         <Environment preset="city" />
 
-        <OfficeHub />
+        <ResearchLabHub />
 
         <Robot groupRef={robotRef} initialPosition={[0, 4, 65]} />
         <AIRobot

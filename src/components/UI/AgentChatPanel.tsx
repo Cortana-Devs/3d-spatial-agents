@@ -148,7 +148,7 @@ export const AgentChatPanel: React.FC = () => {
             .trim();
           let area = registry.getPlacingAreaById(cleanedAreaId);
           // Try empty group slot BEFORE name match so group names like
-          // "office-desk-h" resolve to an empty slot right away
+          // "lab-desk-h" resolve to an empty slot right away
           if (!area) area = registry.getEmptyAreaByGroup(cleanedAreaId);
           if (!area) area = registry.getAreaByName(cleanedAreaId);
 
@@ -444,7 +444,7 @@ export const AgentChatPanel: React.FC = () => {
           <div className={styles.chatAgentAvatar}>🤖</div>
           <div className={styles.chatAgentName}>
             <strong>{chatAgentId}</strong>
-            <span>Office Assistant</span>
+            <span>Research Lab Assistant</span>
           </div>
         </div>
         <button className={styles.chatCloseBtn} onClick={handleClose}>
