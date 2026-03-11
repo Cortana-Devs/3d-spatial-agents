@@ -503,12 +503,14 @@ export function OfficeDesk({
   userData,
   children,
   initialItems,
+  withDesktopPC = true,
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
   children?: React.ReactNode;
   initialItems?: string[];
+  withDesktopPC?: boolean;
 }) {
   const deskId = userData?.id || "lab-desk";
   const deskName = userData?.name || "Lab Desk";
@@ -647,28 +649,30 @@ export function OfficeDesk({
       </mesh>
 
       {/* PC Placing Slot (back center) */}
-      <group position={[0, 4.0, -1.5]}>
-        {/* Invisible Slot Mesh */}
-        <PCPlacingSlot
-          id={`${deskId}-pc-slot`}
-          name={`${deskName} PC Slot`}
-          position={[0, 0, 0]}
-          initialItem={
-            userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"
-          }
-        />
+      {withDesktopPC && (
+        <group position={[0, 4.0, -1.5]}>
+          {/* Invisible Slot Mesh */}
+          <PCPlacingSlot
+            id={`${deskId}-pc-slot`}
+            name={`${deskName} PC Slot`}
+            position={[0, 0, 0]}
+            initialItem={
+              userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"
+            }
+          />
 
-        <DesktopPC
-          id={userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"}
-          position={[0, 0, 0]}
-          rotation={0}
-          userData={{
-            type: "Prop",
-            name: "Desktop PC",
-            parentID: userData?.id,
-          }}
-        />
-      </group>
+          <DesktopPC
+            id={userData?.id ? `${userData.id}-desktop-pc` : "desktop-pc"}
+            position={[0, 0, 0]}
+            rotation={0}
+            userData={{
+              type: "Prop",
+              name: "Desktop PC",
+              parentID: userData?.id,
+            }}
+          />
+        </group>
+      )}
       {children}
     </group>
   );

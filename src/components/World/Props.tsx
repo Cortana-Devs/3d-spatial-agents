@@ -544,7 +544,8 @@ export function Sofa({
   userData?: any;
 }) {
   const meshRef = useRef<THREE.Group>(null);
-  useInteractable(meshRef, userData);
+  const addInteractables = useGameStore((s) => s.addInteractables);
+  const removeInteractables = useGameStore((s) => s.removeInteractables);
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
   const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
@@ -613,6 +614,53 @@ export function Sofa({
     addCollidableMesh,
     removeCollidableMesh,
   ]);
+
+  useEffect(() => {
+    const id =
+      userData?.id ||
+      `sofa-${position[0].toFixed(1)}-${position[1].toFixed(
+        1,
+      )}-${position[2].toFixed(1)}`;
+
+    const rotQuat = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotation,
+    );
+
+    let worldPos = posVec.clone();
+    if (meshRef.current) {
+      meshRef.current.updateMatrixWorld(true);
+      worldPos = new THREE.Vector3();
+      meshRef.current.getWorldPosition(worldPos);
+    }
+
+    addInteractables([
+      {
+        id,
+        type: "sofa",
+        position: worldPos,
+        rotation: rotQuat,
+        name: userData?.name,
+        description: userData?.description,
+        pickable: false,
+        meshRef: meshRef.current ?? undefined,
+      },
+    ]);
+
+    return () => {
+      removeInteractables([id]);
+    };
+  }, [
+    addInteractables,
+    removeInteractables,
+    posVec,
+    rotation,
+    userData?.description,
+    userData?.id,
+    userData?.name,
+    position,
+  ]);
+
   return (
     <group
       ref={meshRef}

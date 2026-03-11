@@ -655,8 +655,8 @@ export default function ResearchLabHub() {
         }),
       )}
 
-      {/* 3. Storage Room Cupboards (10 Units, 2 Rows x 5 Cols) */}
-      {/* Row 1 (Back): Units 1-5 */}
+      {/* 3. Storage Room: Back row cupboards (1–5) and front row tables (6–10) */}
+      {/* Row 1 (Back): Cupboards 1-5 remain for bulk storage */}
       {Array.from({ length: 5 }).map((_, i) => (
         <CupboardUnit
           key={`cupboard-r1-${i}`}
@@ -674,19 +674,190 @@ export default function ResearchLabHub() {
         />
       ))}
 
-      {/* Row 2 (Front): Units 6-10 */}
-      {Array.from({ length: 5 }).map((_, i) => (
-        <CupboardUnit
-          key={`cupboard-r2-${i}`}
-          position={[hubCenter.x - 90 + i * 20, hubCenter.y, hubCenter.z - 40]}
-          label={(i + 6).toString()}
-          userData={{
-            type: "Furniture",
-            id: `cupboard-unit-${i + 6}`,
-            name: `Cupboard ${i + 6}`,
-          }}
-        />
-      ))}
+      {/* Row 2 (Front): Replace cupboards 6–10 with research tables 6–10 */}
+      {Array.from({ length: 5 }).map((_, i) => {
+        const tableIndex = i + 6;
+        const x = hubCenter.x - 90 + i * 20;
+        const z = hubCenter.z - 40;
+        const tableLabel = String.fromCharCode(65 + i); // A–E for tables 6–10
+
+        return (
+          <group key={`storage-table-${tableIndex}`}>
+            <OfficeDesk
+              position={[x, hubCenter.y, z]}
+              withDesktopPC={false}
+              userData={{
+                type: "Furniture",
+                id: `storage-table-${tableIndex}`,
+                name: `Storage Table ${tableIndex}`,
+                interactable: true,
+              }}
+            >
+              {/* Light research equipment on each table */}
+              {tableIndex === 6 && (
+                <>
+                  {/* Data analysis workstation */}
+                  <Laptop
+                    position={[0, 4.2, 0]}
+                    rotation={Math.PI}
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-6-laptop",
+                      name: "Data Analysis Laptop",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "laptop",
+                    }}
+                  />
+                  <FileFolder
+                    position={[-3, 4.1, 1]}
+                    rotation={0.2}
+                    color="blue"
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-6-protocols",
+                      name: "Experiment Protocols",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                </>
+              )}
+              {tableIndex === 7 && (
+                <>
+                  {/* Sample logging and labeling */}
+                  <FileFolder
+                    position={[2.5, 4.1, 0.5]}
+                    rotation={-0.1}
+                    color="red"
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-7-sample-logs",
+                      name: "Sample Log Files",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                  <PenDrive
+                    position={[-2, 4.1, 0.3]}
+                    rotation={0.4}
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-7-backup-drive",
+                      name: "Backup USB Drive",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "pendrive",
+                    }}
+                  />
+                </>
+              )}
+              {tableIndex === 8 && (
+                <>
+                  {/* General lab documentation */}
+                  <FileFolder
+                    position={[0, 4.1, 0.5]}
+                    rotation={0.05}
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-8-sops",
+                      name: "Lab SOP Binder",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                  <FileFolder
+                    position={[-2.5, 4.1, -0.5]}
+                    rotation={-0.15}
+                    color="blue"
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-8-manuals",
+                      name: "Equipment Manuals",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                </>
+              )}
+              {tableIndex === 9 && (
+                <>
+                  {/* Digital media & transfers */}
+                  <Laptop
+                    position={[1.5, 4.2, -0.3]}
+                    rotation={Math.PI}
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-9-laptop",
+                      name: "Data Transfer Laptop",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "laptop",
+                    }}
+                  />
+                  <PenDrive
+                    position={[-1.5, 4.1, 0]}
+                    rotation={0.2}
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-9-usb",
+                      name: "Experiment USB Stick",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "pendrive",
+                    }}
+                  />
+                </>
+              )}
+              {tableIndex === 10 && (
+                <>
+                  {/* Overflow documents and backup media */}
+                  <FileFolder
+                    position={[2.5, 4.1, -0.3]}
+                    rotation={0.1}
+                    color="red"
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-10-archive",
+                      name: "Archived Experiment Files",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                  <PenDrive
+                    position={[-2.5, 4.1, -0.2]}
+                    rotation={-0.3}
+                    userData={{
+                      type: "Prop",
+                      id: "storage-table-10-archive-usb",
+                      name: "Archive USB Drive",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "pendrive",
+                    }}
+                  />
+                </>
+              )}
+            </OfficeDesk>
+            {/* Floor label for quick identification (A–E), aligned at front-left of table */}
+            <Text
+              position={[x - 5.5, hubCenter.y + 4.1, z - 2.5]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              fontSize={1}
+              color="black"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {tableLabel}
+            </Text>
+          </group>
+        );
+      })}
 
       {/* Lobby section removed — wall is now solid at lobbyDividerZ */}
 
