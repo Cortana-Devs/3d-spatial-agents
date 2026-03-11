@@ -674,6 +674,178 @@ export function OfficeDesk({
   );
 }
 
+// --- LAB WORKBENCH (Large Industrial) ---
+export function LabWorkbench({
+  position,
+  rotation = 0,
+  userData,
+  children,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  userData?: any;
+  children?: React.ReactNode;
+}) {
+  const benchId = userData?.id || "lab-workbench";
+  const benchName = userData?.name || "Lab Workbench";
+
+  // 3 placing slots across the top surface
+  const slotLeftRef = useRef<THREE.Mesh>(null);
+  const slotMidRef = useRef<THREE.Mesh>(null);
+  const slotRightRef = useRef<THREE.Mesh>(null);
+
+  usePlacingArea(slotLeftRef, {
+    id: `${benchId}-slot-left`,
+    name: `${benchName} Left`,
+    capacity: 2,
+    dimensions: [14, 0.4, 5],
+  });
+  usePlacingArea(slotMidRef, {
+    id: `${benchId}-slot-mid`,
+    name: `${benchName} Center`,
+    capacity: 2,
+    dimensions: [14, 0.4, 5],
+  });
+  usePlacingArea(slotRightRef, {
+    id: `${benchId}-slot-right`,
+    name: `${benchName} Right`,
+    capacity: 2,
+    dimensions: [14, 0.4, 5],
+  });
+
+  const addObstacles = useGameStore((s) => s.addObstacles);
+  const removeObstacles = useGameStore((s) => s.removeObstacles);
+  const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
+  const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
+
+  const groupRef = useRef<THREE.Group>(null);
+  const posVec = useMemo(
+    () => new THREE.Vector3(...position),
+    [position[0], position[1], position[2]],
+  );
+
+  // Workbench dimensions
+  const benchWidth = 50;
+  const benchDepth = 8;
+  const topThickness = 0.8;
+  const topHeight = 4.0;
+
+  useEffect(() => {
+    // Top surface obstacle
+    const top = {
+      position: posVec.clone().add(new THREE.Vector3(0, topHeight, 0)),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(benchWidth / 2, topThickness / 2, benchDepth / 2),
+      rotation,
+    };
+
+    // 4 steel legs
+    const legHeight = topHeight - topThickness / 2;
+    const legPositions = [
+      new THREE.Vector3(-benchWidth / 2 + 1.5, legHeight / 2, -benchDepth / 2 + 1),
+      new THREE.Vector3(benchWidth / 2 - 1.5, legHeight / 2, -benchDepth / 2 + 1),
+      new THREE.Vector3(-benchWidth / 2 + 1.5, legHeight / 2, benchDepth / 2 - 1),
+      new THREE.Vector3(benchWidth / 2 - 1.5, legHeight / 2, benchDepth / 2 - 1),
+    ];
+    const rotQ = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotation,
+    );
+    const legs = legPositions.map((pos) => ({
+      position: pos.clone().applyQuaternion(rotQ).add(posVec),
+      radius: 0,
+      type: "furniture" as const,
+      halfExtents: new THREE.Vector3(0.5, legHeight / 2, 0.5),
+      rotation,
+    }));
+
+    const obs = [top, ...legs];
+    addObstacles(obs);
+    if (groupRef.current) addCollidableMesh(groupRef.current);
+    return () => {
+      removeObstacles(obs);
+      if (groupRef.current) removeCollidableMesh(groupRef.current.uuid);
+    };
+  }, [posVec, rotation, addObstacles, removeObstacles, addCollidableMesh, removeCollidableMesh]);
+
+  return (
+    <group
+      ref={groupRef}
+      position={new THREE.Vector3(...position)}
+      rotation={[0, rotation, 0]}
+      userData={userData}
+    >
+      {/* Heavy workbench top — industrial epoxy surface */}
+      <mesh position={[0, topHeight, 0]} castShadow receiveShadow>
+        <boxGeometry args={[benchWidth, topThickness, benchDepth]} />
+        <meshStandardMaterial color="#2a3a3e" roughness={0.3} metalness={0.1} />
+      </mesh>
+
+      {/* Front edge trim — bright accent strip */}
+      <mesh position={[0, topHeight, benchDepth / 2 + 0.05]} castShadow>
+        <boxGeometry args={[benchWidth, topThickness * 0.6, 0.1]} />
+        <meshStandardMaterial color="#00c8a0" roughness={0.3} metalness={0.4} />
+      </mesh>
+
+      {/* Placing area slots (invisible) */}
+      <mesh ref={slotLeftRef} position={[-16, topHeight + 0.4, 0]} visible={false}>
+        <boxGeometry args={[14, 0.1, 5]} />
+      </mesh>
+      <mesh ref={slotMidRef} position={[0, topHeight + 0.4, 0]} visible={false}>
+        <boxGeometry args={[14, 0.1, 5]} />
+      </mesh>
+      <mesh ref={slotRightRef} position={[16, topHeight + 0.4, 0]} visible={false}>
+        <boxGeometry args={[14, 0.1, 5]} />
+      </mesh>
+
+      {/* Steel H-frame legs */}
+      {[
+        [-benchWidth / 2 + 1.5, -benchDepth / 2 + 1],
+        [benchWidth / 2 - 1.5, -benchDepth / 2 + 1],
+        [-benchWidth / 2 + 1.5, benchDepth / 2 - 1],
+        [benchWidth / 2 - 1.5, benchDepth / 2 - 1],
+      ].map(([x, z], i) => (
+        <mesh
+          key={`wbleg-${i}`}
+          position={[x, (topHeight - topThickness / 2) / 2, z]}
+          castShadow
+          material={metalMaterial}
+        >
+          <boxGeometry args={[1, topHeight - topThickness / 2, 1]} />
+        </mesh>
+      ))}
+      {/* Center support legs */}
+      {[
+        [0, -benchDepth / 2 + 1],
+        [0, benchDepth / 2 - 1],
+      ].map(([x, z], i) => (
+        <mesh
+          key={`wbleg-c-${i}`}
+          position={[x, (topHeight - topThickness / 2) / 2, z]}
+          castShadow
+          material={metalMaterial}
+        >
+          <boxGeometry args={[1, topHeight - topThickness / 2, 1]} />
+        </mesh>
+      ))}
+
+      {/* Cross bracing / lower shelf rail */}
+      <mesh position={[0, 1.0, 0]} castShadow material={metalMaterial}>
+        <boxGeometry args={[benchWidth - 3, 0.3, benchDepth - 2]} />
+      </mesh>
+
+      {/* Lower utility shelf */}
+      <mesh position={[0, 1.2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[benchWidth - 4, 0.15, benchDepth - 2.5]} />
+        <meshStandardMaterial color="#3a4a4e" roughness={0.5} metalness={0.05} />
+      </mesh>
+
+      {children}
+    </group>
+  );
+}
+
 // --- SHELF LEVEL COMPONENT ---
 function ShelfLevel({
   position,

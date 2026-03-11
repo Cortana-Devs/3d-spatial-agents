@@ -12,8 +12,8 @@ import {
   CeilingLight,
   WallSwitch,
   CupboardUnit,
-  ReceptionDesk,
   ManagersDesk,
+  LabWorkbench,
 } from "./Furniture";
 import { Elevator } from "./Elevator";
 import {
@@ -28,7 +28,6 @@ import {
   TV,
   CoffeeMachine,
   CoffeeCup,
-  Telephone,
   CoffeeStation,
 } from "./Props";
 
@@ -63,7 +62,6 @@ export default function ResearchLabHub() {
 
   // --- LIGHTING STATE ---
   const [lights, setLights] = useState({
-    lobby: true,
     lab: true,
     conf: true,
     storage: false, // Storage starts dark for effect
@@ -77,8 +75,8 @@ export default function ResearchLabHub() {
   const system = useMemo(
     () => ({
       findAvailableBox: (agentPos: any) => null, // Box collection disabled
-      claimBox: (boxId: string, agentId: string) => {},
-      pickUpBox: (boxId: string, agentId: string) => {},
+      claimBox: (boxId: string, agentId: string) => { },
+      pickUpBox: (boxId: string, agentId: string) => { },
       getNextConstructionSlot: () => {
         const idx = stateRef.current.nextSlotIndex;
         stateRef.current.nextSlotIndex++;
@@ -290,23 +288,13 @@ export default function ResearchLabHub() {
       },
     });
 
-    // B. Lobby Divider
-    // Wall across X with wide entrance
+    // B. Lobby Divider — Solid wall (lobby removed)
     createWall(
       left,
       lobbyDividerZ,
-      hubCenter.x - 9, // Fixed: narrowed from -15 to match 18-unit door
-      lobbyDividerZ,
-      "Wall-Lobby-Left",
-      0.5,
-    );
-    createWall(
-      hubCenter.x + 9, // Fixed: narrowed from 15 to match 18-unit door
-      lobbyDividerZ,
       right,
       lobbyDividerZ,
-      "Wall-Lobby-Right",
-      0.5,
+      "Wall-Lobby-Solid",
     );
 
     // C. PI Office (South-West Corner: X < -30, Z > 10)
@@ -482,13 +470,13 @@ export default function ResearchLabHub() {
               object={
                 w.isWindow
                   ? new THREE.MeshPhysicalMaterial({
-                      color: 0xc0dff0,
-                      metalness: 0,
-                      roughness: 0,
-                      transmission: 0.92,
-                      transparent: true,
-                      thickness: 0.5,
-                    })
+                    color: 0xc0dff0,
+                    metalness: 0,
+                    roughness: 0,
+                    transmission: 0.92,
+                    transparent: true,
+                    thickness: 0.5,
+                  })
                   : materials.concrete
               }
               attach="material"
@@ -579,72 +567,34 @@ export default function ResearchLabHub() {
       />
 
       {/* 2. Workstations (Open Lab) */}
-      {/* Left Block */}
-      {[0, 1].map((r) =>
-        [0, 1, 2].map((c) => {
-          const dx = hubCenter.x - 20 - c * 20;
-          const dz = hubCenter.z + r * 30;
-
-          if (dx < hubCenter.x - 30 && dz > hubCenter.z + 10) return null;
-          // Also remove desk blocking Manager's Door (Row 1, Col 0 -> X=-20, Z=30)
-          if (r === 1 && c === 0) return null;
-
-          return (
-            <group key={`desk-l-${r}-${c}`}>
-              <OfficeDesk
-                position={[dx, hubCenter.y, dz - 5]}
-                userData={{
-                  type: "Furniture",
-                  id: `desk-l-${r}-${c}`,
-                  name: `Lab Desk ${String.fromCharCode(65 + r * 3 + c)}`,
-                  interactable: true,
-                }}
-                initialItems={r === 0 && c === 0 ? ["red-file-01"] : undefined}
-              >
-                {/* Objects on desk surface (relative to desk position) */}
-                {r === 0 && c === 0 && (
-                  <FileFolder
-                    position={[-3, 4.1, 0]}
-                    color="red"
-                    rotation={0.1}
-                    userData={{
-                      type: "Prop",
-                      id: "red-file-01",
-                      name: "Confidential Red File",
-                      description:
-                        "A highly important confidential file containing sensitive data.",
-                      interactable: true,
-                      pickable: true,
-                      objectType: "file",
-                      owner: "System",
-                    }}
-                  />
-                )}
-              </OfficeDesk>
-              <OfficeChair
-                id={`chair-l-${r}-${c}`}
-                position={[dx, hubCenter.y, dz + 2]}
-                rotation={Math.PI}
-                userData={{
-                  type: "Furniture",
-                  id: `chair-l-${r}-${c}`,
-                  name: "Lab Chair",
-                }}
-              />
-              <Text
-                position={[dx - 5.5, hubCenter.y + 4.1, dz - 7.5]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                fontSize={1}
-                color="black"
-                anchorX="center"
-                anchorY="middle"
-              >
-                {String.fromCharCode(65 + r * 3 + c)}
-              </Text>
-            </group>
-          );
-        }),
-      )}
+      {/* Left Block — Row 0 replaced with a single large Workbench */}
+      <LabWorkbench
+        position={[hubCenter.x - 40, hubCenter.y, hubCenter.z - 5]}
+        userData={{
+          type: "Furniture",
+          id: "workbench-main",
+          name: "Main Lab Workbench",
+          interactable: true,
+        }}
+      >
+        {/* Red File on workbench surface */}
+        <FileFolder
+          position={[16, 4.5, 0]}
+          color="red"
+          rotation={0.1}
+          userData={{
+            type: "Prop",
+            id: "red-file-01",
+            name: "Confidential Red File",
+            description:
+              "A highly important confidential file containing sensitive data.",
+            interactable: true,
+            pickable: true,
+            objectType: "file",
+            owner: "System",
+          }}
+        />
+      </LabWorkbench>
       {/* Right Block */}
       {[0, 1].map((r) =>
         [0, 1, 2].map((c) => {
@@ -738,103 +688,7 @@ export default function ResearchLabHub() {
         />
       ))}
 
-      {/* 4. Reception Info Desk (Lobby) - Centered */}
-      <ReceptionDesk
-        position={[hubCenter.x, hubCenter.y, hubCenter.z + 58]}
-        rotation={Math.PI}
-        userData={{
-          type: "Furniture",
-          id: "reception-desk",
-          name: "Reception Desk",
-          interactable: true,
-        }}
-        initialItemsLeft={["telephone-reception"]}
-        initialItemsMid={["laptop-reception"]}
-      >
-        {/* Objects on reception counter placed precisely in slots */}
-        <Laptop
-          position={[0, 4.21, -0.5]}
-          rotation={0}
-          userData={{
-            type: "Prop",
-            id: "laptop-reception",
-            name: "Reception Laptop",
-            interactable: true,
-            pickable: true,
-            objectType: "laptop",
-          }}
-        />
-        <Telephone
-          position={[-5, 4.21, -0.5]}
-          rotation={0}
-          userData={{
-            type: "Prop",
-            id: "telephone-reception",
-            name: "Reception Telephone",
-            interactable: true,
-            pickable: true,
-            objectType: "telephone",
-          }}
-        />
-      </ReceptionDesk>
-      <OfficeChair
-        id="chair-reception"
-        position={[hubCenter.x, hubCenter.y, hubCenter.z + 50]}
-        rotation={0}
-        userData={{
-          type: "Furniture",
-          id: "chair-reception",
-          name: "Reception Chair",
-        }}
-      />
-
-      {/* Lobby Sofas - 4 units aligned to walls */}
-      {/* West Wall (Left side of lobby) - Facing East */}
-      <Sofa
-        position={[hubCenter.x - 80, hubCenter.y, hubCenter.z + 50]}
-        rotation={Math.PI / 2}
-        userData={{
-          type: "Furniture",
-          id: "sofa-lobby-1",
-          name: "Lobby Sofa 1",
-          interactable: true,
-          objectType: "sofa",
-        }}
-      />
-      <Sofa
-        position={[hubCenter.x - 80, hubCenter.y, hubCenter.z + 65]}
-        rotation={Math.PI / 2}
-        userData={{
-          type: "Furniture",
-          id: "sofa-lobby-2",
-          name: "Lobby Sofa 2",
-          interactable: true,
-          objectType: "sofa",
-        }}
-      />
-      {/* East Wall (Right side of lobby) - Facing West */}
-      <Sofa
-        position={[hubCenter.x + 80, hubCenter.y, hubCenter.z + 50]}
-        rotation={-Math.PI / 2}
-        userData={{
-          type: "Furniture",
-          id: "sofa-lobby-3",
-          name: "Lobby Sofa 3",
-          interactable: true,
-          objectType: "sofa",
-        }}
-      />
-      <Sofa
-        position={[hubCenter.x + 80, hubCenter.y, hubCenter.z + 65]}
-        rotation={-Math.PI / 2}
-        userData={{
-          type: "Furniture",
-          id: "sofa-lobby-4",
-          name: "Lobby Sofa 4",
-          interactable: true,
-          objectType: "sofa",
-        }}
-      />
+      {/* Lobby section removed — wall is now solid at lobbyDividerZ */}
 
       {/* Elevator Removed */}
 
@@ -1077,13 +931,6 @@ export default function ResearchLabHub() {
       {/* Conference Table File is now a child of ConferenceTable */}
 
       {/* DOORS */}
-      {/* Lobby: Single Centered Door at Z=40 (Matches lobbyDividerZ) */}
-      <OfficeDoor
-        id="door-main"
-        position={[hubCenter.x, hubCenter.y, hubCenter.z + 40]}
-        label="Lobby"
-        userData={{ type: "Furniture", id: "door-main", name: "Lobby Door" }}
-      />
 
       {/* New Room Doors */}
       <OfficeDoor
@@ -1176,15 +1023,7 @@ export default function ResearchLabHub() {
         }}
       />
 
-      {/* 1. LOBBY */}
-      <CeilingLight
-        position={[hubCenter.x, hubCenter.y + 28, hubCenter.z + 55]}
-        isOn={true}
-        color="#e8f0ff"
-        intensity={1200}
-        distance={80}
-        userData={{ type: "Device", id: "light-lobby", name: "Lobby Light" }}
-      />
+      {/* Lobby light removed — lobby section removed */}
 
       {/* 2. OPEN LAB */}
       <CeilingLight
@@ -1227,7 +1066,7 @@ export default function ResearchLabHub() {
       {/* ============ LAB WALL ART ============ */}
 
       {/* 1. PERIODIC TABLE — West wall, Open Lab area */}
-      <group position={[-99, hubCenter.y + 16, 5]} rotation={[0, Math.PI / 2, 0]}>
+      <group position={[-99, hubCenter.y + 16, 0]} rotation={[0, Math.PI / 2, 0]}>
         {/* Frame */}
         <mesh position={[0, 0, -0.06]}>
           <boxGeometry args={[16, 10, 0.1]} />
@@ -1385,42 +1224,7 @@ export default function ResearchLabHub() {
         </Text>
       </group>
 
-      {/* 5. ATOM MODEL — Lobby west wall */}
-      <group position={[-99, hubCenter.y + 16, 55]} rotation={[0, Math.PI / 2, 0]}>
-        <mesh position={[0, 0, -0.06]}>
-          <boxGeometry args={[10, 10, 0.1]} />
-          <meshStandardMaterial color="#1a1a2e" />
-        </mesh>
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[9.4, 9.4, 0.05]} />
-          <meshStandardMaterial color="#050a15" />
-        </mesh>
-        <Text position={[0, 4.0, 0.04]} fontSize={0.55} color="#44ccff" anchorX="center">
-          ATOMIC STRUCTURE
-        </Text>
-        {/* Nucleus */}
-        <mesh position={[0, 0, 0.06]}>
-          <sphereGeometry args={[0.9, 12, 12]} />
-          <meshStandardMaterial color="#ff4444" emissive="#660000" emissiveIntensity={0.5} />
-        </mesh>
-        {/* Electron orbits */}
-        {[0, Math.PI / 3, -Math.PI / 3].map((tilt, i) => (
-          <group key={`orbit-${i}`} rotation={[tilt, 0, i * 0.7]}>
-            <mesh position={[0, 0, 0.05]}>
-              <torusGeometry args={[3, 0.04, 8, 48]} />
-              <meshStandardMaterial color="#4488ff" emissive="#224488" emissiveIntensity={0.4} />
-            </mesh>
-            {/* Electron */}
-            <mesh position={[3 * Math.cos(i * 2.1), 3 * Math.sin(i * 2.1), 0.06]}>
-              <sphereGeometry args={[0.25, 8, 8]} />
-              <meshStandardMaterial color="#44ddff" emissive="#22aadd" emissiveIntensity={0.8} />
-            </mesh>
-          </group>
-        ))}
-        <Text position={[0, -4.0, 0.04]} fontSize={0.3} color="#4488aa" anchorX="center">
-          Bohr Model Representation
-        </Text>
-      </group>
+      {/* Atom model removed — was on lobby west wall */}
 
       {/* 6. CHEMICAL FORMULAS — Open lab divider wall, left side (south face) */}
       <group position={[-25, hubCenter.y + 16, -19]} rotation={[0, 0, 0]}>

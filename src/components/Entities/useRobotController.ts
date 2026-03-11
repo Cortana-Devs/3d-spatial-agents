@@ -1,4 +1,4 @@
-﻿import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
@@ -844,9 +844,9 @@ export function useRobotController(
 
     if (isSitting) {
       const t = stateRoot.clock.getElapsedTime();
-      j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 1.9, 0.1);
+      j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 2.6, 0.1);
       j.hips.position.z = THREE.MathUtils.lerp(j.hips.position.z, 0.0, 0.1);
-      j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, -0.3, 0.1);
+      j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, -0.25, 0.1);
       j.neck.rotation.x = Math.sin(t * 8) * 0.05;
       j.neck.rotation.y = Math.sin(t * 2) * 0.1;
 
@@ -871,34 +871,37 @@ export function useRobotController(
         0.1,
       );
 
+      // Thighs: rotate exactly 90° forward so they rest horizontal on the seat
       j.leftHip.rotation.x = THREE.MathUtils.lerp(
         j.leftHip.rotation.x,
-        -1.6,
+        -Math.PI / 2,
         0.1,
       );
       j.rightHip.rotation.x = THREE.MathUtils.lerp(
         j.rightHip.rotation.x,
-        -1.6,
+        -Math.PI / 2,
         0.1,
       );
+      // Knees: bend exactly 90° so lower legs hang straight down
       j.leftKnee.rotation.x = THREE.MathUtils.lerp(
         j.leftKnee.rotation.x,
-        1.6,
+        Math.PI / 2,
         0.1,
       );
       j.rightKnee.rotation.x = THREE.MathUtils.lerp(
         j.rightKnee.rotation.x,
-        1.6,
+        Math.PI / 2,
         0.1,
       );
+      // Slight outward splay for natural look
       j.leftHip.rotation.z = THREE.MathUtils.lerp(
         j.leftHip.rotation.z,
-        -0.15,
+        -0.08,
         0.1,
       );
       j.rightHip.rotation.z = THREE.MathUtils.lerp(
         j.rightHip.rotation.z,
-        0.15,
+        0.08,
         0.1,
       );
       return;

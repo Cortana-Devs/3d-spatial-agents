@@ -215,7 +215,7 @@ export default function Scene() {
 
         <ResearchLabHub />
 
-        <Robot groupRef={robotRef} initialPosition={[0, 4, 65]} />
+        <Robot groupRef={robotRef} initialPosition={[0, 4, 10]} />
         <AIRobot
           playerRef={robotRef}
           initialPosition={[10, 4, 10]}
