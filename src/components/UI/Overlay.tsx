@@ -85,6 +85,42 @@ export default function Overlay() {
     };
   }, []);
 
+  // Morning check report: show notification (all ok vs missing items)
+  useEffect(() => {
+    const handleMorningCheckReport = (e: CustomEvent<{
+      agentId: string;
+      tableId: string;
+      missing: string[];
+      present: string[];
+      allOk: boolean;
+    }>) => {
+      const { agentId, tableId, missing, allOk } = e.detail;
+      const gameStore = useGameStore.getState();
+      const msg = allOk
+        ? `[${agentId}] Morning check: all items present on ${tableId}.`
+        : `[${agentId}] Morning check: missing on ${tableId}: ${missing.join(", ")}`;
+      gameStore.setInteractionNotification(msg);
+      setTimeout(() => {
+        if (
+          useGameStore.getState().interactionNotification?.includes(agentId)
+        ) {
+          useGameStore.getState().setInteractionNotification(null);
+        }
+      }, 5000);
+    };
+
+    window.addEventListener(
+      "agent-morning-check-report",
+      handleMorningCheckReport as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "agent-morning-check-report",
+        handleMorningCheckReport as EventListener,
+      );
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === keyBindings.menu) {

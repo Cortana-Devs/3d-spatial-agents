@@ -692,6 +692,25 @@ export default function ResearchLabHub() {
                 name: `Storage Table ${tableIndex}`,
                 interactable: true,
               }}
+              initialItems={
+                tableIndex === 6
+                  ? ["storage-table-6-laptop", "storage-table-6-protocols"]
+                  : tableIndex === 7
+                    ? [
+                        "storage-table-7-sample-logs",
+                        "storage-table-7-backup-drive",
+                      ]
+                    : tableIndex === 8
+                      ? ["storage-table-8-sops", "storage-table-8-manuals"]
+                      : tableIndex === 9
+                        ? ["storage-table-9-laptop", "storage-table-9-usb"]
+                        : tableIndex === 10
+                          ? [
+                              "storage-table-10-archive",
+                              "storage-table-10-archive-usb",
+                            ]
+                          : undefined
+              }
             >
               {/* Light research equipment on each table */}
               {tableIndex === 6 && (

@@ -525,13 +525,16 @@ export function OfficeDesk({
     name: `${deskName} Pad Left`,
     capacity: 1,
     dimensions: [3.0, 0.4, 2.5],
-    initialItems: initialItems,
+    initialItems:
+      initialItems && initialItems.length > 0 ? [initialItems[0]] : undefined,
   });
   usePlacingArea(padRightRef, {
     id: `${deskId}-pad-right`,
     name: `${deskName} Pad Right`,
     capacity: 1,
     dimensions: [3.0, 0.4, 2.5],
+    initialItems:
+      initialItems && initialItems.length > 1 ? [initialItems[1]] : undefined,
   });
 
   // No useEffect shift needed - we position the group directly

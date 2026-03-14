@@ -425,6 +425,16 @@ export class InteractableRegistry {
     return Array.from(this.placingAreas.values());
   }
 
+  /**
+   * Returns all placing areas that belong to a given table (desk).
+   * Areas are identified by id starting with tableId + "-" (e.g. storage-table-6-pad-left).
+   */
+  public getPlacingAreasForTable(tableId: string): PlacingArea[] {
+    return Array.from(this.placingAreas.values()).filter(
+      (a) => a.id === tableId || a.id.startsWith(tableId + "-"),
+    );
+  }
+
   public getNearbyPlacingAreas(
     position: THREE.Vector3,
     radius: number,

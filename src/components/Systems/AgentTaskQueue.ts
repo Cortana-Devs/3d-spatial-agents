@@ -4,6 +4,10 @@ import { InteractableRegistry } from "./InteractableRegistry";
 import NavigationNetwork from "./NavigationNetwork";
 import type { PathResult } from "./NavigationNetwork";
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import {
+  getAssignedStorageTable,
+  getStorageTableChecklist,
+} from "@/config/agentRoutines";
 
 // ============================================================================
 // Task Types
@@ -20,7 +24,8 @@ export type AgentTaskType =
   | "INTERACT"
   | "READ_FILE"
   | "WRITE_FILE"
-  | "COPY_FILE";
+  | "COPY_FILE"
+  | "MORNING_CHECK";
 
 export interface AgentTask {
   type: AgentTaskType;
@@ -1421,6 +1426,56 @@ export class AgentTaskQueue {
       case "WAIT": {
         this.phase = "WAIT";
         break;
+      }
+
+      case "MORNING_CHECK": {
+        const tableId = getAssignedStorageTable(this.agentId);
+        if (!tableId) {
+          const message = "Morning check: no assigned table.";
+          window.dispatchEvent(
+            new CustomEvent("agent-task-failed", {
+              detail: { agentId: this.agentId, message },
+            }),
+          );
+          memoryStream
+            .add("ACTION", message, [`script:${this.currentTask?.scriptId || "morning_check"}`])
+            .catch(() => {});
+          this.phase = "COMPLETED";
+          return;
+        }
+
+        const expected = getStorageTableChecklist(tableId);
+        const areas = registry.getPlacingAreasForTable(tableId);
+        const present: string[] = areas
+          .map((a) => a.currentItem)
+          .filter((id): id is string => id != null);
+        const missing = expected.filter((id) => !present.includes(id));
+        const allOk = missing.length === 0;
+
+        window.dispatchEvent(
+          new CustomEvent("agent-morning-check-report", {
+            detail: {
+              agentId: this.agentId,
+              tableId,
+              missing,
+              present,
+              allOk,
+            },
+          }),
+        );
+
+        const memorySummary = allOk
+          ? `Morning check at ${tableId}: all items present.`
+          : `Morning check at ${tableId}: missing [${missing.join(", ")}].`;
+        memoryStream
+          .add("OBSERVATION", memorySummary, [
+            `script:${this.currentTask?.scriptId || "morning_check"}`,
+            `id:${tableId}`,
+          ])
+          .catch(() => {});
+
+        this.phase = "COMPLETED";
+        return;
       }
     }
   }

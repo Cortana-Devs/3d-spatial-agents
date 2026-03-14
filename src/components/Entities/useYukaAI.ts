@@ -15,6 +15,10 @@ import { AgentTaskRegistry } from "../Systems/AgentTaskQueue";
 import type { SteeringCommand } from "../Systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import {
+  getAssignedStorageTable,
+  getTableCenterPosition,
+} from "@/config/agentRoutines";
 
 // Fix #1/#3: World bounds for clamping LLM-generated coordinates
 const WORLD_BOUNDS = { minX: -100, maxX: 100, minZ: -75, maxZ: 75 };
@@ -99,6 +103,54 @@ export function useYukaAI(
 
   // --- TASK QUEUE (Manual Task Assignment) ---
   const taskQueueRef = useRef(AgentTaskRegistry.getInstance().getOrCreate(id));
+
+  // --- MORNING CHECK (once per agent on start, then switch to default) ---
+  const hasEnqueuedMorningCheckRef = useRef(false);
+  useEffect(() => {
+    if (hasEnqueuedMorningCheckRef.current) return;
+    const tableId = getAssignedStorageTable(id);
+    if (!tableId) return;
+
+    const timer = setTimeout(() => {
+      if (hasEnqueuedMorningCheckRef.current) return;
+      const tablePos = getTableCenterPosition(tableId);
+      if (!tablePos) return;
+
+      hasEnqueuedMorningCheckRef.current = true;
+      const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
+      const scriptId = "morning_check";
+      const priority = 10;
+
+      queue.enqueue({
+        type: "GO_TO",
+        priority,
+        scriptId,
+        targetPos: tablePos,
+      });
+      queue.enqueue({
+        type: "WAIT",
+        priority,
+        scriptId,
+        duration: 2,
+      });
+      queue.enqueue({
+        type: "MORNING_CHECK",
+        priority,
+        scriptId,
+      });
+      queue.enqueue({
+        type: "WANDER",
+        priority: 0,
+        scriptId: "subconscious_wander",
+      });
+
+      console.log(
+        `[useYukaAI:${id}] Enqueued morning check (table: ${tableId}), then default WANDER`,
+      );
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [id]);
 
   // --- ANIMATION STATE ---
   const [animationState, setAnimationState] = useState<
