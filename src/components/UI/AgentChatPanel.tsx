@@ -7,6 +7,7 @@ import { buildWorldContext } from "@/lib/nlp-parser";
 import { AgentTaskRegistry } from "@/components/Systems/AgentTaskQueue";
 import { InteractableRegistry } from "@/components/Systems/InteractableRegistry";
 import { findAlternativeArea } from "@/lib/nlp-parser";
+import { getMeetingRoomPosition } from "@/config/agentRoutines";
 import * as THREE from "three";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import styles from "./AgentChatPanel.module.css";
@@ -20,7 +21,11 @@ export const AgentChatPanel: React.FC = () => {
     chatAgentId ? state.chatMessages[chatAgentId] || EMPTY_ARRAY : EMPTY_ARRAY,
   );
   const addChatMessage = useGameStore((state) => state.addChatMessage);
+  const addCommonAgentMessage = useGameStore(
+    (state) => state.addCommonAgentMessage,
+  );
   const setChatOpen = useGameStore((state) => state.setChatOpen);
+  const setCommonChatOpen = useGameStore((state) => state.setCommonChatOpen);
   const setChatAgentId = useGameStore((state) => state.setChatAgentId);
   const clearChatMessages = useGameStore((state) => state.clearChatMessages);
   const setNearbyAgentId = useGameStore((state) => state.setNearbyAgentId);
@@ -109,6 +114,52 @@ export const AgentChatPanel: React.FC = () => {
 
     for (const task of tasks) {
       switch (task.type) {
+        case "ANNOUNCE_MEETING": {
+          const taskRegistry = AgentTaskRegistry.getInstance();
+          const allAgentIds = taskRegistry.getAllAgentIds();
+          const meetingMessage =
+            "Meeting in the meeting room. Heading there now.";
+          for (const otherId of allAgentIds) {
+            if (otherId !== agentId) {
+              addChatMessage(otherId, {
+                role: "agent",
+                text: meetingMessage,
+              });
+              addCommonAgentMessage(otherId, {
+                role: "agent",
+                text: meetingMessage,
+              });
+              // So the other agent shows the message in their thought bubble
+              window.dispatchEvent(
+                new CustomEvent("agent-meeting-announcement", {
+                  detail: { agentId: otherId, message: meetingMessage },
+                }),
+              );
+            }
+          }
+          setCommonChatOpen(true);
+          const meetingPos = getMeetingRoomPosition();
+          if (!meetingPos) {
+            console.warn(
+              "[AgentChat] ANNOUNCE_MEETING: conference room position not available, skipping.",
+            );
+            break;
+          }
+          const scriptId = `meeting_${Date.now()}`;
+          for (const id of allAgentIds) {
+            taskRegistry.getOrCreate(id).enqueue({
+              type: "GO_TO",
+              priority: 20,
+              scriptId,
+              targetPos: meetingPos.clone(),
+            });
+          }
+          console.log(
+            `[AgentChat] ANNOUNCE_MEETING: informed ${allAgentIds.length} agent(s), enqueued GO_TO conference room.`,
+          );
+          break;
+        }
+
         case "FETCH_AND_PLACE": {
           if (!task.itemId || !task.destAreaId) break;
 
@@ -379,8 +430,9 @@ export const AgentChatPanel: React.FC = () => {
     const trimmed = inputValue.trim();
     if (!trimmed || isThinking || !chatAgentId) return;
 
-    // Add user message
+    // Add user message to per-agent chat and common communication log
     addChatMessage(chatAgentId, { role: "user", text: trimmed });
+    addCommonAgentMessage(chatAgentId, { role: "user", text: trimmed });
     setInputValue("");
     setIsThinking(true);
 
@@ -398,7 +450,7 @@ export const AgentChatPanel: React.FC = () => {
           ? `\n\nRECENT MEMORIES:\n${recentMemories.map((m) => `- [${m.type}] ${m.content}`).join("\n")}`
           : "";
 
-      const worldContextStr = `ITEMS:\n${ctx.items}\n\nPLACING AREAS:\n${ctx.areas}\n\nAGENTS:\n${ctx.agents}${memoryContextStr}`;
+      const worldContextStr = `ITEMS:\n${ctx.items}\n\nPLACING AREAS:\n${ctx.areas}\n\nAGENTS:\n${ctx.agents}\n\nLocations: Meeting room = conference area.${memoryContextStr}`;
 
       const currentMessages =
         useGameStore.getState().chatMessages[chatAgentId] || [];
@@ -409,8 +461,12 @@ export const AgentChatPanel: React.FC = () => {
         worldContextStr,
       );
 
-      // Add agent's reply to chat
+      // Add agent's reply to chat and to common agent communication
       addChatMessage(chatAgentId, { role: "agent", text: response.reply });
+      addCommonAgentMessage(chatAgentId, {
+        role: "agent",
+        text: response.reply,
+      });
 
       // If the LLM returned tasks, inject them into the agent's queue
       if (response.tasks && response.tasks.length > 0) {
@@ -421,10 +477,9 @@ export const AgentChatPanel: React.FC = () => {
         processTasks(chatAgentId, response.tasks);
       }
     } catch (err) {
-      addChatMessage(chatAgentId, {
-        role: "agent",
-        text: "Sorry, I'm having trouble responding right now.",
-      });
+      const errMsg = "Sorry, I'm having trouble responding right now.";
+      addChatMessage(chatAgentId, { role: "agent", text: errMsg });
+      addCommonAgentMessage(chatAgentId, { role: "agent", text: errMsg });
     } finally {
       setIsThinking(false);
     }

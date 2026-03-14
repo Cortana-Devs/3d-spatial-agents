@@ -47,3 +47,27 @@ export function getTableCenterPosition(tableId: string): THREE.Vector3 | null {
   const first = areas[0];
   return first.position.clone();
 }
+
+// ============================================================================
+// Meeting room (conference room) — single target for ANNOUNCE_MEETING
+// ============================================================================
+
+/** Table id for the conference table in the meeting room (placing areas: conf-table-center, etc.) */
+export const CONFERENCE_TABLE_ID = "conf-table";
+
+/**
+ * Hub center from OfficeHub layout (0, 4, 0). Conference room: table at (50, 4, -47.5), door at (50, 4, -20).
+ * Table obstacle carves roughly x 29..71, z -58..-36 (with padding). We target a point clearly in the
+ * walkable corridor between door and table so pathfinding never aims into the table or a wall.
+ */
+const HUB_CENTER = { x: 0, y: 4, z: 0 };
+const MEETING_ROOM_WALKABLE = new THREE.Vector3(
+  HUB_CENTER.x + 50,
+  HUB_CENTER.y,
+  HUB_CENTER.z - 28,
+);
+
+/** Returns a walkable position in the conference room for GO_TO (meeting room). */
+export function getMeetingRoomPosition(): THREE.Vector3 | null {
+  return MEETING_ROOM_WALKABLE.clone();
+}

@@ -271,6 +271,7 @@ If the user asks you to DO something (move item, go somewhere, follow, read file
 - READ_FILE: Read the text from a document. Requires "itemId".
 - WRITE_FILE: Write text to a document. Requires "itemId" and "content" (the text to write).
 - COPY_FILE: Copy the entire contents of one document perfectly into another document. Requires "sourceItemId" and "itemId" (destination).
+- ANNOUNCE_MEETING: When the user says there is a meeting in the meeting room (or similar), respond with {"reply": "...", "tasks": [{"type": "ANNOUNCE_MEETING"}]}. Acknowledge that you will inform the others and head to the meeting room. No extra fields needed.
 
 ## Advanced Behaviors
 - CRITICAL: You cannot read a file and write/copy its contents in the exact same response because you don't know the contents yet! If asked to copy a file, you must FIRST output ONLY a READ_FILE task. Once you have read it and know the contents, the user can ask you to WRITE_FILE.

@@ -303,6 +303,7 @@ export default function GameMenu() {
                             <ControlRow action="Toggle Menu" actionKey="menu" currentKey={keyBindings.menu} isListening={listeningFor === 'menu'} onListen={() => setListeningFor('menu')} />
                             <ControlRow action="Task Panel" actionKey="taskPanel" currentKey={keyBindings.taskPanel} isListening={listeningFor === 'taskPanel'} onListen={() => setListeningFor('taskPanel')} />
                             <ControlRow action="Command Bar" actionKey="commandBar" currentKey={keyBindings.commandBar} isListening={listeningFor === 'commandBar'} onListen={() => setListeningFor('commandBar')} />
+                            <ControlRow action="Agent Communication" actionKey="agentComms" currentKey={keyBindings.agentComms} isListening={listeningFor === 'agentComms'} onListen={() => setListeningFor('agentComms')} />
                             <ControlRow action="Debug Mode" actionKey="debugMode" currentKey={keyBindings.debugMode} isListening={listeningFor === 'debugMode'} onListen={() => setListeningFor('debugMode')} />
                         </div>
                     </div>

@@ -7,6 +7,8 @@ import * as THREE from "three";
 export interface ObstacleData {
   position: { x: number; y: number; z: number };
   halfExtents?: { x: number; y: number; z: number };
+  /** Y-axis rotation in radians (for OBB). If set, carveOBB uses rotated footprint. */
+  rotation?: number;
   radius?: number;
 }
 
@@ -112,7 +114,7 @@ class NavigationNetwork {
    * so the grid rebuilds when obstacles move, not just when count changes.
    */
   private computeObstacleHash(obstacles: ObstacleData[]): string {
-    // Fast hash: concatenate quantized positions and extents
+    // Fast hash: concatenate quantized positions, extents, and rotation
     let hash = `n=${obstacles.length};`;
     for (const ob of obstacles) {
       const px = (ob.position.x * 10) | 0;
@@ -120,7 +122,8 @@ class NavigationNetwork {
       if (ob.halfExtents) {
         const hx = (ob.halfExtents.x * 10) | 0;
         const hz = (ob.halfExtents.z * 10) | 0;
-        hash += `B${px},${pz},${hx},${hz};`;
+        const rot = ob.rotation != null ? (ob.rotation * 100) | 0 : 0;
+        hash += `B${px},${pz},${hx},${hz},${rot};`;
       } else if (ob.radius) {
         const r = (ob.radius * 10) | 0;
         hash += `S${px},${pz},${r};`;
@@ -151,8 +154,8 @@ class NavigationNetwork {
       if ((ob as any).type === "door") continue; // AI pathfinding ignores doors
 
       if (ob.halfExtents) {
-        // OBB obstacle: block the rectangle + padding
-        this.carveOBB(ob.position, ob.halfExtents);
+        // OBB obstacle: block the rectangle + padding (with optional Y rotation)
+        this.carveOBB(ob.position, ob.halfExtents, ob.rotation);
       } else if (ob.radius && ob.radius > 0) {
         // Sphere obstacle: block cells within radius + padding
         this.carveSphere(ob.position, ob.radius);
@@ -176,14 +179,42 @@ class NavigationNetwork {
     this.lastObstacleHash = "";
   }
 
+  /**
+   * Carve an OBB footprint. If rotation is provided (Y-axis, radians), the box
+   * is rotated in the xz plane so walls (e.g. center divider) block the correct cells.
+   */
   private carveOBB(
     pos: { x: number; y: number; z: number },
     half: { x: number; y: number; z: number },
+    rotation?: number,
   ): void {
-    const minOX = pos.x - half.x - this.padding;
-    const maxOX = pos.x + half.x + this.padding;
-    const minOZ = pos.z - half.z - this.padding;
-    const maxOZ = pos.z + half.z + this.padding;
+    let minOX: number;
+    let maxOX: number;
+    let minOZ: number;
+    let maxOZ: number;
+
+    if (rotation != null && rotation !== 0) {
+      // 2D AABB of rotated rectangle in xz: four corners (±half.x, ±half.z) rotated
+      const c = Math.cos(rotation);
+      const s = Math.sin(rotation);
+      const x1 = pos.x + (half.x * c - half.z * s);
+      const z1 = pos.z + (half.x * s + half.z * c);
+      const x2 = pos.x + (half.x * c + half.z * s);
+      const z2 = pos.z + (half.x * s - half.z * c);
+      const x3 = pos.x + (-half.x * c - half.z * s);
+      const z3 = pos.z + (-half.x * s + half.z * c);
+      const x4 = pos.x + (-half.x * c + half.z * s);
+      const z4 = pos.z + (-half.x * s - half.z * c);
+      minOX = Math.min(x1, x2, x3, x4) - this.padding;
+      maxOX = Math.max(x1, x2, x3, x4) + this.padding;
+      minOZ = Math.min(z1, z2, z3, z4) - this.padding;
+      maxOZ = Math.max(z1, z2, z3, z4) + this.padding;
+    } else {
+      minOX = pos.x - half.x - this.padding;
+      maxOX = pos.x + half.x + this.padding;
+      minOZ = pos.z - half.z - this.padding;
+      maxOZ = pos.z + half.z + this.padding;
+    }
 
     const gMin = this.worldToGrid(minOX, minOZ);
     const gMax = this.worldToGrid(maxOX, maxOZ);

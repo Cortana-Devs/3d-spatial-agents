@@ -152,6 +152,19 @@ export function useYukaAI(
     return () => clearTimeout(timer);
   }, [id]);
 
+  // Show "Meeting in the meeting room" in thought bubble when another agent announces a meeting
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { agentId: targetId, message } = (e as CustomEvent<{ agentId: string; message: string }>).detail;
+      if (targetId !== id) return;
+      const brain = brainRef.current;
+      brain.state.thought = message;
+      brain.state.lastThoughtTime = Date.now();
+    };
+    window.addEventListener("agent-meeting-announcement", handler);
+    return () => window.removeEventListener("agent-meeting-announcement", handler);
+  }, [id]);
+
   // --- ANIMATION STATE ---
   const [animationState, setAnimationState] = useState<
     "Idle" | "Walk" | "Run" | "Wave"

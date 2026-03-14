@@ -162,6 +162,7 @@ interface GameState {
     taskPanel: string;
     commandBar: string;
     debugMode: string;
+    agentComms: string;
   };
   setKeyBinding: (action: string, key: string) => void;
 
@@ -266,6 +267,15 @@ interface GameState {
     msg: { role: "user" | "agent"; text: string },
   ) => void;
   clearChatMessages: (agentId: string) => void;
+
+  // Common agent communication log (all agents' messages in one feed)
+  commonAgentMessages: { agentId: string; role: "user" | "agent"; text: string }[];
+  addCommonAgentMessage: (
+    agentId: string,
+    msg: { role: "user" | "agent"; text: string },
+  ) => void;
+  isCommonChatOpen: boolean;
+  setCommonChatOpen: (open: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -375,6 +385,7 @@ export const useGameStore = create<GameState>((set) => ({
     taskPanel: "KeyM",
     commandBar: "Slash",
     debugMode: "Backquote",
+    agentComms: "KeyJ",
   },
   setKeyBinding: (action, key) =>
     set((state) => ({
@@ -525,4 +536,15 @@ export const useGameStore = create<GameState>((set) => ({
     set((state) => ({
       chatMessages: { ...state.chatMessages, [agentId]: [] },
     })),
+
+  commonAgentMessages: [],
+  addCommonAgentMessage: (agentId, msg) =>
+    set((state) => ({
+      commonAgentMessages: [
+        ...state.commonAgentMessages,
+        { agentId, role: msg.role, text: msg.text },
+      ],
+    })),
+  isCommonChatOpen: false,
+  setCommonChatOpen: (open) => set({ isCommonChatOpen: open }),
 }));

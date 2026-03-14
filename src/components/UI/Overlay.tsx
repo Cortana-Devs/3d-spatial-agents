@@ -7,6 +7,7 @@ import { InspectorPanel } from "./InspectorPanel";
 import { TaskAssignmentPanel } from "./TaskAssignmentPanel";
 import { CommandBar } from "./CommandBar";
 import { AgentChatPanel } from "./AgentChatPanel";
+import { AgentCommunicationPanel } from "./AgentCommunicationPanel";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { FileEditorModal } from "./FileEditorModal";
 
@@ -58,14 +59,22 @@ export default function Overlay() {
         }
       }, 4000);
 
-      // Also add to chat log so the user can review why it failed
+      // Also add to chat log and common agent communication
       gameStore.addChatMessage(agentId, { role: "agent", text: message });
+      gameStore.addCommonAgentMessage(agentId, {
+        role: "agent",
+        text: `⚠️ ${message}`,
+      });
     };
 
     const handleTaskSuccess = (e: any) => {
       const { agentId, message } = e.detail;
       const gameStore = useGameStore.getState();
 
+      gameStore.addCommonAgentMessage(agentId, {
+        role: "agent",
+        text: message,
+      });
       gameStore.setInteractionNotification(`[${agentId}] ✅ ${message}`);
 
       setTimeout(() => {
@@ -146,6 +155,16 @@ export default function Overlay() {
       if (e.code === keyBindings.taskPanel && !isMenuOpen) {
         const isOpen = useGameStore.getState().isTaskPanelOpen;
         useGameStore.getState().setTaskPanelOpen(!isOpen);
+        if (!isOpen) {
+          document.exitPointerLock();
+        }
+      }
+
+      // J key: Toggle common agent communication panel
+      if (e.code === keyBindings.agentComms && !isMenuOpen) {
+        e.preventDefault();
+        const isOpen = useGameStore.getState().isCommonChatOpen;
+        useGameStore.getState().setCommonChatOpen(!isOpen);
         if (!isOpen) {
           document.exitPointerLock();
         }
@@ -730,6 +749,7 @@ export default function Overlay() {
       <TaskAssignmentPanel />
       <CommandBar />
       <AgentChatPanel />
+      <AgentCommunicationPanel />
       <FileEditorModal />
     </>
   );
