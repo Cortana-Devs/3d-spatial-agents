@@ -1,106 +1,237 @@
-import { getGeminiClient, rotateGeminiKey } from '@/lib/gemini';
+import { getGroqClient, rotateGroqKey } from "@/lib/groq";
+import { logAgentInteraction } from "@/lib/logging/agent-logger";
 
 export interface NearbyEntity {
-    type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE'
-    id?: string;
-    distance: number;
-    status?: string; // e.g., 'Moving', 'Idle'
+  type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE', 'OBJECT'
+  id?: string;
+  distance: number;
+  status?: string; // e.g., 'Moving', 'Idle', 'carried by ...'
+  objectType?: string; // For OBJECT entities: 'file', 'laptop', etc.
+  name?: string; // Human-readable name
 }
 
 export interface AgentContext {
-    position: { x: number; y: number; z: number };
-    nearbyEntities: NearbyEntity[];
-    currentBehavior: string;
+  position: { x: number; y: number; z: number };
+  nearbyEntities: NearbyEntity[];
+  currentBehavior: string;
+  /** Current task queue state — undefined if no queue is available */
+  taskState?: {
+    currentScriptId: string | null;
+    currentTask: string | null;
+    currentPriority: number;
+    queuedTasksCount: number;
+    phase: string;
+  };
 }
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export interface TraceOptions {
+  sessionId: string;
+  requestId: string;
+  conversationId?: string;
+  userId?: string;
+}
 
-export async function processAgentThought(context: AgentContext): Promise<string> {
-    const MAX_RETRIES = 3;
-    let attempt = 0;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Context Compression: Convert entities to Markdown Table
-    const entityTable = context.nearbyEntities.length > 0
-        ? `| Type | ID | Dist | Status |\n|---|---|---|---|\n` +
-        context.nearbyEntities.map(e => `| ${e.type} | ${e.id || '-'} | ${e.distance}m | ${e.status || '-'} |`).join('\n')
-        : "No entities nearby.";
+export async function processAgentThought(
+  context: AgentContext,
+  memoryContext: string = "",
+  trace?: TraceOptions,
+): Promise<string> {
+  const MAX_RETRIES = 3;
+  let attempt = 0;
 
-    const prompt = `
-    You are an AI agent in a 3D world.
+  // Context Compression: Convert entities to Markdown Table
+  const entityTable =
+    context.nearbyEntities.length > 0
+      ? `| Type | ID (use this) | DisplayName | Dist | Status |\n|---|---|---|---|---|\n` +
+        context.nearbyEntities
+          .map(
+            (e) =>
+              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.status || "-"} |`,
+          )
+          .join("\n")
+      : "No entities nearby.";
+
+  const prompt = `
+    You are the "Conscious" mind of an intelligent research lab assistant robot. 
+    Your body relies on a Subconscious motor control system that handles basic wandering, avoiding collisions, and standing idle automatically.
     
+    You "wake up" periodically to observe the research lab. You must decide whether to OBSERVE (let the subconscious continue its wandering) or INTERFERE_SCRIPT (inject a high-priority sequence of tasks to accomplish a specific goal).
+
+    ## Personality
+    - **Tone**: Professional, efficient, yet warm and helpful.
+    - **Behavior**: Interfere only when necessary (e.g., placing items on workstations, following a researcher who needs help, organizing a specific room).
+
     ## Context
     **Position**: {x: ${context.position.x.toFixed(1)}, y: ${context.position.y.toFixed(1)}, z: ${context.position.z.toFixed(1)}}
-    **Behavior**: ${context.currentBehavior}
+    **Subconscious Activity**: ${context.currentBehavior}
+    **Task Queue**: ${context.taskState ? `Phase: ${context.taskState.phase}, Script: ${context.taskState.currentScriptId || "none"}, Task: ${context.taskState.currentTask || "none"}, Priority: ${context.taskState.currentPriority}, Queued: ${context.taskState.queuedTasksCount}` : "No active tasks"}
 
     ## Perception (Visual)
     ${entityTable}
 
-    ## Task
-    Decide your next action based on the perception above.
-    
+    ## Memory (Past Interactions)
+    ${memoryContext || "No relevant past memories."}
+
     ## Output Format (JSON ONLY)
-    { 
-      "action": "MOVE_TO" | "WAIT" | "WANDER" | "FOLLOW", 
-      "targetId"?: "id_of_entity_to_follow", 
-      "target"?: {x, y, z}, 
-      "thought": "brief reasoning" 
+    If you do not need to intervene, output:
+    {
+       "operation": "OBSERVE",
+       "thought": "brief reasoning why no intervention is needed right now"
+    }
+
+    If you need to intervene and accomplish a specific goal, output a sequence of tasks:
+    {
+       "operation": "INTERFERE_SCRIPT",
+       "priority": 10,
+       "scriptId": "a_short_snake_case_name_for_this_script",
+       "thought": "brief reasoning reflecting your professional persona about why you are interfering",
+       "tasks": [
+          { "type": "FETCH_AND_PLACE", "itemId": "id_of_item", "destAreaId": "id_of_area" }
+       ]
     }
     
-    ## Rules
-    - **FOLLOW**: If you see a 'PLAYER' (< 20m), you MUST decided to 'FOLLOW' them to say hello.
-    - **WANDER**: If no specific entities of interest, explore.
-    - **WAIT**: If idle or thinking.
+    IMPORTANT: Provide ONLY the specific tasks required for your goal. Do NOT output a sequence of every possible task type.
+    
+    ## Task Rules
+    - **FETCH_AND_PLACE**: Requires \`itemId\` and \`destAreaId\`. Picks up an item and places it on a surface.
+    - **GO_TO**: Requires \`targetPos\` {x, y, z}. Moves to a specific location.
+    - **PICK_NEARBY**: Requires \`itemId\`. Picks up an item near you.
+    - **FOLLOW_PLAYER**: Follows the user indefinitely.
+    - **READ_FILE**: Requires \`itemId\`. Reads the text from a document. Use this when instructed or when investigating a file. You must face it before you read.
+    - **WRITE_FILE**: Requires \`itemId\` and \`content\`. Writes the text in \`content\` into the document. 
+    - **COPY_FILE**: Requires \`sourceItemId\` and \`itemId\` (destination). Copies the entire text perfectly from one file into another.
+    - **IMPORTANT**: Do NOT issue new scripts if your Task Queue already shows an active script running. Wait for it to complete first. If you see "Phase: WALK_TO_SOURCE" or similar, your previous script is still executing.
+
+    ## Advanced Behaviors
+    - CRITICAL: You cannot read a file and write/copy its contents in the exact same response because you don't know the contents yet! If asked to copy a file, you must FIRST output ONLY a READ_FILE task. Once you have read it and know the contents, the user can ask you to WRITE_FILE.
+    - Note: you must hold a file to read/write it. If you aren't holding it, the system will automatically make you pick it up and return it when you're done.
+
+    ## Organization Rules
+    You will ONLY see OBJECT entries for items that are on the floor — items already on a surface are invisible to you. If you see any OBJECT entry in the table, it is misplaced and MUST be placed on a surface immediately.
+    
+    When placing a floor item: prioritize using the AREA entry with status 'empty (home)' as this is its correct designated slot. If no home slot is available, fall back to the AREA entry with the smallest distance value and status 'empty'.
+    Use ONLY a single FETCH_AND_PLACE task — do NOT add unnecessary GO_TO steps before it. The motor system navigates automatically.
+
+    ## ID Rules
+    CRITICAL: Copy item id and area id values character-for-character from the Perception table.
+    The "ID (use this)" column is the system ID. The "DisplayName" column is human-readable only — never use it as an ID.
+    The system silently ignores any \`itemId\` or \`destAreaId\` not found in the table.
   `;
 
-    while (attempt < MAX_RETRIES) {
-        try {
-            // Get the current client (refreshed on each loop iteration)
-            const client = getGeminiClient();
+  while (attempt < MAX_RETRIES) {
+    const startTime = Date.now();
+    const model = "llama-3.1-8b-instant";
 
-            const response = await client.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [{ text: prompt }]
-                    }
-                ]
-            });
+    try {
+      // Get the current client (refreshed on each loop iteration)
+      const client = getGroqClient();
 
-            // Safety check for empty response
-            if (!response || !response.text) {
-                throw new Error("Empty response from Gemini");
-            }
+      const completion = await client.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an AI assistant mapped to a 3D robot avatar. Output exclusively valid JSON explicitly for your next action and no markdown or extra sentences.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        model: model,
+        temperature: 0.3,
+        max_completion_tokens: 400,
+        top_p: 1,
+        stream: false,
+        stop: null,
+        response_format: { type: "json_object" },
+      });
 
-            // SDK Compatibility: Handle .text as function (v0) or property (v1)
-            const txt = (response as any).text;
-            return typeof txt === 'function' ? txt.call(response) : String(txt);
+      const content = completion.choices[0]?.message?.content;
+      const endTime = Date.now();
 
-        } catch (error: any) {
-            console.error(`Gemini API Error (Attempt ${attempt + 1}/${MAX_RETRIES}):`, error.message || error);
+      // Safety check for empty response
+      if (!content) {
+        throw new Error("Empty response from Groq");
+      }
 
-            // Check for 429 or similar rate limit errors
-            const isRateLimit =
-                JSON.stringify(error).includes("429") ||
-                JSON.stringify(error).includes("quota") ||
-                JSON.stringify(error).includes("RESOURCE_EXHAUSTED");
+      if (trace) {
+        await logAgentInteraction({
+          timestamp: new Date().toISOString(),
+          session_id: trace.sessionId,
+          conversation_id: trace.conversationId,
+          request_id: trace.requestId,
+          agent_type: "3d-lab-agent",
+          request_type: "chat_completion",
+          request_content: prompt,
+          response_content: content,
+          response_status: "success",
+          processing_time_ms: endTime - startTime,
+          input_tokens: completion.usage?.prompt_tokens,
+          output_tokens: completion.usage?.completion_tokens,
+          model_version: completion.model || model,
+          user_id: trace.userId,
+        });
+      }
 
-            if (isRateLimit) {
-                console.warn("Rate limit hit. Rotating API key and retrying...");
-                rotateGeminiKey();
-                // Wait a bit before retrying to prevent rapid-fire cycling if all keys are bad
-                await sleep(1000);
-            } else {
-                // If it's not a rate limit, maybe we shouldn't retry? 
-                // Or retry anyway for transient network issues?
-                // Let's retry only on rate limits for now to be safe, or just throw.
-                // Actually, for demo stability, let's retry once more for network blips.
-                if (attempt === MAX_RETRIES - 1) throw error;
-            }
+      return content;
+    } catch (error: any) {
+      const endTime = Date.now();
+      console.error(
+        `Groq API Error (Attempt ${attempt + 1}/${MAX_RETRIES}):`,
+        error.message || error,
+      );
 
-            attempt++;
-        }
+      if (trace) {
+        await logAgentInteraction({
+          timestamp: new Date().toISOString(),
+          session_id: trace.sessionId,
+          conversation_id: trace.conversationId,
+          request_id: trace.requestId,
+          agent_type: "3d-lab-agent",
+          request_type: "chat_completion",
+          request_content: prompt,
+          response_content: "",
+          response_status: "error",
+          processing_time_ms: endTime - startTime,
+          error_code: error.code || error.status,
+          error_message: error.message,
+          model_version: model,
+          user_id: trace.userId,
+        });
+      }
+
+      // Fix #Loop-7: "No Groq API keys available" is a config error, not transient.
+      // Don't retry — it will never succeed and burns 3× the log quota.
+      if (error.message === "No Groq API keys available.") {
+        throw error;
+      }
+
+      // Check for 429 (Rate Limit) or 401 (Invalid Key) to trigger rotation
+      const isAuthOrRateError =
+        JSON.stringify(error).includes("429") ||
+        JSON.stringify(error).includes("401") ||
+        JSON.stringify(error).includes("quota") ||
+        JSON.stringify(error).includes("rate limit") ||
+        JSON.stringify(error).includes("invalid_api_key") ||
+        error?.status === 429 ||
+        error?.status === 401;
+
+      if (isAuthOrRateError) {
+        console.warn(
+          "Groq API Error (Auth/RateLimit). Rotating API key and retrying...",
+        );
+        rotateGroqKey();
+        await sleep(1000);
+      } else {
+        if (attempt === MAX_RETRIES - 1) throw error;
+      }
+
+      attempt++;
     }
+  }
 
-    throw new Error("Failed to generate thought after multiple attempts.");
+  throw new Error("Failed to generate thought after multiple attempts.");
 }

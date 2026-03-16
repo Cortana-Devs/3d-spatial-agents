@@ -1,238 +1,242 @@
-'use client';
+"use client";
 
-import React, { useRef, useEffect, useMemo } from 'react';
-import { Canvas, useFrame, useThree, extend } from '@react-three/fiber';
-import { Sky, Stats, Environment, AdaptiveDpr, AdaptiveEvents } from '@react-three/drei';
-import * as THREE from 'three';
-import { Water } from 'three/examples/jsm/objects/Water.js';
-import Terrain from '../World/Terrain';
-import Bridge from '../World/Bridge';
-import SocialWorkHub from '../World/SocialWorkHub';
-import OfficeHub from '../World/OfficeHub';
-import Robot from '../Entities/Robot';
-import AIRobot from '../Entities/AIRobot';
-import YukaSystem from '../Systems/YukaSystem';
-import TimeSystem from '../Systems/TimeSystem';
-import StreetLamp from '../World/StreetLamp';
-import GroundLight from '../World/GroundLight';
-import LevelBoundaries from '../Systems/LevelBoundaries';
-import ZoneController from '../Systems/ZoneController';
-import Portal from '../World/Portal';
-import { useGameStore } from '@/store/gameStore';
-import { createWaterNormalMap } from '../Systems/Utilities';
+import React, { useRef, useEffect } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import "@/lib/bvh-setup";
+import { Stats, AdaptiveEvents, Environment } from "@react-three/drei";
+import * as THREE from "three";
+import ResearchLabHub from "../World/OfficeHub";
+import Robot from "../Entities/Robot";
+import AIRobot from "../Entities/AIRobot";
+import YukaSystem from "../Systems/YukaSystem";
+import DebugCrosshair from "../Systems/DebugCrosshair";
+import ObstacleVisualizer from "../Systems/ObstacleVisualizer";
+import { PlacingAreaMarkers } from "../Systems/PlacingAreaMarkers";
+import ObjectHighlighter from "../Systems/ObjectHighlighter";
 
-extend({ Water });
+import { useGameStore } from "@/store/gameStore";
 
-declare module '@react-three/fiber' {
-    interface ThreeElements {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        water: any;
-    }
-}
+function CameraRig({
+  target,
+}: {
+  target: React.RefObject<THREE.Group | null>;
+}) {
+  const { camera, gl, scene } = useThree();
+  const setCameraLocked = useGameStore((state) => state.setCameraLocked);
+  const setDebugText = useGameStore((state) => state.setDebugText);
+  const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
 
-function WaterComponent() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ref = useRef<any>(null);
-    const waterNormals = useMemo(() => createWaterNormalMap(), []);
+  const invertedMouse = useGameStore((state) => state.invertedMouse);
+  const sensitivity = useGameStore((state) => state.sensitivity);
 
-    const config = useMemo(() => ({
-        textureWidth: 512,
-        textureHeight: 512,
-        waterNormals: waterNormals || undefined,
-        sunDirection: new THREE.Vector3(),
-        sunColor: 0xffffff,
-        waterColor: 0x004455,
-        distortionScale: 3.7,
-        fog: true
-    }), [waterNormals]);
+  const cameraState = useRef({ yaw: 0, pitch: 0 });
 
-    useFrame((state, delta) => {
-        if (ref.current) {
-            ref.current.material.uniforms.time.value += delta;
+  useEffect(() => {
+    const onMouseMove = (event: MouseEvent) => {
+      if (!document.pointerLockElement) return;
+
+      // Apply sensitivity (base multiplier 0.002)
+      const multiplier = 0.002 * sensitivity;
+
+      cameraState.current.yaw -= event.movementX * multiplier;
+
+      // Apply inverted mouse
+      const pitchDelta = event.movementY * multiplier;
+      cameraState.current.pitch -= invertedMouse ? -pitchDelta : pitchDelta;
+
+      const limit = Math.PI / 2 - 0.1;
+      cameraState.current.pitch = Math.max(
+        -limit,
+        Math.min(limit, cameraState.current.pitch),
+      );
+    };
+
+    const onPointerLockChange = () => {
+      const locked = document.pointerLockElement === gl.domElement;
+      setCameraLocked(locked);
+      if (locked) {
+        setDebugText(
+          "Locked! Controls: WASD/Space/Shift | Click: View | E: Sit/Stand",
+        );
+      } else {
+        setDebugText("Click to Resume | WASD/Space/Shift | E: Sit/Stand");
+      }
+    };
+
+    const onClick = () => {
+      if (document.pointerLockElement !== gl.domElement) {
+        try {
+          gl.domElement.requestPointerLock();
+        } catch (e) {
+          console.warn("Pointer lock failed:", e);
         }
-    });
+      }
+    };
 
-    return (
-        <water
-            ref={ref}
-            args={[new THREE.PlaneGeometry(10000, 10000), config]}
-            rotation-x={-Math.PI / 2}
-        />
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("pointerlockchange", onPointerLockChange);
+    gl.domElement.addEventListener("click", onClick);
+
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("pointerlockchange", onPointerLockChange);
+      gl.domElement.removeEventListener("click", onClick);
+    };
+  }, [gl, setCameraLocked, setDebugText, invertedMouse, sensitivity]);
+
+  const raycaster = useRef(new THREE.Raycaster());
+
+  useFrame(() => {
+    let currentTarget = target.current;
+    let isInspecting = false;
+
+    if (inspectedAgentId) {
+      const agent = scene.children.find(
+        (c) => c.userData?.id === inspectedAgentId,
+      );
+      if (agent) {
+        currentTarget = agent as THREE.Group;
+        isInspecting = true;
+      }
+    }
+
+    if (!currentTarget) return;
+
+    // Head position (Pivot point)
+    const robotHead = currentTarget.position
+      .clone()
+      .add(new THREE.Vector3(0, 5.5, 0));
+
+    if (isInspecting) {
+      // Zoom Logic (Inspector Mode)
+      // Position camera slightly in front and above the agent
+      const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(
+        currentTarget.quaternion,
+      );
+      const idealPos = robotHead
+        .clone()
+        .add(forward.multiplyScalar(8.0))
+        .add(new THREE.Vector3(0, 1.5, 0));
+
+      camera.position.lerp(idealPos, 0.1);
+      camera.lookAt(robotHead);
+      return;
+    }
+
+    // Calculate Rotation from Yaw/Pitch
+    // Z- is forward in standard Three.js camera space when rotation is 0,
+    // but our orbit controls usually treat Z+ or Z- as start.
+    // Let's assume standard Euler YXZ order for FPS/TPS cameras.
+    const quat = new THREE.Quaternion();
+    quat.setFromEuler(
+      new THREE.Euler(
+        cameraState.current.pitch,
+        cameraState.current.yaw,
+        0,
+        "YXZ",
+      ),
     );
-}
 
-function CameraRig({ target }: { target: React.RefObject<THREE.Group | null> }) {
-    const { camera, gl } = useThree();
-    const setCameraLocked = useGameStore((state) => state.setCameraLocked);
-    const setDebugText = useGameStore((state) => state.setDebugText);
+    // Define Offset (Right 2.5, Up 0.5, Back 8.0)
+    // Adjust these values to tune the "Over-the-shoulder" feel
+    const offset = new THREE.Vector3(2.5, 0.5, 12.0);
+    offset.applyQuaternion(quat);
 
-    const invertedMouse = useGameStore((state) => state.invertedMouse);
-    const sensitivity = useGameStore((state) => state.sensitivity);
+    // Ideal Position
+    const idealPos = robotHead.clone().add(offset);
 
-    const cameraState = useRef({ yaw: 0, pitch: 0 });
+    // Collision Detection
+    // Raycast from head to idealPos to prevent clipping through walls
+    const direction = idealPos.clone().sub(robotHead);
+    const distanceToIdeal = direction.length();
+    direction.normalize();
 
-    useEffect(() => {
-        const onMouseMove = (event: MouseEvent) => {
-            if (!document.pointerLockElement) return;
-            
-            // Apply sensitivity (base multiplier 0.002)
-            const multiplier = 0.002 * sensitivity;
-            
-            cameraState.current.yaw -= event.movementX * multiplier;
-            
-            // Apply inverted mouse
-            const pitchDelta = event.movementY * multiplier;
-            cameraState.current.pitch -= invertedMouse ? -pitchDelta : pitchDelta;
-            
-            const limit = Math.PI / 2 - 0.1;
-            cameraState.current.pitch = Math.max(-limit, Math.min(limit, cameraState.current.pitch));
-        };
+    raycaster.current.set(robotHead, direction);
+    raycaster.current.far = distanceToIdeal;
 
-        const onPointerLockChange = () => {
-            const locked = document.pointerLockElement === gl.domElement;
-            setCameraLocked(locked);
-            if (locked) {
-                setDebugText("Locked! Controls: WASD/Space/Shift | Click: View | E: Sit/Stand");
-            } else {
-                setDebugText("Click to Resume | WASD/Space/Shift | E: Sit/Stand");
-            }
-        };
+    // Intersect scene to find obstacles
+    const intersects = raycaster.current.intersectObjects(scene.children, true);
 
-        const onClick = () => {
-            if (document.pointerLockElement !== gl.domElement) {
-                try {
-                    gl.domElement.requestPointerLock();
-                } catch (e) {
-                    console.warn("Pointer lock failed:", e);
-                }
-            }
-        };
+    let finalDist = distanceToIdeal;
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('pointerlockchange', onPointerLockChange);
-        gl.domElement.addEventListener('click', onClick);
+    for (const hit of intersects) {
+      // Skip the player itself
+      let isPlayer = false;
+      let obj: THREE.Object3D | null = hit.object;
+      while (obj) {
+        if (obj === target.current || obj.name === "Robot") {
+          isPlayer = true;
+          break;
+        }
+        obj = obj.parent;
+      }
 
-        return () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('pointerlockchange', onPointerLockChange);
-            gl.domElement.removeEventListener('click', onClick);
-        };
-    }, [gl, setCameraLocked, setDebugText, invertedMouse, sensitivity]);
+      if (isPlayer) continue;
 
-    useFrame(() => {
-        if (!target.current) return;
-        const robotPos = target.current.position.clone().add(new THREE.Vector3(0, 6.0, 0)); // Head height approx
+      // Found a valid obstacle
+      // Bring camera closer: hit.distance - cushion
+      finalDist = Math.max(0.5, hit.distance - 0.5);
+      break;
+    }
 
-        const camDist = 20;
-        const viewAngleOffset = 0; // Fixed to third person back view
+    // Update Camera Position
+    camera.position.copy(robotHead).add(direction.multiplyScalar(finalDist));
 
-        const cx = camDist * Math.sin(cameraState.current.yaw + viewAngleOffset);
-        const cz = camDist * Math.cos(cameraState.current.yaw + viewAngleOffset);
-        const cy = camDist * Math.sin(cameraState.current.pitch);
+    // Update Camera Rotation
+    // In standard TPS, camera looks parallel to the "forward" direction defined by yaw/pitch
+    // We can just set the quaternion we calculated earlier
+    camera.setRotationFromQuaternion(quat);
+  });
 
-        camera.position.x = robotPos.x - cx * Math.cos(cameraState.current.pitch); // eslint-disable-line react-hooks/immutability
-        camera.position.z = robotPos.z - cz * Math.cos(cameraState.current.pitch); // eslint-disable-line react-hooks/immutability
-        camera.position.y = robotPos.y + cy; // eslint-disable-line react-hooks/immutability
-        if (camera.position.y < 2.0) camera.position.y = 2.0; // eslint-disable-line react-hooks/immutability
-
-        camera.lookAt(robotPos);
-    });
-
-    return null;
+  return null;
 }
 
 export default function Scene() {
-    const robotRef = useRef<THREE.Group>(null);
+  const robotRef = useRef<THREE.Group>(null);
 
-    return (
-        <div style={{ width: '100vw', height: '100vh' }}>
-            <Canvas shadows dpr={[1, 1.5]} performance={{ min: 0.5 }} camera={{ position: [0, 10, -20], fov: 60 }} gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.8 }}>
-                {/* <AdaptiveDpr pixelated /> */}
-                <AdaptiveEvents />
-                <fog attach="fog" args={[0xd6eaf8, 0.0015]} />
-                <TimeSystem />
-                <WaterComponent />
+  return (
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <Canvas
+        shadows
+        dpr={[1, 1.5]}
+        performance={{ min: 0.5 }}
+        camera={{ position: [0, 10, -20], fov: 60 }}
+        gl={{
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.2,
+        }}
+      >
+        <AdaptiveEvents />
+        <color attach="background" args={["#202020"]} />
 
-                <Terrain />
+        {/* Simple ambient light to prevent pitch black shadows before lights load or in corners */}
+        {/* <ambientLight intensity={0.2} /> */}
+        <Environment preset="city" />
 
-                {/* --- Bridges (Triangle Network) --- */}
-                {/* 1. Main: Island -> Social Hub */}
-                <Bridge start={[0, 5, -120]} end={[0, 4, -300]} />
+        <ResearchLabHub />
 
-                {/* 2. Island -> Office Hub (East) */}
-                <Bridge start={[20, 5, -120]} end={[350, 4, -200]} />
+        <Robot groupRef={robotRef} initialPosition={[0, 4, 10]} />
+        <AIRobot
+          playerRef={robotRef}
+          initialPosition={[10, 4, 10]}
+          id="agent-01"
+        />
+        <AIRobot
+          playerRef={robotRef}
+          initialPosition={[-10, 4, 20]}
+          id="agent-02"
+        />
 
-                {/* 3. Social Hub -> Office Hub */}
-                <Bridge start={[50, 4, -350]} end={[350, 4, -300]} />
+        <YukaSystem />
+        <DebugCrosshair />
+        <ObstacleVisualizer />
+        <PlacingAreaMarkers playerRef={robotRef} />
+        <ObjectHighlighter />
 
-                <SocialWorkHub />
-                <OfficeHub />
+        <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
 
-                {/* Street Lamps */}
-                {/* Street Lamps (8 Total - 4 Outer, 4 Inner) */}
-                {/* Outer Corners */}
-                <StreetLamp position={[120, 2, -495]} />
-                <StreetLamp position={[-120, 2, -495]} />
-                <StreetLamp position={[120, 2, -255]} />
-                <StreetLamp position={[-120, 2, -255]} />
-
-                {/* Inner Ring */}
-                <StreetLamp position={[50, 2, -425]} />
-                <StreetLamp position={[-50, 2, -425]} />
-                <StreetLamp position={[50, 2, -325]} />
-                <StreetLamp position={[-50, 2, -325]} />
-
-                {/* Ground Lights (Social Hub Corners) */}
-                <GroundLight position={[-115, 2.05, -490]} />
-                <GroundLight position={[115, 2.05, -490]} />
-                <GroundLight position={[-115, 2.05, -260]} />
-                <GroundLight position={[115, 2.05, -260]} />
-
-                {/* Spawn Area Ground Light */}
-                <GroundLight position={[-5, 0.05, -40]} />
-
-                {/* Portal - Beach Area (Near Spawn) */}
-                <Portal
-                    position={[-20, 2, -50]}
-                    rotation={[0, 0.5, 0]}
-                    playerRef={robotRef}
-                    onTeleport={() => {
-                        // Teleport Logic
-                        if (robotRef.current) {
-                            // 1. Trigger Fade Out
-                            useGameStore.getState().setTeleporting(true);
-
-                            // 2. Wait for Fade (500ms)
-                            setTimeout(() => {
-                                if (robotRef.current) {
-                                    // 3. Move Robot (Entrance of OFFICE Hub)
-                                    // New Office X = 350. Entrance near Z=-200 or -250?
-                                    // Let's target the entrance side near Bridge 2.
-                                    robotRef.current.position.set(350, 5, -220);
-
-                                    // 4. Force Rotation (Face South/Inward)
-                                    robotRef.current.rotation.set(0, Math.PI, 0);
-
-                                    // 5. Trigger Fade In after short delay
-                                    setTimeout(() => {
-                                        useGameStore.getState().setTeleporting(false);
-                                    }, 500);
-                                }
-                            }, 500);
-                        }
-                    }}
-                />
-
-                <Robot groupRef={robotRef} />
-                <AIRobot playerRef={robotRef} initialPosition={[10, 5, -330]} />
-                <AIRobot playerRef={robotRef} initialPosition={[15, 5, -330]} />
-                <YukaSystem />
-                <LevelBoundaries />
-                <ZoneController robotRef={robotRef} />
-                <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
-
-                <Stats />
-            </Canvas>
-        </div>
-    );
+        <Stats />
+      </Canvas>
+    </div>
+  );
 }
