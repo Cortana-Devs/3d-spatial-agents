@@ -29,6 +29,7 @@ import {
   CoffeeMachine,
   CoffeeCup,
   CoffeeStation,
+  Telephone,
 } from "./Props";
 
 interface Box {
@@ -499,12 +500,26 @@ export default function ResearchLabHub() {
         initialItemsCenter={["file-conf-table"]}
       >
         {/* Objects on conference table (relative to table) */}
+        {/* Central presenter laptop */}
+        <Laptop
+          position={[0, 4.4, 0]}
+          rotation={Math.PI}
+          userData={{
+            type: "Prop",
+            id: "conf-presenter-laptop",
+            name: "Presenter Laptop",
+            interactable: true,
+            pickable: true,
+            objectType: "laptop",
+          }}
+        />
+        {/* Stack of printed handouts near one edge */}
         <FileFolder
-          position={[5, 4.5, 0]}
+          position={[10, 4.5, 2]}
           userData={{
             type: "Prop",
             id: "file-conf-table",
-            name: "Conference File",
+            name: "Meeting Handouts",
             interactable: true,
             pickable: true,
             objectType: "file",
@@ -577,17 +592,58 @@ export default function ResearchLabHub() {
           interactable: true,
         }}
       >
-        {/* Red File on workbench surface */}
+        {/* Core experimental setup on the main workbench */}
+        {/* Tube rack with sample vials */}
+        <group position={[10, 4.4, 0]}>
+          <mesh
+            castShadow
+            receiveShadow
+            position={[0, 0, 0]}
+            material={new THREE.MeshStandardMaterial({ color: "#d0d4e0" })}
+          >
+            <boxGeometry args={[5, 0.2, 2]} />
+          </mesh>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <mesh
+              key={`tube-${i}`}
+              position={[-2 + i * 1, 0.6, 0]}
+              castShadow
+              material={new THREE.MeshStandardMaterial({ color: "#5cc0ff" })}
+            >
+              <cylinderGeometry args={[0.2, 0.2, 1.0, 12]} />
+            </mesh>
+          ))}
+        </group>
+        {/* Benchtop analyzer / qPCR-style box */}
+        <group position={[0, 4.6, -1]}>
+          <mesh
+            castShadow
+            receiveShadow
+            material={new THREE.MeshStandardMaterial({ color: "#f5f5f5" })}
+          >
+            <boxGeometry args={[6, 1.6, 4]} />
+          </mesh>
+          <mesh
+            position={[0, 1, 1.2]}
+            material={new THREE.MeshStandardMaterial({
+              color: "#202531",
+              emissive: "#102040",
+              emissiveIntensity: 0.4,
+            })}
+          >
+            <boxGeometry args={[4.5, 0.6, 0.1]} />
+          </mesh>
+        </group>
+        {/* Lab notebook / protocol binder */}
         <FileFolder
-          position={[16, 4.5, 0]}
+          position={[-14, 4.5, 0.5]}
           color="red"
           rotation={0.1}
           userData={{
             type: "Prop",
             id: "red-file-01",
-            name: "Confidential Red File",
-            description:
-              "A highly important confidential file containing sensitive data.",
+            name: "Experiment Logbook",
+            description: "Primary notebook for recording experiment runs.",
             interactable: true,
             pickable: true,
             objectType: "file",
@@ -621,7 +677,22 @@ export default function ResearchLabHub() {
                   name: `Lab Desk ${String.fromCharCode(65 + 6 + r * 3 + c)}`,
                   interactable: true,
                 }}
-              />
+              >
+                {/* Individual workstation: SOP binder only (no dedicated laptop) */}
+                <FileFolder
+                  position={[-3.0, 4.1, 0.8]}
+                  rotation={0.15}
+                  color="blue"
+                  userData={{
+                    type: "Prop",
+                    id: `desk-r-${r}-${c}-sop`,
+                    name: "Desk SOP Binder",
+                    interactable: true,
+                    pickable: true,
+                    objectType: "file",
+                  }}
+                />
+              </OfficeDesk>
               <OfficeChair
                 id={`chair-r-${r}-${c}`}
                 position={[
@@ -901,7 +972,7 @@ export default function ResearchLabHub() {
           userData={{
             type: "Prop",
             id: "file-supervisor-blue",
-            name: "Blue Supervisor File",
+            name: "Grant Proposal Dossier",
             interactable: true,
             pickable: true,
             objectType: "file",
@@ -913,7 +984,7 @@ export default function ResearchLabHub() {
           userData={{
             type: "Prop",
             id: "laptop-supervisor",
-            name: "Supervisor Laptop",
+            name: "Supervisor Workstation",
             interactable: true,
             pickable: true,
             objectType: "laptop",
@@ -929,6 +1000,18 @@ export default function ResearchLabHub() {
             interactable: true,
             pickable: true,
             objectType: "pendrive",
+          }}
+        />
+        {/* Desk telephone for calls */}
+        <Telephone
+          position={[3.5, 4.15, 1.5]}
+          rotation={Math.PI / 2}
+          userData={{
+            type: "Prop",
+            id: "telephone-supervisor",
+            name: "Desk Telephone",
+            interactable: true,
+            objectType: "telephone",
           }}
         />
       </ManagersDesk>
@@ -970,13 +1053,16 @@ export default function ResearchLabHub() {
         userData={{
           type: "Furniture",
           id: "rack-supervisor",
-          name: "Supervisor Rack",
+          name: "Supervisor Archive Rack",
           interactable: true,
         }}
         initialItems={["flower-supervisor"]}
-        initialItemsMiddle={["file-supervisor-red-1", "file-supervisor-red-2"]}
+        initialItemsMiddle={[
+          "archive-box-1",
+          "archive-box-2",
+        ]}
       >
-        {/* Red files on middle shelf, flower pot on top — local coords, rack rotated π/4 */}
+        {/* Archive boxes on middle shelf, flower pot on top — local coords, rack rotated π/4 */}
         {/* inverse(π/4): local = R(-π/4) × world */}
         <FileFolder
           position={[0, 3.1, 0]}
@@ -984,8 +1070,8 @@ export default function ResearchLabHub() {
           rotation={0.1}
           userData={{
             type: "Prop",
-            id: "file-supervisor-red-1",
-            name: "Red Supervisor File 1",
+            id: "archive-box-1",
+            name: "Archive Box – Experiments",
             interactable: true,
             pickable: true,
             objectType: "file",
@@ -997,8 +1083,8 @@ export default function ResearchLabHub() {
           rotation={-0.1}
           userData={{
             type: "Prop",
-            id: "file-supervisor-red-2",
-            name: "Red Supervisor File 2",
+            id: "archive-box-2",
+            name: "Archive Box – Reports",
             interactable: true,
             pickable: true,
             objectType: "file",

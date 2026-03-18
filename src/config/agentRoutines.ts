@@ -49,6 +49,58 @@ export function getTableCenterPosition(tableId: string): THREE.Vector3 | null {
 }
 
 // ============================================================================
+// Main lab workbench helpers (bench readiness check)
+// ============================================================================
+
+// Hard-coded from OfficeHub layout: Main Lab Workbench at (-40, 4, -5)
+const WORKBENCH_CENTER_DUP = new THREE.Vector3(-40, 4, -5);
+const WORKBENCH_ALLOWED_ITEM_IDS_DUP = new Set<string>(["red-file-01"]); // logbook
+
+export function getWorkbenchCenterPosition(): THREE.Vector3 {
+  return WORKBENCH_CENTER.clone();
+}
+
+/**
+ * Returns IDs of stray pickable items near the main lab workbench.
+ * Core equipment (tube rack, analyzer, logbook) are allowed; everything
+ * else within the radius is treated as clutter.
+ */
+function getWorkbenchStrayItemsDup(
+  registry: InteractableRegistry,
+  radius: number = 10,
+): string[] {
+  const nearby = registry.getNearby(WORKBENCH_CENTER_DUP, radius);
+  return nearby
+    .filter((obj) => obj.pickable && !obj.carriedBy)
+    .filter((obj) => !WORKBENCH_ALLOWED_ITEM_IDS_DUP.has(obj.id))
+    .map((obj) => obj.id);
+}
+
+// ============================================================================
+// Main lab workbench helpers (bench readiness check)
+// ============================================================================
+
+// Hard-coded from OfficeHub layout: Main Lab Workbench at (-40, 4, -5)
+const WORKBENCH_CENTER = new THREE.Vector3(-40, 4, -5);
+const WORKBENCH_ALLOWED_ITEM_IDS = new Set<string>(["red-file-01"]); // logbook
+
+/**
+ * Returns IDs of stray pickable items near the main lab workbench.
+ * Core equipment (tube rack, analyzer, logbook) are allowed; everything
+ * else within the radius is treated as clutter.
+ */
+export function getWorkbenchStrayItems(
+  registry: InteractableRegistry,
+  radius: number = 10,
+): string[] {
+  const nearby = registry.getNearby(WORKBENCH_CENTER, radius);
+  return nearby
+    .filter((obj) => obj.pickable && !obj.carriedBy)
+    .filter((obj) => !WORKBENCH_ALLOWED_ITEM_IDS.has(obj.id))
+    .map((obj) => obj.id);
+}
+
+// ============================================================================
 // Meeting room (conference room) — single target for ANNOUNCE_MEETING
 // ============================================================================
 

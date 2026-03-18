@@ -143,6 +143,41 @@ export default function Overlay() {
     };
   }, []);
 
+  // Bench readiness report: show notification after agents check workbench
+  useEffect(() => {
+    const handleBenchCheckReport = (e: CustomEvent<{
+      agentId: string;
+      benchOk: boolean;
+      benchStray: string[];
+    }>) => {
+      const { agentId, benchOk, benchStray } = e.detail;
+      const gameStore = useGameStore.getState();
+      const label = formatAgentLabel(agentId);
+      const msg = benchOk
+        ? `[${label}] Bench readiness: main lab workbench clear.`
+        : `[${label}] Bench readiness: workbench has stray items: ${benchStray.join(", ")}.`;
+      gameStore.setInteractionNotification(msg);
+      setTimeout(() => {
+        if (
+          useGameStore.getState().interactionNotification?.includes(agentId)
+        ) {
+          useGameStore.getState().setInteractionNotification(null);
+        }
+      }, 5000);
+    };
+
+    window.addEventListener(
+      "agent-bench-check-report",
+      handleBenchCheckReport as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "agent-bench-check-report",
+        handleBenchCheckReport as EventListener,
+      );
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === keyBindings.menu) {

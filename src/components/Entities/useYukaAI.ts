@@ -18,6 +18,7 @@ import { memoryStream } from "@/lib/memory/MemoryStream";
 import {
   getAssignedStorageTable,
   getTableCenterPosition,
+  getWorkbenchCenterPosition,
 } from "@/config/agentRoutines";
 
 // Fix #1/#3: World bounds for clamping LLM-generated coordinates
@@ -135,6 +136,25 @@ export function useYukaAI(
       });
       queue.enqueue({
         type: "MORNING_CHECK",
+        priority,
+        scriptId,
+      });
+      // After storage table check, walk to main lab workbench for bench readiness
+      const benchPos = getWorkbenchCenterPosition();
+      queue.enqueue({
+        type: "GO_TO",
+        priority,
+        scriptId,
+        targetPos: benchPos,
+      });
+      queue.enqueue({
+        type: "WAIT",
+        priority,
+        scriptId,
+        duration: 2,
+      });
+      queue.enqueue({
+        type: "BENCH_CHECK",
         priority,
         scriptId,
       });

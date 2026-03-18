@@ -7,6 +7,7 @@ import { memoryStream } from "@/lib/memory/MemoryStream";
 import {
   getAssignedStorageTable,
   getStorageTableChecklist,
+  getWorkbenchStrayItems,
 } from "@/config/agentRoutines";
 
 // ============================================================================
@@ -25,7 +26,8 @@ export type AgentTaskType =
   | "READ_FILE"
   | "WRITE_FILE"
   | "COPY_FILE"
-  | "MORNING_CHECK";
+  | "MORNING_CHECK"
+  | "BENCH_CHECK";
 
 export interface AgentTask {
   type: AgentTaskType;
@@ -1471,6 +1473,36 @@ export class AgentTaskQueue {
           .add("OBSERVATION", memorySummary, [
             `script:${this.currentTask?.scriptId || "morning_check"}`,
             `id:${tableId}`,
+          ])
+          .catch(() => {});
+
+        this.phase = "COMPLETED";
+        return;
+      }
+
+      case "BENCH_CHECK": {
+        const benchStray = getWorkbenchStrayItems(registry);
+        const benchOk = benchStray.length === 0;
+
+        window.dispatchEvent(
+          new CustomEvent("agent-bench-check-report", {
+            detail: {
+              agentId: this.agentId,
+              benchOk,
+              benchStray,
+            },
+          }),
+        );
+
+        const memorySummary = benchOk
+          ? "Bench readiness: main lab workbench clear."
+          : `Bench readiness: main lab workbench has stray items: [${benchStray.join(
+              ", ",
+            )}].`;
+        memoryStream
+          .add("OBSERVATION", memorySummary, [
+            `script:${this.currentTask?.scriptId || "morning_check"}`,
+            "id:workbench-main",
           ])
           .catch(() => {});
 
