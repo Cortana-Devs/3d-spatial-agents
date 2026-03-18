@@ -11,6 +11,14 @@ import { AgentCommunicationPanel } from "./AgentCommunicationPanel";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { FileEditorModal } from "./FileEditorModal";
 
+function formatAgentLabel(agentId: string): string {
+  const match = /^agent-0*(\d+)$/.exec(agentId);
+  if (match) {
+    return `Assistance ${match[1]}`;
+  }
+  return agentId;
+}
+
 export default function Overlay() {
   const debugText = useGameStore((state) => state.debugText);
   const debugTarget = useGameStore((state) => state.debugTarget);
@@ -49,7 +57,9 @@ export default function Overlay() {
       const { agentId, message } = e.detail;
       const gameStore = useGameStore.getState();
 
-      gameStore.setInteractionNotification(`[${agentId}] ⚠️ ${message}`);
+      gameStore.setInteractionNotification(
+        `[${formatAgentLabel(agentId)}] ⚠️ ${message}`,
+      );
 
       setTimeout(() => {
         if (
@@ -75,7 +85,9 @@ export default function Overlay() {
         role: "agent",
         text: message,
       });
-      gameStore.setInteractionNotification(`[${agentId}] ✅ ${message}`);
+      gameStore.setInteractionNotification(
+        `[${formatAgentLabel(agentId)}] ✅ ${message}`,
+      );
 
       setTimeout(() => {
         if (
@@ -105,9 +117,10 @@ export default function Overlay() {
     }>) => {
       const { agentId, tableId, missing, allOk } = e.detail;
       const gameStore = useGameStore.getState();
+      const label = formatAgentLabel(agentId);
       const msg = allOk
-        ? `[${agentId}] Morning check: all items present on ${tableId}.`
-        : `[${agentId}] Morning check: missing on ${tableId}: ${missing.join(", ")}`;
+        ? `[${label}] Morning check: all items present on ${tableId}.`
+        : `[${label}] Morning check: missing on ${tableId}: ${missing.join(", ")}`;
       gameStore.setInteractionNotification(msg);
       setTimeout(() => {
         if (
@@ -208,7 +221,7 @@ export default function Overlay() {
               // Add initial greeting from agent
               useGameStore.getState().addChatMessage(agentId, {
                 role: "agent",
-                text: `Hello! I'm ${agentId}, your research lab assistant. How can I help you today?`,
+                  text: `Hello! I'm ${formatAgentLabel(agentId)}, your research lab assistant. How can I help you today?`,
               });
             }
             useGameStore.getState().setChatOpen(true);

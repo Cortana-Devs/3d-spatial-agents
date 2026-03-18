@@ -123,6 +123,14 @@ const statusBadgeStyle = (phase: string): React.CSSProperties => ({
   color: phase === "IDLE" ? "#60d080" : "#ffb040",
 });
 
+function formatAgentLabel(agentId: string): string {
+  const match = /^agent-0*(\d+)$/.exec(agentId);
+  if (match) {
+    return `Assistance ${match[1]}`;
+  }
+  return agentId;
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -241,7 +249,9 @@ export function TaskAssignmentPanel() {
             >
               <span style={{ fontSize: "20px" }}>🤖</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{id}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {formatAgentLabel(id)}
+                </div>
                 <div style={{ fontSize: "11px", color: "#6080aa" }}>
                   AI Research Lab Assistant
                 </div>
@@ -261,7 +271,10 @@ export function TaskAssignmentPanel() {
     <div>
       <p style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}>
         Select action for{" "}
-        <strong style={{ color: "#80b0ff" }}>{selectedAgent}</strong>:
+        <strong style={{ color: "#80b0ff" }}>
+          {selectedAgent ? formatAgentLabel(selectedAgent) : ""}
+        </strong>
+        :
       </p>
       {ACTIONS.map((action) => {
         // Capacity check: Can't fetch if already carrying or if queue has a fetch without a place
@@ -491,7 +504,10 @@ export function TaskAssignmentPanel() {
     <div>
       <p style={{ color: "#6080aa", margin: "0 0 8px 0", fontSize: "13px" }}>
         Task queue for{" "}
-        <strong style={{ color: "#80b0ff" }}>{selectedAgent}</strong>:
+        <strong style={{ color: "#80b0ff" }}>
+          {selectedAgent ? formatAgentLabel(selectedAgent) : ""}
+        </strong>
+        :
       </p>
 
       {pendingTasks.length === 0 ? (

@@ -313,7 +313,7 @@ export function CommandBar() {
                 handleSubmit();
               }
             }}
-            placeholder='e.g. "move blue manager file to lab desk A"'
+            placeholder='e.g. "move blue supervisor file to lab desk A"'
             disabled={state === "loading"}
             style={{
               ...inputStyle,

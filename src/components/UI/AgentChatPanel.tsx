@@ -119,6 +119,11 @@ export const AgentChatPanel: React.FC = () => {
           const allAgentIds = taskRegistry.getAllAgentIds();
           const meetingMessage =
             "Meeting in the meeting room. Heading there now.";
+          // Log initiator's broadcast in common channel as well
+          addCommonAgentMessage(agentId, {
+            role: "agent",
+            text: meetingMessage,
+          });
           for (const otherId of allAgentIds) {
             if (otherId !== agentId) {
               addChatMessage(otherId, {

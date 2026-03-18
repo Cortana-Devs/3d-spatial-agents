@@ -1581,8 +1581,8 @@ export function ManagersDesk({
   initialItemsMid?: string[];
   initialItemsRight?: string[];
 }) {
-  const deskId = userData?.id || "managers-desk";
-  const deskName = userData?.name || "Manager's Desk";
+  const deskId = userData?.id || "supervisors-desk";
+  const deskName = userData?.name || "Supervisor's Desk";
 
   // 3 individual placing slots on the leather pad (closer to chair side)
   const padLeftRef = useRef<THREE.Mesh>(null);
@@ -1621,7 +1621,7 @@ export function ManagersDesk({
     [position[0], position[1], position[2]],
   );
   useEffect(() => {
-    // Manager Desk: 16 x 8 x 4 — single box obstacle
+    // Supervisor Desk: 16 x 8 x 4 — single box obstacle
     const obs = [
       {
         position: posVec.clone().add(new THREE.Vector3(0, 2, 0)),

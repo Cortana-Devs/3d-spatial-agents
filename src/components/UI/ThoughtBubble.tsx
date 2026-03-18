@@ -107,7 +107,9 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({
                 <Cpu size={14} color="#10b981" />
               )}
               <span className={styles.statusText}>
-                {isThinking ? "PROCESSING" : `NEURAL LINK [${brain.id}]`}
+                {isThinking
+                  ? "PROCESSING"
+                  : brain.id.replace(/^agent-0*(\d+)$/i, "Assistance $1")}
               </span>
             </div>
 

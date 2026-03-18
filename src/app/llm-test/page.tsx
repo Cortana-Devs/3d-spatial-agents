@@ -14,7 +14,7 @@ type MockContext = {
 
 const DEFAULT_ITEMS = `A=available,C=carried,X=claimed. Only pick (A) items.
 ID|Name|Type|Status
-laptop-alpha|Manager Laptop|prop|A
+laptop-alpha|Supervisor Laptop|prop|A
 red-folder-1|Financial Reports|item|C
 cup-3|Coffee Mug|prop|A`;
 
@@ -29,7 +29,7 @@ agent-intern|BUSY`;
 
 export default function LLMTestingDashboard() {
   const [command, setCommand] = useState(
-    "move Manager Laptop to Lab Desk A",
+    "move Supervisor Laptop to Lab Desk A",
   );
   const [items, setItems] = useState(DEFAULT_ITEMS);
   const [areas, setAreas] = useState(DEFAULT_AREAS);

@@ -304,7 +304,7 @@ export default function ResearchLabHub() {
       hubCenter.z + 10,
       hubCenter.x - 30,
       hubCenter.z + 10,
-      "Wall-Manager-North",
+      "Wall-Supervisor-North",
     );
     // Wall-East at X=-30 from Z=10 to Z=40
     // Door gap: Z=25 (width 18) -> Gap 16 to 34
@@ -313,14 +313,14 @@ export default function ResearchLabHub() {
       hubCenter.z + 10,
       hubCenter.x - 30,
       hubCenter.z + 16,
-      "Wall-Manager-East-1",
+      "Wall-Supervisor-East-1",
     );
     createWall(
       hubCenter.x - 30,
       hubCenter.z + 34,
       hubCenter.x - 30,
       lobbyDividerZ,
-      "Wall-Manager-East-2",
+      "Wall-Supervisor-East-2",
     );
 
     // D. Break Room (South-East Corner: X > 30, Z > 10)
@@ -887,21 +887,21 @@ export default function ResearchLabHub() {
         rotation={Math.PI / 2}
         userData={{
           type: "Furniture",
-          id: "desk-manager",
-          name: "Manager Desk",
+          id: "desk-supervisor",
+          name: "Supervisor Desk",
         }}
-        initialItemsLeft={["file-manager-blue"]}
-        initialItemsMid={["laptop-manager"]}
-        initialItemsRight={["pendrive-manager"]}
+        initialItemsLeft={["file-supervisor-blue"]}
+        initialItemsMid={["laptop-supervisor"]}
+        initialItemsRight={["pendrive-supervisor"]}
       >
-        {/* Objects on Manager desk placed in exact slot positions */}
+        {/* Objects on Supervisor desk placed in exact slot positions */}
         <FileFolder
           position={[-5, 4.1, -2]}
           color="blue"
           userData={{
             type: "Prop",
-            id: "file-manager-blue",
-            name: "Blue Manager File",
+            id: "file-supervisor-blue",
+            name: "Blue Supervisor File",
             interactable: true,
             pickable: true,
             objectType: "file",
@@ -912,8 +912,8 @@ export default function ResearchLabHub() {
           rotation={-Math.PI}
           userData={{
             type: "Prop",
-            id: "laptop-manager",
-            name: "Manager Laptop",
+            id: "laptop-supervisor",
+            name: "Supervisor Laptop",
             interactable: true,
             pickable: true,
             objectType: "laptop",
@@ -924,7 +924,7 @@ export default function ResearchLabHub() {
           rotation={0.3}
           userData={{
             type: "Prop",
-            id: "pendrive-manager",
+            id: "pendrive-supervisor",
             name: "USB Drive",
             interactable: true,
             pickable: true,
@@ -933,33 +933,33 @@ export default function ResearchLabHub() {
         />
       </ManagersDesk>
       <OfficeChair
-        id="chair-manager"
+        id="chair-supervisor"
         position={[hubCenter.x - 75, hubCenter.y, hubCenter.z + 25]}
         rotation={Math.PI / 2}
         userData={{
           type: "Furniture",
-          id: "chair-manager",
-          name: "Manager Chair",
+          id: "chair-supervisor",
+          name: "Supervisor Chair",
         }}
       />
       <OfficeChair
-        id="chair-manager-visitor-1"
+        id="chair-supervisor-visitor-1"
         position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 21]}
         rotation={-Math.PI / 2}
         userData={{
           type: "Furniture",
-          id: "chair-manager-visitor-1",
-          name: "Manager Visitor Chair 1",
+          id: "chair-supervisor-visitor-1",
+          name: "Supervisor Visitor Chair 1",
         }}
       />
       <OfficeChair
-        id="chair-manager-visitor-2"
+        id="chair-supervisor-visitor-2"
         position={[hubCenter.x - 48, hubCenter.y, hubCenter.z + 29]}
         rotation={-Math.PI / 2}
         userData={{
           type: "Furniture",
-          id: "chair-manager-visitor-2",
-          name: "Manager Visitor Chair 2",
+          id: "chair-supervisor-visitor-2",
+          name: "Supervisor Visitor Chair 2",
         }}
       />
 
@@ -969,12 +969,12 @@ export default function ResearchLabHub() {
         rotation={Math.PI / 4}
         userData={{
           type: "Furniture",
-          id: "rack-manager",
-          name: "Manager Rack",
+          id: "rack-supervisor",
+          name: "Supervisor Rack",
           interactable: true,
         }}
-        initialItems={["flower-manager"]}
-        initialItemsMiddle={["file-manager-red-1", "file-manager-red-2"]}
+        initialItems={["flower-supervisor"]}
+        initialItemsMiddle={["file-supervisor-red-1", "file-supervisor-red-2"]}
       >
         {/* Red files on middle shelf, flower pot on top — local coords, rack rotated π/4 */}
         {/* inverse(π/4): local = R(-π/4) × world */}
@@ -984,8 +984,8 @@ export default function ResearchLabHub() {
           rotation={0.1}
           userData={{
             type: "Prop",
-            id: "file-manager-red-1",
-            name: "Red Manager File 1",
+            id: "file-supervisor-red-1",
+            name: "Red Supervisor File 1",
             interactable: true,
             pickable: true,
             objectType: "file",
@@ -997,8 +997,8 @@ export default function ResearchLabHub() {
           rotation={-0.1}
           userData={{
             type: "Prop",
-            id: "file-manager-red-2",
-            name: "Red Manager File 2",
+            id: "file-supervisor-red-2",
+            name: "Red Supervisor File 2",
             interactable: true,
             pickable: true,
             objectType: "file",
@@ -1008,8 +1008,8 @@ export default function ResearchLabHub() {
           position={[0, 4.2, 0]}
           userData={{
             type: "Prop",
-            id: "flower-manager",
-            name: "Manager Flower Pot",
+            id: "flower-supervisor",
+            name: "Supervisor Flower Pot",
             interactable: true,
           }}
         />
@@ -1124,14 +1124,14 @@ export default function ResearchLabHub() {
 
       {/* New Room Doors */}
       <OfficeDoor
-        id="door-manager"
+        id="door-supervisor"
         position={[hubCenter.x - 30, hubCenter.y, hubCenter.z + 25]}
         rotation={Math.PI / 2}
-        label="Manager"
+        label="Supervisor"
         userData={{
           type: "Furniture",
-          id: "door-manager",
-          name: "Manager Door",
+          id: "door-supervisor",
+          name: "Supervisor Door",
         }}
       />
       <OfficeDoor

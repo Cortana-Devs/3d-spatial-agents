@@ -4,6 +4,14 @@ import React, { useEffect, useRef } from "react";
 import { useGameStore } from "@/store/gameStore";
 import styles from "./AgentCommunicationPanel.module.css";
 
+function formatAgentLabel(agentId: string): string {
+  const match = /^agent-0*(\d+)$/.exec(agentId);
+  if (match) {
+    return `Assistance ${match[1]}`;
+  }
+  return agentId;
+}
+
 export const AgentCommunicationPanel: React.FC = () => {
   const isOpen = useGameStore((state) => state.isCommonChatOpen);
   const setCommonChatOpen = useGameStore((state) => state.setCommonChatOpen);
@@ -62,7 +70,9 @@ export const AgentCommunicationPanel: React.FC = () => {
                 m.role === "user" ? styles.commUser : styles.commAgent
               }`}
             >
-              <div className={styles.commAgentLabel}>{m.agentId}</div>
+              <div className={styles.commAgentLabel}>
+                {m.role === "user" ? "Supervisor" : formatAgentLabel(m.agentId)}
+              </div>
               <div className={styles.commText}>{m.text}</div>
             </div>
           ))
