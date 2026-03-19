@@ -12,6 +12,14 @@ import * as THREE from "three";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import styles from "./AgentChatPanel.module.css";
 
+function formatAgentLabel(agentId: string): string {
+  const match = /^agent-0*(\d+)$/.exec(agentId);
+  if (match) {
+    return `Assistance ${match[1]}`;
+  }
+  return agentId;
+}
+
 const EMPTY_ARRAY: { role: "user" | "agent"; text: string }[] = [];
 
 export const AgentChatPanel: React.FC = () => {
@@ -197,6 +205,143 @@ export const AgentChatPanel: React.FC = () => {
             break;
           }
           cleanedItemId = item.id; // use correct ID
+          const itemDisplayName = item.name || cleanedItemId;
+
+          // =============================================================
+          // INTER-AGENT NEGOTIATION: Ask other agents if they need item
+          // =============================================================
+          const taskRegistry = AgentTaskRegistry.getInstance();
+          const otherAgentUsingItem = taskRegistry.getAgentUsingItem(cleanedItemId, agentId);
+
+          // Open the common communication panel to show the negotiation
+          setCommonChatOpen(true);
+
+          // Step 1: Requesting agent broadcasts asking about the item
+          const askMsg = `🔍 I need to take "${itemDisplayName}" — does anyone currently need it?`;
+          addCommonAgentMessage(agentId, { role: "agent", text: askMsg });
+          addChatMessage(agentId, { role: "agent", text: askMsg });
+
+          if (otherAgentUsingItem) {
+            // Step 2a: Another agent IS using the item — they respond
+            const otherAgentName = otherAgentUsingItem;
+            const responseMsg = `🙋 Yes, I'm currently working with "${itemDisplayName}". I still need it.`;
+            addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: responseMsg });
+            addChatMessage(otherAgentUsingItem, { role: "agent", text: responseMsg });
+
+            // Step 3a: Requesting agent defers the task
+            const deferMsg = `✋ Understood, ${formatAgentLabel(otherAgentName)}. I'll wait — please inform me when you're finished with "${itemDisplayName}".`;
+            addCommonAgentMessage(agentId, { role: "agent", text: deferMsg });
+            addChatMessage(agentId, { role: "agent", text: deferMsg });
+
+            // Step 4a: The other agent acknowledges
+            const ackMsg = `👍 Sure, I'll let you know once I'm done with "${itemDisplayName}".`;
+            addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: ackMsg });
+            addChatMessage(otherAgentUsingItem, { role: "agent", text: ackMsg });
+
+            // Register a listener for when the other agent finishes with the item
+            const handleItemReleased = (e: any) => {
+              const { agentId: releasedByAgent, itemId: releasedItemId } = e.detail;
+              if (releasedByAgent === otherAgentUsingItem && releasedItemId === cleanedItemId) {
+                // Remove listener first to prevent duplicate handling
+                window.removeEventListener("agent-item-released", handleItemReleased);
+
+                // The other agent finished — notify via communication panel
+                const notifyMsg = `✅ I've finished using "${itemDisplayName}". It's available now, ${formatAgentLabel(agentId)}!`;
+                useGameStore.getState().addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: notifyMsg });
+                useGameStore.getState().addChatMessage(otherAgentUsingItem, { role: "agent", text: notifyMsg });
+
+                const resumeMsg = `👌 Thanks! I'll go get "${itemDisplayName}" now.`;
+                useGameStore.getState().addCommonAgentMessage(agentId, { role: "agent", text: resumeMsg });
+                useGameStore.getState().addChatMessage(agentId, { role: "agent", text: resumeMsg });
+
+                // Use setTimeout to let the releasing agent's state fully clear first,
+                // then directly enqueue the task (skip re-negotiation)
+                setTimeout(() => {
+                  const freshRegistry = InteractableRegistry.getInstance();
+                  const freshQueue = AgentTaskRegistry.getInstance().getOrCreate(agentId);
+
+                  // Re-validate item is still available
+                  const freshItem = freshRegistry.getById(cleanedItemId);
+                  if (!freshItem || !freshItem.pickable) {
+                    useGameStore.getState().addChatMessage(agentId, {
+                      role: "agent",
+                      text: `⚠️ "${itemDisplayName}" is no longer available.`,
+                    });
+                    useGameStore.getState().addCommonAgentMessage(agentId, {
+                      role: "agent",
+                      text: `⚠️ "${itemDisplayName}" is no longer available.`,
+                    });
+                    return;
+                  }
+
+                  // Re-validate area
+                  let resumeAreaId = String(task.destAreaId).replace(/\s*\([A-Z]\)$/i, "").trim();
+                  let resumeArea = freshRegistry.getPlacingAreaById(resumeAreaId);
+                  if (!resumeArea) resumeArea = freshRegistry.getEmptyAreaByGroup(resumeAreaId);
+                  if (!resumeArea) resumeArea = freshRegistry.getAreaByName(resumeAreaId);
+
+                  if (!resumeArea) {
+                    useGameStore.getState().addChatMessage(agentId, {
+                      role: "agent",
+                      text: `⚠️ I can't find the destination "${task.destAreaId}" anymore.`,
+                    });
+                    return;
+                  }
+
+                  let finalAreaId = resumeArea.id;
+                  if (resumeArea.currentItem) {
+                    const alt = findAlternativeArea(finalAreaId, freshRegistry, new Set());
+                    if (alt) finalAreaId = alt;
+                    else {
+                      useGameStore.getState().addChatMessage(agentId, {
+                        role: "agent",
+                        text: `⚠️ There's no empty space left at "${task.destAreaId}".`,
+                      });
+                      return;
+                    }
+                  }
+
+                  // Directly enqueue without re-negotiation
+                  freshQueue.enqueue({
+                    type: "FETCH_AND_PLACE",
+                    priority: 20,
+                    scriptId: `chat_resumed_${Date.now()}`,
+                    itemId: cleanedItemId,
+                    destAreaId: finalAreaId,
+                  });
+
+                  console.log(
+                    `[AgentChat] Resumed deferred FETCH_AND_PLACE: ${cleanedItemId} → ${finalAreaId}`,
+                  );
+                }, 500); // 500ms delay to let the other agent's state fully reset
+              }
+            };
+            window.addEventListener("agent-item-released", handleItemReleased);
+
+            console.log(
+              `[AgentChat] FETCH_AND_PLACE deferred: ${cleanedItemId} is being used by ${otherAgentUsingItem}`,
+            );
+            break; // Don't execute the task now
+          }
+
+          // Step 2b: No other agent is using it — all agents respond "no"
+          const allAgentIds = taskRegistry.getAllAgentIds();
+          const otherAgents = allAgentIds.filter((id) => id !== agentId);
+          
+          if (otherAgents.length > 0) {
+            // Each other agent confirms they don't need it
+            for (const otherId of otherAgents) {
+              const noMsg = `✅ No, I don't need "${itemDisplayName}" right now. Go ahead!`;
+              addCommonAgentMessage(otherId, { role: "agent", text: noMsg });
+            }
+
+            // Requesting agent confirms proceeding
+            const proceedMsg = `👍 Great, no one needs it. I'll go get "${itemDisplayName}" now.`;
+            addCommonAgentMessage(agentId, { role: "agent", text: proceedMsg });
+            addChatMessage(agentId, { role: "agent", text: proceedMsg });
+          }
+
+          // === PROCEED WITH ORIGINAL FETCH_AND_PLACE LOGIC ===
 
           // Validate area exists and resolve alternatives
           let cleanedAreaId = String(task.destAreaId)

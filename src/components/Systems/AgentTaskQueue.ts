@@ -224,6 +224,22 @@ export class AgentTaskQueue {
     return this.isActive() || this.queue.length > 0;
   }
 
+  /** Check if this agent is currently using/carrying/targeting a specific item */
+  public isUsingItem(itemId: string): boolean {
+    // Check if the currently active task involves this item
+    if (this.currentTask && this.activeItemId === itemId) return true;
+    // Check queued tasks too
+    for (const task of this.queue) {
+      if (task.itemId === itemId) return true;
+    }
+    return false;
+  }
+
+  /** Get the ID of the item this agent is currently working with */
+  public getActiveItemId(): string | null {
+    return this.activeItemId;
+  }
+
   public cancel(): void {
     // Release any claimed items
     if (this.activeItemId) {
@@ -792,6 +808,14 @@ export class AgentTaskQueue {
             });
             this.originalAreaId = null; // consume it
           }
+          // Notify other agents that this item is now released/available
+          if (this.activeItemId) {
+            window.dispatchEvent(
+              new CustomEvent("agent-item-released", {
+                detail: { agentId: this.agentId, itemId: this.activeItemId },
+              }),
+            );
+          }
           this.phase = "COMPLETED";
         }
         return { type: "STOP" };
@@ -829,6 +853,14 @@ export class AgentTaskQueue {
               destAreaId: this.originalAreaId,
             });
             this.originalAreaId = null; // consume it
+          }
+          // Notify other agents that this item is now released/available
+          if (this.activeItemId) {
+            window.dispatchEvent(
+              new CustomEvent("agent-item-released", {
+                detail: { agentId: this.agentId, itemId: this.activeItemId },
+              }),
+            );
           }
           this.phase = "COMPLETED";
         }
@@ -882,6 +914,14 @@ export class AgentTaskQueue {
               destAreaId: this.originalAreaId,
             });
             this.originalAreaId = null; // consume it
+          }
+          // Notify other agents that this item is now released/available
+          if (this.activeItemId) {
+            window.dispatchEvent(
+              new CustomEvent("agent-item-released", {
+                detail: { agentId: this.agentId, itemId: this.activeItemId },
+              }),
+            );
           }
           this.phase = "COMPLETED";
         }
@@ -1114,6 +1154,16 @@ export class AgentTaskQueue {
               `I couldn't place the item at the destination, so I set it down nearby.`,
             );
           }
+
+          // Notify other agents that this item is now released/available
+          if (this.activeItemId) {
+            window.dispatchEvent(
+              new CustomEvent("agent-item-released", {
+                detail: { agentId: this.agentId, itemId: this.activeItemId },
+              }),
+            );
+          }
+
           this.phase = "COMPLETED";
         }
 
@@ -1557,6 +1607,34 @@ class AgentTaskRegistry {
       taskCount: queue.isActive() ? 1 : 0,
       phase: queue.getCurrentPhase(),
     };
+  }
+
+  /**
+   * Check if any OTHER agent (excluding `excludeAgentId`) is currently using
+   * a specific item — either via task queue or by physically carrying it.
+   * Returns the agentId of the agent using it, or null if no one is.
+   */
+  public getAgentUsingItem(itemId: string, excludeAgentId: string): string | null {
+    // 1. Check task queues of all other agents
+    for (const [agentId, queue] of this.queues.entries()) {
+      if (agentId === excludeAgentId) continue;
+      if (queue.isUsingItem(itemId)) return agentId;
+    }
+
+    // 2. Check if the item is physically carried by another agent
+    const registry = InteractableRegistry.getInstance();
+    const item = registry.getById(itemId);
+    if (item?.carriedBy && item.carriedBy !== excludeAgentId && item.carriedBy !== "player") {
+      return item.carriedBy;
+    }
+
+    // 3. Check if the item is claimed by another agent
+    const claimant = registry.getItemClaimant(itemId);
+    if (claimant && claimant !== excludeAgentId) {
+      return claimant;
+    }
+
+    return null;
   }
 }
 

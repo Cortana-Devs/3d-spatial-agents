@@ -63,19 +63,30 @@ export const AgentCommunicationPanel: React.FC = () => {
         {messages.length === 0 ? (
           <div className={styles.commEmpty}>No messages yet.</div>
         ) : (
-          messages.map((m, idx) => (
-            <div
-              key={idx}
-              className={`${styles.commBubble} ${
-                m.role === "user" ? styles.commUser : styles.commAgent
-              }`}
-            >
-              <div className={styles.commAgentLabel}>
-                {m.role === "user" ? "Supervisor" : formatAgentLabel(m.agentId)}
+          messages.map((m, idx) => {
+            // Detect inter-agent negotiation messages by their emoji markers
+            const isNegotiation =
+              m.role === "agent" &&
+              /^[🔍🙋✋✅👍👌]/.test(m.text);
+
+            return (
+              <div
+                key={idx}
+                className={`${styles.commBubble} ${
+                  m.role === "user"
+                    ? styles.commUser
+                    : isNegotiation
+                      ? styles.commNegotiation
+                      : styles.commAgent
+                }`}
+              >
+                <div className={styles.commAgentLabel}>
+                  {m.role === "user" ? "Supervisor" : formatAgentLabel(m.agentId)}
+                </div>
+                <div className={styles.commText}>{m.text}</div>
               </div>
-              <div className={styles.commText}>{m.text}</div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

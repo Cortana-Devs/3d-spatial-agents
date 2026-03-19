@@ -647,6 +647,7 @@ export function useYukaAI(
 
     // --- PHYSICS (Gravity / Ground Detection) ---
     // FIX: Runs every frame (was every-other-frame, causing missed ground + free-fall)
+    // FIX: Agents no longer walk on workbenches — max step-up height limits Y snapping
     if (collidableMeshes.length > 0) {
       const raycaster = raycasterRef.current;
       const rayOrigin = rayOriginRef.current;
@@ -662,16 +663,47 @@ export function useYukaAI(
       let groundHeight = -100;
       let foundGround = false;
 
+      // Maximum height the agent can "step up" onto — anything higher is
+      // furniture (workbenches, tables) and must be ignored.
+      const MAX_STEP_UP = 0.3;
+      const currentY = vehicle.position.y;
+
       if (hits.length > 0) {
         // Filter out ceilings
         const validHits = hits.filter(
           (h) => !h.object.name.includes("Ceiling"),
         );
+
+        // Separate hits into reachable (floor-level) vs elevated (furniture)
+        let bestFloorHit = -100;  // Lowest valid surface (the actual floor)
+        let bestStepHit = -100;   // Surfaces within step-up range
+
         for (const hit of validHits) {
-          if (hit.point.y < rayOrigin.y) {
-            groundHeight = Math.max(groundHeight, hit.point.y);
-            foundGround = true;
+          if (hit.point.y >= rayOrigin.y) continue; // Above ray origin — skip
+
+          const hitY = hit.point.y;
+
+          // Is this surface within the agent's step-up range?
+          if (hitY <= currentY + MAX_STEP_UP) {
+            // Valid walkable surface — take the highest one within range
+            if (hitY > bestStepHit) {
+              bestStepHit = hitY;
+            }
           }
+
+          // Track the absolute lowest surface (floor)
+          if (hitY < currentY + MAX_STEP_UP && hitY > bestFloorHit) {
+            bestFloorHit = hitY;
+          }
+        }
+
+        // Prefer surfaces within step-up range; fall back to floor
+        if (bestStepHit > -100) {
+          groundHeight = bestStepHit;
+          foundGround = true;
+        } else if (bestFloorHit > -100) {
+          groundHeight = bestFloorHit;
+          foundGround = true;
         }
       }
 
