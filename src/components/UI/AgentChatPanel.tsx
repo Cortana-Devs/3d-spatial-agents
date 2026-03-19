@@ -217,24 +217,24 @@ export const AgentChatPanel: React.FC = () => {
           setCommonChatOpen(true);
 
           // Step 1: Requesting agent broadcasts asking about the item
-          const askMsg = `🔍 I need to take "${itemDisplayName}" — does anyone currently need it?`;
+          const askMsg = `I need to take "${itemDisplayName}" — does anyone currently need it?`;
           addCommonAgentMessage(agentId, { role: "agent", text: askMsg });
           addChatMessage(agentId, { role: "agent", text: askMsg });
 
           if (otherAgentUsingItem) {
             // Step 2a: Another agent IS using the item — they respond
             const otherAgentName = otherAgentUsingItem;
-            const responseMsg = `🙋 Yes, I'm currently working with "${itemDisplayName}". I still need it.`;
+            const responseMsg = `Yes, I'm currently working with "${itemDisplayName}". I still need it.`;
             addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: responseMsg });
             addChatMessage(otherAgentUsingItem, { role: "agent", text: responseMsg });
 
             // Step 3a: Requesting agent defers the task
-            const deferMsg = `✋ Understood, ${formatAgentLabel(otherAgentName)}. I'll wait — please inform me when you're finished with "${itemDisplayName}".`;
+            const deferMsg = `Understood, ${formatAgentLabel(otherAgentName)}. I'll wait — please inform me when you're finished with "${itemDisplayName}".`;
             addCommonAgentMessage(agentId, { role: "agent", text: deferMsg });
             addChatMessage(agentId, { role: "agent", text: deferMsg });
 
             // Step 4a: The other agent acknowledges
-            const ackMsg = `👍 Sure, I'll let you know once I'm done with "${itemDisplayName}".`;
+            const ackMsg = `Sure, I'll let you know once I'm done with "${itemDisplayName}".`;
             addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: ackMsg });
             addChatMessage(otherAgentUsingItem, { role: "agent", text: ackMsg });
 
@@ -246,11 +246,11 @@ export const AgentChatPanel: React.FC = () => {
                 window.removeEventListener("agent-item-released", handleItemReleased);
 
                 // The other agent finished — notify via communication panel
-                const notifyMsg = `✅ I've finished using "${itemDisplayName}". It's available now, ${formatAgentLabel(agentId)}!`;
+                const notifyMsg = `I've finished using "${itemDisplayName}". It's available now, ${formatAgentLabel(agentId)}!`;
                 useGameStore.getState().addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: notifyMsg });
                 useGameStore.getState().addChatMessage(otherAgentUsingItem, { role: "agent", text: notifyMsg });
 
-                const resumeMsg = `👌 Thanks! I'll go get "${itemDisplayName}" now.`;
+                const resumeMsg = `Thanks! I'll go get "${itemDisplayName}" now.`;
                 useGameStore.getState().addCommonAgentMessage(agentId, { role: "agent", text: resumeMsg });
                 useGameStore.getState().addChatMessage(agentId, { role: "agent", text: resumeMsg });
 
@@ -327,7 +327,7 @@ export const AgentChatPanel: React.FC = () => {
           // Step 2b: No other agent is using it — all agents respond "no"
           const allAgentIds = taskRegistry.getAllAgentIds();
           const otherAgents = allAgentIds.filter((id) => id !== agentId);
-          
+
           if (otherAgents.length > 0) {
             // Each other agent confirms they don't need it
             for (const otherId of otherAgents) {
@@ -662,9 +662,8 @@ export const AgentChatPanel: React.FC = () => {
         {chatMessages.map((msg, idx) => (
           <div
             key={idx}
-            className={`${styles.messageBubble} ${
-              msg.role === "user" ? styles.messageUser : styles.messageAgent
-            }`}
+            className={`${styles.messageBubble} ${msg.role === "user" ? styles.messageUser : styles.messageAgent
+              }`}
           >
             {msg.text}
           </div>
