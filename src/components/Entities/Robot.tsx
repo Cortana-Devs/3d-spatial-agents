@@ -71,13 +71,49 @@ export default function Robot({
     return { labCoat, shirt, pants, skin, shoes, hair, glasses, badge, eyeWhite, pupil };
   }, []);
 
+  const geos = useMemo(() => {
+    return {
+      hips: new THREE.CapsuleGeometry(0.45, 0.8, 12, 16),
+      waist: new THREE.CylinderGeometry(0.5, 0.6, 1.3, 16),
+      torso: new THREE.SphereGeometry(0.6, 16, 16),
+      badge: new THREE.BoxGeometry(0.3, 0.4, 0.04),
+      clip: new THREE.BoxGeometry(0.15, 0.06, 0.05),
+      pocket: new THREE.BoxGeometry(0.25, 0.2, 0.03),
+      pen: new THREE.CylinderGeometry(0.015, 0.015, 0.2, 6),
+      neck: new THREE.CylinderGeometry(0.18, 0.2, 0.3, 10),
+      head: new THREE.SphereGeometry(0.45, 16, 16),
+      hairCap: new THREE.SphereGeometry(0.42, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+      hairFill: new THREE.SphereGeometry(0.42, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      eye: new THREE.SphereGeometry(0.08, 10, 10),
+      pupil: new THREE.SphereGeometry(0.04, 8, 8),
+      lens: new THREE.TorusGeometry(0.11, 0.018, 8, 16),
+      bridge: new THREE.CylinderGeometry(0.015, 0.015, 0.12, 6),
+      temple: new THREE.CylinderGeometry(0.012, 0.012, 0.35, 6),
+      nose: new THREE.SphereGeometry(0.06, 8, 8),
+      mouth: new THREE.CapsuleGeometry(0.015, 0.12, 4, 6),
+      eyebrow: new THREE.BoxGeometry(0.16, 0.025, 0.03),
+      shoulder: new THREE.SphereGeometry(0.35, 12, 12),
+      upperArm: new THREE.CylinderGeometry(0.25, 0.3, 1.3, 10),
+      elbow: new THREE.SphereGeometry(0.28, 10, 10),
+      forearm: new THREE.CylinderGeometry(0.18, 0.22, 1.2, 10),
+      palm: new THREE.BoxGeometry(0.2, 0.25, 0.12),
+      thumb: new THREE.CapsuleGeometry(0.04, 0.1, 8, 8),
+      finger1: new THREE.CapsuleGeometry(0.035, 0.12, 8, 8),
+      finger2: new THREE.CapsuleGeometry(0.035, 0.16, 8, 8),
+      thigh: new THREE.CylinderGeometry(0.3, 0.35, 1.5, 10),
+      knee: new THREE.SphereGeometry(0.32, 10, 10),
+      calf: new THREE.CylinderGeometry(0.25, 0.28, 1.5, 10),
+      shoe: new THREE.SphereGeometry(0.3, 12, 12),
+    };
+  }, []);
+
   return (
     <group ref={groupRef} name="Robot">
       <group
         ref={(el) => {
           if (el && joints.current) joints.current.hips = el;
         }}
-        position={[0, 3.1, 0]}
+        position={[0, 3.3, 0]}
       >
         {/* Pelvis/Hips */}
         <mesh
@@ -85,9 +121,8 @@ export default function Robot({
           castShadow
           receiveShadow
           rotation={[0, 0, Math.PI / 2]}
-        >
-          <capsuleGeometry args={[0.45, 0.8, 12, 16]} />
-        </mesh>
+          geometry={geos.hips}
+        />
 
         <group
           ref={(el) => {
@@ -101,9 +136,8 @@ export default function Robot({
             material={mats.labCoat}
             castShadow
             receiveShadow
-          >
-            <cylinderGeometry args={[0.5, 0.6, 1.3, 16]} />
-          </mesh>
+            geometry={geos.waist}
+          />
 
           {/* Upper torso — lab coat body */}
           <mesh
@@ -112,51 +146,42 @@ export default function Robot({
             castShadow
             receiveShadow
             scale={[1.8, 1.6, 1.0]}
-          >
-            <sphereGeometry args={[0.6, 16, 16]} />
-          </mesh>
+            geometry={geos.torso}
+          />
 
           {/* ID Badge — green badge to distinguish player */}
           <mesh
             position={[0.45, 2.0, 0.62]}
             material={mats.badge}
-            castShadow
-          >
-            <boxGeometry args={[0.3, 0.4, 0.04]} />
-          </mesh>
+            geometry={geos.badge}
+          />
           {/* Badge clip */}
           <mesh
             position={[0.45, 2.22, 0.62]}
             material={mats.glasses}
-          >
-            <boxGeometry args={[0.15, 0.06, 0.05]} />
-          </mesh>
+            geometry={geos.clip}
+          />
 
           {/* Breast pocket on right side */}
           <mesh
             position={[-0.38, 2.05, 0.6]}
             material={mats.labCoat}
-            castShadow
-          >
-            <boxGeometry args={[0.25, 0.2, 0.03]} />
-          </mesh>
+            geometry={geos.pocket}
+          />
           {/* Pen in pocket */}
           <mesh
             position={[-0.38, 2.2, 0.62]}
             material={mats.badge}
             rotation={[0, 0, 0.05]}
-          >
-            <cylinderGeometry args={[0.015, 0.015, 0.2, 6]} />
-          </mesh>
+            geometry={geos.pen}
+          />
 
           {/* Neck */}
           <mesh
             position={[0, 2.5, 0]}
             material={mats.skin}
-            castShadow
-          >
-            <cylinderGeometry args={[0.18, 0.2, 0.3, 10]} />
-          </mesh>
+            geometry={geos.neck}
+          />
 
           {/* Head group */}
           <group
@@ -172,9 +197,8 @@ export default function Robot({
               castShadow
               receiveShadow
               scale={[0.9, 1.0, 0.95]}
-            >
-              <sphereGeometry args={[0.45, 16, 16]} />
-            </mesh>
+              geometry={geos.head}
+            />
 
             {/* Hair — top cap */}
             <mesh
@@ -182,76 +206,61 @@ export default function Robot({
               material={mats.hair}
               castShadow
               scale={[1.0, 0.5, 1.0]}
-            >
-              <sphereGeometry args={[0.42, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-            </mesh>
+              geometry={geos.hairCap}
+            />
             {/* Hair — sides & back fill */}
             <mesh
               position={[0, 0.55, -0.08]}
               material={mats.hair}
               castShadow
               scale={[1.02, 0.7, 1.05]}
-            >
-              <sphereGeometry args={[0.42, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
-            </mesh>
+              geometry={geos.hairFill}
+            />
 
             {/* Left Eye — white */}
-            <mesh position={[0.16, 0.48, 0.4]} material={mats.eyeWhite}>
-              <sphereGeometry args={[0.08, 10, 10]} />
-            </mesh>
+            <mesh position={[0.16, 0.48, 0.4]} material={mats.eyeWhite} geometry={geos.eye} />
             {/* Left Pupil */}
-            <mesh position={[0.16, 0.48, 0.47]} material={mats.pupil}>
-              <sphereGeometry args={[0.04, 8, 8]} />
-            </mesh>
+            <mesh position={[0.16, 0.48, 0.47]} material={mats.pupil} geometry={geos.pupil} />
             {/* Right Eye — white */}
-            <mesh position={[-0.16, 0.48, 0.4]} material={mats.eyeWhite}>
-              <sphereGeometry args={[0.08, 10, 10]} />
-            </mesh>
+            <mesh position={[-0.16, 0.48, 0.4]} material={mats.eyeWhite} geometry={geos.eye} />
             {/* Right Pupil */}
-            <mesh position={[-0.16, 0.48, 0.47]} material={mats.pupil}>
-              <sphereGeometry args={[0.04, 8, 8]} />
-            </mesh>
+            <mesh position={[-0.16, 0.48, 0.47]} material={mats.pupil} geometry={geos.pupil} />
 
             {/* Glasses — left lens frame */}
             <mesh
               position={[0.16, 0.48, 0.42]}
               material={mats.glasses}
               scale={[1.0, 1.0, 0.15]}
-            >
-              <torusGeometry args={[0.11, 0.018, 8, 16]} />
-            </mesh>
+              geometry={geos.lens}
+            />
             {/* Glasses — right lens frame */}
             <mesh
               position={[-0.16, 0.48, 0.42]}
               material={mats.glasses}
               scale={[1.0, 1.0, 0.15]}
-            >
-              <torusGeometry args={[0.11, 0.018, 8, 16]} />
-            </mesh>
+              geometry={geos.lens}
+            />
             {/* Glasses bridge */}
             <mesh
               position={[0, 0.48, 0.44]}
               material={mats.glasses}
               rotation={[0, 0, Math.PI / 2]}
-            >
-              <cylinderGeometry args={[0.015, 0.015, 0.12, 6]} />
-            </mesh>
+              geometry={geos.bridge}
+            />
             {/* Glasses temple — left */}
             <mesh
               position={[0.28, 0.48, 0.25]}
               material={mats.glasses}
               rotation={[0, Math.PI / 2.4, 0]}
-            >
-              <cylinderGeometry args={[0.012, 0.012, 0.35, 6]} />
-            </mesh>
+              geometry={geos.temple}
+            />
             {/* Glasses temple — right */}
             <mesh
               position={[-0.28, 0.48, 0.25]}
               material={mats.glasses}
               rotation={[0, -Math.PI / 2.4, 0]}
-            >
-              <cylinderGeometry args={[0.012, 0.012, 0.35, 6]} />
-            </mesh>
+              geometry={geos.temple}
+            />
 
             {/* Nose */}
             <mesh
@@ -259,9 +268,8 @@ export default function Robot({
               material={mats.skin}
               rotation={[0.3, 0, 0]}
               scale={[0.6, 1.0, 0.8]}
-            >
-              <sphereGeometry args={[0.06, 8, 8]} />
-            </mesh>
+              geometry={geos.nose}
+            />
 
             {/* Mouth */}
             <mesh
@@ -270,35 +278,32 @@ export default function Robot({
                 new THREE.MeshStandardMaterial({ color: 0xc49080, roughness: 0.7 })
               }
               rotation={[0, 0, Math.PI / 2]}
-            >
-              <capsuleGeometry args={[0.015, 0.12, 4, 6]} />
-            </mesh>
+              geometry={geos.mouth}
+            />
 
             {/* Eyebrows */}
             <mesh
               position={[0.16, 0.57, 0.42]}
               material={mats.hair}
               rotation={[0.1, 0, 0.1]}
-            >
-              <boxGeometry args={[0.16, 0.025, 0.03]} />
-            </mesh>
+              geometry={geos.eyebrow}
+            />
             <mesh
               position={[-0.16, 0.57, 0.42]}
               material={mats.hair}
               rotation={[0.1, 0, -0.1]}
-            >
-              <boxGeometry args={[0.16, 0.025, 0.03]} />
-            </mesh>
+              geometry={geos.eyebrow}
+            />
           </group>
 
           {/* Arms */}
-          <PlayerArm side="left" joints={joints} mats={mats} />
-          <PlayerArm side="right" joints={joints} mats={mats} />
+          <PlayerArm side="left" joints={joints} mats={mats} geos={geos} />
+          <PlayerArm side="right" joints={joints} mats={mats} geos={geos} />
         </group>
 
         {/* Legs */}
-        <PlayerLeg side="left" joints={joints} mats={mats} />
-        <PlayerLeg side="right" joints={joints} mats={mats} />
+        <PlayerLeg side="left" joints={joints} mats={mats} geos={geos} />
+        <PlayerLeg side="right" joints={joints} mats={mats} geos={geos} />
       </group>
     </group>
   );
@@ -321,10 +326,12 @@ function PlayerArm({
   side,
   joints,
   mats,
+  geos,
 }: {
   side: "left" | "right";
   joints: React.MutableRefObject<Joints>;
   mats: PlayerMats;
+  geos: any;
 }) {
   const dir = side === "left" ? 1 : -1;
   return (
@@ -338,13 +345,9 @@ function PlayerArm({
       position={[dir * 1.0, 2.2, 0]}
     >
       {/* Shoulder — lab coat */}
-      <mesh material={mats.labCoat} castShadow receiveShadow>
-        <sphereGeometry args={[0.35, 12, 12]} />
-      </mesh>
+      <mesh material={mats.labCoat} castShadow receiveShadow geometry={geos.shoulder} />
       {/* Upper arm — lab coat sleeve */}
-      <mesh position={[0, -0.7, 0]} material={mats.labCoat} castShadow receiveShadow>
-        <cylinderGeometry args={[0.25, 0.3, 1.3, 10]} />
-      </mesh>
+      <mesh position={[0, -0.7, 0]} material={mats.labCoat} castShadow receiveShadow geometry={geos.upperArm} />
       <group
         ref={(el) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -355,33 +358,24 @@ function PlayerArm({
         position={[0, -1.4, 0]}
       >
         {/* Elbow — rolled-up sleeve cuff */}
-        <mesh material={mats.labCoat} castShadow receiveShadow>
-          <sphereGeometry args={[0.28, 10, 10]} />
-        </mesh>
+        <mesh material={mats.labCoat} castShadow receiveShadow geometry={geos.elbow} />
         {/* Forearm — exposed skin (sleeves rolled up) */}
         <mesh
           position={[0, -0.6, 0]}
           material={mats.skin}
           castShadow
           receiveShadow
-        >
-          <cylinderGeometry args={[0.18, 0.22, 1.2, 10]} />
-        </mesh>
+          geometry={geos.forearm}
+        />
         {/* Hand with Fingers */}
         <group position={[0, -1.3, 0]}>
           {/* Palm */}
-          <mesh material={mats.skin} castShadow position={[0, -0.05, 0]}>
-            <boxGeometry args={[0.2, 0.25, 0.12]} />
-          </mesh>
+          <mesh material={mats.skin} castShadow position={[0, -0.05, 0]} geometry={geos.palm} />
           {/* Thumb */}
-          <mesh material={mats.skin} castShadow position={[-dir * 0.12, -0.05, 0.05]} rotation={[Math.PI / 8, 0, -dir * Math.PI / 6]}>
-            <capsuleGeometry args={[0.04, 0.1, 8, 8]} />
-          </mesh>
+          <mesh material={mats.skin} castShadow position={[-dir * 0.12, -0.05, 0.05]} rotation={[Math.PI / 8, 0, -dir * Math.PI / 6]} geometry={geos.thumb} />
           {/* Fingers */}
           {[-0.07, 0, 0.07].map((x, i) => (
-            <mesh key={`finger-${i}`} material={mats.skin} castShadow position={[x, -0.22 - (i === 1 ? 0.02 : 0), 0]}>
-              <capsuleGeometry args={[0.035, 0.12 + (i === 1 ? 0.04 : 0), 8, 8]} />
-            </mesh>
+            <mesh key={`finger-${i}`} material={mats.skin} castShadow position={[x, -0.22 - (i === 1 ? 0.02 : 0), 0]} geometry={i === 1 ? geos.finger2 : geos.finger1} />
           ))}
         </group>
       </group>
@@ -393,10 +387,12 @@ function PlayerLeg({
   side,
   joints,
   mats,
+  geos,
 }: {
   side: "left" | "right";
   joints: React.MutableRefObject<Joints>;
   mats: PlayerMats;
+  geos: any;
 }) {
   const dir = side === "left" ? 1 : -1;
   return (
@@ -412,9 +408,8 @@ function PlayerLeg({
         material={mats.pants}
         castShadow
         receiveShadow
-      >
-        <cylinderGeometry args={[0.3, 0.35, 1.5, 10]} />
-      </mesh>
+        geometry={geos.thigh}
+      />
       <group
         ref={(el) => {
           if (el && joints.current) joints.current[`${side}Knee`] = el;
@@ -422,18 +417,15 @@ function PlayerLeg({
         position={[0, -1.5, 0]}
       >
         {/* Knee joint */}
-        <mesh material={mats.pants} castShadow receiveShadow>
-          <sphereGeometry args={[0.32, 10, 10]} />
-        </mesh>
+        <mesh material={mats.pants} castShadow receiveShadow geometry={geos.knee} />
         {/* Lower leg — dark pants */}
         <mesh
           position={[0, -0.75, 0]}
           material={mats.pants}
           castShadow
           receiveShadow
-        >
-          <cylinderGeometry args={[0.25, 0.28, 1.5, 10]} />
-        </mesh>
+          geometry={geos.calf}
+        />
         {/* Comfortable lab shoes */}
         <mesh
           position={[0, -1.6, 0.15]}
@@ -441,9 +433,8 @@ function PlayerLeg({
           castShadow
           receiveShadow
           scale={[1, 0.7, 1.6]}
-        >
-          <sphereGeometry args={[0.3, 12, 12]} />
-        </mesh>
+          geometry={geos.shoe}
+        />
       </group>
     </group>
   );

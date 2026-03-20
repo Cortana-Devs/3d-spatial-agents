@@ -78,8 +78,19 @@ export function useYukaAI(
   const lookAheadRef = useRef(new THREE.Vector3());
   const sensorPosRef = useRef(new THREE.Vector3());
   const safetyTargetRef = useRef(new THREE.Vector3(0, 0, -330));
-
   const toSafetyRef = useRef(new THREE.Vector3());
+
+  // Tier 1: Per-frame allocation elimination — all reusable Vector3/Quaternion objects
+  // hoisted as refs so they are never re-allocated inside useFrame callbacks.
+  const vehiclePosRef = useRef(new THREE.Vector3());
+  const toTargetRef = useRef(new THREE.Vector3());
+  const toPlayerRef = useRef(new THREE.Vector3());
+  const forwardRef = useRef(new THREE.Vector3());
+  const leftRef = useRef(new THREE.Vector3());
+  const rightRef = useRef(new THREE.Vector3());
+  const normalRef = useRef(new THREE.Vector3());
+  const yAxisRef = useRef(new THREE.Vector3(0, 1, 0)); // World up — constant, never mutated
+  const zAxisRef = useRef(new THREE.Vector3(0, 0, 1)); // World forward — constant, never mutated
 
   // Animation smoothing
   const {
@@ -273,6 +284,15 @@ export function useYukaAI(
     };
   }, [obstacles]);
 
+  // Set raycaster to only intersect with objects on Layer 1 (Collidables)
+  useEffect(() => {
+    raycasterRef.current.layers.set(1);
+  }, []);
+
+  const frustumRef = useRef(new THREE.Frustum());
+  const projScreenMatrixRef = useRef(new THREE.Matrix4());
+  const agentSphereRef = useRef(new THREE.Sphere(new THREE.Vector3(), 3));
+
   useFrame((state, delta) => {
     // Remote Logic: Update inspected agent data
     if (id === inspectedAgentId) {
@@ -292,7 +312,7 @@ export function useYukaAI(
 
     // --- MANUAL TASK QUEUE UPDATE ---
     const taskQueue = taskQueueRef.current;
-    const vehiclePos = new THREE.Vector3(
+    const vehiclePos = vehiclePosRef.current.set(
       vehicle.position.x,
       vehicle.position.y,
       vehicle.position.z,
@@ -353,14 +373,14 @@ export function useYukaAI(
 
         // Fix #11/#23: Face the interaction target if provided
         if (steeringCmd.faceTarget && groupRef.current) {
-          const toTarget = new THREE.Vector3(
+          const toTarget = toTargetRef.current.set(
             steeringCmd.faceTarget.x - vehicle.position.x,
             0,
             steeringCmd.faceTarget.z - vehicle.position.z,
           );
           if (toTarget.lengthSq() > 0.01) {
             const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, 1),
+              zAxisRef.current,
               toTarget.normalize(),
             );
             vehicle.rotation.copy(targetQuat as unknown as YUKA.Quaternion);
@@ -372,19 +392,20 @@ export function useYukaAI(
     // --- WALL AVOIDANCE (Multi-Ray + Sliding) ---
     // FIX: Uses raw `delta` instead of `dt` (which was delta*15, causing 15x overstrength)
     // FIX: Clamps total push magnitude to prevent corner-squeeze teleports
-    if (collidableMeshes.length > 0) {
+    // PERF: Throttle wall avoidance to every 2nd frame to save CPU on raycasts
+    if (frameRef.current % 2 === 0 && collidableMeshes.length > 0) {
       const speed = vehicle.velocity.length();
       if (speed > 0.1) {
         // Rays: Center, Left (30deg), Right (30deg)
-        const forward = new THREE.Vector3()
-          .copy(vehicle.velocity as unknown as THREE.Vector3)
+        const forward = forwardRef.current
+          .set(vehicle.velocity.x, vehicle.velocity.y, vehicle.velocity.z)
           .normalize();
-        const left = new THREE.Vector3()
+        const left = leftRef.current
           .copy(forward)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 6);
-        const right = new THREE.Vector3()
+          .applyAxisAngle(yAxisRef.current, Math.PI / 6);
+        const right = rightRef.current
           .copy(forward)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 6);
+          .applyAxisAngle(yAxisRef.current, -Math.PI / 6);
 
         const directions = [forward, left, right];
         const raycaster = raycasterRef.current;
@@ -408,7 +429,7 @@ export function useYukaAI(
             const hit = hits[0];
             const dist = hit.distance;
 
-            let normal = new THREE.Vector3();
+            let normal = normalRef.current.set(0, 0, 0);
             if (hit.face) {
               normal
                 .copy(hit.face.normal)
@@ -416,9 +437,10 @@ export function useYukaAI(
                 .normalize();
             } else {
               normal
-                .subVectors(
-                  vehicle.position as unknown as THREE.Vector3,
-                  hit.point,
+                .set(
+                  vehicle.position.x - hit.point.x,
+                  vehicle.position.y - hit.point.y,
+                  vehicle.position.z - hit.point.z,
                 )
                 .normalize();
               normal.y = 0;
@@ -494,14 +516,14 @@ export function useYukaAI(
 
           // Face the player
           if (groupRef.current && playerRef.current) {
-            const toPlayer = new THREE.Vector3(
+            const toPlayer = toPlayerRef.current.set(
               playerRef.current.position.x - vehicle.position.x,
               0,
               playerRef.current.position.z - vehicle.position.z,
             );
             if (toPlayer.lengthSq() > 0.01) {
               const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-                new THREE.Vector3(0, 0, 1),
+                zAxisRef.current,
                 toPlayer.normalize(),
               );
               vehicle.rotation.copy(targetQuat as unknown as YUKA.Quaternion);
@@ -556,14 +578,14 @@ export function useYukaAI(
 
         // Face the player continuously during chat
         if (groupRef.current && playerRef.current) {
-          const toPlayer = new THREE.Vector3(
+          const toPlayer = toPlayerRef.current.set(
             playerRef.current.position.x - vehicle.position.x,
             0,
             playerRef.current.position.z - vehicle.position.z,
           );
           if (toPlayer.lengthSq() > 0.01) {
             const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, 1),
+              zAxisRef.current,
               toPlayer.normalize(),
             );
             groupRef.current.quaternion.slerp(targetQuat, 0.05);
@@ -753,8 +775,17 @@ export function useYukaAI(
     ) {
       // SKIP BRAIN: Agent is interacting with player — thoughts are set by proximity state machine
     } else if (frameRef.current % brainIntervalRef.current === 0) {
-      // SKIP BRAIN IF FOLLOWING (Manual Override)
-      if (followingAgentId === id) {
+      // Throttle brain based on distance
+      let shouldSkipDueToDistance = false;
+      if (playerRef.current) {
+        const d = vehicle.position.distanceTo(playerRef.current.position as unknown as YUKA.Vector3);
+        if (d > 50 && Math.random() < 0.66) shouldSkipDueToDistance = true;
+        else if (d > 25 && Math.random() < 0.5) shouldSkipDueToDistance = true;
+      }
+
+      if (shouldSkipDueToDistance) {
+        // Skipped
+      } else if (followingAgentId === id) {
         // Follow mode - handled above via task queue or legacy
       } else if (
         taskQueue.isBusy() &&
@@ -1118,6 +1149,15 @@ export function useYukaAI(
     }
 
     // --- ANIMATION UPDATE (Procedural) ---
+    const frustum = frustumRef.current;
+    const projScreenMatrix = projScreenMatrixRef.current;
+    projScreenMatrix.multiplyMatrices(state.camera.projectionMatrix, state.camera.matrixWorldInverse);
+    frustum.setFromProjectionMatrix(projScreenMatrix);
+    const agentSphere = agentSphereRef.current;
+    agentSphere.center.copy(vehicle.position as unknown as THREE.Vector3);
+    const isVisible = frustum.intersectsSphere(agentSphere);
+
+    if (isVisible) {
     // Apply internal procedural gait engine. We must use real delta, NOT the 15x physical simulation dt.
     const realDelta = Math.min(delta, 0.1);
     const strideLength = 5.5; // AI agents need a longer stride for a relaxed walk
@@ -1287,6 +1327,7 @@ export function useYukaAI(
         );
       }
     }
+    } // End if (isVisible)
 
     // Carried items are hidden (invisible) while being transported.
     // They reappear at the destination when placed.

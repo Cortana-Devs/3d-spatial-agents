@@ -407,6 +407,9 @@ export default function ResearchLabHub() {
           id: "ground-main",
           name: "Lab Ground",
         }}
+        onUpdate={(self) => {
+          self.layers.enable(1); // Enable Layer 1 for AI ground detection
+        }}
       >
         <boxGeometry args={[bWidth + 10, 5, bDepth + 10]} />
         <meshStandardMaterial color="#2a2f38" />
@@ -425,6 +428,9 @@ export default function ResearchLabHub() {
               type: "Structure",
               id: f.name || `floor-${i}`,
               name: "Lab Floor",
+            }}
+            onUpdate={(self) => {
+              self.layers.enable(1); // Enable Layer 1 for ground detection raycasts
             }}
           >
             <boxGeometry args={f.args} />
@@ -464,6 +470,9 @@ export default function ResearchLabHub() {
                 name: w.name.replace(/-/g, " "),
               }
             }
+            onUpdate={(self) => {
+              self.layers.enable(1); // Enable Layer 1 for wall avoidance raycasts
+            }}
           >
             <boxGeometry args={[w.args[0], w.args[1], w.args[2]]} />
             {/* @ts-ignore */}
@@ -1318,6 +1327,7 @@ export default function ResearchLabHub() {
         color="#f0f4ff"
         intensity={1400}
         distance={60}
+        castShadow={false}
         userData={{
           type: "Device",
           id: "light-conf",
@@ -1332,6 +1342,7 @@ export default function ResearchLabHub() {
         color="#e8ecff"
         intensity={1000}
         distance={60}
+        castShadow={false}
         userData={{
           type: "Device",
           id: "light-storage",

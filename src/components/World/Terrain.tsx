@@ -24,7 +24,7 @@ export default function Terrain() {
 
     // --- Terrain Generation ---
     const { geometry } = useMemo(() => {
-        const geo = new THREE.PlaneGeometry(500, 500, 128, 128);
+        const geo = new THREE.PlaneGeometry(500, 500, 64, 64);
         const posAttribute = geo.attributes.position;
         const vertex = new THREE.Vector3();
 
@@ -244,7 +244,7 @@ function RockInstances({ data, material }: { data: { matrix: THREE.Matrix4 }[], 
     }, [data]);
 
     return (
-        <instancedMesh ref={meshRef} args={[undefined, undefined, data.length]} castShadow receiveShadow material={material}>
+        <instancedMesh ref={meshRef} args={[undefined, undefined, data.length]} receiveShadow material={material}>
             <dodecahedronGeometry args={[1, 1]} />
         </instancedMesh>
     );
@@ -289,7 +289,7 @@ function TreeInstances({ trunkData, leafData, woodMat, leafMat }: { trunkData: T
             <instancedMesh ref={trunkRef} args={[undefined, undefined, trunkData.length]} castShadow receiveShadow material={woodMat}>
                 <cylinderGeometry args={[0.8, 0.8, 2, 7]} />
             </instancedMesh>
-            <instancedMesh ref={leafRef} args={[undefined, undefined, leafData.length]} castShadow material={leafMat}>
+            <instancedMesh ref={leafRef} args={[undefined, undefined, leafData.length]} material={leafMat}>
                 <primitive object={leafGeo} attach="geometry" />
             </instancedMesh>
         </group>

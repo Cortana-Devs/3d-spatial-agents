@@ -64,58 +64,24 @@ export default function ObjectHighlighter() {
     }
   }, [placingTargetType, placingTargetId]);
 
+  // Hoisted per-frame temporaries — avoids GC pressure on every rendered frame
+  const worldPosRef = useRef(new THREE.Vector3());
+  const worldQuatRef = useRef(new THREE.Quaternion());
+  const worldScaleRef = useRef(new THREE.Vector3());
+
   useFrame((state) => {
     if (!targetMesh || !cloneRef.current || !materialRef.current) return;
 
-    // Follow the target mesh
-    // Note: If the target mesh is animated (skinned mesh), this static clone won't match perfectly.
-    // For simple rigid bodies (furniture, items), this is fine.
-    // We need world position/rotation/scale.
-
-    const worldPos = new THREE.Vector3();
-    const worldQuat = new THREE.Quaternion();
-    const worldScale = new THREE.Vector3();
-
+    // Follow the target mesh using pre-allocated temporaries (no per-frame alloc)
     targetMesh.updateMatrixWorld();
-    targetMesh.matrixWorld.decompose(worldPos, worldQuat, worldScale);
+    targetMesh.matrixWorld.decompose(worldPosRef.current, worldQuatRef.current, worldScaleRef.current);
 
-    cloneRef.current.position.copy(worldPos);
-    cloneRef.current.quaternion.copy(worldQuat);
-    cloneRef.current.scale.copy(worldScale);
+    cloneRef.current.position.copy(worldPosRef.current);
+    cloneRef.current.quaternion.copy(worldQuatRef.current);
+    cloneRef.current.scale.copy(worldScaleRef.current);
 
-    // Update Shader Uniforms
-    const cameraParams = state.camera.position;
-    // We need view vector from camera to object
-    // Or actually, usually Rim Light uses view vector relative to camera
-    // Standard Rim Light: dot(normal, viewDir)
-    // ViewDir is usually (cameraPos - vertexPos).
-
-    // In our simplified vertex shader:
-    // vNormel = normalize(normalMatrix * viewVector);
-    // checks alignment of Normal with View.
-    // Ideally pass camera position to shader or calculate view vector in vertex shader.
-
-    // Let's improve the shader mechanism slightly.
-    // Standard Rim: 1.0 - dot(normal, viewDir)
-    // viewVector in shader usually implies camera position?
-    // Let's pass camera position as viewVector for now? No, vertex shader expects a direction?
-    // "uniform vec3 viewVector"
-
-    // Actually, let's use a simpler approach which is standard:
-    // varying vec3 vNormal;
-    // varying vec3 vViewPosition;
-    // void main() {
-    //   vNormal = normalize(normalMatrix * normal);
-    //   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    //   vViewPosition = -mvPosition.xyz;
-    //   gl_Position = projectionMatrix * mvPosition;
-    // }
-    // Fragment:
-    // float intensity = pow(1.0 - dot(vNormal, normalize(vViewPosition)), 3.0);
-
-    // Let's stick to the one I wrote but feed it correctly.
-    // The previous shader code looks like it expects a direct view vector.
-    // Let's rewrite the shader to be robust.
+    // Update Shader Uniforms — pass camera position as the view vector (rim light)
+    materialRef.current.uniforms.viewVector.value.copy(state.camera.position);
   });
 
   // Create a clone of geometry if available

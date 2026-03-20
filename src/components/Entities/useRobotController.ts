@@ -61,6 +61,16 @@ export function useRobotController(
   const gridUpdateTimer = useRef(0);
   const lastPlayerPosLog = useRef(new THREE.Vector3(0, 0, 0));
 
+  // Tier 1: Per-frame allocation elimination — hoisted as refs so they are
+  // never re-allocated inside the useFrame loop, preventing GC pressure.
+  const camForwardRef = useRef(new THREE.Vector3());
+  const camRightRef = useRef(new THREE.Vector3());
+  const moveDirRef = useRef(new THREE.Vector3());
+  const rayOriginRef = useRef(new THREE.Vector3());
+  const playerVelRef = useRef(new THREE.Vector3());
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const raycastDirRef = useRef(new THREE.Vector3(0, -1, 0)); // World-down — constant, never mutated
+
   const keyBindings = useGameStore((state) => state.keyBindings);
 
   // Input Handling
@@ -640,18 +650,15 @@ export function useRobotController(
       inputZ /= len;
     }
 
-    const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
-      camera.quaternion,
-    );
+    const camForward = camForwardRef.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
     camForward.y = 0;
     camForward.normalize();
-    const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(
-      camera.quaternion,
-    );
+    
+    const camRight = camRightRef.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
     camRight.y = 0;
     camRight.normalize();
 
-    const moveDir = new THREE.Vector3();
+    const moveDir = moveDirRef.current.set(0, 0, 0);
     moveDir.addScaledVector(camForward, inputZ);
     moveDir.addScaledVector(camRight, -inputX);
     if (moveDir.lengthSq() > 0) moveDir.normalize();
@@ -763,10 +770,10 @@ export function useRobotController(
 
       let groundHeight = -10;
       if (collidableMeshes.length > 0) {
-        const raycaster = new THREE.Raycaster();
-        const rayOrigin = mesh.position.clone();
+        const raycaster = raycasterRef.current;
+        const rayOrigin = rayOriginRef.current.copy(mesh.position);
         rayOrigin.y += 50;
-        raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
+        raycaster.set(rayOrigin, raycastDirRef.current);
         const hits = raycaster.intersectObjects(collidableMeshes, true);
         if (hits.length > 0) {
           const validHits = hits.filter(
@@ -803,9 +810,10 @@ export function useRobotController(
       setPlayerPosition(mesh.position.clone());
     }
 
-    const playerVel = isMoving
-      ? new THREE.Vector3().copy(moveDir).multiplyScalar(currentSpeed)
-      : new THREE.Vector3(0, 0, 0);
+    const playerVel = playerVelRef.current.set(0, 0, 0);
+    if (isMoving) {
+      playerVel.copy(moveDir).multiplyScalar(currentSpeed);
+    }
     const playerStride = isSprinting ? 7.5 : 6.0;
 
     gait.update(playerVel, dt, {

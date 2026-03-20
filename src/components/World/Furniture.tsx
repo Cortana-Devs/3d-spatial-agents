@@ -30,6 +30,21 @@ const glassMaterial = new THREE.MeshPhysicalMaterial({
 const lightGlowMaterial = new THREE.MeshBasicMaterial({ color: "#f0f4ff" });
 const lightOffMaterial = new THREE.MeshStandardMaterial({ color: "#555555" });
 
+// Shared Materials for deduplication
+const cushionMaterial = new THREE.MeshStandardMaterial({ color: "#2c3e50", roughness: 0.8 });
+const primaryMetalMaterial = new THREE.MeshStandardMaterial({ color: "#d0d4da", roughness: 0.3, metalness: 0.4 });
+const secondaryMetalMaterial = new THREE.MeshStandardMaterial({ color: "#d0d4da", roughness: 0.35, metalness: 0.02 });
+const filingCabinetMaterial = new THREE.MeshStandardMaterial({ color: "#3a5a6e", roughness: 0.7 });
+const offWhiteMaterial = new THREE.MeshStandardMaterial({ color: "#eef0f4", roughness: 0.2, metalness: 0.05 });
+const darkSlateMaterial = new THREE.MeshStandardMaterial({ color: "#2a3a3e", roughness: 0.3, metalness: 0.1 });
+const serverRackMaterial = new THREE.MeshStandardMaterial({ color: "#3a4a4e", roughness: 0.5, metalness: 0.05 });
+const lightPanelMaterial = new THREE.MeshStandardMaterial({ color: "#c8ccd2", roughness: 0.4 });
+const switchPlateMaterial = new THREE.MeshStandardMaterial({ color: "#eeeeee" });
+const switchToggleMaterial = new THREE.MeshStandardMaterial({ color: "#ffffff" });
+const indicatorOnMaterial = new THREE.MeshBasicMaterial({ color: "#00ff00" });
+const indicatorOffMaterial = new THREE.MeshBasicMaterial({ color: "#ff0000" });
+const accentGreenMaterial = new THREE.MeshStandardMaterial({ color: "#00c8a0", roughness: 0.3, metalness: 0.4 });
+
 // --- CEILING LIGHT ---
 export interface CeilingLightProps {
   position: [number, number, number];
@@ -45,14 +60,14 @@ export function CeilingLight({
   color = "#ffffff",
   intensity = 1.0,
   distance = 60,
+  castShadow = false,
   userData,
-}: CeilingLightProps & { userData?: any }) {
+}: CeilingLightProps & { castShadow?: boolean; userData?: any }) {
   return (
     <group position={new THREE.Vector3(...position)} userData={userData}>
       {/* Fixture Base */}
-      <mesh position={[0, 0.5, 0]} castShadow>
+      <mesh position={[0, 0.5, 0]} castShadow material={primaryMetalMaterial}>
         <cylinderGeometry args={[2, 2, 1, 16]} />
-        <meshStandardMaterial color="#d0d4da" roughness={0.3} metalness={0.4} />
       </mesh>
       {/* Bulb / Diffuser */}
       <mesh position={[0, -0.5, 0]}>
@@ -70,7 +85,7 @@ export function CeilingLight({
           distance={distance}
           decay={2}
           color={color}
-          castShadow
+          castShadow={castShadow}
           shadow-bias={-0.0001}
         />
       )}
@@ -137,19 +152,16 @@ export function WallSwitch({
   return (
     <group position={posVec} rotation={[0, rotation, 0]} userData={userData}>
       {/* Switch Plate */}
-      <mesh position={[0, 0, 0.05]} receiveShadow>
+      <mesh position={[0, 0, 0.05]} receiveShadow material={switchPlateMaterial}>
         <boxGeometry args={[1.2, 2.0, 0.1]} />
-        <meshStandardMaterial color="#eeeeee" />
       </mesh>
       {/* Switch Toggle */}
-      <mesh position={[0, 0, 0.15]} rotation={[isOn ? -0.2 : 0.2, 0, 0]}>
+      <mesh position={[0, 0, 0.15]} rotation={[isOn ? -0.2 : 0.2, 0, 0]} material={switchToggleMaterial}>
         <boxGeometry args={[0.5, 1.0, 0.2]} />
-        <meshStandardMaterial color="#ffffff" />
       </mesh>
       {/* Indicator Light */}
-      <mesh position={[0, 0.6, 0.1]}>
+      <mesh position={[0, 0.6, 0.1]} material={isOn ? indicatorOnMaterial : indicatorOffMaterial}>
         <circleGeometry args={[0.1, 16]} />
-        <meshBasicMaterial color={isOn ? "#00ff00" : "#ff0000"} />
       </mesh>
     </group>
   );
@@ -244,14 +256,12 @@ export function OfficeChair({
       userData={userData}
     >
       {/* Seat — dark cushion */}
-      <mesh position={[0, 2.2, 0]} castShadow receiveShadow>
+      <mesh position={[0, 2.2, 0]} castShadow receiveShadow material={cushionMaterial}>
         <boxGeometry args={[3, 0.5, 3]} />
-        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
       </mesh>
       {/* Backrest — dark cushion with slight curve */}
-      <mesh position={[0, 4.0, -1.4]} castShadow receiveShadow>
+      <mesh position={[0, 4.0, -1.4]} castShadow receiveShadow material={cushionMaterial}>
         <boxGeometry args={[3, 3.5, 0.5]} />
-        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
       </mesh>
       {/* Chrome gas cylinder */}
       <mesh position={[0, 1.0, 0]} castShadow material={metalMaterial}>
@@ -313,9 +323,8 @@ export function ConferencePad({
         <boxGeometry args={[3.5, 0.1, 3.5]} />
       </mesh>
       {/* Visual Desk Pad (Lab mat) */}
-      <mesh position={[0, 0, 0]} receiveShadow>
+      <mesh position={[0, 0, 0]} receiveShadow material={filingCabinetMaterial}>
         <boxGeometry args={[7.5, 0.05, 3.5]} />
-        <meshStandardMaterial color="#3a5a6e" roughness={0.7} />
       </mesh>
     </group>
   );
@@ -423,9 +432,17 @@ export function ConferenceTable({
       userData={userData}
     >
       {/* Main Rectangular Table Top — lab surface */}
-      <mesh ref={surfaceRef} position={[0, 4, 0]} castShadow receiveShadow>
+      <mesh
+        ref={surfaceRef}
+        position={[0, 4, 0]}
+        castShadow
+        receiveShadow
+        material={offWhiteMaterial}
+        onUpdate={(self) => {
+          self.layers.enable(1); // Enable Layer 1 for raycasting
+        }}
+      >
         <boxGeometry args={[40, 0.8, 20]} />
-        <meshStandardMaterial color="#eef0f4" roughness={0.2} metalness={0.05} />
       </mesh>
 
       {/* Center Placing Area */}
@@ -621,9 +638,8 @@ export function OfficeDesk({
         </mesh>
 
         {/* Visual Desk Pad (Lab anti-static mat) */}
-        <mesh position={[0, 0.205, 0]} receiveShadow>
+        <mesh position={[0, 0.205, 0]} receiveShadow material={filingCabinetMaterial}>
           <boxGeometry args={[10.2, 0.05, 3.2]} />
-          <meshStandardMaterial color="#3a5a6e" roughness={0.7} />
         </mesh>
       </group>
 
@@ -633,22 +649,22 @@ export function OfficeDesk({
         castShadow
         receiveShadow
         material={whitePlastic}
+        onUpdate={(self) => {
+          self.layers.enable(1); // Enable Layer 1 for raycasting
+        }}
       >
         <boxGeometry args={[12, 0.4, 6]} />
       </mesh>
       {/* Cabinets — light gray laminate */}
-      <mesh position={[-5, 1.8, 0]} castShadow receiveShadow>
+      <mesh position={[-5, 1.8, 0]} castShadow receiveShadow material={secondaryMetalMaterial}>
         <boxGeometry args={[1.8, 3.6, 5]} />
-        <meshStandardMaterial color="#d0d4da" roughness={0.35} metalness={0.02} />
       </mesh>
-      <mesh position={[5, 1.8, 0]} castShadow receiveShadow>
+      <mesh position={[5, 1.8, 0]} castShadow receiveShadow material={secondaryMetalMaterial}>
         <boxGeometry args={[1.8, 3.6, 5]} />
-        <meshStandardMaterial color="#d0d4da" roughness={0.35} metalness={0.02} />
       </mesh>
       {/* Back Panel — light lab panel */}
-      <mesh position={[0, 2.5, -2.0]} castShadow receiveShadow>
+      <mesh position={[0, 2.5, -2.0]} castShadow receiveShadow material={lightPanelMaterial}>
         <boxGeometry args={[8, 2.5, 0.2]} />
-        <meshStandardMaterial color="#c8ccd2" roughness={0.4} />
       </mesh>
 
       {/* PC Placing Slot (back center) */}
@@ -784,15 +800,21 @@ export function LabWorkbench({
       userData={userData}
     >
       {/* Heavy workbench top — industrial epoxy surface */}
-      <mesh position={[0, topHeight, 0]} castShadow receiveShadow>
+      <mesh
+        position={[0, topHeight, 0]}
+        castShadow
+        receiveShadow
+        material={darkSlateMaterial}
+        onUpdate={(self) => {
+          self.layers.enable(1); // Enable Layer 1 for raycasting
+        }}
+      >
         <boxGeometry args={[benchWidth, topThickness, benchDepth]} />
-        <meshStandardMaterial color="#2a3a3e" roughness={0.3} metalness={0.1} />
       </mesh>
 
       {/* Front edge trim — bright accent strip */}
-      <mesh position={[0, topHeight, benchDepth / 2 + 0.05]} castShadow>
+      <mesh position={[0, topHeight, benchDepth / 2 + 0.05]} castShadow material={accentGreenMaterial}>
         <boxGeometry args={[benchWidth, topThickness * 0.6, 0.1]} />
-        <meshStandardMaterial color="#00c8a0" roughness={0.3} metalness={0.4} />
       </mesh>
 
       {/* Placing area slots (invisible) */}
@@ -843,9 +865,8 @@ export function LabWorkbench({
       </mesh>
 
       {/* Lower utility shelf */}
-      <mesh position={[0, 1.2, 0]} castShadow receiveShadow>
+      <mesh position={[0, 1.2, 0]} castShadow receiveShadow material={serverRackMaterial}>
         <boxGeometry args={[benchWidth - 4, 0.15, benchDepth - 2.5]} />
-        <meshStandardMaterial color="#3a4a4e" roughness={0.5} metalness={0.05} />
       </mesh>
 
       {children}
