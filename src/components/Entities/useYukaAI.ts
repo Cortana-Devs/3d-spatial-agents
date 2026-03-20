@@ -201,8 +201,19 @@ export function useYukaAI(
     vehicle.mass = 2.0;
     vehicle.boundingRadius = 1.0; // TUNED: 1.0 fits the robot footprint perfectly (was 2.0)
 
-    // Sync initial position
-    vehicle.position.copy(groupRef.current.position as unknown as YUKA.Vector3);
+    // Sync initial position — XZ from the group reference is correct.
+    // Y is *always* forced to FLOOR_Y (5.5) regardless of where groupRef.current
+    // drifted to in previous frames. This reflects the real lab floor surface 
+    // at Y=5.5 (ground-main).
+    const FLOOR_Y = 5.5; 
+    vehicle.position.set(
+      groupRef.current.position.x,
+      FLOOR_Y,
+      groupRef.current.position.z,
+    );
+    // Also correct the Three.js mesh so the render-sync callback doesn't
+    // immediately write a stale sunken Y back on the first Yuka update tick.
+    groupRef.current.position.y = FLOOR_Y;
     vehicle.rotation.copy(
       groupRef.current.quaternion as unknown as YUKA.Quaternion,
     );
@@ -654,7 +665,7 @@ export function useYukaAI(
 
       rayOrigin.set(
         vehicle.position.x,
-        vehicle.position.y + 5.0,
+        vehicle.position.y + 20.0, // Increased to match player controller robustness
         vehicle.position.z,
       );
       raycaster.set(rayOrigin, rayDirRef.current);
@@ -663,9 +674,10 @@ export function useYukaAI(
       let groundHeight = -100;
       let foundGround = false;
 
-      // Maximum height the agent can "step up" onto — anything higher is
-      // furniture (workbenches, tables) and must be ignored.
-      const MAX_STEP_UP = 0.3;
+      // Maximum height the agent can "step up" onto.
+      // Increased to 2.0 to ensure recovery if agents ever fall below floor slab. 
+      // Higher than this is still ignored as furniture (workbenches, tables).
+      const MAX_STEP_UP = 2.0;
       const currentY = vehicle.position.y;
 
       if (hits.length > 0) {
@@ -723,9 +735,11 @@ export function useYukaAI(
         vehicle.position.y -= 10.0 * delta;
       }
 
-      // Safety clamp: if agent fell too far below floor, snap back
-      if (vehicle.position.y < -5) {
-        vehicle.position.y = 0;
+      // Safety clamp: if agent falls into the void, snap back to ground.
+      const FLOOR_Y = 5.5;
+      if (vehicle.position.y < -15) { // Void fall safety
+        vehicle.position.y = FLOOR_Y;
+        groupRef.current!.position.y = FLOOR_Y;
       }
     }
 

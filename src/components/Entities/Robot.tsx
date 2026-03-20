@@ -77,7 +77,7 @@ export default function Robot({
         ref={(el) => {
           if (el && joints.current) joints.current.hips = el;
         }}
-        position={[0, 3.5, 0]}
+        position={[0, 3.1, 0]}
       >
         {/* Pelvis/Hips */}
         <mesh
