@@ -20,6 +20,11 @@ function formatAgentLabel(agentId: string): string {
 }
 
 export default function Overlay() {
+  /**
+   * The Overlay is the primary 2D logic hub. 
+   * It consumes global design tokens to ensure that tooltips, toasts, 
+   * and sidebars correlate with the "Cyber-Lab" aesthetic.
+   */
   const debugText = useGameStore((state) => state.debugText);
   const debugTarget = useGameStore((state) => state.debugTarget);
   const isTeleporting = useGameStore((state) => state.isTeleporting);
@@ -285,7 +290,7 @@ export default function Overlay() {
             top: "20px",
             left: "50%",
             transform: "translateX(-50%)",
-            background: "rgba(76, 175, 80, 0.92)",
+            background: "var(--color-success)",
             backdropFilter: "blur(12px)",
             color: "white",
             padding: "10px 22px",
@@ -351,14 +356,14 @@ export default function Overlay() {
             position: "absolute",
             bottom: "20px",
             right: "20px",
-            background: "rgba(0, 0, 0, 0.85)",
-            color: "#00ff00",
+            background: "var(--ui-bg)",
+            color: "var(--color-success)",
             padding: "12px",
-            borderRadius: "8px",
+            borderRadius: "var(--radius-sm)",
             fontSize: "14px",
             fontFamily: "monospace",
             whiteSpace: "pre-wrap",
-            border: "1px solid #00ff00",
+            border: "1px solid var(--color-success)",
             boxShadow: "0 4px 6px rgba(0,0,0,0.5)",
             minWidth: "250px",
             pointerEvents: "none",
@@ -431,13 +436,13 @@ export default function Overlay() {
               gap: "10px",
               padding: "12px 28px",
               background: isMenuPanelOpen
-                ? "rgba(76, 175, 80, 0.25)"
-                : "rgba(15, 15, 25, 0.7)",
+                ? "var(--color-success-bg)"
+                : "var(--ui-bg)",
               backdropFilter: "blur(16px)",
               WebkitBackdropFilter: "blur(16px)",
               border: isMenuPanelOpen
-                ? "1px solid rgba(76, 175, 80, 0.6)"
-                : "1px solid rgba(255, 255, 255, 0.12)",
+                ? "1px solid var(--color-success)"
+                : "1px solid var(--ui-border)",
               borderRadius: "14px",
               color: "white",
               fontSize: "15px",
@@ -451,16 +456,16 @@ export default function Overlay() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = isMenuPanelOpen
-                ? "rgba(76, 175, 80, 0.35)"
-                : "rgba(25, 25, 40, 0.85)";
+                ? "var(--color-success-bg)"
+                : "var(--ui-bg)";
               e.currentTarget.style.borderColor = isMenuPanelOpen
                 ? "rgba(76, 175, 80, 0.8)"
                 : "rgba(255, 255, 255, 0.25)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = isMenuPanelOpen
-                ? "rgba(76, 175, 80, 0.25)"
-                : "rgba(15, 15, 25, 0.7)";
+                ? "var(--color-success-bg)"
+                : "var(--ui-bg)";
               e.currentTarget.style.borderColor = isMenuPanelOpen
                 ? "rgba(76, 175, 80, 0.6)"
                 : "rgba(255, 255, 255, 0.12)";
@@ -487,7 +492,7 @@ export default function Overlay() {
             onClick={() => setMenuOpen(false)}
             style={{
               padding: "12px 24px",
-              background: "rgba(76, 175, 80, 0.2)",
+              background: "var(--color-success-bg)",
               backdropFilter: "blur(16px)",
               WebkitBackdropFilter: "blur(16px)",
               border: "1px solid rgba(76, 175, 80, 0.4)",
@@ -501,11 +506,11 @@ export default function Overlay() {
               letterSpacing: "0.5px",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(76, 175, 80, 0.35)";
+              e.currentTarget.style.background = "var(--color-success)";
               e.currentTarget.style.color = "white";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(76, 175, 80, 0.2)";
+              e.currentTarget.style.background = "var(--color-success-bg)";
               e.currentTarget.style.color = "#4CAF50";
             }}
           >
@@ -525,7 +530,7 @@ export default function Overlay() {
             top: "100px",
             left: "50%",
             transform: "translateX(-50%)",
-            backgroundColor: "rgba(0, 50, 200, 0.8)",
+            background: "var(--color-primary-bg)",
             color: "white",
             padding: "10px 20px",
             borderRadius: "8px",
@@ -546,22 +551,22 @@ export default function Overlay() {
             position: "absolute",
             bottom: "70px",
             left: "20px",
-            backgroundColor: "rgba(20, 20, 30, 0.9)",
-            color: "white",
+            background: "var(--ui-bg)",
+            color: "var(--foreground)",
             padding: "12px 16px",
-            borderRadius: "10px",
-            border: "1px solid rgba(100, 100, 255, 0.4)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--ui-border)",
             minWidth: "200px",
             maxWidth: "280px",
             zIndex: 150,
             pointerEvents: "auto",
-            backdropFilter: "blur(4px)",
+            backdropFilter: "blur(var(--ui-blur))",
           }}
         >
           <div
             style={{
               fontSize: "12px",
-              color: "#aaa",
+              color: "rgba(255,255,255,0.5)",
               marginBottom: "8px",
               display: "flex",
               justifyContent: "space-between",
@@ -569,7 +574,7 @@ export default function Overlay() {
             }}
           >
             <span>🎒 INVENTORY ({playerInventory.length})</span>
-            <span style={{ fontSize: "10px", color: "#666" }}>Scroll ↕</span>
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>Scroll ↕</span>
           </div>
           {playerInventory.map((item, idx) => {
             const isSelected =
@@ -602,10 +607,10 @@ export default function Overlay() {
                   marginBottom: "2px",
                   borderRadius: "4px",
                   backgroundColor: isSelected
-                    ? "rgba(80, 80, 255, 0.3)"
+                    ? "var(--color-primary-bg)"
                     : "transparent",
                   border: isSelected
-                    ? "1px solid rgba(100, 100, 255, 0.5)"
+                    ? "1px solid var(--color-primary)"
                     : "1px solid transparent",
                   fontSize: "13px",
                   display: "flex",
@@ -643,11 +648,11 @@ export default function Overlay() {
             position: "absolute",
             bottom: "200px",
             right: "20px",
-            backgroundColor: "rgba(20, 25, 30, 0.95)",
+            background: "var(--ui-bg)",
             color: "white",
             padding: "0",
             borderRadius: "12px",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
+            border: "1px solid var(--ui-border)",
             width: "320px",
             zIndex: 151,
             pointerEvents: "none",
@@ -661,8 +666,8 @@ export default function Overlay() {
           <div
             style={{
               padding: "12px 16px",
-              background: "rgba(255, 255, 255, 0.03)",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--color-agent-bg)",
+              borderBottom: "1px solid var(--ui-border)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -725,11 +730,11 @@ export default function Overlay() {
                         key={cell.id}
                         style={{
                           border: isSelected
-                            ? "1px solid #4CAF50"
-                            : "1px solid rgba(255,255,255,0.1)",
-                          background: isSelected
-                            ? "rgba(76, 175, 80, 0.2)"
-                            : "rgba(255,255,255,0.05)",
+                            ? "1px solid var(--color-success)"
+                            : "1px solid var(--ui-border)",
+                            background: isSelected
+                              ? "var(--color-success-bg)"
+                              : "var(--color-agent-bg)",
                           padding: "8px 10px",
                           borderRadius: "8px",
                           minWidth: "50px",
@@ -740,9 +745,9 @@ export default function Overlay() {
                           position: "relative",
                           transition: "all 0.15s ease-out",
                           transform: isSelected ? "translateY(-2px)" : "none",
-                          boxShadow: isSelected
-                            ? "0 4px 12px rgba(76, 175, 80, 0.3)"
-                            : "none",
+                            boxShadow: isSelected
+                              ? "0 4px 12px var(--color-success-bg)"
+                              : "none",
                         }}
                       >
                         <div
@@ -778,9 +783,9 @@ export default function Overlay() {
                               right: 4,
                               width: 6,
                               height: 6,
-                              background: "#4CAF50",
+                              background: "var(--color-success)",
                               borderRadius: "50%",
-                              boxShadow: "0 0 4px #4CAF50",
+                              boxShadow: "0 0 4px var(--color-success)",
                             }}
                           />
                         )}

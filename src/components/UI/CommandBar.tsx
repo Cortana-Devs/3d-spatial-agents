@@ -29,26 +29,26 @@ const overlayStyle: React.CSSProperties = {
 
 const barStyle: React.CSSProperties = {
   width: "560px",
-  background: "rgba(10, 10, 22, 0.95)",
-  backdropFilter: "blur(24px)",
-  border: "1px solid rgba(100, 140, 255, 0.25)",
-  borderRadius: "16px",
+  background: "var(--ui-bg)",
+  backdropFilter: "blur(var(--ui-blur))",
+  border: "1px solid var(--ui-border)",
+  borderRadius: "var(--radius-md)",
   padding: "20px 24px",
   boxShadow:
     "0 16px 64px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255,255,255,0.05)",
-  fontFamily: "'Inter', 'Segoe UI', sans-serif",
-  color: "#e0e8ff",
+  fontFamily: "inherit",
+  color: "var(--foreground)",
 };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "12px 16px",
-  background: "rgba(255, 255, 255, 0.06)",
-  border: "1px solid rgba(100, 140, 255, 0.2)",
-  borderRadius: "10px",
-  color: "#e0e8ff",
+  background: "var(--color-agent-bg)",
+  border: "1px solid var(--ui-border)",
+  borderRadius: "var(--radius-sm)",
+  color: "var(--foreground)",
   fontSize: "15px",
-  fontFamily: "'Inter', 'Segoe UI', sans-serif",
+  fontFamily: "inherit",
   outline: "none",
   transition: "border-color 0.2s ease",
 };
@@ -267,7 +267,7 @@ export function CommandBar() {
                 margin: 0,
                 fontSize: "16px",
                 fontWeight: 700,
-                color: "#a0c0ff",
+                color: "var(--color-primary)",
                 letterSpacing: "-0.3px",
               }}
             >
@@ -286,10 +286,10 @@ export function CommandBar() {
           <button
             onClick={() => close(false)}
             style={{
-              background: "rgba(255, 80, 80, 0.12)",
-              border: "1px solid rgba(255, 80, 80, 0.25)",
-              color: "#ff6060",
-              borderRadius: "8px",
+              background: "var(--color-danger-bg)",
+              border: "1px solid var(--color-danger)",
+              color: "var(--color-danger)",
+              borderRadius: "var(--radius-sm)",
               padding: "4px 10px",
               cursor: "pointer",
               fontSize: "12px",
@@ -351,10 +351,10 @@ export function CommandBar() {
               borderRadius: "8px",
               background:
                 state === "error"
-                  ? "rgba(255, 60, 60, 0.1)"
+                  ? "var(--color-danger-bg)"
                   : state === "success"
-                    ? "rgba(60, 200, 100, 0.1)"
-                    : "rgba(80, 140, 255, 0.08)",
+                    ? "var(--color-success-bg)"
+                    : "var(--color-agent-bg)",
               border: `1px solid ${state === "error" ? "rgba(255, 60, 60, 0.2)" : state === "success" ? "rgba(60, 200, 100, 0.2)" : "rgba(80, 140, 255, 0.15)"}`,
               fontSize: "13px",
               color: stateColor,

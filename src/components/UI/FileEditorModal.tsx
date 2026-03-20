@@ -43,8 +43,8 @@ export function FileEditorModal() {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
+        backdropFilter: "blur(var(--ui-blur))",
+        WebkitBackdropFilter: "blur(var(--ui-blur))",
         pointerEvents: "auto",
         animation: "fadeIn 0.2s ease-out forwards",
       }}
@@ -52,14 +52,14 @@ export function FileEditorModal() {
     >
       <div
         style={{
-          background: "rgba(25, 25, 35, 0.9)",
+          background: "var(--ui-bg)",
           boxShadow:
             "0 24px 64px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1)",
           padding: "24px",
-          borderRadius: "16px",
+          borderRadius: "var(--radius-md)",
           width: "100%",
           maxWidth: "500px",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
+          border: "1px solid var(--ui-border)",
           display: "flex",
           flexDirection: "column",
           gap: "16px",
@@ -90,9 +90,9 @@ export function FileEditorModal() {
             style={{
               fontSize: "11px",
               color: "rgba(255,255,255,0.5)",
-              background: "rgba(255,255,255,0.1)",
+              background: "var(--color-agent-bg)",
               padding: "4px 8px",
-              borderRadius: "6px",
+              borderRadius: "var(--radius-sm)",
               fontFamily: "monospace",
             }}
           >
@@ -108,10 +108,10 @@ export function FileEditorModal() {
             fontSize: "14px",
             fontFamily: "Inter, system-ui, sans-serif",
             lineHeight: "1.5",
-            background: "rgba(10, 10, 15, 0.8)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            borderRadius: "8px",
-            color: "rgba(255, 255, 255, 0.9)",
+            background: "var(--color-agent-bg)",
+            border: "1px solid var(--ui-border)",
+            borderRadius: "var(--radius-sm)",
+            color: "var(--foreground)",
             outline: "none",
             resize: "none",
             boxSizing: "border-box",
@@ -120,7 +120,7 @@ export function FileEditorModal() {
           value={localText}
           onChange={(e) => setLocalText(e.target.value)}
           onFocus={(e) =>
-            (e.target.style.borderColor = "rgba(76, 175, 80, 0.6)")
+            (e.target.style.borderColor = "var(--color-success)")
           }
           onBlur={(e) =>
             (e.target.style.borderColor = "rgba(255, 255, 255, 0.2)")
@@ -164,14 +164,14 @@ export function FileEditorModal() {
           <button
             style={{
               padding: "10px 20px",
-              borderRadius: "8px",
+              borderRadius: "var(--radius-sm)",
               fontSize: "14px",
               fontWeight: 600,
               color: "white",
-              background: "#4CAF50",
+              background: "var(--color-success)",
               border: "none",
               cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
+              boxShadow: "0 4px 12px var(--color-success-bg)",
               transition: "transform 0.1s ease, background 0.2s ease",
             }}
             onClick={handleSave}

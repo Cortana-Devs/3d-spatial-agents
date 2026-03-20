@@ -5,9 +5,9 @@ import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 
 const COLOR_MAP: Record<string, string> = {
-  wall: "#ff4444",
-  furniture: "#ffcc00",
-  cupboard: "#00ffff",
+  wall: "#ef5350",     // --color-danger
+  furniture: "#ffca28",  // Neon Amber
+  cupboard: "#00e5ff",   // --color-primary (premium cyan)
 };
 const DEFAULT_COLOR = "#ffffff";
 

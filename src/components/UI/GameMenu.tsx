@@ -81,18 +81,18 @@ export default function GameMenu() {
 
     const tabStyle = (tab: string) => ({
         background: activeTab === tab
-            ? 'rgba(76, 175, 80, 0.2)'
+            ? 'var(--color-success-bg)'
             : 'transparent',
         border: activeTab === tab
-            ? '1px solid rgba(76, 175, 80, 0.5)'
+            ? '1px solid var(--color-success)'
             : '1px solid transparent',
-        color: activeTab === tab ? '#4CAF50' : 'rgba(255,255,255,0.5)',
+        color: activeTab === tab ? 'var(--color-success)' : 'rgba(255,255,255,0.5)',
         fontSize: '14px',
         cursor: 'pointer' as const,
         textTransform: 'capitalize' as const,
         fontWeight: activeTab === tab ? 600 : 400,
         padding: '8px 20px',
-        borderRadius: '10px',
+        borderRadius: 'var(--radius-sm)',
         transition: 'all 0.2s ease',
         letterSpacing: '0.3px',
     });
@@ -105,16 +105,16 @@ export default function GameMenu() {
             transform: 'translate(-50%, -55%)',
             width: 'min(680px, 90vw)',
             maxHeight: '70vh',
-            backgroundColor: 'rgba(10, 10, 20, 0.75)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            backgroundColor: 'var(--ui-bg)',
+            backdropFilter: 'blur(var(--ui-blur))',
+            WebkitBackdropFilter: 'blur(var(--ui-blur))',
             display: 'flex',
             flexDirection: 'column',
             zIndex: 1000,
-            color: 'white',
-            fontFamily: 'sans-serif',
-            borderRadius: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            color: 'var(--foreground)',
+            fontFamily: 'inherit',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--ui-border)',
             boxShadow: '0 24px 80px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255,255,255,0.1)',
             overflow: 'hidden',
         }}>
@@ -124,7 +124,7 @@ export default function GameMenu() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '16px 20px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                borderBottom: '1px solid var(--ui-border)',
             }}>
                 <div style={{
                     display: 'flex',
@@ -144,12 +144,12 @@ export default function GameMenu() {
                 <button
                     onClick={handleClose}
                     style={{
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--color-agent-bg)',
+                        border: '1px solid var(--ui-border)',
                         color: 'rgba(255, 255, 255, 0.5)',
                         width: '36px',
                         height: '36px',
-                        borderRadius: '10px',
+                        borderRadius: 'var(--radius-sm)',
                         cursor: 'pointer',
                         fontSize: '18px',
                         display: 'flex',
@@ -213,9 +213,9 @@ export default function GameMenu() {
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             padding: '14px 16px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                            borderRadius: '12px',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                            backgroundColor: 'var(--color-agent-bg)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--ui-border)',
                         }}>
                             <label htmlFor="inverted-mouse" style={{ fontSize: '14px', fontWeight: 500 }}>Inverted Mouse</label>
                             <input
@@ -223,7 +223,7 @@ export default function GameMenu() {
                                 type="checkbox"
                                 checked={invertedMouse}
                                 onChange={(e) => setInvertedMouse(e.target.checked)}
-                                style={{ transform: 'scale(1.3)', cursor: 'pointer', accentColor: '#4CAF50' }}
+                                style={{ transform: 'scale(1.3)', cursor: 'pointer', accentColor: 'var(--color-success)' }}
                             />
                         </div>
 
@@ -231,13 +231,13 @@ export default function GameMenu() {
                         <div style={{
                             margin: '0 0 20px',
                             padding: '14px 16px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                            borderRadius: '12px',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                            backgroundColor: 'var(--color-agent-bg)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--ui-border)',
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                 <label htmlFor="sensitivity" style={{ fontSize: '14px', fontWeight: 500 }}>Mouse Sensitivity</label>
-                                <span style={{ color: '#4CAF50', fontWeight: 600, fontSize: '14px' }}>{sensitivity.toFixed(1)}</span>
+                                <span style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: '14px' }}>{sensitivity.toFixed(1)}</span>
                             </div>
                             <input
                                 id="sensitivity"
@@ -247,7 +247,7 @@ export default function GameMenu() {
                                 step="0.1"
                                 value={sensitivity}
                                 onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-                                style={{ width: '100%', cursor: 'pointer', accentColor: '#4CAF50' }}
+                                style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--color-success)' }}
                             />
                         </div>
 
@@ -255,13 +255,13 @@ export default function GameMenu() {
                         <div style={{
                             margin: '0 0 20px',
                             padding: '14px 16px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                            borderRadius: '12px',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                            backgroundColor: 'var(--color-agent-bg)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--ui-border)',
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                 <label htmlFor="volume" style={{ fontSize: '14px', fontWeight: 500 }}>Master Volume</label>
-                                <span style={{ color: '#4CAF50', fontWeight: 600, fontSize: '14px' }}>{Math.round(volume * 100)}%</span>
+                                <span style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: '14px' }}>{Math.round(volume * 100)}%</span>
                             </div>
                             <input
                                 id="volume"
@@ -271,7 +271,7 @@ export default function GameMenu() {
                                 step="0.01"
                                 value={volume}
                                 onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                style={{ width: '100%', cursor: 'pointer', accentColor: '#4CAF50' }}
+                                style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--color-success)' }}
                             />
                         </div>
                     </div>
@@ -349,15 +349,16 @@ export default function GameMenu() {
                         <div
                             style={{
                                 flex: 1,
-                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                                borderRadius: '8px',
+                                backgroundColor: 'var(--color-agent-bg)',
+                                borderRadius: 'var(--radius-sm)',
                                 padding: '16px',
                                 overflow: 'auto',
                                 fontFamily: 'monospace',
                                 fontSize: '11px',
                                 whiteSpace: 'pre-wrap',
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                color: '#ccc'
+                                border: '1px solid var(--ui-border)',
+                                color: 'var(--foreground)',
+                                opacity: 0.8
                             }}
                         >
                             {logsLoading ? (
@@ -381,24 +382,24 @@ function ControlRow({ action, currentKey, isListening, onListen }: { action: str
             display: 'flex',
             justifyContent: 'space-between',
             padding: '12px 14px',
-            backgroundColor: isListening ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 255, 255, 0.04)',
-            borderRadius: '10px',
+            backgroundColor: isListening ? 'var(--color-success-bg)' : 'var(--color-agent-bg)',
+            borderRadius: 'var(--radius-sm)',
             alignItems: 'center',
-            border: isListening ? '1px solid rgba(76, 175, 80, 0.4)' : '1px solid rgba(255, 255, 255, 0.06)',
+            border: isListening ? '1px solid var(--color-success)' : '1px solid var(--ui-border)',
             transition: 'all 0.2s ease',
         }}>
             <span style={{ fontSize: '13px', fontWeight: 500 }}>{action}</span>
             <button
                 onClick={onListen}
                 style={{
-                    backgroundColor: isListening ? 'rgba(76, 175, 80, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                    backgroundColor: isListening ? 'var(--color-success-bg)' : 'var(--color-agent-bg)',
                     padding: '6px 16px',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--radius-sm)',
                     fontFamily: 'monospace',
                     fontWeight: 600,
                     fontSize: '12px',
-                    color: isListening ? '#4CAF50' : 'rgba(255, 255, 255, 0.7)',
-                    border: isListening ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                    color: isListening ? 'var(--color-success)' : 'rgba(255, 255, 255, 0.7)',
+                    border: isListening ? '1px solid var(--color-success)' : '1px solid var(--ui-border)',
                     cursor: 'pointer',
                     minWidth: '80px',
                     textAlign: 'center',

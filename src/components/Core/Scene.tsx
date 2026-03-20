@@ -207,7 +207,7 @@ export default function Scene() {
         }}
       >
         <AdaptiveEvents />
-        <color attach="background" args={["#202020"]} />
+        <color attach="background" args={["#0a0c14"]} />
 
         {/* Simple ambient light to prevent pitch black shadows before lights load or in corners */}
         {/* <ambientLight intensity={0.2} /> */}

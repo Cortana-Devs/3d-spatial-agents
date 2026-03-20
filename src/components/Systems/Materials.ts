@@ -36,8 +36,8 @@ export const createMaterials = () => {
       metalness: 0.5,
     }),
     robotGlow: new THREE.MeshStandardMaterial({
-      color: 0x00ffff,
-      emissive: 0x00ffff,
+      color: 0x00e5ff,
+      emissive: 0x00e5ff,
       emissiveIntensity: 3,
     }),
     terrain: new THREE.MeshStandardMaterial({

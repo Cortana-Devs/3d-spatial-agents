@@ -10,18 +10,18 @@
 }
 
 .promptBubble {
-  background: rgba(12, 14, 22, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(76, 175, 80, 0.35);
-  border-radius: 14px;
+  background: var(--ui-bg);
+  backdrop-filter: blur(var(--ui-blur));
+  -webkit-backdrop-filter: blur(var(--ui-blur));
+  border: 1px solid var(--color-success-bg);
+  border-radius: var(--radius-md);
   padding: 14px 20px;
-  color: #fff;
+  color: var(--foreground);
   font-family: "Inter", system-ui, sans-serif;
   text-align: center;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(76, 175, 80, 0.15);
+    0 0 20px var(--color-success-bg);
   min-width: 200px;
 }
 
@@ -29,7 +29,7 @@
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 10px;
-  color: #e0e0e0;
+  color: var(--color-agent-text);
   line-height: 1.4;
 }
 
@@ -60,23 +60,23 @@
 }
 
 .keyYes kbd {
-  background: rgba(76, 175, 80, 0.25);
+  background: var(--color-success-bg);
   border: 1px solid rgba(76, 175, 80, 0.6);
-  color: #4caf50;
+  color: var(--color-success);
 }
 
 .keyYes span {
-  color: #81c784;
+  color: var(--color-success);
 }
 
 .keyNo kbd {
-  background: rgba(239, 83, 80, 0.2);
+  background: var(--color-danger-bg);
   border: 1px solid rgba(239, 83, 80, 0.5);
-  color: #ef5350;
+  color: var(--color-danger);
 }
 
 .keyNo span {
-  color: #ef9a9a;
+  color: var(--color-danger);
 }
 
 .promptConnector {
@@ -99,10 +99,10 @@
   z-index: 1500;
   display: flex;
   flex-direction: column;
-  background: rgba(10, 12, 20, 0.92);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--ui-bg);
+  backdrop-filter: blur(var(--ui-blur));
+  -webkit-backdrop-filter: blur(var(--ui-blur));
+  border-left: 1px solid var(--ui-border);
   box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
   font-family: "Inter", system-ui, sans-serif;
   animation: chatSlideIn 0.3s ease-out forwards;
@@ -113,8 +113,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--color-agent-bg);
 }
 
 .chatAgentInfo {
@@ -127,7 +127,7 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  background: var(--color-success);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -142,7 +142,7 @@
 .chatAgentName strong {
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: var(--foreground);
 }
 
 .chatAgentName span {
@@ -202,16 +202,17 @@
 
 .messageUser {
   align-self: flex-end;
-  background: linear-gradient(135deg, #1565c0, #0d47a1);
+  background: var(--color-primary-bg);
+  border: 1px solid rgba(0, 50, 200, 0.4);
   color: #fff;
   border-bottom-right-radius: 4px;
 }
 
 .messageAgent {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e0e0e0;
+  background: var(--color-agent-bg);
+  border: 1px solid var(--ui-border);
+  color: var(--color-agent-text);
   border-bottom-left-radius: 4px;
 }
 
@@ -242,8 +243,8 @@
 
 .chatInputArea {
   padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--ui-border);
+  background: var(--color-agent-bg);
 }
 
 .chatInputWrapper {
@@ -255,9 +256,9 @@
   flex: 1;
   padding: 10px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  border: 1px solid var(--ui-border);
+  background: var(--color-agent-bg);
+  color: var(--foreground);
   font-size: 13px;
   font-family: "Inter", system-ui, sans-serif;
   outline: none;
@@ -277,7 +278,7 @@
   padding: 10px 16px;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, #4caf50, #388e3c);
+  background: var(--color-success);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -287,9 +288,9 @@
 }
 
 .chatSendBtn:hover {
-  background: linear-gradient(135deg, #66bb6a, #43a047);
+  background: #43a047;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  box-shadow: 0 4px 12px var(--color-success-bg);
 }
 
 .chatSendBtn:disabled {

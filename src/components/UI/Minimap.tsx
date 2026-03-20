@@ -31,7 +31,7 @@ export function Minimap() {
         ctx.clearRect(0, 0, mapSize, mapSize);
 
         // Background
-        ctx.fillStyle = "rgba(20, 20, 30, 0.5)";
+        ctx.fillStyle = "rgba(10, 12, 20, 0.85)";
         ctx.fillRect(0, 0, mapSize, mapSize);
 
         const centerX = mapSize / 2;
@@ -53,7 +53,7 @@ export function Minimap() {
         };
 
         // 1. Draw Static Geometry (Obstacles - Walls, Furniture collisions)
-        ctx.fillStyle = "rgba(120, 120, 160, 0.4)"; // Muted blue-grey for structure
+        ctx.fillStyle = "rgba(140, 150, 180, 0.3)"; // Muted blue-grey for structure
         obstacles.forEach(ob => {
             const p = worldToCanvas(ob.position.x, ob.position.z);
             const r = ob.radius * worldScale;
@@ -65,7 +65,7 @@ export function Minimap() {
         });
 
         // 2. Draw Interactables (Active items - highlight them)
-        ctx.fillStyle = "rgba(100, 200, 255, 0.8)"; // Cyan for interactables
+        ctx.fillStyle = "#00e5ff"; // Matched to robotGlow / premium cyan
         interactables.forEach(item => {
             const p = worldToCanvas(item.position.x, item.position.z);
             // Draw small dot
@@ -75,7 +75,7 @@ export function Minimap() {
         });
 
         // Draw Agents
-        ctx.fillStyle = "#ff5555"; // Red for agents
+        ctx.fillStyle = "#ef5350"; // Match --color-danger
         Object.values(agentPositions).forEach(pos => {
             const p = worldToCanvas(pos.x, pos.z);
             // Check bounds (don't draw if off map?) 
@@ -88,7 +88,7 @@ export function Minimap() {
         });
 
         // Draw Player (Center)
-        ctx.fillStyle = "#55ff55"; // Green for player
+        ctx.fillStyle = "#4caf50"; // Match --color-success
         ctx.beginPath();
         ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
         ctx.fill();
@@ -122,11 +122,11 @@ export function Minimap() {
             <div style={{
                 width: mapSize,
                 height: mapSize,
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-sm)',
                 overflow: 'hidden',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                border: '1px solid var(--ui-border)',
                 position: 'relative',
-                backgroundColor: '#000'
+                backgroundColor: 'var(--background)'
             }}>
                 <canvas
                     ref={canvasRef}

@@ -7,7 +7,7 @@ import { InteractableRegistry } from "./InteractableRegistry";
 // Custom Shader for Rim Lighting / Glow
 const GlowShaderMaterial = {
   uniforms: {
-    color: { value: new THREE.Color("#00ffff") }, // Cyan/Blue glow
+    color: { value: new THREE.Color("#00e5ff") }, // Premium Cyber-Blue glow
     viewVector: { value: new THREE.Vector3() },
     glowIntensity: { value: 1.5 },
     glowPower: { value: 3.0 }, // Controls sharp/soft falloff
@@ -132,7 +132,7 @@ export default function ObjectHighlighter() {
   const shaderArgs = useMemo(
     () => ({
       uniforms: {
-        color: { value: new THREE.Color("#00ffff") },
+        color: { value: new THREE.Color("#00e5ff") },
         coef: { value: 1.2 }, // Expansion coeff?
         power: { value: 2.0 },
       },

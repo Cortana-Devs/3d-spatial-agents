@@ -104,7 +104,7 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({
               {isThinking ? (
                 <Activity className={`${styles.pulse}`} size={14} />
               ) : (
-                <Cpu size={14} color="#10b981" />
+                <Cpu size={14} color="#4ade80" />
               )}
               <span className={styles.statusText}>
                 {isThinking
@@ -134,7 +134,7 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({
                     style={{
                       height: "6px",
                       width: "80%",
-                      background: "rgba(255,255,255,0.1)",
+                      background: "var(--color-primary-bg)",
                       borderRadius: "4px",
                       animation: "pulse 1s infinite",
                     }}
@@ -143,7 +143,7 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({
                     style={{
                       height: "6px",
                       width: "50%",
-                      background: "rgba(255,255,255,0.1)",
+                      background: "var(--color-primary-bg)",
                       borderRadius: "4px",
                       animation: "pulse 1s infinite",
                       animationDelay: "0.1s",
@@ -168,7 +168,7 @@ export const ThoughtBubble: React.FC<ThoughtBubbleProps> = ({
                   style={{
                     fontSize: "9px",
                     fontFamily: "monospace",
-                    color: "rgba(255,255,255,0.3)",
+                    color: "rgba(255,255,255,0.4)",
                     textTransform: "uppercase",
                     letterSpacing: "1px",
                     marginBottom: "8px",
