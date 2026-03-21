@@ -42,11 +42,12 @@ export function buildWorldContext(
         : "A";
     const loc = item.placedInArea ? "Placed" : "OnFloor";
     const home = item.homeAreaId || "none";
-    return `${item.id}|${item.name}|${item.type}|${status}|${loc}|Home:${home}`;
+    const pos = `(${item.position.x.toFixed(1)}, ${item.position.y.toFixed(1)}, ${item.position.z.toFixed(1)})`;
+    return `${item.id}|${item.name}|${item.type}|${status}|${loc}|Pos:${pos}|Home:${home}`;
   });
   const items =
     itemRows.length > 0
-      ? `A=available,C=carried,X=claimed. Only pick (A) items.\nID|Name|Type|Status|Location|HomeArea\n${itemRows.join("\n")}`
+      ? `A=available,C=carried,X=claimed. Only pick (A) items.\nID|Name|Type|Status|Location|Position|HomeArea\n${itemRows.join("\n")}`
       : "No pickable items.";
 
   // --- Placing Areas: ALL areas, grouped by furniture for token efficiency ---
@@ -70,7 +71,11 @@ export function buildWorldContext(
   }
   const areaLines: string[] = [];
   for (const [name, slots] of grouped) {
-    const slotStrs = slots.map((s) => `${s.id}(${s.empty ? "E" : "O"})`);
+    const slotStrs = slots.map((s) => {
+        const area = allAreas.find(a => a.id === s.id);
+        const pos = area ? `(${area.position.x.toFixed(1)}, ${area.position.y.toFixed(1)}, ${area.position.z.toFixed(1)})` : "?";
+        return `${s.id}(${s.empty ? "E" : "O"}, ${pos})`;
+    });
     areaLines.push(`${name}: ${slotStrs.join(", ")}`);
   }
   const areas =

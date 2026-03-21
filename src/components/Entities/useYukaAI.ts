@@ -61,6 +61,7 @@ export function useYukaAI(
   const socialTimer = useRef(0);
   const socialTarget = useRef<YUKA.Vehicle | null>(null);
   const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
+  const greetingTimer = useRef(0);
   const socialCheckTimer = useRef(0);
 
   // Player Proximity Chat State
@@ -532,6 +533,7 @@ export function useYukaAI(
         ) {
           playerProximityState.current = "GREETING";
           greetingState.current = "WAVING";
+          greetingTimer.current = 0;
           vehicle.velocity.set(0, 0, 0);
 
           // Face the player
@@ -566,6 +568,12 @@ export function useYukaAI(
       } else if (playerProximityState.current === "GREETING") {
         // Keep the agent stopped and facing the player while greeting
         vehicle.velocity.set(0, 0, 0);
+
+        // Wave timeout: Stop waving after 4 seconds even if player is still there
+        greetingTimer.current += delta;
+        if (greetingTimer.current > 4.0 && greetingState.current === "WAVING") {
+          greetingState.current = "NONE";
+        }
 
         // Check if prompt was dismissed (N pressed)
         if (!storeState.chatPromptVisible && !storeState.isChatOpen) {
@@ -862,6 +870,11 @@ export function useYukaAI(
               id: "player-01",
               distance: pDist,
               status: "Active",
+              position: { 
+                x: playerRef.current.position.x, 
+                y: playerRef.current.position.y, 
+                z: playerRef.current.position.z 
+              },
             });
           }
 
@@ -906,6 +919,7 @@ export function useYukaAI(
               objectType: item.type,
               name: item.name,
               status: isClaimed ? "on floor (claimed)" : "on floor",
+              position: { x: itemPos.x, y: itemPos.y, z: itemPos.z },
             });
             floorItems.push(item);
           }
@@ -957,6 +971,7 @@ export function useYukaAI(
                 distance: distToItem,
                 name: area.name,
                 status: isHome ? "empty (home)" : "empty",
+                position: { x: area.position.x, y: area.position.y, z: area.position.z },
               });
             }
           }
@@ -977,6 +992,7 @@ export function useYukaAI(
                 ),
                 name: area.name,
                 status: area.currentItem ? "occupied" : "empty",
+                position: { x: area.position.x, y: area.position.y, z: area.position.z },
               });
             }
           }

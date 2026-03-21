@@ -11,6 +11,7 @@ export interface NearbyEntity {
   status?: string; // e.g., 'Moving', 'Idle', 'carried by ...'
   objectType?: string; // For OBJECT entities: 'file', 'laptop', etc.
   name?: string; // Human-readable name
+  position?: { x: number; y: number; z: number };
 }
 
 export interface AgentContext {
@@ -49,11 +50,11 @@ export async function processAgentThought(
   // Context Compression: Convert entities to Markdown Table
   const entityTable =
     context.nearbyEntities.length > 0
-      ? `| Type | ID (use this) | DisplayName | Dist | Status |\n|---|---|---|---|---|\n` +
+      ? `| Type | ID (use this) | DisplayName | Dist | AbsolutePos | Status |\n|---|---|---|---|---|---|\n` +
         context.nearbyEntities
           .map(
             (e) =>
-              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.status || "-"} |`,
+              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.position ? `(${e.position.x.toFixed(1)}, ${e.position.y.toFixed(1)}, ${e.position.z.toFixed(1)})` : "-"} | ${e.status || "-"} |`,
           )
           .join("\n")
       : "No entities nearby.";
