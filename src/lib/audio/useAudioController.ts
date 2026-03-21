@@ -93,6 +93,7 @@ export function useAudioController() {
       
       const tasks = [...globalSpeechQueue];
       globalSpeechQueue = [];
+      window.dispatchEvent(new CustomEvent("audio-queue-updated", { detail: { count: 0 } }));
       
       for (const task of tasks) {
         // We call speak on the next tick to ensure AudioContext has finished resuming
@@ -144,6 +145,7 @@ export function useAudioController() {
     if (ctx.state !== "running") {
       console.log(`[AudioController] Audio blocked by browser policy. Queueing speech: \"${text.slice(0, 20)}...\"`);
       globalSpeechQueue.push({ text, agentId, isSubconscious });
+      window.dispatchEvent(new CustomEvent("audio-queue-updated", { detail: { count: globalSpeechQueue.length } }));
       globalSpeechLock = false;
       return;
     }
@@ -229,5 +231,13 @@ export function useAudioController() {
     setAudioState("idle");
   }, [currentAudioElement, reqIdRef]);
 
-  return { audioState, currentBuffer, currentAudioElement, speak, stopSpeaking, ensureAudioContext };
+  return { 
+    audioState, 
+    currentBuffer, 
+    currentAudioElement, 
+    speak, 
+    stopSpeaking, 
+    ensureAudioContext,
+    hasPendingAudio: globalSpeechQueue.length > 0
+  };
 }
