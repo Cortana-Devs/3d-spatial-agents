@@ -1,4 +1,6 @@
+"use client";
 import { useState, useCallback, useEffect } from "react";
+import puter from "@heyputer/puter.js";
 
 export type AudioState = "idle" | "fetching_primary" | "fetching_fallback" | "speaking" | "error";
 
@@ -80,14 +82,13 @@ export function useAudioController() {
     const timeoutId = setTimeout(() => abortController.abort(), 8000); // Allow more time for network
 
     try {
-      console.log("[AudioController] Fetching primary TTS via window.puter...");
+      console.log("[AudioController] Fetching primary TTS via puter.js...");
       
-      if (typeof window === "undefined" || !(window as any).puter) {
-        throw new Error("window.puter SDK is not available.");
-      }
-
       // 1. Generate via Puter (returns an HTMLAudioElement)
-      const audioElement = await (window as any).puter.ai.txt2speech(text);
+      const audioElement = await puter.ai.txt2speech(text, {
+        provider: "openai",
+        voice: "alloy"
+      });
       
       // 2. We need the native raw decoded buffer to use in PositionalAudio spatial context
       // So we fetch the blob/URL directly from the returned element's src
