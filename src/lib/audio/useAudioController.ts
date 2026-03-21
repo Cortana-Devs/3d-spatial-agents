@@ -75,31 +75,27 @@ export function useAudioController() {
     const ctx = ensureAudioContext();
     if (!ctx) return;
     
-    // Attempt 1: Puter API (ElevenLabs wrapper)
+    // Attempt 1: Puter API (via official SDK)
     const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 2000); // Strict 2000ms timeout
+    const timeoutId = setTimeout(() => abortController.abort(), 8000); // Allow more time for network
 
     try {
-      console.log("[AudioController] Fetching primary TTS...");
-      const response = await fetch("https://api.puter.com/v2/ai/text-to-speech", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_PUTER_API_KEY || ''}`, 
-        },
-        body: JSON.stringify({ text, voice: "josh" }),
-        signal: abortController.signal
-      });
+      console.log("[AudioController] Fetching primary TTS via window.puter...");
+      
+      if (typeof window === "undefined" || !(window as any).puter) {
+        throw new Error("window.puter SDK is not available.");
+      }
 
+      // 1. Generate via Puter (returns an HTMLAudioElement)
+      const audioElement = await (window as any).puter.ai.txt2speech(text);
+      
+      // 2. We need the native raw decoded buffer to use in PositionalAudio spatial context
+      // So we fetch the blob/URL directly from the returned element's src
+      const response = await fetch(audioElement.src, { signal: abortController.signal });
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`Primary TTS failed with status ${response.status}`);
-      }
-      
-      const contentType = response.headers.get("content-type");
-      if (!contentType || contentType.includes("text/html")) {
-         throw new Error("Primary TTS returned HTML instead of Audio Buffer (Auth/Rate-Limit issue).");
+        throw new Error(`Failed to fetch audio stream from puter src: ${response.status}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
