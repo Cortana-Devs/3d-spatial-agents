@@ -600,7 +600,7 @@ export const AgentChatPanel: React.FC = () => {
     if (!trimmed || isThinking || !chatAgentId) return;
 
     // Must resume AudioContext on actual user gesture (click/keypress) so agents can be heard
-    ensureAudioContext();
+    await ensureAudioContext();
 
     // Add user message to per-agent chat and common communication log
     addChatMessage(chatAgentId, { role: "user", text: trimmed });

@@ -9,19 +9,30 @@ let globalAudioCtx: AudioContext | null = null;
 let globalWorker: Worker | null = null;
 let globalResolveWorkerCb: ((buf: AudioBuffer) => void) | null = null;
 let globalRejectWorkerCb: ((err: Error) => void) | null = null;
+let globalSpeechLock = false; // Singleton lock
+let globalSpeechQueue: { text: string; agentId?: string; isSubconscious: boolean }[] = [];
+let globalHasInteracted = false;
 
 export function useAudioController() {
   const [audioState, setAudioState] = useState<AudioState>("idle");
   const [currentBuffer, setCurrentBuffer] = useState<AudioBuffer | null>(null);
+  const [currentAudioElement, setCurrentAudioElement] = useState<HTMLAudioElement | null>(null);
+  const lastRequestId = useCallback(() => (window as any)._audioReqId = ((window as any)._audioReqId || 0) + 1, []);
+  const reqIdRef = useState(() => ({ current: 0 }))[0]; // local ID tracker
 
   // Initialize or resume the Audio Context
-  const ensureAudioContext = useCallback(() => {
+  const ensureAudioContext = useCallback(async () => {
     if (typeof window !== "undefined") {
       if (!globalAudioCtx) {
         globalAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
       if (globalAudioCtx.state === "suspended") {
-        globalAudioCtx.resume().catch(console.warn);
+        try {
+          await globalAudioCtx.resume();
+          console.log("[AudioController] AudioContext Resumed.");
+        } catch (e) {
+          console.warn("[AudioController] Resume failed:", e);
+        }
       }
     }
     return globalAudioCtx;
@@ -40,7 +51,7 @@ export function useAudioController() {
           console.log("[AudioController] Fallback TTS Engine Ready.");
         } else if (type === "SUCCESS" && audio && sampleRate) {
           try {
-            const ctx = ensureAudioContext();
+            const ctx = await ensureAudioContext();
             if (ctx) {
                // Kokoro outputs mono Float32Array
                const buffer = ctx.createBuffer(1, audio.length, sampleRate);
@@ -71,45 +82,108 @@ export function useAudioController() {
     return globalWorker;
   }, [ensureAudioContext]);
 
+  // Global Queue Flush Logic
+  useEffect(() => {
+    if (globalHasInteracted) return;
+
+    const flushQueue = async () => {
+      if (globalHasInteracted) return;
+      console.log(`[AudioController] Interaction detected - Flushing ${globalSpeechQueue.length} queued speech tasks.`);
+      globalHasInteracted = true;
+      
+      const tasks = [...globalSpeechQueue];
+      globalSpeechQueue = [];
+      
+      for (const task of tasks) {
+        // We call speak on the next tick to ensure AudioContext has finished resuming
+        setTimeout(() => speak(task.text, task.agentId, task.isSubconscious), 50);
+      }
+      
+      // Cleanup
+      events.forEach(e => document.removeEventListener(e, flushQueue));
+    };
+
+    const events = ["click", "keydown", "touchstart", "pointerdown"];
+    events.forEach(e => document.addEventListener(e, flushQueue));
+    return () => events.forEach(e => document.removeEventListener(e, flushQueue));
+  }, []);
+
   // Main Speak Function
-  const speak = useCallback(async (text: string) => {
-    setAudioState("fetching_primary");
-    const ctx = ensureAudioContext();
-    if (!ctx) return;
+  // Main Speak Function
+  const speak = useCallback(async (text: string, agentId?: string, isSubconscious = false) => {
+    // 1. Singleton Lock: Prevent overlapping cloud synthesis
+    if (globalSpeechLock && isSubconscious) return;
     
-    // Attempt 1: Puter API (via official SDK)
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 20000); // 20s allowance for WSS handshakes
+    // Auth Check: Puter OpenAI requires a valid session
+    try {
+      const isSignedIn = await puter.auth.isSignedIn();
+      if (!isSignedIn) {
+        if (isSubconscious) {
+          console.log("[AudioController] Not signed in - falling back to local for subconscious.");
+          throw new Error("Auth Required");
+        } else {
+          console.log("[AudioController] Not signed in - prompting login...");
+          await puter.auth.signIn();
+        }
+      }
+    } catch (e) {
+       if (isSubconscious) throw e;
+    }
+
+    const requestId = ++reqIdRef.current;
+    globalSpeechLock = true;
+    
+    setAudioState("fetching_primary");
+    const ctx = await ensureAudioContext();
+    if (!ctx) {
+      globalSpeechLock = false;
+      return;
+    }
+
+    // 2. Queue Logic: If blocked by browser, wait for interaction
+    if (ctx.state !== "running") {
+      console.log(`[AudioController] Audio blocked by browser policy. Queueing speech: \"${text.slice(0, 20)}...\"`);
+      globalSpeechQueue.push({ text, agentId, isSubconscious });
+      globalSpeechLock = false;
+      return;
+    }
+    
+    // Clear old state
+    setCurrentBuffer(null);
+    if (currentAudioElement) {
+       currentAudioElement.pause();
+       currentAudioElement.src = "";
+    }
+    setCurrentAudioElement(null);
 
     try {
-      console.log("[AudioController] Fetching primary TTS via puter.js...");
-      
-      const usedVoice = useGameStore.getState().audioVoice || "nova";
+      console.log(`[AudioController] -> CLOUD [Agent: ${agentId || 'User'}] Text: \"${text.slice(0, 30)}...\"`);
       
       const audioElement = await puter.ai.txt2speech(text, {
         provider: "openai",
-        voice: usedVoice
+        voice: "nova"
       });
       
-      // 2. We need the native raw decoded buffer to use in PositionalAudio spatial context
-      // So we fetch the blob/URL directly from the returned element's src
-      const response = await fetch(audioElement.src, { signal: abortController.signal });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch audio stream from puter src: ${response.status}`);
+      if (requestId !== reqIdRef.current) {
+        globalSpeechLock = false;
+        return;
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
-      
-      setCurrentBuffer(decodedBuffer);
+      // We return the element for MediaElementSource usage in the 3D entity
+      setCurrentAudioElement(audioElement);
       setAudioState("speaking");
-      return;
+      
+      audioElement.onended = () => {
+        if (requestId === reqIdRef.current) globalSpeechLock = false;
+      };
+      audioElement.onerror = () => {
+        if (requestId === reqIdRef.current) globalSpeechLock = false;
+      };
+      
+      return audioElement;
 
     } catch (err) {
-      console.warn("[AudioController] Primary TTS Failed/Timed out. Proceeding to fallback...", err);
-      clearTimeout(timeoutId);
+      console.warn("[AudioController] Cloud Primary Failed. Fallback to Kokoro...", err);
     }
 
     // Attempt 2: Fallback (Kokoro WebGPU)
@@ -129,19 +203,31 @@ export function useAudioController() {
         });
       });
 
-      setCurrentBuffer(buffer);
-      setAudioState("speaking");
+      if (requestId === reqIdRef.current) {
+        setCurrentBuffer(buffer);
+        setAudioState("speaking");
+        // Clear lock after buffer length
+        setTimeout(() => { if (requestId === reqIdRef.current) globalSpeechLock = false; }, (text.length * 80) + 1000);
+      }
     } catch (fallbackErr) {
       console.error("[AudioController] Fallback TTS Failed:", fallbackErr);
       setAudioState("error");
+      globalSpeechLock = false;
     }
 
-  }, [ensureAudioContext, initFallbackWorker]);
+  }, [ensureAudioContext, initFallbackWorker, currentAudioElement, reqIdRef]);
 
   const stopSpeaking = useCallback(() => {
+    reqIdRef.current++;
+    globalSpeechLock = false;
     setCurrentBuffer(null);
+    if (currentAudioElement) {
+      currentAudioElement.pause();
+      currentAudioElement.src = "";
+    }
+    setCurrentAudioElement(null);
     setAudioState("idle");
-  }, []);
+  }, [currentAudioElement, reqIdRef]);
 
-  return { audioState, currentBuffer, speak, stopSpeaking, ensureAudioContext };
+  return { audioState, currentBuffer, currentAudioElement, speak, stopSpeaking, ensureAudioContext };
 }

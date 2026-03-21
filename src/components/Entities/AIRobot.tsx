@@ -50,9 +50,10 @@ export default function AIRobot({
     }
   };
 
-  const { currentBuffer, ensureAudioContext, speak, stopSpeaking } = useAudioController();
+  const { currentBuffer, currentAudioElement, ensureAudioContext, speak, stopSpeaking } = useAudioController();
   const audioRef = useRef<THREE.PositionalAudio>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   // Setup Listener for native positional audio
   const { camera } = useThree();
@@ -68,11 +69,20 @@ export default function AIRobot({
   useEffect(() => {
     const handleSpeak = (e: any) => {
       if (e.detail?.agentId === id && e.detail?.text) {
-        speak(e.detail.text);
+        speak(e.detail.text, id, false);
+      }
+    };
+    const handleSubconsciousSpeak = (e: any) => {
+      if (e.detail?.agentId === id && e.detail?.text) {
+        speak(e.detail.text, id, true);
       }
     };
     window.addEventListener("agent-speak", handleSpeak);
-    return () => window.removeEventListener("agent-speak", handleSpeak);
+    window.addEventListener("subconscious-speak", handleSubconsciousSpeak);
+    return () => {
+      window.removeEventListener("agent-speak", handleSpeak);
+      window.removeEventListener("subconscious-speak", handleSubconsciousSpeak);
+    };
   }, [id, speak]);
 
   useEffect(() => {
@@ -108,6 +118,32 @@ export default function AIRobot({
     }
   }, [ensureAudioContext]);
 
+  // Pipeline A: Streaming (Low Latency)
+  useEffect(() => {
+    if (audioRef.current && currentAudioElement) {
+      if (audioRef.current.isPlaying) audioRef.current.stop();
+      
+      const ctx = audioRef.current.context;
+      
+      // We must reclaim/reuse the source node if it already exists for this element
+      // or just create a new one if it's a new element instance.
+      try {
+        if (mediaSourceRef.current) {
+          // Three.js doesn't provide a clean "unsetSource" so we just overwrite
+        }
+        const source = ctx.createMediaElementSource(currentAudioElement);
+        mediaSourceRef.current = source;
+        audioRef.current.setNodeSource(source as any);
+        
+        // Play the element directly (this starts the stream)
+        currentAudioElement.play().catch(e => console.warn("[AIRobot] Autoplay blocked or interrupted", e));
+      } catch (e) {
+        console.warn("[AIRobot] Stream link error:", e);
+      }
+    }
+  }, [currentAudioElement]);
+
+  // Pipeline B: Local Buffer (Fallback)
   useEffect(() => {
     if (audioRef.current && currentBuffer) {
       if (audioRef.current.isPlaying) audioRef.current.stop();

@@ -79,8 +79,8 @@ export default function AudioTestPage() {
 
   const playerRef = useRef<THREE.Group>(null);
 
-  const handlePlayAudio = () => {
-    ensureAudioContext();
+  const handlePlayAudio = async () => {
+    await ensureAudioContext();
     window.dispatchEvent(
       new CustomEvent("agent-speak", {
         detail: {
@@ -91,7 +91,8 @@ export default function AudioTestPage() {
     );
   };
 
-  const applyPreset = (presetName: string) => {
+  const applyPreset = async (presetName: string) => {
+    await ensureAudioContext();
     switch (presetName) {
       case "whisper":
         setAudioDistanceModel("exponential");
