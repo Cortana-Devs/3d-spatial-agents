@@ -113,13 +113,18 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "observe",
+      name: "web_search",
       description:
-        "Do nothing and continue your current behavior. Use when no action is needed. You will keep wandering or idling.",
+        "Perform a web search to find up-to-date information, facts, or answers from the internet. Use when your internal knowledge is insufficient.",
       parameters: {
         type: "object",
-        properties: {},
-        required: [],
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query to look up on the internet.",
+          },
+        },
+        required: ["query"],
       },
     },
   },
@@ -135,6 +140,7 @@ export type ToolCallAction =
   | { tool: "go_to"; targetX?: number; targetZ?: number; zoneId?: string }
   | { tool: "interact"; itemId: string }
   | { tool: "say"; message: string }
+  | { tool: "web_search"; query: string }
   | { tool: "observe" };
 
 /**
@@ -171,6 +177,10 @@ export function parseToolCall(
       case "say":
         if (!args.message) return null;
         return { tool: "say", message: args.message };
+
+      case "web_search":
+        if (!args.query) return null;
+        return { tool: "web_search", query: args.query };
 
       case "observe":
         return { tool: "observe" };

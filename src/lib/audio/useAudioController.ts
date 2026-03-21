@@ -95,6 +95,11 @@ export function useAudioController() {
       if (!response.ok) {
         throw new Error(`Primary TTS failed with status ${response.status}`);
       }
+      
+      const contentType = response.headers.get("content-type");
+      if (!contentType || contentType.includes("text/html")) {
+         throw new Error("Primary TTS returned HTML instead of Audio Buffer (Auth/Rate-Limit issue).");
+      }
 
       const arrayBuffer = await response.arrayBuffer();
       const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);

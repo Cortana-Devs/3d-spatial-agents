@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { InteractableRegistry } from "./InteractableRegistry";
 import NavigationNetwork from "./NavigationNetwork";
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import { getRandomPhrase } from "@/lib/audio/phraseBank";
 
 // ============================================================================
 // Task Types
@@ -187,6 +188,16 @@ export class AgentTaskQueue {
 
     this.phase = "NAVIGATING";
     console.log(`[AgentTaskQueue:${this.agentId}] Started atomic task: ${this.currentTask.type}`);
+    
+    // Subconscious Chatter (30% chance to mutter when starting a physical task)
+    if (this.currentTask.type !== "SAY" && this.currentTask.type !== "WANDER" && Math.random() < 0.3) {
+      const phrase = this.currentTask.type === "GO_TO" ? getRandomPhrase("MOVING") : getRandomPhrase("WORKING");
+      window.dispatchEvent(
+         new CustomEvent("subconscious-speak", {
+           detail: { agentId: this.agentId, text: phrase },
+         })
+      );
+    }
   }
 
   // --- Stuck Detection ---

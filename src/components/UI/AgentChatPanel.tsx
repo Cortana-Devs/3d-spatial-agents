@@ -618,6 +618,13 @@ export const AgentChatPanel: React.FC = () => {
         text: response.reply,
       });
 
+      // Dispatch voice event for TTS playback
+      window.dispatchEvent(
+        new CustomEvent("agent-speak", {
+          detail: { agentId: chatAgentId, text: response.reply },
+        })
+      );
+
       // If the LLM returned tasks, inject them into the agent's queue
       if (response.tasks && response.tasks.length > 0) {
         console.log(

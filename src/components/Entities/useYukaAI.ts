@@ -15,6 +15,7 @@ import { AgentTaskRegistry } from "../Systems/AgentTaskQueue";
 import type { SteeringCommand } from "../Systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import { getRandomPhrase } from "@/lib/audio/phraseBank";
 import {
   getAssignedStorageTable,
   getTableCenterPosition,
@@ -538,6 +539,12 @@ export function useYukaAI(
           // Update brain thought to reflect greeting
           brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). Greeting and offering assistance.`;
           brain.state.lastThoughtTime = Date.now();
+          
+          window.dispatchEvent(
+            new CustomEvent("subconscious-speak", {
+              detail: { agentId: id, text: getRandomPhrase("GREETINGS") },
+            })
+          );
         }
       } else if (playerProximityState.current === "GREETING") {
         // Keep the agent stopped and facing the player while greeting

@@ -79,7 +79,7 @@ export async function processAgentThought(
     - You MUST use the provided tools to take action.
     - If your 'Tidiness' drive is low, find an OBJECT on the floor and use 'pick_up', then 'place_at' an empty area.
     - If you are just exploring, use 'go_to' or 'observe'.
-    - If you want to communicate, use 'say'.
+    - If you want to communicate, use 'say'. Output for 'say' goes directly to a Text-To-Speech engine; use unformatted, conversational language.
     - IMPORTANT: You can call multiple tools in a single response (e.g. pick_up then place_at).
     - If you are already running tasks, consider using 'observe' to let them finish unless there is an emergency.
 

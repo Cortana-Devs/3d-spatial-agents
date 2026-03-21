@@ -14,7 +14,7 @@ async function initSynthesizer() {
   // Use the WebGPU backend strictly as specified
   synthesizer = await pipeline("text-to-speech", "onnx-community/Kokoro-82M-v1.0-ONNX", {
     device: "webgpu",
-    dtype: "fp32", // fp32 is safer for audio fidelity in WebGPU Kokoro
+    dtype: "q8", // q8 (quantized) prevents WebGL Context Loss on most consumer 3D applications
   });
   
   isReady = true;

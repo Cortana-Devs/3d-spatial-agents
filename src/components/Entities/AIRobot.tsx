@@ -1,14 +1,14 @@
 /* eslint-disable react-hooks/immutability */
-import React, { useRef, useMemo, useEffect } from "react";
+import React, { useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
 import { useYukaAI } from "./useYukaAI";
 import { ThoughtBubble } from "../UI/ThoughtBubble";
 import { AgentChatPrompt } from "../UI/AgentChatPrompt";
+import { SpeechIndicator } from "../UI/SpeechIndicator";
 import { ErrorBoundary } from "../UI/ErrorBoundary";
 import { useGameStore } from "@/store/gameStore";
 import { useAudioController } from "@/lib/audio/useAudioController";
-import { PositionalAudio } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 
 // Shared Geometry/Material logic ported from Robot.tsx
 // to ensure AI looks exactly like the Player.
@@ -48,6 +48,16 @@ export default function AIRobot({
   const { currentBuffer, ensureAudioContext, speak } = useAudioController();
   const audioRef = useRef<THREE.PositionalAudio>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+
+  // Setup Listener for native positional audio
+  const { camera } = useThree();
+  const [listener] = useState(() => new THREE.AudioListener());
+  useEffect(() => {
+    camera.add(listener);
+    return () => {
+      camera.remove(listener);
+    };
+  }, [camera, listener]);
 
   useEffect(() => {
     const handleSpeak = (e: any) => {
@@ -119,7 +129,8 @@ export default function AIRobot({
     >
       <ThoughtBubble brain={brain} isInspected={inspectedAgentId === id} />
       <AgentChatPrompt agentId={id} />
-      <PositionalAudio ref={audioRef as any} url="" />
+      <SpeechIndicator agentId={id} />
+      <positionalAudio ref={audioRef as any} args={[listener]} />
       {/* We use the same procedural model as Robot.tsx */}
       <ProceduralRobotModel joints={joints} id={id} />
     </group>

@@ -259,6 +259,7 @@ export async function chatWithAgent(
 - Professional yet warm, like a helpful coworker
 - Concise — keep replies to 1-3 short sentences
 - Proactive — offer specific suggestions when the user seems unsure
+- Spoken Dialogue — Your 'reply' is sent directly to a Text-To-Speech (TTS) engine. Do NOT use markdown, asterisks, code blocks, bullet points, or complex punctuation. Talk naturally.
 
 ## Output Format (JSON ONLY)
 You MUST respond with valid JSON in this exact format:
