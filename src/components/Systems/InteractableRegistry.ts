@@ -135,8 +135,9 @@ export class InteractableRegistry {
      
      for (const area of this.placingAreas.values()) {
         if (
-          area.groupName?.toLowerCase() === zoneNameOrId.toLowerCase() || 
-          area.groupId?.toLowerCase() === zoneNameOrId.toLowerCase()
+          area.groupName?.toLowerCase().includes(zoneNameOrId.toLowerCase()) || 
+          area.groupId?.toLowerCase().includes(zoneNameOrId.toLowerCase()) ||
+          area.name?.toLowerCase().includes(zoneNameOrId.toLowerCase())
         ) {
            center.add(area.position);
            count++;

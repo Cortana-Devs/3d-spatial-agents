@@ -110,6 +110,7 @@ export const AgentChatPanel: React.FC = () => {
       type: string;
       itemId?: string;
       destAreaId?: string;
+      targetAreaId?: string;
       targetX?: number;
       targetZ?: number;
     }[],
@@ -426,7 +427,16 @@ export const AgentChatPanel: React.FC = () => {
         }
 
         case "GO_TO": {
-          if (task.targetX !== undefined && task.targetZ !== undefined) {
+          if (task.targetAreaId) {
+            queue.enqueue({
+              type: "GO_TO",
+              priority: 20,
+              targetAreaId: task.targetAreaId,
+            } as any);
+            console.log(
+              `[AgentChat] Dispatched GO_TO semantic area: ${task.targetAreaId}`,
+            );
+          } else if (task.targetX !== undefined && task.targetZ !== undefined) {
             queue.enqueue({
               type: "GO_TO",
               priority: 20,
@@ -435,6 +445,12 @@ export const AgentChatPanel: React.FC = () => {
             console.log(
               `[AgentChat] Dispatched GO_TO: (${task.targetX}, ${task.targetZ})`,
             );
+          } else {
+            console.warn(`[AgentChat] GO_TO task missing target location`, task);
+            useGameStore.getState().addChatMessage(agentId, {
+              role: "agent",
+              text: `I'm sorry, I don't know where that is.`,
+            });
           }
           break;
         }

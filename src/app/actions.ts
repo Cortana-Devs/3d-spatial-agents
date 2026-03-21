@@ -136,7 +136,7 @@ export async function parseNaturalCommand(
             "You are a command parser for a 3D research lab environment. You parse natural language commands into structured JSON task objects. Always output valid JSON only, no markdown fences.\n" +
             "Available task types:\n" +
             "- FETCH_AND_PLACE: Requires itemId, destAreaId\n" +
-            "- GO_TO: Requires targetPos {x,y,z}\n" +
+            "- GO_TO: Requires targetAreaId (zone name) or targetPos {x,y,z}\n" +
             "- PICK_NEARBY: Requires itemId\n" +
             "- FOLLOW_PLAYER\n" +
             "- READ_FILE: Requires itemId. Reads a document.\n" +
@@ -227,6 +227,7 @@ export interface ChatResponse {
     type: string;
     itemId?: string;
     destAreaId?: string;
+    targetAreaId?: string;
     targetX?: number;
     targetZ?: number;
   }[];
@@ -274,7 +275,7 @@ If the user asks you to DO something (move item, go somewhere, follow, read file
 ## Available Task Types
 - FETCH_AND_PLACE: Pick up an item and place it. Requires "itemId" and "destAreaId". Use EXACT IDs from the World State.
 - FOLLOW_PLAYER: Follow the user. No extra fields needed.
-- GO_TO: Move to a location. Requires "targetX" and "targetZ" (coordinates).
+- GO_TO: Move to a location. Requires "targetAreaId" (a semantic zone name like "conference area", "meeting room", "storage") OR exact "targetX" and "targetZ" (coordinates). Use targetAreaId if coordinates are unknown.
 - READ_FILE: Read the text from a document. Requires "itemId".
 - WRITE_FILE: Write text to a document. Requires "itemId" and "content" (the text to write).
 - COPY_FILE: Copy the entire contents of one document perfectly into another document. Requires "sourceItemId" and "itemId" (destination).

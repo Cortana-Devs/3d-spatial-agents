@@ -168,13 +168,24 @@ export class AgentTaskQueue {
     
     // Resolve Semantic Zone targets
     if (this.currentTask.type === "GO_TO" && this.currentTask.targetAreaId) {
-        const center = reg.getZoneCenter(this.currentTask.targetAreaId);
-        if (center) {
-           this.currentTask.targetPos = center;
-        } else {
-           console.warn(`[AgentTaskQueue:${this.agentId}] Null Zone Center for ${this.currentTask.targetAreaId}`);
-           this.phase = "COMPLETED";
-           return;
+        const targetStr = this.currentTask.targetAreaId.toLowerCase();
+        
+        // Hardcoded safe zones to prevent NavMesh stuck issues
+        if (targetStr.includes("meeting") || targetStr.includes("conference")) {
+            const { getMeetingRoomPosition } = require("@/config/agentRoutines");
+            const pos = getMeetingRoomPosition();
+            if (pos) this.currentTask.targetPos = pos;
+        }
+
+        if (!this.currentTask.targetPos) {
+            const center = reg.getZoneCenter(this.currentTask.targetAreaId);
+            if (center) {
+               this.currentTask.targetPos = center;
+            } else {
+               console.warn(`[AgentTaskQueue:${this.agentId}] Null Zone Center for ${this.currentTask.targetAreaId}`);
+               this.phase = "COMPLETED";
+               return;
+            }
         }
     }
 
