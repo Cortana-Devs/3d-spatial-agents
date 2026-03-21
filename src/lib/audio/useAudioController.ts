@@ -84,10 +84,11 @@ export function useAudioController() {
     try {
       console.log("[AudioController] Fetching primary TTS via puter.js...");
       
-      // 1. Generate via Puter (returns an HTMLAudioElement)
+      const usedVoice = useGameStore.getState().audioVoice || "nova";
+      
       const audioElement = await puter.ai.txt2speech(text, {
         provider: "openai",
-        voice: "alloy"
+        voice: usedVoice
       });
       
       // 2. We need the native raw decoded buffer to use in PositionalAudio spatial context

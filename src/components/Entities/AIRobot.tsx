@@ -50,7 +50,7 @@ export default function AIRobot({
     }
   };
 
-  const { currentBuffer, ensureAudioContext, speak } = useAudioController();
+  const { currentBuffer, ensureAudioContext, speak, stopSpeaking } = useAudioController();
   const audioRef = useRef<THREE.PositionalAudio>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
@@ -74,6 +74,19 @@ export default function AIRobot({
     window.addEventListener("agent-speak", handleSpeak);
     return () => window.removeEventListener("agent-speak", handleSpeak);
   }, [id, speak]);
+
+  useEffect(() => {
+    const handleStop = (e: any) => {
+      if (e.detail?.agentId === id) {
+        stopSpeaking();
+        if (audioRef.current && audioRef.current.isPlaying) {
+          audioRef.current.stop();
+        }
+      }
+    };
+    window.addEventListener("agent-stop", handleStop);
+    return () => window.removeEventListener("agent-stop", handleStop);
+  }, [id, stopSpeaking]);
 
   useEffect(() => {
     if (!audioRef.current) return;

@@ -135,6 +135,8 @@ interface GameState {
   setAudioMaxDistance: (dist: number) => void;
   audioRolloffFactor: number;
   setAudioRolloffFactor: (factor: number) => void;
+  audioVoice: string;
+  setAudioVoice: (voice: string) => void;
 
   // Menu State
   isMenuOpen: boolean;
@@ -363,6 +365,8 @@ export const useGameStore = create<GameState>((set) => ({
   setAudioMaxDistance: (dist) => set({ audioMaxDistance: dist }),
   audioRolloffFactor: 1,
   setAudioRolloffFactor: (factor) => set({ audioRolloffFactor: factor }),
+  audioVoice: "nova",
+  setAudioVoice: (voice) => set({ audioVoice: voice }),
 
   // Menu State
   isMenuOpen: false,

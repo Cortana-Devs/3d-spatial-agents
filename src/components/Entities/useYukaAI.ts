@@ -327,11 +327,18 @@ export function useYukaAI(
       playerPos = playerRef.current.position;
     }
 
-    const steeringCmd: SteeringCommand = taskQueue.update(
-      delta,
-      vehiclePos,
-      playerPos,
-    );
+    const isInteractingWithPlayer =
+      playerProximityState.current === "GREETING" ||
+      playerProximityState.current === "CHATTING";
+
+    let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
+    if (!isInteractingWithPlayer) {
+      steeringCmd = taskQueue.update(
+        delta,
+        vehiclePos,
+        playerPos,
+      );
+    }
     const hasManualTask = taskQueue.isBusy();
 
     // Fix #27: Always disable wander when a manual task is active
@@ -341,11 +348,21 @@ export function useYukaAI(
     const bSeek = vehicle.steering.behaviors[1] as YUKA.SeekBehavior;
     const bArrive = vehicle.steering.behaviors[2] as YUKA.ArriveBehavior;
     const bWander = vehicle.steering.behaviors[3] as YUKA.WanderBehavior;
+
+    if (isInteractingWithPlayer) {
+      // PAUSE MODE: Force agent to stop and stand still while interacting
+      bFollowPath.active = false;
+      bSeek.active = false;
+      bArrive.active = false;
+      bWander.active = false;
+      vehicle.velocity.set(0, 0, 0);
+    }
+
     if (hasManualTask && bWander.active) {
       bWander.active = false;
     }
 
-    // Apply steering command from task queue
+    // Apply steering command from task queue (if active)
     if (steeringCmd.type !== "NONE") {
       const resetBehaviors = () => {
         bFollowPath.active = false;
@@ -499,7 +516,7 @@ export function useYukaAI(
     // --- PLAYER PROXIMITY CHAT ---
     // Check if the player is nearby and trigger greeting/chat flow
     const brain = brainRef.current;
-    if (playerRef.current && !hasManualTask) {
+    if (playerRef.current) {
       const distToPlayer = vehicle.position.distanceTo(
         playerRef.current.position as unknown as YUKA.Vector3,
       );
