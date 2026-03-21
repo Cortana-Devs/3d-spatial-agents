@@ -220,8 +220,22 @@ export class AgentTaskQueue {
     }
 
     if (this.currentTask?.type === "SAY" || this.currentTask?.type === "WAIT") {
+       if (this.phaseTimer === 0 && this.currentTask.type === "SAY") {
+          window.dispatchEvent(
+            new CustomEvent("agent-speak", {
+              detail: { agentId: this.agentId, text: (this.currentTask as any).message || "Hello." },
+            })
+          );
+       }
        this.phaseTimer += delta;
-       const dur = this.currentTask.duration || 2.0;
+       
+       // Calculate TTS speaking duration heuristically (approx 100ms per character with minimum 2s)
+       let dur = this.currentTask.duration || 2.0;
+       if (this.currentTask.type === "SAY") {
+         const charLength = ((this.currentTask as any).message || "").length;
+         dur = Math.max(2.0, charLength * 0.08); // 80ms per char
+       }
+
        if (this.phaseTimer > dur) {
           this.phase = "COMPLETED";
        }

@@ -45,9 +45,19 @@ export default function AIRobot({
     }
   };
 
-  const { currentBuffer, ensureAudioContext } = useAudioController();
+  const { currentBuffer, ensureAudioContext, speak } = useAudioController();
   const audioRef = useRef<THREE.PositionalAudio>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+
+  useEffect(() => {
+    const handleSpeak = (e: any) => {
+      if (e.detail?.agentId === id && e.detail?.text) {
+        speak(e.detail.text);
+      }
+    };
+    window.addEventListener("agent-speak", handleSpeak);
+    return () => window.removeEventListener("agent-speak", handleSpeak);
+  }, [id, speak]);
 
   useEffect(() => {
     if (!audioRef.current) return;
