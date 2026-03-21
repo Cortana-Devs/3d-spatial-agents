@@ -1,7 +1,8 @@
 import { getGroqClient, rotateGroqKey } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
 import { AGENT_TOOLS } from "./agent-tools";
-import type { ChatCompletionMessage } from "groq-sdk/resources/chat/completions";
+import { performWebSearch } from "./search";
+import type { ChatCompletionMessage, ChatCompletionMessageParam, ChatCompletionToolMessageParam } from "groq-sdk/resources/chat/completions";
 
 export interface NearbyEntity {
   type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE', 'OBJECT'
@@ -95,18 +96,20 @@ export async function processAgentThought(
     try {
       const client = getGroqClient();
 
-      const completion = await client.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an AI assistant mapped to a 3D robot avatar. Use your provided tools to navigate, interact, and organize the lab. Keep your internal monologue brief and focused on action.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+      const messages: ChatCompletionMessageParam[] = [
+        {
+          role: "system",
+          content:
+            "You are an AI assistant mapped to a 3D robot avatar. Use your provided tools to navigate, interact, and organize the lab. Keep your internal monologue brief and focused on action.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ];
+
+      let completion = await client.chat.completions.create({
+        messages,
         model: model,
         temperature: 0.3,
         max_completion_tokens: 400,
@@ -116,7 +119,47 @@ export async function processAgentThought(
         stream: false,
       });
 
-      const message = completion.choices[0]?.message;
+      let message = completion.choices[0]?.message;
+
+      // --- Tool Execution Loop ---
+      // If the model wants to search, we execute it and feed results back.
+      if (message?.tool_calls) {
+        let hasServerSideTools = false;
+        const toolMessages: ChatCompletionToolMessageParam[] = [];
+
+        for (const toolCall of message.tool_calls) {
+            if (toolCall.function.name === "web_search") {
+                hasServerSideTools = true;
+                const args = JSON.parse(toolCall.function.arguments);
+                const results = await performWebSearch(args.query);
+                
+                toolMessages.push({
+                    role: "tool",
+                    tool_call_id: toolCall.id,
+                    content: JSON.stringify(results),
+                });
+            }
+        }
+
+        if (hasServerSideTools) {
+            // Add the assistant message and tool response message to the thread
+            messages.push(message as any);
+            messages.push(...toolMessages);
+
+            // Get a new completion that accounts for the search results
+            completion = await client.chat.completions.create({
+                messages,
+                model: model,
+                temperature: 0.3,
+                max_completion_tokens: 400,
+                tools: AGENT_TOOLS,
+                tool_choice: "auto",
+                top_p: 1,
+                stream: false,
+            });
+            message = completion.choices[0]?.message;
+        }
+      }
       const endTime = Date.now();
 
       if (!message) {

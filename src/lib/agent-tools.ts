@@ -128,6 +128,19 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "observe",
+      description:
+        "Do nothing and continue your current behavior. Use when no action is needed. You will keep wandering or idling.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
 ];
 
 // ============================================================================

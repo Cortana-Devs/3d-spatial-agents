@@ -7,6 +7,7 @@ import {
 } from "@/lib/agent-core";
 import { getGroqClient } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
+import { performWebSearch } from "@/lib/search";
 
 export async function generateAgentThought(
   context: AgentContext,
@@ -277,6 +278,7 @@ If the user asks you to DO something (move item, go somewhere, follow, read file
 - READ_FILE: Read the text from a document. Requires "itemId".
 - WRITE_FILE: Write text to a document. Requires "itemId" and "content" (the text to write).
 - COPY_FILE: Copy the entire contents of one document perfectly into another document. Requires "sourceItemId" and "itemId" (destination).
+- WEB_SEARCH: Perform a web search to find information. Requires "query". This is a mental action; you will receive the results immediately and should then provide a final reply.
 - ANNOUNCE_MEETING: When the user says there is a meeting in the meeting room (or similar), respond with {"reply": "...", "tasks": [{"type": "ANNOUNCE_MEETING"}]}. Acknowledge that you will inform the others and head to the meeting room. No extra fields needed.
 
 ## Advanced Behaviors
@@ -310,7 +312,7 @@ ${worldSection}`,
   try {
     const client = getGroqClient();
 
-    const completion = await client.chat.completions.create({
+    let completion = await client.chat.completions.create({
       messages,
       model,
       temperature: 0.4,
@@ -320,8 +322,39 @@ ${worldSection}`,
       response_format: { type: "json_object" },
     });
 
-    const rawContent =
+    let rawContent =
       completion.choices[0]?.message?.content?.trim() || '{"reply": "..."}';
+
+    // --- Web Search Handling ---
+    try {
+        const parsedInitial = JSON.parse(rawContent);
+        const searchTask = parsedInitial.tasks?.find((t: any) => t.type === "WEB_SEARCH");
+        
+        if (searchTask && searchTask.query) {
+            const searchResults = await performWebSearch(searchTask.query);
+            
+            // Push the search results as a 'system' or 'user' message context update
+            messages.push({ role: "assistant", content: rawContent });
+            messages.push({ 
+                role: "user", 
+                content: `WEB SEARCH RESULTS for "${searchTask.query}":\n${JSON.stringify(searchResults)}\n\nPlease provide your final reply based on these results.` 
+            });
+
+            // Re-run
+            completion = await client.chat.completions.create({
+                messages,
+                model,
+                temperature: 0.3,
+                max_completion_tokens: 300,
+                top_p: 1,
+                stream: false,
+                response_format: { type: "json_object" },
+            });
+            rawContent = completion.choices[0]?.message?.content?.trim() || '{"reply": "..."}';
+        }
+    } catch (e) {
+        console.warn("JSON Parse or Search error in chat loop:", e);
+    }
     const endTime = Date.now();
 
     await logAgentInteraction({
