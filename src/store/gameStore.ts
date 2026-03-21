@@ -127,6 +127,14 @@ interface GameState {
   setSensitivity: (sensitivity: number) => void;
   volume: number;
   setVolume: (volume: number) => void;
+  audioDistanceModel: "linear" | "inverse" | "exponential";
+  setAudioDistanceModel: (model: "linear" | "inverse" | "exponential") => void;
+  audioRefDistance: number;
+  setAudioRefDistance: (dist: number) => void;
+  audioMaxDistance: number;
+  setAudioMaxDistance: (dist: number) => void;
+  audioRolloffFactor: number;
+  setAudioRolloffFactor: (factor: number) => void;
 
   // Menu State
   isMenuOpen: boolean;
@@ -347,6 +355,14 @@ export const useGameStore = create<GameState>((set) => ({
   setSensitivity: (sensitivity) => set({ sensitivity }),
   volume: 0.5,
   setVolume: (volume) => set({ volume }),
+  audioDistanceModel: "exponential",
+  setAudioDistanceModel: (model) => set({ audioDistanceModel: model }),
+  audioRefDistance: 5,
+  setAudioRefDistance: (dist) => set({ audioRefDistance: dist }),
+  audioMaxDistance: 50,
+  setAudioMaxDistance: (dist) => set({ audioMaxDistance: dist }),
+  audioRolloffFactor: 1,
+  setAudioRolloffFactor: (factor) => set({ audioRolloffFactor: factor }),
 
   // Menu State
   isMenuOpen: false,

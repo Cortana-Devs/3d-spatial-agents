@@ -37,6 +37,11 @@ export default function AIRobot({
     (state) => state.setInspectedAgentId,
   );
 
+  const audioDistanceModel = useGameStore((state) => state.audioDistanceModel);
+  const audioRefDistance = useGameStore((state) => state.audioRefDistance);
+  const audioMaxDistance = useGameStore((state) => state.audioMaxDistance);
+  const audioRolloffFactor = useGameStore((state) => state.audioRolloffFactor);
+
   const handleClick = (e: any) => {
     if (isMenuOpen) {
       e.stopPropagation();
@@ -116,6 +121,15 @@ export default function AIRobot({
     }
   });
 
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.setDistanceModel(audioDistanceModel);
+      audioRef.current.setRefDistance(audioRefDistance);
+      audioRef.current.setMaxDistance(audioMaxDistance);
+      audioRef.current.setRolloffFactor(audioRolloffFactor);
+    }
+  }, [audioDistanceModel, audioRefDistance, audioMaxDistance, audioRolloffFactor]);
+
   return (
     <group
       ref={groupRef}
@@ -131,7 +145,7 @@ export default function AIRobot({
       <ThoughtBubble brain={brain} isInspected={inspectedAgentId === id} />
       <AgentChatPrompt agentId={id} />
       <SpeechIndicator agentId={id} />
-      <positionalAudio ref={audioRef as any} args={[listener]} distanceModel="exponential" refDistance={5} maxDistance={50} />
+      <positionalAudio ref={audioRef as any} args={[listener]} />
       {/* We use the same procedural model as Robot.tsx */}
       <ProceduralRobotModel joints={joints} id={id} />
     </group>
