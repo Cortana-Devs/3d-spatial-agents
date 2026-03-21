@@ -14,16 +14,12 @@ async function initSynthesizer() {
   
   try {
     synthesizer = await pipeline("text-to-speech", "Xenova/mms-tts-eng", {
-      device: "webgpu",
-      dtype: "q8"
-    });
-  } catch (err) {
-    console.warn("WebGPU not supported or failed, falling back to wasm:", err);
-    synthesizer = await pipeline("text-to-speech", "Xenova/mms-tts-eng", {
       device: "wasm",
       dtype: "q8",
       quantized: true
     });
+  } catch (err) {
+    console.error("WASM fallback failed to initialize:", err);
   }
   
   isReady = true;

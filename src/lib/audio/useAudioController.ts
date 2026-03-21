@@ -79,7 +79,7 @@ export function useAudioController() {
     
     // Attempt 1: Puter API (via official SDK)
     const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 8000); // Allow more time for network
+    const timeoutId = setTimeout(() => abortController.abort(), 20000); // 20s allowance for WSS handshakes
 
     try {
       console.log("[AudioController] Fetching primary TTS via puter.js...");
