@@ -6,6 +6,9 @@ import { ThoughtBubble } from "../UI/ThoughtBubble";
 import { AgentChatPrompt } from "../UI/AgentChatPrompt";
 import { ErrorBoundary } from "../UI/ErrorBoundary";
 import { useGameStore } from "@/store/gameStore";
+import { useAudioController } from "@/lib/audio/useAudioController";
+import { PositionalAudio } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 
 // Shared Geometry/Material logic ported from Robot.tsx
 // to ensure AI looks exactly like the Player.
@@ -42,6 +45,56 @@ export default function AIRobot({
     }
   };
 
+  const { currentBuffer, ensureAudioContext } = useAudioController();
+  const audioRef = useRef<THREE.PositionalAudio>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    try {
+      // Need to resume context on explicit user interaction elsewhere,
+      // but ensure context exists here.
+      ensureAudioContext();
+      const ctx = audioRef.current.context;
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      analyserRef.current = analyser;
+      
+      const gainNode = audioRef.current.getOutput();
+      if (gainNode) {
+        gainNode.connect(analyser);
+      }
+    } catch (e) {
+      console.warn("Audio Context init deferred", e);
+    }
+  }, [ensureAudioContext]);
+
+  useEffect(() => {
+    if (audioRef.current && currentBuffer) {
+      if (audioRef.current.isPlaying) audioRef.current.stop();
+      audioRef.current.setBuffer(currentBuffer);
+      audioRef.current.play();
+    }
+  }, [currentBuffer]);
+
+  useFrame(() => {
+    if (analyserRef.current && audioRef.current?.isPlaying && joints.current?.mouth) {
+      const data = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.getByteFrequencyData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i];
+      const avg = sum / data.length;
+      
+      // X scale is width, Y scale is height for mouth (assuming geometry orientation)
+      // Base scale is 1. We stretch it based on volume.
+      const scaleStretch = 1 + (avg / 255) * 3.0; 
+      joints.current.mouth.scale.set(scaleStretch, scaleStretch, scaleStretch);
+    } else if (joints.current?.mouth) {
+      // Lerp back to resting state
+      joints.current.mouth.scale.lerp(new THREE.Vector3(1, 1, 1), 0.2);
+    }
+  });
+
   return (
     <group
       ref={groupRef}
@@ -56,6 +109,7 @@ export default function AIRobot({
     >
       <ThoughtBubble brain={brain} isInspected={inspectedAgentId === id} />
       <AgentChatPrompt agentId={id} />
+      <PositionalAudio ref={audioRef as any} url="" />
       {/* We use the same procedural model as Robot.tsx */}
       <ProceduralRobotModel joints={joints} id={id} />
     </group>
@@ -317,6 +371,9 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
 
             {/* Mouth — simple line */}
             <mesh
+              ref={(el) => {
+                if (el && joints.current) joints.current.mouth = el;
+              }}
               position={[0, 0.28, 0.43]}
               material={
                 new THREE.MeshStandardMaterial({ color: 0xc49080, roughness: 0.7 })
