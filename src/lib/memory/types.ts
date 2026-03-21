@@ -7,6 +7,7 @@ export type MemoryType =
 
 export interface MemoryObject {
   id: string; // UUID
+  agentId?: string; // Which agent this memory belongs to
   type: MemoryType;
   content: string; // The actual text content
   timestamp: number; // Unix timestamp
@@ -16,6 +17,7 @@ export interface MemoryObject {
 }
 
 export interface RetrievalContext {
+  agentId?: string; // Filter by the specific agent
   query?: string; // Natural language query (optional for now, future use)
   tags?: string[]; // Filter by tags (e.g. "What do I know about PLAYER?")
   limit?: number; // Max memories to return (default 10)

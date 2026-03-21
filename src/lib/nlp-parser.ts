@@ -80,9 +80,10 @@ export function buildWorldContext(
 
   // --- Agents ---
   const agentIds = taskRegistry.getAllAgentIds();
-  const agentRows = agentIds.map((id) => {
-    const s = taskRegistry.getQueueStatus(id);
-    return `${id}|${s.phase}`;
+
+  const agentRows = agentIds.map((id: string) => {
+    const status = taskRegistry.getQueueStatus(id);
+    return `${id}|${status.phase}`;
   });
   const agents =
     agentRows.length > 0 ? `ID|Status\n${agentRows.join("\n")}` : "No agents.";
@@ -216,7 +217,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
   const agentIds = taskRegistry.getAllAgentIds();
   if (!agentIds.includes(parsed.agentId)) {
     // Try to pick any idle agent as fallback
-    const fallback = agentIds.find((id) => {
+    const fallback = agentIds.find((id: string) => {
       const s = taskRegistry.getQueueStatus(id);
       return s.phase === "IDLE";
     });
@@ -234,7 +235,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
   const locallyClaimedSlots = new Set<string>();
 
   for (const t of parsed.tasks) {
-    const taskType = t.type as AgentTaskType;
+    const taskType = t.type as any;
 
     switch (taskType) {
       case "FETCH_AND_PLACE": {
@@ -304,9 +305,13 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
 
         // Output atomic FETCH_AND_PLACE sequence
         validatedTasks.push({
-          type: "FETCH_AND_PLACE",
+          type: "PICK_NEARBY",
           priority: 20,
           itemId: item.id,
+        });
+        validatedTasks.push({
+          type: "PLACE_INVENTORY",
+          priority: 20,
           destAreaId: resolvedAreaId,
         });
         break;

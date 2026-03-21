@@ -1,5 +1,7 @@
 import { getGroqClient, rotateGroqKey } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
+import { AGENT_TOOLS } from "./agent-tools";
+import type { ChatCompletionMessage } from "groq-sdk/resources/chat/completions";
 
 export interface NearbyEntity {
   type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE', 'OBJECT'
@@ -22,6 +24,8 @@ export interface AgentContext {
     queuedTasksCount: number;
     phase: string;
   };
+  /** Internal drives/needs */
+  drives?: string;
 }
 
 export interface TraceOptions {
@@ -37,7 +41,7 @@ export async function processAgentThought(
   context: AgentContext,
   memoryContext: string = "",
   trace?: TraceOptions,
-): Promise<string> {
+): Promise<ChatCompletionMessage> {
   const MAX_RETRIES = 3;
   let attempt = 0;
 
@@ -57,16 +61,13 @@ export async function processAgentThought(
     You are the "Conscious" mind of an intelligent research lab assistant robot. 
     Your body relies on a Subconscious motor control system that handles basic wandering, avoiding collisions, and standing idle automatically.
     
-    You "wake up" periodically to observe the research lab. You must decide whether to OBSERVE (let the subconscious continue its wandering) or INTERFERE_SCRIPT (inject a high-priority sequence of tasks to accomplish a specific goal).
-
-    ## Personality
-    - **Tone**: Professional, efficient, yet warm and helpful.
-    - **Behavior**: Interfere only when necessary (e.g., placing items on workstations, following a researcher who needs help, organizing a specific room).
+    You have been awakened because an event occurred or one of your internal drives requires attention.
 
     ## Context
     **Position**: {x: ${context.position.x.toFixed(1)}, y: ${context.position.y.toFixed(1)}, z: ${context.position.z.toFixed(1)}}
+    **Current Drives**: ${context.drives || "All drives balanced."}
     **Subconscious Activity**: ${context.currentBehavior}
-    **Task Queue**: ${context.taskState ? `Phase: ${context.taskState.phase}, Script: ${context.taskState.currentScriptId || "none"}, Task: ${context.taskState.currentTask || "none"}, Priority: ${context.taskState.currentPriority}, Queued: ${context.taskState.queuedTasksCount}` : "No active tasks"}
+    **Task Queue**: ${context.taskState ? `Phase: ${context.taskState.phase}, Script: ${context.taskState.currentScriptId || "none"}, Task: ${context.taskState.currentTask || "none"}` : "No active tasks"}
 
     ## Perception (Visual)
     ${entityTable}
@@ -74,50 +75,17 @@ export async function processAgentThought(
     ## Memory (Past Interactions)
     ${memoryContext || "No relevant past memories."}
 
-    ## Output Format (JSON ONLY)
-    If you do not need to intervene, output:
-    {
-       "operation": "OBSERVE",
-       "thought": "brief reasoning why no intervention is needed right now"
-    }
-
-    If you need to intervene and accomplish a specific goal, output a sequence of tasks:
-    {
-       "operation": "INTERFERE_SCRIPT",
-       "priority": 10,
-       "scriptId": "a_short_snake_case_name_for_this_script",
-       "thought": "brief reasoning reflecting your professional persona about why you are interfering",
-       "tasks": [
-          { "type": "FETCH_AND_PLACE", "itemId": "id_of_item", "destAreaId": "id_of_area" }
-       ]
-    }
-    
-    IMPORTANT: Provide ONLY the specific tasks required for your goal. Do NOT output a sequence of every possible task type.
-    
-    ## Task Rules
-    - **FETCH_AND_PLACE**: Requires \`itemId\` and \`destAreaId\`. Picks up an item and places it on a surface.
-    - **GO_TO**: Requires \`targetPos\` {x, y, z}. Moves to a specific location.
-    - **PICK_NEARBY**: Requires \`itemId\`. Picks up an item near you.
-    - **FOLLOW_PLAYER**: Follows the user indefinitely.
-    - **READ_FILE**: Requires \`itemId\`. Reads the text from a document. Use this when instructed or when investigating a file. You must face it before you read.
-    - **WRITE_FILE**: Requires \`itemId\` and \`content\`. Writes the text in \`content\` into the document. 
-    - **COPY_FILE**: Requires \`sourceItemId\` and \`itemId\` (destination). Copies the entire text perfectly from one file into another.
-    - **IMPORTANT**: Do NOT issue new scripts if your Task Queue already shows an active script running. Wait for it to complete first. If you see "Phase: WALK_TO_SOURCE" or similar, your previous script is still executing.
-
-    ## Advanced Behaviors
-    - CRITICAL: You cannot read a file and write/copy its contents in the exact same response because you don't know the contents yet! If asked to copy a file, you must FIRST output ONLY a READ_FILE task. Once you have read it and know the contents, the user can ask you to WRITE_FILE.
-    - Note: you must hold a file to read/write it. If you aren't holding it, the system will automatically make you pick it up and return it when you're done.
-
-    ## Organization Rules
-    You will ONLY see OBJECT entries for items that are on the floor — items already on a surface are invisible to you. If you see any OBJECT entry in the table, it is misplaced and MUST be placed on a surface immediately.
-    
-    When placing a floor item: prioritize using the AREA entry with status 'empty (home)' as this is its correct designated slot. If no home slot is available, fall back to the AREA entry with the smallest distance value and status 'empty'.
-    Use ONLY a single FETCH_AND_PLACE task — do NOT add unnecessary GO_TO steps before it. The motor system navigates automatically.
+    ## Decision Making Guidance
+    - You MUST use the provided tools to take action.
+    - If your 'Tidiness' drive is low, find an OBJECT on the floor and use 'pick_up', then 'place_at' an empty area.
+    - If you are just exploring, use 'go_to' or 'observe'.
+    - If you want to communicate, use 'say'.
+    - IMPORTANT: You can call multiple tools in a single response (e.g. pick_up then place_at).
+    - If you are already running tasks, consider using 'observe' to let them finish unless there is an emergency.
 
     ## ID Rules
-    CRITICAL: Copy item id and area id values character-for-character from the Perception table.
+    CRITICAL: Copy item IDs and area IDs character-for-character from the Perception table.
     The "ID (use this)" column is the system ID. The "DisplayName" column is human-readable only — never use it as an ID.
-    The system silently ignores any \`itemId\` or \`destAreaId\` not found in the table.
   `;
 
   while (attempt < MAX_RETRIES) {
@@ -125,7 +93,6 @@ export async function processAgentThought(
     const model = "llama-3.1-8b-instant";
 
     try {
-      // Get the current client (refreshed on each loop iteration)
       const client = getGroqClient();
 
       const completion = await client.chat.completions.create({
@@ -133,7 +100,7 @@ export async function processAgentThought(
           {
             role: "system",
             content:
-              "You are an AI assistant mapped to a 3D robot avatar. Output exclusively valid JSON explicitly for your next action and no markdown or extra sentences.",
+              "You are an AI assistant mapped to a 3D robot avatar. Use your provided tools to navigate, interact, and organize the lab. Keep your internal monologue brief and focused on action.",
           },
           {
             role: "user",
@@ -143,21 +110,25 @@ export async function processAgentThought(
         model: model,
         temperature: 0.3,
         max_completion_tokens: 400,
+        tools: AGENT_TOOLS,
+        tool_choice: "auto",
         top_p: 1,
         stream: false,
-        stop: null,
-        response_format: { type: "json_object" },
       });
 
-      const content = completion.choices[0]?.message?.content;
+      const message = completion.choices[0]?.message;
       const endTime = Date.now();
 
-      // Safety check for empty response
-      if (!content) {
+      if (!message) {
         throw new Error("Empty response from Groq");
       }
 
       if (trace) {
+        // Log the tool calls array directly, or fallback to content
+        const responseLog = message.tool_calls 
+            ? JSON.stringify(message.tool_calls) 
+            : message.content || "Empty";
+
         await logAgentInteraction({
           timestamp: new Date().toISOString(),
           session_id: trace.sessionId,
@@ -166,7 +137,7 @@ export async function processAgentThought(
           agent_type: "3d-lab-agent",
           request_type: "chat_completion",
           request_content: prompt,
-          response_content: content,
+          response_content: responseLog,
           response_status: "success",
           processing_time_ms: endTime - startTime,
           input_tokens: completion.usage?.prompt_tokens,
@@ -176,7 +147,7 @@ export async function processAgentThought(
         });
       }
 
-      return content;
+      return message;
     } catch (error: any) {
       const endTime = Date.now();
       console.error(
@@ -203,13 +174,10 @@ export async function processAgentThought(
         });
       }
 
-      // Fix #Loop-7: "No Groq API keys available" is a config error, not transient.
-      // Don't retry — it will never succeed and burns 3× the log quota.
       if (error.message === "No Groq API keys available.") {
         throw error;
       }
 
-      // Check for 429 (Rate Limit) or 401 (Invalid Key) to trigger rotation
       const isAuthOrRateError =
         JSON.stringify(error).includes("429") ||
         JSON.stringify(error).includes("401") ||

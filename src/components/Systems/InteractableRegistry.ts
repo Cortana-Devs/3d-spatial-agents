@@ -97,6 +97,58 @@ export class InteractableRegistry {
     return area.position.clone();
   }
 
+  // --- SEMANTIC ZONING SYSTEM ---
+
+  /**
+   * Dynamically infer the semantic zone name based on the nearest placing area group.
+   * This gives the LLM context of *where* it is (e.g. "Storage Table 6" instead of just coordinates).
+   */
+  public getSemanticZone(position: THREE.Vector3): string {
+    let nearestDistSq = Infinity;
+    let nearestGrpName = "Hallway/Open Space";
+
+    for (const area of this.placingAreas.values()) {
+      const distSq = position.distanceToSquared(area.position);
+      if (distSq < nearestDistSq) {
+        nearestDistSq = distSq;
+        nearestGrpName = area.groupName || area.groupId || "Unknown Area";
+      }
+    }
+
+    // If within 15 meters of that area, we consider the agent to be in its "zone"
+    if (nearestDistSq < 15 * 15) {
+      return nearestGrpName;
+    }
+    return "Hallway/Open Space";
+  }
+
+  /**
+   * Get the center point of a semantic zone by averaging its placing areas.
+   * Used when an LLM issues a go_to(zoneId) command.
+   */
+  public getZoneCenter(zoneNameOrId: string): THREE.Vector3 | null {
+     let count = 0;
+     const center = new THREE.Vector3();
+     
+     // Special cases from agentRoutines or hardcoded anchors could go here if needed,
+     // but first we rely on dynamic area scanning.
+     
+     for (const area of this.placingAreas.values()) {
+        if (
+          area.groupName?.toLowerCase() === zoneNameOrId.toLowerCase() || 
+          area.groupId?.toLowerCase() === zoneNameOrId.toLowerCase()
+        ) {
+           center.add(area.position);
+           count++;
+        }
+     }
+     
+     if (count > 0) {
+        return center.divideScalar(count);
+     }
+     return null;
+  }
+
   // --- CLAIM SYSTEM (prevents two agents targeting the same item) ---
 
   public claimItem(itemId: string, agentId: string): boolean {

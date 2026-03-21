@@ -1,0 +1,27 @@
+src/components/Entities/useYukaAI.ts(119,49): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/Entities/useYukaAI.ts(134,39): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/Systems/AgentTaskQueue.ts(128,44): error TS2339: Property 'unclaimArea' does not exist on type 'InteractableRegistry'.
+src/components/Systems/AgentTaskQueue.ts(188,16): error TS2339: Property 'claimArea' does not exist on type 'InteractableRegistry'.
+src/components/Systems/AgentTaskQueue.ts(353,53): error TS2339: Property 'unclaimArea' does not exist on type 'InteractableRegistry'.
+src/components/Systems/AgentTaskQueue.ts(377,23): error TS2551: Property 'placeItem' does not exist on type 'InteractableRegistry'. Did you mean 'placeItemAt'?
+src/components/UI/AgentChatPanel.tsx(118,37): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/AgentChatPanel.tsx(126,50): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/AgentChatPanel.tsx(213,50): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/AgentChatPanel.tsx(261,56): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/AgentChatPanel.tsx(329,51): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/UI/CommandBar.tsx(181,39): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/TaskAssignmentPanel.tsx(154,40): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/TaskAssignmentPanel.tsx(186,37): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/TaskAssignmentPanel.tsx(208,12): error TS2678: Type '"FETCH_AND_PLACE"' is not comparable to type 'AgentTaskType'.
+src/components/UI/TaskAssignmentPanel.tsx(231,23): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/UI/TaskAssignmentPanel.tsx(232,44): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/components/UI/TaskAssignmentPanel.tsx(288,48): error TS2367: This comparison appears to be unintentional because the types '"GO_TO" | "PLACE_INVENTORY" | "INTERACT" | "SAY" | "FOLLOW_PLAYER" | "WANDER" | "WAIT"' and '"FETCH_AND_PLACE"' have no overlap.
+src/components/UI/TaskAssignmentPanel.tsx(308,48): error TS2367: This comparison appears to be unintentional because the types '"GO_TO" | "PLACE_INVENTORY" | "INTERACT" | "SAY" | "FOLLOW_PLAYER" | "WANDER" | "WAIT"' and '"FETCH_AND_PLACE"' have no overlap.
+src/components/unuseFiles/simulate_agency.ts(46,44): error TS2339: Property 'replace' does not exist on type 'ChatCompletionMessage'.
+src/components/unuseFiles/simulate_agency.ts(67,44): error TS2339: Property 'replace' does not exist on type 'ChatCompletionMessage'.
+src/lib/nlp-parser.ts(24,42): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/lib/nlp-parser.ts(83,35): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/lib/nlp-parser.ts(213,42): error TS2339: Property 'getInstance' does not exist on type '{ get(agentId: string): AgentTaskQueue | undefined; }'.
+src/lib/nlp-parser.ts(219,37): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/lib/nlp-parser.ts(240,12): error TS2678: Type '"FETCH_AND_PLACE"' is not comparable to type 'AgentTaskType'.
+src/lib/nlp-parser.ts(307,11): error TS2322: Type '"FETCH_AND_PLACE"' is not assignable to type 'AgentTaskType'.

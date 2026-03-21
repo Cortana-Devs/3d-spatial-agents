@@ -91,6 +91,7 @@ export class ClientBrain {
       }
 
       const relevantMemories = await memoryStream.retrieve({
+        agentId: this.id, // Added agent filter
         tags: contextTags,
         limit: 5,
       });
@@ -106,33 +107,78 @@ export class ClientBrain {
           : "No relevant past memories.";
 
       // --- 2. THINK (Server Side) ---
-      const responseText = await generateAgentThought(
+      const response = await generateAgentThought(
         context,
         memoryContextStr,
         this.sessionId,
       );
 
-      // Clean the response (remove markdown code blocks if present)
-      const cleanText = responseText
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
+      const tasks: AgentTask[] = [];
+      let thought = response.content || "Processing...";
+      let operation: "OBSERVE" | "INTERFERE_SCRIPT" = "OBSERVE";
 
-      let decision: AgentDecision;
-      try {
-        decision = JSON.parse(cleanText);
-      } catch (jsonError) {
-        console.warn(
-          `[ClientBrain:${this.id}] Failed to parse JSON, raw text used.`,
-          cleanText,
-        );
-        decision = {
-          operation: "OBSERVE",
-          thought: cleanText.substring(0, 100),
-        };
+      if (response.tool_calls && response.tool_calls.length > 0) {
+        operation = "INTERFERE_SCRIPT";
+        
+        // If there's no thought content, synthesize one from the first tool call
+        if (!thought || thought === "Processing...") {
+          thought = `I am going to use ${response.tool_calls[0].function.name}.`;
+        }
+
+        // Parse tool calls into our AgentTasks
+        for (const tc of response.tool_calls) {
+          if (tc.type !== "function") continue;
+          
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const name = tc.function.name;
+
+            switch (name) {
+              case "pick_up":
+                if (args.itemId) {
+                  tasks.push({ type: "PICK_NEARBY", itemId: args.itemId } as AgentTask);
+                }
+                break;
+              case "place_at":
+                if (args.areaId) {
+                  tasks.push({ type: "PLACE_INVENTORY", destAreaId: args.areaId } as AgentTask);
+                }
+                break;
+              case "go_to":
+                if (args.zoneId) {
+                   tasks.push({ type: "GO_TO", targetPos: new THREE.Vector3(args.targetX || 0, 0, args.targetZ || 0), targetAreaId: args.zoneId } as any);
+                } else if (args.targetX !== undefined && args.targetZ !== undefined) {
+                   tasks.push({ type: "GO_TO", targetPos: new THREE.Vector3(args.targetX, 0, args.targetZ) } as AgentTask);
+                }
+                break;
+              case "say":
+                tasks.push({ type: "SAY" as any, content: args.message } as any);
+                thought = args.message; // Override internal thought with spoken word
+                break;
+              case "interact":
+                if (args.itemId) {
+                  tasks.push({ type: "INTERACT", itemId: args.itemId } as AgentTask);
+                }
+                break;
+              case "observe":
+                // explicitly do nothing
+                break;
+            }
+          } catch (e) {
+            console.error(`[ClientBrain:${this.id}] Failed parsing tool call:`, e);
+          }
+        }
       }
 
-      this.state.thought = decision.thought || "Processing...";
+      const decision: AgentDecision = {
+        operation,
+        thought,
+        tasks: tasks.length > 0 ? tasks : undefined,
+        scriptId: `tool_action_${Date.now()}`,
+        priority: 10,
+      };
+
+      this.state.thought = decision.thought;
       this.state.lastThoughtTime = Date.now();
       this.state.isThinking = false;
 
@@ -142,7 +188,7 @@ export class ClientBrain {
       if (decision.thought) {
         // Store the thought/action
         memoryStream
-          .add("ACTION", decision.thought, contextTags, this.sessionId)
+          .add(this.id, "ACTION", decision.thought, contextTags, this.sessionId)
           .catch((err) =>
             console.error(`[ClientBrain:${this.id}] Memory add failed:`, err),
           );

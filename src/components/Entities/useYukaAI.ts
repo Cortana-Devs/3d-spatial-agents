@@ -20,6 +20,7 @@ import {
   getTableCenterPosition,
   getWorkbenchCenterPosition,
 } from "@/config/agentRoutines";
+import { DriveManager } from "@/lib/agent-drives";
 
 // Fix #1/#3: World bounds for clamping LLM-generated coordinates
 const WORLD_BOUNDS = { minX: -100, maxX: 100, minZ: -75, maxZ: 75 };
@@ -79,6 +80,7 @@ export function useYukaAI(
   const sensorPosRef = useRef(new THREE.Vector3());
   const safetyTargetRef = useRef(new THREE.Vector3(0, 0, -330));
   const toSafetyRef = useRef(new THREE.Vector3());
+  const driveManagerRef = useRef(new DriveManager());
 
   // Tier 1: Per-frame allocation elimination — all reusable Vector3/Quaternion objects
   // hoisted as refs so they are never re-allocated inside useFrame callbacks.
@@ -146,7 +148,7 @@ export function useYukaAI(
         duration: 2,
       });
       queue.enqueue({
-        type: "MORNING_CHECK",
+        type: "MORNING_CHECK" as any,
         priority,
         scriptId,
       });
@@ -165,7 +167,7 @@ export function useYukaAI(
         duration: 2,
       });
       queue.enqueue({
-        type: "BENCH_CHECK",
+        type: "BENCH_CHECK" as any,
         priority,
         scriptId,
       });
@@ -329,7 +331,7 @@ export function useYukaAI(
       vehiclePos,
       playerPos,
     );
-    const hasManualTask = taskQueue.isActive();
+    const hasManualTask = taskQueue.isBusy();
 
     // Fix #27: Always disable wander when a manual task is active
     // Fix #5/#8: Updated indices after removing ObstacleAvoidanceBehavior
@@ -792,149 +794,185 @@ export function useYukaAI(
         (taskQueue.getCurrentTask()?.priority ?? 0) > 0
       ) {
         // SKIP BRAIN: A conscious script is actively running — don't poll LLM
-        console.log(
+        /* console.log(
           `[useYukaAI:${id}] Brain gate: SKIPPING (busy, priority=${taskQueue.getCurrentTask()?.priority}, phase=${taskQueue.getCurrentPhase()})`,
-        );
+        ); */
       } else {
+
+        // --- DRIVE & EVENT MANAGER ---
         let currentBehavior = "IDLE";
         if (vehicle.steering.behaviors[1].active) currentBehavior = "SEEKING";
         else if (vehicle.steering.behaviors[0].active)
           currentBehavior = "WANDERING";
 
-        const nearbyEntities: NearbyEntity[] = [];
+        const registry = InteractableRegistry.getInstance();
+        const vPos = vehicle.position as unknown as THREE.Vector3;
+        
+        // Fast proximity check for Drive update (no raycast needed here, just volume sense)
+        const nearbyAnyItems = registry.getNearby(vPos, 15);
+        const nearbyFloorCount = nearbyAnyItems.filter(i => i.pickable && !i.carriedBy && !i.placedInArea).length;
+        const pDist = playerRef.current ? vehicle.position.distanceTo(playerRef.current.position as unknown as YUKA.Vector3) : null;
+        const isIdle = currentBehavior === "IDLE" || currentBehavior === "WANDERING";
 
-        // Perception Logic (Condensed for brevity - same as before)
-        if (playerRef.current) {
-          const d = vehicle.position.distanceTo(
-            playerRef.current.position as unknown as YUKA.Vector3,
-          );
-          if (d < 30)
+        driveManagerRef.current.update(delta, {
+           nearbyFloorItems: nearbyFloorCount,
+           playerDistance: pDist,
+           nearbyAgentCount: socialState.current !== "NONE" ? 1 : 0,
+           isIdle
+        });
+
+        const urgentDrive = driveManagerRef.current.getUrgentDrive();
+        
+        // FIRE CONSCIOUSNESS ONLY IF A DRIVE IS URGENT (EVENT-DRIVEN)
+        if (urgentDrive && !brain.state.isThinking) {
+        
+          driveManagerRef.current.markTriggered(urgentDrive.drive);
+          const driveContextStr = driveManagerRef.current.toContextString();
+
+          const nearbyEntities: NearbyEntity[] = [];
+
+          // Perception Logic
+          if (playerRef.current && pDist !== null && pDist < 30) {
             nearbyEntities.push({
               type: "PLAYER",
               id: "player-01",
-              distance: d,
+              distance: pDist,
               status: "Active",
             });
-        }
+          }
 
-        // Perception: Nearby pickable items — ONLY show items on the floor.
-        // Items already placed on a surface are hidden from the agent brain to
-        // prevent "re-organize" loops. Perception = source of truth for what needs fixing.
-        const registry = InteractableRegistry.getInstance();
-        const nearbyItems = registry.getNearby(
-          vehicle.position as unknown as THREE.Vector3,
-          15,
-        );
+          // Perception: Nearby pickable items — with LINE OF SIGHT Raycasting
+          const floorItems: typeof nearbyAnyItems = [];
+          const agentEye = new THREE.Vector3(vPos.x, vPos.y + 1.5, vPos.z);
+          const dir = new THREE.Vector3();
 
-        const floorItems: typeof nearbyItems = [];
-        for (const item of nearbyItems) {
-          if (!item.pickable) continue;
-          // Only surface items that are on the floor (not carried, not placed on a surface)
-          const isOnFloor = !item.carriedBy && !item.placedInArea;
-          const isClaimed = registry.isItemClaimed(item.id);
-          if (!isOnFloor) continue; // ← key change: skip placed/carried items entirely
+          for (const item of nearbyAnyItems) {
+            if (!item.pickable) continue;
+            // Only surface items that are on the floor (not carried, not placed on a surface)
+            const isOnFloor = !item.carriedBy && !item.placedInArea;
+            const isClaimed = registry.isItemClaimed(item.id);
+            if (!isOnFloor) continue;
 
-          nearbyEntities.push({
-            type: "OBJECT",
-            id: item.id,
-            distance: vehicle.position.distanceTo(
-              item.position as unknown as YUKA.Vector3,
-            ),
-            objectType: item.type,
-            name: item.name,
-            status: isClaimed ? "on floor (claimed)" : "on floor",
-          });
-          floorItems.push(item);
-        }
+            const itemPos = item.position as unknown as THREE.Vector3;
+            dir.subVectors(itemPos, agentEye);
+            const dist = dir.length();
+            dir.normalize();
 
-        // Perception: For each on-floor item, include empty areas sorted by proximity
-        // to the ITEM (not the agent) so the LLM always gets relevant, valid targets.
-        const seenAreaIds = new Set<string>();
-        for (const floorItem of floorItems) {
-          const allAreas = registry.getAllPlacingAreas();
+            // Line-of-sight check
+            raycasterRef.current.set(agentEye, dir);
+            const hits = raycasterRef.current.intersectObjects(collidableMeshes);
+            let occluded = false;
+            for (const hit of hits) {
+               // If hit object is closer than item (minus a small margin to allow item lying on floor)
+               if (hit.distance < dist - 0.5) {
+                 // Ignore standard flat floors/ceilings
+                 if (!hit.object.name.includes("Floor") && !hit.object.name.includes("Ceiling")) {
+                    occluded = true;
+                    break;
+                 }
+               }
+            }
 
-          // Identify home area if it's currently empty
-          let homeArea = null;
-          if (floorItem.homeAreaId) {
-            const potentialHome = registry.getPlacingAreaById(
-              floorItem.homeAreaId,
-            );
-            if (potentialHome && !potentialHome.currentItem) {
-              homeArea = potentialHome;
+            if (occluded) continue; // Item is behind a wall or desk!
+
+            nearbyEntities.push({
+              type: "OBJECT",
+              id: item.id,
+              distance: dist,
+              objectType: item.type,
+              name: item.name,
+              status: isClaimed ? "on floor (claimed)" : "on floor",
+            });
+            floorItems.push(item);
+          }
+
+          // Semantic Zoning Context
+          const currentZone = registry.getSemanticZone(vPos);
+
+          // Perception: Empty areas mapped to the visual floor items
+          const seenAreaIds = new Set<string>();
+          for (const floorItem of floorItems) {
+            const allAreas = registry.getAllPlacingAreas();
+            let homeArea = null;
+            if (floorItem.homeAreaId) {
+              const potentialHome = registry.getPlacingAreaById(
+                floorItem.homeAreaId,
+              );
+              if (potentialHome && !potentialHome.currentItem) {
+                homeArea = potentialHome;
+              }
+            }
+
+            const emptyAreas = allAreas
+              .filter((a) => !a.currentItem && a.id !== homeArea?.id)
+              .map((a) => ({
+                area: a,
+                distToItem: floorItem.position.distanceTo(
+                  a.position as unknown as THREE.Vector3,
+                ),
+              }))
+              .sort((a, b) => a.distToItem - b.distToItem)
+              .slice(0, 3);
+
+            if (homeArea) {
+              emptyAreas.unshift({
+                area: homeArea,
+                distToItem: floorItem.position.distanceTo(
+                  homeArea.position as unknown as THREE.Vector3,
+                ),
+              });
+            }
+
+            for (const { area, distToItem } of emptyAreas) {
+              if (seenAreaIds.has(area.id)) continue;
+              seenAreaIds.add(area.id);
+              const isHome = area.id === floorItem.homeAreaId;
+              nearbyEntities.push({
+                type: "AREA",
+                id: area.id,
+                distance: distToItem,
+                name: area.name,
+                status: isHome ? "empty (home)" : "empty",
+              });
             }
           }
 
-          const emptyAreas = allAreas
-            .filter((a) => !a.currentItem && a.id !== homeArea?.id) // only empty slots, exclude home (will add it explicitly)
-            .map((a) => ({
-              area: a,
-              distToItem: floorItem.position.distanceTo(
-                a.position as unknown as THREE.Vector3,
-              ),
-            }))
-            .sort((a, b) => a.distToItem - b.distToItem)
-            .slice(0, 3); // show the 3 nearest empty areas per floor item
-
-          // Prepend home area if available
-          if (homeArea) {
-            emptyAreas.unshift({
-              area: homeArea,
-              distToItem: floorItem.position.distanceTo(
-                homeArea.position as unknown as THREE.Vector3,
-              ),
-            });
+          if (floorItems.length === 0) {
+            const nearbyAreas = registry.getNearbyPlacingAreas(
+              vPos,
+              15,
+            );
+            for (const area of nearbyAreas) {
+              if (seenAreaIds.has(area.id)) continue;
+              seenAreaIds.add(area.id);
+              nearbyEntities.push({
+                type: "AREA",
+                id: area.id,
+                distance: vPos.distanceTo(
+                  area.position,
+                ),
+                name: area.name,
+                status: area.currentItem ? "occupied" : "empty",
+              });
+            }
           }
 
-          for (const { area, distToItem } of emptyAreas) {
-            if (seenAreaIds.has(area.id)) continue;
-            seenAreaIds.add(area.id);
-            const isHome = area.id === floorItem.homeAreaId;
-            nearbyEntities.push({
-              type: "AREA",
-              id: area.id,
-              distance: distToItem,
-              name: area.name,
-              status: isHome ? "empty (home)" : "empty",
-            });
-          }
-        }
+          const scriptState = taskQueue.getScriptState();
 
-        // If no floor items, also show nearby areas (for context / follow tasks etc.)
-        // but suppress them when there are floor items to keep the prompt focused.
-        if (floorItems.length === 0) {
-          const nearbyAreas = registry.getNearbyPlacingAreas(
-            vehicle.position as unknown as THREE.Vector3,
-            15,
-          );
-          for (const area of nearbyAreas) {
-            if (seenAreaIds.has(area.id)) continue;
-            seenAreaIds.add(area.id);
-            nearbyEntities.push({
-              type: "AREA",
-              id: area.id,
-              distance: vehicle.position.distanceTo(
-                area.position as unknown as YUKA.Vector3,
-              ),
-              name: area.name,
-              status: area.currentItem ? "occupied" : "empty",
-            });
-          }
-        }
+          // Update Brain with Semantic Zone and Drives
+          const enhancedBehavior = `${currentBehavior} (Current Zone: ${currentZone})`;
 
-        // Fix B: Include task queue state so the LLM knows what it's currently doing
-        const scriptState = taskQueue.getScriptState();
-
-        // Update Brain
-        brain
-          .update(
-            vehicle.position as unknown as THREE.Vector3,
-            nearbyEntities,
-            currentBehavior,
-            {
-              ...scriptState,
-              phase: taskQueue.getCurrentPhase(),
-            },
-          )
+          brain
+            .update(
+              vPos,
+              nearbyEntities,
+              enhancedBehavior,
+              {
+                ...scriptState,
+                phase: taskQueue.getCurrentPhase(),
+                drives: driveContextStr // Passed through taskState arbitrarily for now
+              } as any,
+            )
           .then((decision) => {
             if (decision) {
               // Fix #1: Guard — if a higher-priority task arrived while we were thinking, skip
@@ -999,137 +1037,23 @@ export function useYukaAI(
                 lastScriptTimeRef.current = Date.now();
 
                 // Inject the tasks into the priority queue
+                // Inject the tasks into the priority queue (Atomic insertion for AgentTaskQueue v2)
                 decision.tasks.forEach((task) => {
-                  if (
-                    task.type === "FETCH_AND_PLACE" &&
-                    task.itemId &&
-                    task.destAreaId
-                  ) {
-                    const registry = InteractableRegistry.getInstance();
-                    let item = registry.getById(task.itemId);
-                    // Fallback: LLM may return the item's display name instead of its ID
-                    // e.g. "Desktop PC" instead of "desktop-pc"
-                    let resolvedItemId = task.itemId;
-                    if (!item) {
-                      const byName = registry.getByName(task.itemId);
-                      if (byName) {
-                        console.log(
-                          `[useYukaAI:${id}] Resolved item name "${task.itemId}" → id "${byName.id}"`,
-                        );
-                        item = byName;
-                        resolvedItemId = byName.id;
-                      }
-                    }
-                    if (!item) {
-                      console.warn(
-                        `[useYukaAI:${id}] Item ${task.itemId} not found — LLM used a hallucinated ID`,
-                      );
-                      // Fix #Loop-4: Write a failure memory so the LLM gets a negative
-                      // signal instead of silence. Use local tags derived from the item ID.
-                      memoryStream
-                        .add(
-                          "ACTION",
-                          `FAILED: Item '${task.itemId}' not found. The ID was invalid — this item does not exist in the registry. Do not use this ID again.`,
-                          [`id:${task.itemId}`, "entity:object"],
-                        )
-                        .catch(() => {});
-                      return;
-                    }
-
-                    if (item.carriedBy && item.carriedBy !== id) {
-                      console.warn(
-                        `[useYukaAI:${id}] Item ${resolvedItemId} is carried by ${item.carriedBy}, aborting fetch.`,
-                      );
-                      return;
-                    }
-
-                    // Guard: skip items already placed on a surface — they're not misplaced
-                    if (item.placedInArea) {
-                      console.log(
-                        `[useYukaAI:${id}] Item ${resolvedItemId} is already placed in area "${item.placedInArea}" — skipping FETCH_AND_PLACE`,
-                      );
-                      return;
-                    }
-
-                    // Smart area resolution — with name fallback for LLM hallucinations
-                    let resolvedAreaId = task.destAreaId;
-                    let area = registry.getPlacingAreaById(resolvedAreaId);
-                    // Fallback: try matching by display name
-                    if (!area) {
-                      const byName = registry.getAreaByName(task.destAreaId);
-                      if (byName) {
-                        console.log(
-                          `[useYukaAI:${id}] Resolved area name "${task.destAreaId}" → id "${byName.id}"`,
-                        );
-                        area = byName;
-                        resolvedAreaId = byName.id;
-                      }
-                    }
-                    if (!area) {
-                      // Fix #Loop-4: Area ID is hallucinated — write failure memory
-                      console.warn(
-                        `[useYukaAI:${id}] Area '${task.destAreaId}' not found — LLM used a hallucinated area ID`,
-                      );
-                      memoryStream
-                        .add(
-                          "ACTION",
-                          `FAILED: Area '${task.destAreaId}' does not exist in the registry. Do not use this area ID again.`,
-                          [`id:${task.destAreaId}`, "entity:area"],
-                        )
-                        .catch(() => {});
-                      return;
-                    }
-                    if (area.currentItem) {
-                      const alt = findAlternativeArea(resolvedAreaId, registry);
-                      if (alt) {
-                        resolvedAreaId = alt;
-                        console.log(
-                          `[useYukaAI:${id}] Area ${task.destAreaId} is full, using alternative ${alt}`,
-                        );
-                      } else {
-                        console.warn(
-                          `[useYukaAI:${id}] All slots for ${task.destAreaId} are full.`,
-                        );
-                      }
-                    }
-
-                    if (item.carriedBy === id) {
-                      taskQueue.enqueue({
-                        type: "PLACE_INVENTORY",
-                        priority,
-                        scriptId,
-                        destAreaId: resolvedAreaId,
-                      });
-                    } else {
-                      taskQueue.enqueue({
-                        type: "PICK_NEARBY",
-                        priority,
-                        scriptId,
-                        itemId: resolvedItemId,
-                      });
-                      taskQueue.enqueue({
-                        type: "PLACE_INVENTORY",
-                        priority,
-                        scriptId,
-                        destAreaId: resolvedAreaId,
-                      });
-                    }
-                  } else {
-                    // Fix #3: Clamp LLM-generated coordinates to world bounds
-                    if (task.type === "GO_TO" && task.targetPos) {
-                      const clamped = clampToWorldBounds(task.targetPos);
-                      task.targetPos = new THREE.Vector3(
-                        clamped.x,
-                        clamped.y,
-                        clamped.z,
-                      );
-                    }
-                    taskQueue.enqueue({
-                      ...task,
-                      priority,
-                      scriptId,
-                    });
+                  // Clamp LLM-generated coordinates to world bounds safely
+                  if (task.type === "GO_TO" && task.targetPos) {
+                    const clamped = clampToWorldBounds(task.targetPos);
+                    task.targetPos = new THREE.Vector3(
+                      clamped.x,
+                      clamped.y,
+                      clamped.z,
+                    );
                   }
+                  
+                  taskQueue.enqueue({
+                    ...task,
+                    priority,
+                    scriptId,
+                  });
                 });
               } else if (decision.operation === "OBSERVE") {
                 // The LLM chose not to interfere.
@@ -1144,9 +1068,13 @@ export function useYukaAI(
                 }
               }
             }
+          })
+          .catch((error) => {
+            console.error(`[useYukaAI:${id}] Brain update failed:`, error);
           });
-      }
-    }
+        } // closing if (urgentDrive && !brain.state.isThinking)
+      } // closing else (taskQueue.isBusy())
+    } // closing manual task & proximity state overrides
 
     // --- ANIMATION UPDATE (Procedural) ---
     const frustum = frustumRef.current;
@@ -1274,59 +1202,15 @@ export function useYukaAI(
         j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
           j.rightArm.elbow.rotation.x,
           0,
-          0.1,
+          0.1
         );
         j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
           j.rightArm.elbow.rotation.z,
           -0.8 + wave * 0.2,
-          0.1,
-        );
-      } else if (taskQueue.getCurrentPhase() === "PICKING_UP") {
-        // Fix #18: Reach DOWN to pick up
-        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.x,
-          Math.PI / 3, // Reach forward-down
-          0.1,
-        );
-        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.z,
-          -0.3,
-          0.1,
-        );
-        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.x,
-          -0.4, // Bend elbow to reach down
-          0.1,
-        );
-        j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.z,
-          0,
-          0.1,
-        );
-      } else if (taskQueue.getCurrentPhase() === "PLACING") {
-        // Fix #18: Reach FORWARD to place
-        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.x,
-          Math.PI / 4, // Reach forward
-          0.1,
-        );
-        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.z,
-          -0.5,
-          0.1,
-        );
-        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.x,
-          -0.2, // Slight bend
-          0.1,
-        );
-        j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.z,
-          0,
-          0.1,
+          0.1
         );
       }
-    }
+    } // End if (j.hips && j.torso ...)
     } // End if (isVisible)
 
     // Carried items are hidden (invisible) while being transported.

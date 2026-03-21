@@ -205,8 +205,6 @@ export function TaskAssignmentPanel() {
           : null;
         return `📥 Place → ${area?.name || task.destAreaId}`;
       }
-      case "FETCH_AND_PLACE":
-        return `🔄 Fetch & Place`;
       case "FOLLOW_PLAYER":
         return `🏃 Follow Player`;
       default:
@@ -228,7 +226,7 @@ export function TaskAssignmentPanel() {
           scene.
         </p>
       ) : (
-        agentIds.map((id) => {
+        agentIds.map((id: string) => {
           const status = AgentTaskRegistry.getInstance().getQueueStatus(id);
           return (
             <div
@@ -285,7 +283,7 @@ export function TaskAssignmentPanel() {
           const carriedItems =
             InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
           const hasPendingFetch = pendingTasks.some(
-            (t) => t.type === "PICK_NEARBY" || t.type === "FETCH_AND_PLACE",
+            (t) => t.type === "PICK_NEARBY",
           );
           const hasPendingPlace = pendingTasks.some(
             (t) => t.type === "PLACE_INVENTORY",
@@ -305,7 +303,7 @@ export function TaskAssignmentPanel() {
           const carriedItems =
             InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
           const hasPendingFetch = pendingTasks.some(
-            (t) => t.type === "PICK_NEARBY" || t.type === "FETCH_AND_PLACE",
+            (t) => t.type === "PICK_NEARBY",
           );
 
           if (carriedItems.length === 0 && !hasPendingFetch) {

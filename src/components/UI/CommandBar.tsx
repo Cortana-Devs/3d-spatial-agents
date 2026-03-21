@@ -189,7 +189,7 @@ export function CommandBar() {
       });
 
       console.log(
-        `[CommandBar] Agent ${result.agentId} queue active: ${queue.isActive()}, phase: ${queue.getCurrentPhase()}`,
+        `[CommandBar] Agent ${result.agentId} queue active: ${queue.isBusy()}, phase: ${queue.getCurrentPhase()}`,
       );
       const t4_end = performance.now();
       console.log(

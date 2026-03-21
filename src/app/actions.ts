@@ -18,18 +18,23 @@ export async function generateAgentThought(
   const effectiveSessionId =
     sessionId || "unknown-session-" + crypto.randomUUID().slice(0, 8);
   try {
-    const responseText = await processAgentThought(context, memoryContext, {
+    const responseMessage = await processAgentThought(context, memoryContext, {
       requestId,
       sessionId: effectiveSessionId,
     });
-    return responseText;
+    
+    // Return a plain object for the Server Action
+    return {
+      content: responseMessage.content,
+      tool_calls: responseMessage.tool_calls,
+    };
   } catch (error) {
     console.error("Groq API Error:", error);
     // Fallback response inside the Server Action boundary
-    return JSON.stringify({
-      action: "WAIT",
-      thought: "My brain hurts (API Error).",
-    });
+    return {
+      content: "My brain hurts (API Error).",
+      tool_calls: [],
+    };
   }
 }
 

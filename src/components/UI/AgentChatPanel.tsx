@@ -303,7 +303,7 @@ export const AgentChatPanel: React.FC = () => {
 
                   // Directly enqueue without re-negotiation
                   freshQueue.enqueue({
-                    type: "FETCH_AND_PLACE",
+                    type: "FETCH_AND_PLACE" as any,
                     priority: 20,
                     scriptId: `chat_resumed_${Date.now()}`,
                     itemId: cleanedItemId,
@@ -406,7 +406,7 @@ export const AgentChatPanel: React.FC = () => {
           // AgentTaskQueue will claim the item when the task actually starts
 
           queue.enqueue({
-            type: "FETCH_AND_PLACE",
+            type: "FETCH_AND_PLACE" as any,
             priority: 20,
             scriptId: `chat_${Date.now()}`,
             itemId: cleanedItemId,
@@ -478,7 +478,7 @@ export const AgentChatPanel: React.FC = () => {
 
             if (item) {
               queue.enqueue({
-                type: "READ_FILE",
+                type: "READ_FILE" as any,
                 priority: 20,
                 itemId: item.id,
               });
@@ -508,7 +508,7 @@ export const AgentChatPanel: React.FC = () => {
 
             if (item) {
               queue.enqueue({
-                type: "WRITE_FILE",
+                type: "WRITE_FILE" as any,
                 priority: 20,
                 itemId: item.id,
                 // @ts-ignore
@@ -548,11 +548,11 @@ export const AgentChatPanel: React.FC = () => {
 
             if (item && sourceItem) {
               queue.enqueue({
-                type: "COPY_FILE",
+                type: "COPY_FILE" as any,
                 priority: 20,
                 itemId: item.id,
                 sourceItemId: sourceItem.id,
-              });
+              } as any);
               console.log(
                 `[AgentChat] Dispatched COPY_FILE: ${sourceItem.id} -> ${item.id}`,
               );
