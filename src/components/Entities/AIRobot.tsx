@@ -51,13 +51,14 @@ export default function AIRobot({
 
   // Setup Listener for native positional audio
   const { camera } = useThree();
-  const [listener] = useState(() => new THREE.AudioListener());
-  useEffect(() => {
-    camera.add(listener);
-    return () => {
-      camera.remove(listener);
-    };
-  }, [camera, listener]);
+  const [listener] = useState(() => {
+    let existing = camera.children.find((c) => c.type === "AudioListener" || c instanceof THREE.AudioListener);
+    if (!existing) {
+      existing = new THREE.AudioListener();
+      camera.add(existing);
+    }
+    return existing as THREE.AudioListener;
+  });
 
   useEffect(() => {
     const handleSpeak = (e: any) => {
@@ -130,7 +131,7 @@ export default function AIRobot({
       <ThoughtBubble brain={brain} isInspected={inspectedAgentId === id} />
       <AgentChatPrompt agentId={id} />
       <SpeechIndicator agentId={id} />
-      <positionalAudio ref={audioRef as any} args={[listener]} />
+      <positionalAudio ref={audioRef as any} args={[listener]} distanceModel="exponential" refDistance={5} maxDistance={50} />
       {/* We use the same procedural model as Robot.tsx */}
       <ProceduralRobotModel joints={joints} id={id} />
     </group>

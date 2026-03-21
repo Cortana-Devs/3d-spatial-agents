@@ -11,11 +11,18 @@ let isReady = false;
 async function initSynthesizer() {
   if (synthesizer) return synthesizer;
   
-  // Use the WebGPU backend strictly as specified
-  synthesizer = await pipeline("text-to-speech", "onnx-community/Kokoro-82M-v1.0-ONNX", {
-    device: "webgpu",
-    dtype: "q8", // q8 (quantized) prevents WebGL Context Loss on most consumer 3D applications
-  });
+  try {
+    synthesizer = await pipeline("text-to-speech", "onnx-community/Kokoro-82M-v1.0-ONNX", {
+      device: "webgpu",
+      dtype: "q8",
+    });
+  } catch (err) {
+    console.warn("WebGPU not supported or failed, falling back to wasm:", err);
+    synthesizer = await pipeline("text-to-speech", "onnx-community/Kokoro-82M-v1.0-ONNX", {
+      device: "wasm",
+      dtype: "q8",
+    });
+  }
   
   isReady = true;
   postMessage({ type: "READY" });

@@ -11,6 +11,7 @@ import { getMeetingRoomPosition } from "@/config/agentRoutines";
 import * as THREE from "three";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import styles from "./AgentChatPanel.module.css";
+import { useAudioController } from "@/lib/audio/useAudioController";
 
 function formatAgentLabel(agentId: string): string {
   const match = /^agent-0*(\d+)$/.exec(agentId);
@@ -40,6 +41,8 @@ export const AgentChatPanel: React.FC = () => {
   const setChatPromptVisible = useGameStore(
     (state) => state.setChatPromptVisible,
   );
+
+  const { ensureAudioContext } = useAudioController();
 
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -595,6 +598,9 @@ export const AgentChatPanel: React.FC = () => {
   const handleSend = async () => {
     const trimmed = inputValue.trim();
     if (!trimmed || isThinking || !chatAgentId) return;
+
+    // Must resume AudioContext on actual user gesture (click/keypress) so agents can be heard
+    ensureAudioContext();
 
     // Add user message to per-agent chat and common communication log
     addChatMessage(chatAgentId, { role: "user", text: trimmed });
