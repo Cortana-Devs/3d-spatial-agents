@@ -40,7 +40,7 @@ export function AudioUnlocker() {
           }
         }
       }
-      
+
       // Clean up listeners once everything is running
       if (contexts.every(c => c.state === "running")) {
         console.log("[AudioUnlocker] All contexts running. Cleaning up listeners.");
@@ -49,14 +49,14 @@ export function AudioUnlocker() {
     }
 
     events.forEach(e => document.addEventListener(e, resumeAll));
-    
+
     // Add Puter script support - if Puter.js is loaded later, it might create its own context
     const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === "childList") {
-                // Potential for Puter logic here if needed
-            }
-        });
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          // Potential for Puter logic here if needed
+        }
+      });
     });
     observer.observe(document.head, { childList: true });
 

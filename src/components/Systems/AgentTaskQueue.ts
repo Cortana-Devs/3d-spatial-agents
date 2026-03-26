@@ -98,7 +98,7 @@ export class AgentTaskQueue {
 
     // Preemption
     if (this.currentTask && task.priority > this.currentTask.priority) {
-      console.log(`[AgentTaskQueue:${this.agentId}] Preempting task ${this.currentTask.type}`);
+      console.debug(`[AgentTaskQueue:${this.agentId}] Preempting task ${this.currentTask.type}`);
       this.queue.push(this.currentTask);
       this.queue.sort((a, b) => b.priority - a.priority);
       this.startNextTask();
@@ -198,7 +198,7 @@ export class AgentTaskQueue {
     }
 
     this.phase = "NAVIGATING";
-    console.log(`[AgentTaskQueue:${this.agentId}] Started atomic task: ${this.currentTask.type}`);
+    console.debug(`[AgentTaskQueue:${this.agentId}] Started atomic task: ${this.currentTask.type}`);
     
     // Subconscious Chatter (30% chance to mutter when starting a physical task)
     if (this.currentTask.type !== "SAY" && this.currentTask.type !== "WANDER" && Math.random() < 0.3) {

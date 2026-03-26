@@ -179,7 +179,7 @@ export function useYukaAI(
         scriptId: "subconscious_wander",
       });
 
-      console.log(
+      console.debug(
         `[useYukaAI:${id}] Enqueued morning check (table: ${tableId}), then default WANDER`,
       );
     }, 1500);

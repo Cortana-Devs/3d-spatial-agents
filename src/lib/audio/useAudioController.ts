@@ -29,7 +29,7 @@ export function useAudioController() {
       if (globalAudioCtx.state === "suspended") {
         try {
           await globalAudioCtx.resume();
-          console.log("[AudioController] AudioContext Resumed.");
+          console.debug("[AudioController] AudioContext Resumed.");
         } catch (e) {
           console.warn("[AudioController] Resume failed:", e);
         }
@@ -48,7 +48,7 @@ export function useAudioController() {
         const { type, audio, sampleRate, error } = e.data;
         
         if (type === "READY") {
-          console.log("[AudioController] Fallback TTS Engine Ready.");
+          console.debug("[AudioController] Fallback TTS Engine Ready.");
         } else if (type === "SUCCESS" && audio && sampleRate) {
           try {
             const ctx = await ensureAudioContext();
@@ -88,7 +88,7 @@ export function useAudioController() {
 
     const flushQueue = async () => {
       if (globalHasInteracted) return;
-      console.log(`[AudioController] Interaction detected - Flushing ${globalSpeechQueue.length} queued speech tasks.`);
+      console.debug(`[AudioController] Interaction detected - Flushing ${globalSpeechQueue.length} queued speech tasks.`);
       globalHasInteracted = true;
       
       const tasks = [...globalSpeechQueue];
@@ -143,7 +143,7 @@ export function useAudioController() {
 
     // 2. Queue Logic: If blocked by browser, wait for interaction
     if (ctx.state !== "running") {
-      console.log(`[AudioController] Audio blocked by browser policy. Queueing speech: \"${text.slice(0, 20)}...\"`);
+      console.debug(`[AudioController] Audio blocked by browser policy. Queueing speech: \"${text.slice(0, 20)}...\"`);
       globalSpeechQueue.push({ text, agentId, isSubconscious });
       window.dispatchEvent(new CustomEvent("audio-queue-updated", { detail: { count: globalSpeechQueue.length } }));
       globalSpeechLock = false;
@@ -159,7 +159,7 @@ export function useAudioController() {
     setCurrentAudioElement(null);
 
     try {
-      console.log(`[AudioController] -> CLOUD [Agent: ${agentId || 'User'}] Text: \"${text.slice(0, 30)}...\"`);
+      console.debug(`[AudioController] -> CLOUD [Agent: ${agentId || 'User'}] Text: \"${text.slice(0, 30)}...\"`);
       
       const audioElement = await puter.ai.txt2speech(text, {
         provider: "openai",
