@@ -876,6 +876,36 @@ export function useAgentBrain(
           vehicle.position.z,
         );
       }
+
+      const clampedX = Math.max(
+        WORLD_BOUNDS.minX,
+        Math.min(WORLD_BOUNDS.maxX, vehicle.position.x),
+      );
+      const clampedZ = Math.max(
+        WORLD_BOUNDS.minZ,
+        Math.min(WORLD_BOUNDS.maxZ, vehicle.position.z),
+      );
+
+      const hitMinX =
+        clampedX <= WORLD_BOUNDS.minX + 0.01 && vehicle.velocity.x < 0;
+      const hitMaxX =
+        clampedX >= WORLD_BOUNDS.maxX - 0.01 && vehicle.velocity.x > 0;
+      const hitMinZ =
+        clampedZ <= WORLD_BOUNDS.minZ + 0.01 && vehicle.velocity.z < 0;
+      const hitMaxZ =
+        clampedZ >= WORLD_BOUNDS.maxZ - 0.01 && vehicle.velocity.z > 0;
+
+      vehicle.position.x = clampedX;
+      vehicle.position.z = clampedZ;
+
+      // Prevent "ice skating" at boundaries by cancelling outward velocity
+      // and giving a tiny inward bias so wander naturally recovers.
+      if (hitMinX || hitMaxX) {
+        vehicle.velocity.x = hitMinX ? 0.15 : -0.15;
+      }
+      if (hitMinZ || hitMaxZ) {
+        vehicle.velocity.z = hitMinZ ? 0.15 : -0.15;
+      }
     }
 
     // --- BRAIN UPDATE ---
@@ -1349,13 +1379,13 @@ export function useAgentBrain(
         }
 
         if (greetingState.current === "WAVING") {
-          const waveSpeed = 12;
+          const waveSpeed = 8;
           const wave = Math.sin(state.clock.elapsedTime * waveSpeed) * 0.4;
 
-          // Override arm rotation for waving
+          // Override arm rotation for waving (raise height unchanged; slight forward pitch + forearm)
           j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
             j.rightArm.shoulder.rotation.x,
-            0,
+            -0.25 + wave * 0.08,
             0.1,
           );
           j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
@@ -1365,7 +1395,7 @@ export function useAgentBrain(
           );
           j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
             j.rightArm.elbow.rotation.x,
-            0,
+            -0.35 + wave * 0.2,
             0.1,
           );
           j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(

@@ -140,15 +140,16 @@ export function useProceduralGait(
           f,
         );
 
-        // Arm relaxation (let them hang naturally)
+        // Arm relaxation (let them hang naturally) + subtle shoulder rise with breath
+        const shoulderBreath = breathe * 0.25;
         j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.x,
-          0.05,
+          0.05 + shoulderBreath,
           f,
         );
         j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.x,
-          0.05,
+          0.05 + shoulderBreath,
           f,
         );
         j.leftArm.elbow.rotation.x = THREE.MathUtils.lerp(
@@ -198,20 +199,20 @@ export function useProceduralGait(
         j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.leftArm.shoulder.rotation.x,
           targetLeftShoulder,
-          0.2,
+          0.15,
         );
         j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
           j.rightArm.shoulder.rotation.x,
           targetRightShoulder,
-          0.2,
+          0.15,
         );
 
         // Elbows (Dynamic Bend based on swing direction)
-        // Elbow bends more when swinging forward, straightens swinging backward
+        // Elbow bends more when swinging forward, straightens on backswing
         const leftElbowBend =
-          -0.3 + Math.min(0, Math.sin(walkTime.current + Math.PI)) * 0.5;
+          -0.3 - Math.max(0, Math.sin(walkTime.current + Math.PI)) * 0.5;
         const rightElbowBend =
-          -0.3 + Math.min(0, Math.sin(walkTime.current)) * 0.5;
+          -0.3 - Math.max(0, Math.sin(walkTime.current)) * 0.5;
         j.leftArm.elbow.rotation.x = THREE.MathUtils.lerp(
           j.leftArm.elbow.rotation.x,
           leftElbowBend,

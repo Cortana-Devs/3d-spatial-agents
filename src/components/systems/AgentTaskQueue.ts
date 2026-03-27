@@ -78,6 +78,10 @@ export class AgentTaskQueue {
   private static readonly STUCK_MIN_DISTANCE = 1.0;
   private static readonly STUCK_THRESHOLD = 3.0;
   private static readonly REPATH_INTERVAL = 8.0;
+  private static readonly WANDER_X_MIN = -96;
+  private static readonly WANDER_X_MAX = 96;
+  private static readonly WANDER_Z_MIN = -71;
+  private static readonly WANDER_Z_MAX = 71;
   private static readonly MAX_RETRIES = 5;
 
   private static readonly ARRIVAL_DIST = 2.5; // Tighter for direct atomic actions
@@ -329,9 +333,21 @@ export class AgentTaskQueue {
               const r = 10;
               const theta = Math.random() * Math.PI * 2;
               this.currentTask!.targetPos = new THREE.Vector3(
-                vehiclePos.x + r * Math.cos(theta),
+                Math.max(
+                  AgentTaskQueue.WANDER_X_MIN,
+                  Math.min(
+                    AgentTaskQueue.WANDER_X_MAX,
+                    vehiclePos.x + r * Math.cos(theta),
+                  ),
+                ),
                 vehiclePos.y,
-                vehiclePos.z + r * Math.sin(theta),
+                Math.max(
+                  AgentTaskQueue.WANDER_Z_MIN,
+                  Math.min(
+                    AgentTaskQueue.WANDER_Z_MAX,
+                    vehiclePos.z + r * Math.sin(theta),
+                  ),
+                ),
               );
             }
             targetPos = this.currentTask!.targetPos;

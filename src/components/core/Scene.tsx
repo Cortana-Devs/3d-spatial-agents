@@ -7,6 +7,10 @@ import { AdaptiveEvents, Environment } from "@react-three/drei";
 import DynamicStatsIsland from "@/components/ui/DynamicStatsIsland";
 import * as THREE from "three";
 import ResearchLabHub from "@/components/world/OfficeHub";
+import MinimalFloorWorld from "@/components/world/MinimalFloorWorld";
+
+/** Set true to load the full lab (walls, furniture, props). False = floor + agents only. */
+const USE_FULL_RESEARCH_LAB = false;
 import Robot from "@/components/player/Player";
 import Agent from "@/components/agent/Agent";
 import YukaSystem from "@/components/systems/YukaSystem";
@@ -67,7 +71,13 @@ function CameraRig({
     const onClick = () => {
       if (document.pointerLockElement !== gl.domElement) {
         try {
-          gl.domElement.requestPointerLock();
+          // requestPointerLock() returns a Promise. If the user hits ESC or code
+          // calls exitPointerLock() before it settles, Chrome rejects with:
+          // SecurityError: The user has exited the lock before this request was completed.
+          // That must be handled or Next.js / the runtime reports it as an uncaught error.
+          void gl.domElement.requestPointerLock().catch(() => {
+            /* aborted — expected when menu opens or user cancels lock */
+          });
         } catch (e) {
           console.warn("Pointer lock failed:", e);
         }
@@ -221,7 +231,7 @@ export default function Scene() {
         {/* <ambientLight intensity={0.2} /> */}
         <Environment preset="city" />
 
-        <ResearchLabHub />
+        {USE_FULL_RESEARCH_LAB ? <ResearchLabHub /> : <MinimalFloorWorld />}
 
         <Robot groupRef={robotRef} initialPosition={[0, 5.5, 10]} />
         <Agent

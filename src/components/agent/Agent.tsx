@@ -176,7 +176,13 @@ export default function Agent({
       <SpeechIndicator agentId={id} />
       <positionalAudio ref={audioRef as any} args={[listener]} />
       {/* eslint-disable-next-line react-hooks/refs */}
-      <RobotModel joints={joints} id={id} analyser={analyserRef.current} />
+      <RobotModel
+        joints={joints}
+        id={id}
+        analyser={analyserRef.current}
+        animationState={animationState}
+        brain={brain}
+      />
     </group>
   );
 }

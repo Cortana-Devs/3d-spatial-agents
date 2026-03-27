@@ -4,6 +4,9 @@ import { RoundedBox, useTexture, Decal, Text } from "@react-three/drei";
 import * as THREE from "three";
 import LedMouth from "@/components/models/characters/LedMouth";
 import { useGameStore } from "@/store/gameStore";
+import type { ClientBrain } from "@/components/systems/ClientBrain";
+
+type RobotAnimationState = "Idle" | "Walk" | "Run" | "Wave";
 
 const ARMOR_COLOR = "#f8fafc"; // Premium glossy white
 const ACCENT_COLOR = "#94a3b8"; // Light metallic accent
@@ -230,7 +233,19 @@ function ProstheticHand({ isLeft }: { isLeft: boolean }) {
   );
 }
 
-function LedEyes() {
+function LedEyes({
+  agentId,
+  animationState,
+}: {
+  agentId: string;
+  animationState: RobotAnimationState;
+}) {
+  const chatAgentId = useGameStore((s) => s.chatAgentId);
+  const nearbyAgentId = useGameStore((s) => s.nearbyAgentId);
+  const isFocused =
+    !!agentId &&
+    (chatAgentId === agentId || nearbyAgentId === agentId);
+
   const leftEyeRef = useRef<THREE.Mesh>(null);
   const rightEyeRef = useRef<THREE.Mesh>(null);
   const [emotionInitial] = useState(() => Math.random() * 5);
@@ -239,49 +254,71 @@ function LedEyes() {
   const blinkTimer = useRef(blinkInitial);
   const isBlinking = useRef(false);
   const currentEmotion = useRef(0);
+  const wasFocused = useRef(false);
+  const waveWide = useRef(0);
 
   const targetScale = useRef(new THREE.Vector3(1, 1, 1));
   const targetRotZ = useRef(0);
   const targetPosY = useRef(0);
   const targetColor = useRef(new THREE.Color("#0ea5e9"));
 
-  useFrame((state, delta) => {
-    emotionTimer.current -= delta;
-    if (emotionTimer.current <= 0) {
-      currentEmotion.current = Math.floor(Math.random() * 5);
-      emotionTimer.current = 3 + Math.random() * 5;
+  useFrame((_state, delta) => {
+    const waveTarget = animationState === "Wave" ? 1 : 0;
+    waveWide.current +=
+      (waveTarget - waveWide.current) * Math.min(1, delta * 8);
 
-      switch (currentEmotion.current) {
-        case 0: // Idle
-          targetScale.current.set(1, 1, 1);
-          targetRotZ.current = 0;
-          targetPosY.current = 0;
-          targetColor.current.set("#0ea5e9");
-          break;
-        case 1: // Happy
-          targetScale.current.set(1, 0.7, 1);
-          targetRotZ.current = 0.2;
-          targetPosY.current = 0.005;
-          targetColor.current.set("#22c55e");
-          break;
-        case 2: // Sad
-          targetScale.current.set(1, 0.8, 1);
-          targetRotZ.current = -0.2;
-          targetPosY.current = -0.005;
-          targetColor.current.set("#3b82f6");
-          break;
-        case 3: // Angry
-          targetScale.current.set(1, 0.5, 1);
-          targetRotZ.current = 0.3;
-          targetPosY.current = -0.005;
-          targetColor.current.set("#ef4444");
-          break;
-        case 4: // Surprised
-          targetScale.current.set(1.1, 1.1, 1);
-          targetRotZ.current = 0;
-          targetPosY.current = 0.005;
-          targetColor.current.set("#f59e0b");
-          break;
+    if (isFocused) {
+      if (!wasFocused.current) {
+        emotionTimer.current = 1 + Math.random() * 2;
+      }
+      wasFocused.current = true;
+      targetScale.current.set(1, 1, 1);
+      targetRotZ.current = 0;
+      targetPosY.current = 0;
+      targetColor.current.set("#0ea5e9");
+    } else {
+      if (wasFocused.current) {
+        emotionTimer.current = 0.5 + Math.random();
+      }
+      wasFocused.current = false;
+
+      emotionTimer.current -= delta;
+      if (emotionTimer.current <= 0) {
+        currentEmotion.current = Math.floor(Math.random() * 5);
+        emotionTimer.current = 3 + Math.random() * 5;
+
+        switch (currentEmotion.current) {
+          case 0: // Idle
+            targetScale.current.set(1, 1, 1);
+            targetRotZ.current = 0;
+            targetPosY.current = 0;
+            targetColor.current.set("#0ea5e9");
+            break;
+          case 1: // Happy
+            targetScale.current.set(1, 0.7, 1);
+            targetRotZ.current = 0.2;
+            targetPosY.current = 0.005;
+            targetColor.current.set("#22c55e");
+            break;
+          case 2: // Sad
+            targetScale.current.set(1, 0.8, 1);
+            targetRotZ.current = -0.2;
+            targetPosY.current = -0.005;
+            targetColor.current.set("#3b82f6");
+            break;
+          case 3: // Angry
+            targetScale.current.set(1, 0.5, 1);
+            targetRotZ.current = 0.3;
+            targetPosY.current = -0.005;
+            targetColor.current.set("#ef4444");
+            break;
+          case 4: // Surprised
+            targetScale.current.set(1.1, 1.1, 1);
+            targetRotZ.current = 0;
+            targetPosY.current = 0.005;
+            targetColor.current.set("#f59e0b");
+            break;
+        }
       }
     }
 
@@ -291,16 +328,22 @@ function LedEyes() {
       blinkTimer.current = 0.15;
     } else if (blinkTimer.current <= 0 && isBlinking.current) {
       isBlinking.current = false;
-      blinkTimer.current = 2 + Math.random() * 4;
+      blinkTimer.current = isFocused
+        ? 3.5 + Math.random() * 2.5
+        : 1.5 + Math.random() * 2;
     }
 
     const lerpSpeed = 8 * delta;
-    const currentScaleY = isBlinking.current ? 0.05 : targetScale.current.y;
+    const w = waveWide.current;
+    const baseX = THREE.MathUtils.lerp(targetScale.current.x, 1.12, w);
+    const baseY = THREE.MathUtils.lerp(targetScale.current.y, 1.12, w);
+    const basePosY = THREE.MathUtils.lerp(targetPosY.current, 0.006, w);
+    const currentScaleY = isBlinking.current ? 0.05 : baseY;
 
     if (leftEyeRef.current && rightEyeRef.current) {
-      const targetX = targetScale.current.x;
+      const targetX = baseX;
       const targetZ = targetRotZ.current;
-      const targetY = targetPosY.current;
+      const targetY = basePosY;
       const blinkLerp = isBlinking.current ? 0.8 : lerpSpeed;
 
       leftEyeRef.current.scale.x +=
@@ -351,11 +394,15 @@ export default React.memo(function RobotModel({
   joints,
   analyser,
   id,
+  animationState = "Idle",
+  brain,
   ...props
 }: {
   joints: React.MutableRefObject<any>;
   analyser?: AnalyserNode | null;
   id?: string;
+  animationState?: RobotAnimationState;
+  brain?: ClientBrain | null;
 } & Omit<React.JSX.IntrinsicElements["group"], "id">) {
   const logoTexture = useTexture("/usjp-logo.svg");
 
@@ -420,7 +467,11 @@ export default React.memo(function RobotModel({
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
-    emissiveMat.emissiveIntensity = 1.5 + Math.sin(t * 4) * 0.5;
+    if (brain?.state.isThinking) {
+      emissiveMat.emissiveIntensity = 0.9 + Math.sin(t * 1.2) * 0.12;
+    } else {
+      emissiveMat.emissiveIntensity = 1.5 + Math.sin(t * 4) * 0.5;
+    }
 
     // Head tracking logic
     if (headRef.current) {
@@ -646,7 +697,10 @@ export default React.memo(function RobotModel({
                   castShadow
                   receiveShadow
                 />
-                <LedEyes />
+                <LedEyes
+                  agentId={id ?? ""}
+                  animationState={animationState}
+                />
                 <LedMouth position={[0, -0.035, 0.076]} analyser={analyser} />
               </group>
             </group>
