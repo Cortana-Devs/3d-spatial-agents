@@ -79,6 +79,8 @@ export function useAgentBrain(
   const raycasterRef = useRef(new THREE.Raycaster());
   const rayOriginRef = useRef(new THREE.Vector3());
   const rayDirRef = useRef(new THREE.Vector3(0, -1, 0));
+  const lastInspectedState = useRef("");
+  const lastInspectedThought = useRef("");
   const frameRef = useRef(0);
   const lookAheadRef = useRef(new THREE.Vector3());
   const sensorPosRef = useRef(new THREE.Vector3());
@@ -315,11 +317,19 @@ export function useAgentBrain(
   useFrame((state, delta) => {
     // Remote Logic: Update inspected agent data
     if (id === inspectedAgentId) {
-      setInspectedAgentData({
-        id,
-        thought: brainRef.current.state.thought,
-        state: animationState,
-      });
+      const currentThought = brainRef.current.state.thought;
+      if (
+        lastInspectedState.current !== animationState ||
+        lastInspectedThought.current !== currentThought
+      ) {
+        lastInspectedState.current = animationState;
+        lastInspectedThought.current = currentThought;
+        setInspectedAgentData({
+          id,
+          thought: currentThought,
+          state: animationState,
+        });
+      }
     }
 
     if (isMenuOpen || isMenuPanelOpen) return;

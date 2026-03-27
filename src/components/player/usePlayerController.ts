@@ -569,7 +569,32 @@ export function usePlayerController(
           addNearbyItemsRow();
         }
 
-        useGameStore.getState().setInteractionGrid(grid);
+        const storeGrid = useGameStore.getState().interactionGrid;
+        let gridsDiffer = grid.length !== storeGrid.length;
+
+        if (!gridsDiffer) {
+          for (let i = 0; i < grid.length; i++) {
+            if (
+              grid[i].id !== storeGrid[i].id ||
+              grid[i].cells.length !== storeGrid[i].cells.length
+            ) {
+              gridsDiffer = true;
+              break;
+            }
+            // Check individual cell IDs within the row
+            for (let j = 0; j < grid[i].cells.length; j++) {
+              if (grid[i].cells[j].id !== storeGrid[i].cells[j].id) {
+                gridsDiffer = true;
+                break;
+              }
+            }
+            if (gridsDiffer) break;
+          }
+        }
+
+        if (gridsDiffer) {
+          useGameStore.getState().setInteractionGrid(grid);
+        }
 
         // Update Placing Target Visualization
         const curSel = useGameStore.getState().gridSelection;
@@ -808,7 +833,7 @@ export function usePlayerController(
       }
     }
 
-    if (lastPlayerPosLog.current.distanceToSquared(mesh.position) > 0.01) {
+    if (lastPlayerPosLog.current.distanceToSquared(mesh.position) > 1.0) {
       lastPlayerPosLog.current.copy(mesh.position);
       const centerPos = mesh.position.clone();
       centerPos.y += 6.1; // Offset exactly to head level for agent tracking
