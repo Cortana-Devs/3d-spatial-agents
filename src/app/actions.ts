@@ -1,4 +1,5 @@
 "use server";
+import { after } from "next/server";
 
 import {
   processAgentThought,
@@ -72,7 +73,7 @@ export async function generateReflection(
     const summary = completion.choices[0]?.message?.content?.trim();
     const endTime = Date.now();
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -85,13 +86,13 @@ export async function generateReflection(
       input_tokens: completion.usage?.prompt_tokens,
       output_tokens: completion.usage?.completion_tokens,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return summary;
   } catch (error: any) {
     console.error("Reflection Error:", error);
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -104,7 +105,7 @@ export async function generateReflection(
       error_code: error.code || error.status,
       error_message: error.message,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return null;
   }
@@ -157,7 +158,7 @@ export async function parseNaturalCommand(
     const endTime = Date.now();
     const serverLatency = endTime - startTime;
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -170,7 +171,7 @@ export async function parseNaturalCommand(
       input_tokens: completion.usage?.prompt_tokens,
       output_tokens: completion.usage?.completion_tokens,
       model_version: model,
-    });
+    }).catch(console.error));
 
     if (!content) {
       return {
@@ -189,7 +190,7 @@ export async function parseNaturalCommand(
     console.error("NLP Parse Error:", error);
 
     const errorLatency = Date.now() - startTime;
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -202,7 +203,7 @@ export async function parseNaturalCommand(
       error_code: error.code || error.status,
       error_message: error.message,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return {
       rawResponse: JSON.stringify({
@@ -358,7 +359,7 @@ ${worldSection}`,
     }
     const endTime = Date.now();
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -371,7 +372,7 @@ ${worldSection}`,
       input_tokens: completion.usage?.prompt_tokens,
       output_tokens: completion.usage?.completion_tokens,
       model_version: model,
-    });
+    }).catch(console.error));
 
     // Parse JSON response
     try {
@@ -396,7 +397,7 @@ ${worldSection}`,
   } catch (error: any) {
     console.error("Agent Chat Error:", error);
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -409,7 +410,7 @@ ${worldSection}`,
       error_code: error.code || error.status,
       error_message: error.message,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return {
       reply:

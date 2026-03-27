@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import { Text, Text3D, Center } from "@react-three/drei";
+import { Geometry, Base, Addition } from "@react-three/csg";
 import { usePlacingArea } from "../Systems/usePlacingArea";
 
 const woodMaterial = new THREE.MeshStandardMaterial({
@@ -431,18 +432,33 @@ export function ConferenceTable({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Main Rectangular Table Top — lab surface */}
+      {/* PERFECT PERFORMANCE: 1 Draw Call for the entire table using CSG */}
       <mesh
         ref={surfaceRef}
-        position={[0, 4, 0]}
         castShadow
         receiveShadow
-        material={offWhiteMaterial}
         onUpdate={(self) => {
           self.layers.enable(1); // Enable Layer 1 for raycasting
         }}
       >
-        <boxGeometry args={[40, 0.8, 20]} />
+        <Geometry useGroups>
+          <Base position={[0, 4, 0]} material={offWhiteMaterial}>
+            <boxGeometry args={[40, 0.8, 20]} />
+          </Base>
+          
+          <Addition position={[-15, 2, -7.5]} material={metalMaterial}>
+            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
+          </Addition>
+          <Addition position={[15, 2, -7.5]} material={metalMaterial}>
+            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
+          </Addition>
+          <Addition position={[-15, 2, 7.5]} material={metalMaterial}>
+            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
+          </Addition>
+          <Addition position={[15, 2, 7.5]} material={metalMaterial}>
+            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
+          </Addition>
+        </Geometry>
       </mesh>
 
       {/* Center Placing Area */}
@@ -495,19 +511,6 @@ export function ConferenceTable({
         baseName={userData?.name ? `${userData.name} West` : `Conf West`}
       />
 
-      {/* Table Legs */}
-      <mesh position={[-15, 2, -7.5]} castShadow material={metalMaterial}>
-        <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-      </mesh>
-      <mesh position={[15, 2, -7.5]} castShadow material={metalMaterial}>
-        <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-      </mesh>
-      <mesh position={[-15, 2, 7.5]} castShadow material={metalMaterial}>
-        <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-      </mesh>
-      <mesh position={[15, 2, 7.5]} castShadow material={metalMaterial}>
-        <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-      </mesh>
       {children}
     </group>
   );

@@ -1,3 +1,15 @@
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeout: number = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export interface SearchResult {
   title: string;
   link: string;
@@ -45,7 +57,7 @@ async function fetchBraveSearch(query: string): Promise<SearchResult[] | null> {
   const apiKey = process.env.BRAVE_SEARCH_API_KEY;
   if (!apiKey) return null;
 
-  const response = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`, {
+  const response = await fetchWithTimeout(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`, {
     headers: {
       "Accept": "application/json",
       "Accept-Encoding": "gzip",
@@ -69,7 +81,7 @@ async function fetchSerperSearch(query: string): Promise<SearchResult[] | null> 
   const apiKey = process.env.SERPER_API_KEY;
   if (!apiKey) return null;
 
-  const response = await fetch("https://google.serper.dev/search", {
+  const response = await fetchWithTimeout("https://google.serper.dev/search", {
     method: "POST",
     headers: {
       "X-API-KEY": apiKey,

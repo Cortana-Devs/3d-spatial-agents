@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import puter from "@heyputer/puter.js";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 export type AudioState = "idle" | "fetching_primary" | "fetching_fallback" | "speaking" | "error";
 
@@ -13,11 +14,13 @@ let globalSpeechLock = false; // Singleton lock
 let globalSpeechQueue: { text: string; agentId?: string; isSubconscious: boolean }[] = [];
 let globalHasInteracted = false;
 
+// Voice config from sample project
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_TTS_API_KEY || 'AIzaSyBTwWnhGxShFSIrX9z0kHa8vmGc5AGG9Ds';
+
 export function useAudioController() {
   const [audioState, setAudioState] = useState<AudioState>("idle");
   const [currentBuffer, setCurrentBuffer] = useState<AudioBuffer | null>(null);
   const [currentAudioElement, setCurrentAudioElement] = useState<HTMLAudioElement | null>(null);
-  const lastRequestId = useCallback(() => (window as any)._audioReqId = ((window as any)._audioReqId || 0) + 1, []);
   const reqIdRef = useState(() => ({ current: 0 }))[0]; // local ID tracker
 
   // Initialize or resume the Audio Context
@@ -53,7 +56,6 @@ export function useAudioController() {
           try {
             const ctx = await ensureAudioContext();
             if (ctx) {
-               // Kokoro outputs mono Float32Array
                const buffer = ctx.createBuffer(1, audio.length, sampleRate);
                buffer.copyToChannel(audio, 0);
                
@@ -96,11 +98,9 @@ export function useAudioController() {
       window.dispatchEvent(new CustomEvent("audio-queue-updated", { detail: { count: 0 } }));
       
       for (const task of tasks) {
-        // We call speak on the next tick to ensure AudioContext has finished resuming
         setTimeout(() => speak(task.text, task.agentId, task.isSubconscious), 50);
       }
       
-      // Cleanup
       events.forEach(e => document.removeEventListener(e, flushQueue));
     };
 
@@ -109,28 +109,58 @@ export function useAudioController() {
     return () => events.forEach(e => document.removeEventListener(e, flushQueue));
   }, []);
 
-  // Main Speak Function
-  // Main Speak Function
+  // Helper to construct WAV header for raw PCM data
+  const createWavDataUrl = (base64Audio: string) => {
+    const binaryString = atob(base64Audio);
+    const pcmData = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      pcmData[i] = binaryString.charCodeAt(i);
+    }
+    
+    const sampleRate = 24000;
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = pcmData.length;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    const writeString = (view: DataView, offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    const pcmView = new Uint8Array(buffer, 44);
+    pcmView.set(pcmData);
+
+    const bytes = new Uint8Array(buffer);
+    let wavBinary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      wavBinary += String.fromCharCode(bytes[i]);
+    }
+    
+    return `data:audio/wav;base64,${btoa(wavBinary)}`;
+  };
+
   const speak = useCallback(async (text: string, agentId?: string, isSubconscious = false) => {
-    // 1. Singleton Lock: Prevent overlapping cloud synthesis
     if (globalSpeechLock && isSubconscious) return;
     
-    // Auth Check: Puter OpenAI requires a valid session
-    try {
-      const isSignedIn = await puter.auth.isSignedIn();
-      if (!isSignedIn) {
-        if (isSubconscious) {
-          console.log("[AudioController] Not signed in - falling back to local for subconscious.");
-          throw new Error("Auth Required");
-        } else {
-          console.log("[AudioController] Not signed in - prompting login...");
-          await puter.auth.signIn();
-        }
-      }
-    } catch (e) {
-       if (isSubconscious) throw e;
-    }
-
     const requestId = ++reqIdRef.current;
     globalSpeechLock = true;
     
@@ -141,7 +171,6 @@ export function useAudioController() {
       return;
     }
 
-    // 2. Queue Logic: If blocked by browser, wait for interaction
     if (ctx.state !== "running") {
       console.debug(`[AudioController] Audio blocked by browser policy. Queueing speech: \"${text.slice(0, 20)}...\"`);
       globalSpeechQueue.push({ text, agentId, isSubconscious });
@@ -150,7 +179,6 @@ export function useAudioController() {
       return;
     }
     
-    // Clear old state
     setCurrentBuffer(null);
     if (currentAudioElement) {
        currentAudioElement.pause();
@@ -158,20 +186,35 @@ export function useAudioController() {
     }
     setCurrentAudioElement(null);
 
+    // Attempt 1: Gemini TTS (Free Unlimited)
     try {
-      console.debug(`[AudioController] -> CLOUD [Agent: ${agentId || 'User'}] Text: \"${text.slice(0, 30)}...\"`);
-      
-      const audioElement = await puter.ai.txt2speech(text, {
-        provider: "openai",
-        voice: "nova"
+      console.debug(`[AudioController] -> GEMINI TTS [Agent: ${agentId || 'User'}]`);
+      const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: `Read aloud in a warm, welcoming tone: ${text}` }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: "Leda" }, // Default to Leda
+            },
+          },
+        },
       });
-      
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (!base64Audio) throw new Error("No audio data from Gemini");
+
       if (requestId !== reqIdRef.current) {
         globalSpeechLock = false;
         return;
       }
 
-      // We return the element for MediaElementSource usage in the 3D entity
+      const audioSrc = createWavDataUrl(base64Audio);
+      const audioElement = new Audio(audioSrc);
+      audioElement.crossOrigin = "anonymous";
+      
       setCurrentAudioElement(audioElement);
       setAudioState("speaking");
       
@@ -183,12 +226,39 @@ export function useAudioController() {
       };
       
       return audioElement;
-
     } catch (err) {
-      console.warn("[AudioController] Cloud Primary Failed. Fallback to Kokoro...", err);
+      console.warn("[AudioController] Gemini TTS Failed. Falling back to Puter/OpenAI...", err);
     }
 
-    // Attempt 2: Fallback (Kokoro WebGPU)
+    // Attempt 2: Puter AI (OpenAI)
+    try {
+      console.debug(`[AudioController] -> PUTER CLOUD [Agent: ${agentId || 'User'}]`);
+      const audioElement = await puter.ai.txt2speech(text, {
+        provider: "openai",
+        voice: "nova"
+      });
+      
+      if (requestId !== reqIdRef.current) {
+        globalSpeechLock = false;
+        return;
+      }
+
+      setCurrentAudioElement(audioElement);
+      setAudioState("speaking");
+      
+      audioElement.onended = () => {
+        if (requestId === reqIdRef.current) globalSpeechLock = false;
+      };
+      audioElement.onerror = () => {
+        if (requestId === reqIdRef.current) globalSpeechLock = false;
+      };
+      
+      return audioElement;
+    } catch (err) {
+      console.warn("[AudioController] Puter Cloud Failed. Fallback to Kokoro...", err);
+    }
+
+    // Attempt 3: Fallback (Kokoro WebGPU)
     try {
       setAudioState("fetching_fallback");
       const worker = initFallbackWorker();
@@ -208,7 +278,6 @@ export function useAudioController() {
       if (requestId === reqIdRef.current) {
         setCurrentBuffer(buffer);
         setAudioState("speaking");
-        // Clear lock after buffer length
         setTimeout(() => { if (requestId === reqIdRef.current) globalSpeechLock = false; }, (text.length * 80) + 1000);
       }
     } catch (fallbackErr) {
