@@ -11,10 +11,17 @@ export function AudioUnlocker() {
     if (typeof window === "undefined") return;
 
     const contexts: AudioContext[] = [];
-    const events = ["click", "mousedown", "keydown", "touchstart", "pointerdown"];
+    const events = [
+      "click",
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "pointerdown",
+    ];
 
     // 1. Trap AudioContext creation
-    const OriginalAudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    const OriginalAudioContext =
+      window.AudioContext || (window as any).webkitAudioContext;
     if (!OriginalAudioContext) return;
 
     // Use a proxy to intercept constructors
@@ -22,33 +29,29 @@ export function AudioUnlocker() {
       construct(target, args) {
         const ctx = new target(...args);
         contexts.push(ctx);
-        console.log("[AudioUnlocker] Tracked new AudioContext instance.", ctx);
         return ctx;
       },
     });
 
     // 2. Resume all on interaction
     async function resumeAll() {
-      console.log("[AudioUnlocker] Interaction detected. Resuming all contexts...");
       for (const ctx of contexts) {
         if (ctx.state !== "running") {
           try {
             await ctx.resume();
-            console.log("[AudioUnlocker] Context resumed:", ctx);
           } catch (e) {
-            console.warn("[AudioUnlocker] Resume failed:", e);
+            // Silently fail, user might need another interaction
           }
         }
       }
 
       // Clean up listeners once everything is running
-      if (contexts.every(c => c.state === "running")) {
-        console.log("[AudioUnlocker] All contexts running. Cleaning up listeners.");
-        events.forEach(e => document.removeEventListener(e, resumeAll));
+      if (contexts.every((c) => c.state === "running")) {
+        events.forEach((e) => document.removeEventListener(e, resumeAll));
       }
     }
 
-    events.forEach(e => document.addEventListener(e, resumeAll));
+    events.forEach((e) => document.addEventListener(e, resumeAll));
 
     // Add Puter script support - if Puter.js is loaded later, it might create its own context
     const observer = new MutationObserver((mutations) => {
@@ -61,7 +64,7 @@ export function AudioUnlocker() {
     observer.observe(document.head, { childList: true });
 
     return () => {
-      events.forEach(e => document.removeEventListener(e, resumeAll));
+      events.forEach((e) => document.removeEventListener(e, resumeAll));
       observer.disconnect();
     };
   }, []);
