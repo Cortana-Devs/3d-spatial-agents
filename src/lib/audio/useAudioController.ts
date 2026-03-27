@@ -425,11 +425,15 @@ export function useAudioController() {
           ).webkitAudioContext
         )();
       }
-      if (globalAudioCtx.state === "suspended") {
+      // Only attempt resume() after the user has interacted with the page.
+      // Calling resume() on a suspended context before any gesture triggers a
+      // Chrome DOMException and console warning — AudioUnlocker handles the
+      // actual unlock on the first click/keydown/touch event.
+      if (globalAudioCtx.state === "suspended" && globalHasInteracted) {
         try {
           await globalAudioCtx.resume();
         } catch {
-          /* AudioUnlocker handles this on user gesture */
+          /* AudioUnlocker handles this */
         }
       }
     }

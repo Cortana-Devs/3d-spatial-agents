@@ -1226,8 +1226,29 @@ export function useAgentBrain(
       // Apply internal procedural gait engine. We must use real delta, NOT the 15x physical simulation dt.
       const realDelta = Math.min(delta, 0.1);
       const strideLength = 5.5; // AI agents need a longer stride for a relaxed walk
+
+      // Anticipatory look-ahead based on velocity.
+      // Compute squared length from raw components to avoid calling any method
+      // that differs between YUKA.Vector3 (.squaredLength) and THREE.Vector3
+      // (.lengthSq / .lengthSquared) — the TypeScript types alias both to Vector3.
+      let targetDirection;
+      const vx = vehicle.velocity.x, vy = vehicle.velocity.y, vz = vehicle.velocity.z;
+      if (vx * vx + vy * vy + vz * vz > 0.001) {
+        const velWorld = new THREE.Vector3(vx, vy, vz).normalize();
+        // vehicle.rotation is YUKA.Quaternion at runtime; TS types it as THREE.Quaternion.
+        const r = vehicle.rotation as unknown as {
+          x: number;
+          y: number;
+          z: number;
+          w: number;
+        };
+        const qInv = new THREE.Quaternion(r.x, r.y, r.z, r.w).invert();
+        targetDirection = velWorld.clone().applyQuaternion(qInv);
+      }
+
       updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta, {
         strideLength,
+        targetDirection,
       });
 
       const animSpeed = smoothSpeed.current;
