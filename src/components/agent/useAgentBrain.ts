@@ -10,7 +10,7 @@ import { useProceduralGait } from "@/components/agent/useProceduralGait";
 import { ClientBrain } from "@/components/systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-core";
 import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
-import NavigationNetwork from "@/components/systems/NavigationNetwork";
+import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
 import type { SteeringCommand } from "@/components/systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
@@ -258,7 +258,7 @@ export function useAgentBrain(
     // --- BEHAVIORS ---
 
     // --- Rebuild navigation grid whenever obstacles change ---
-    NavigationNetwork.getInstance().rebuildGrid(obstacles);
+    AgentBrainClient.getInstance().initNav(obstacles);
 
     // Fix #5/#8: Removed YUKA ObstacleAvoidanceBehavior — wall avoidance is
     // handled exclusively by the raycaster-based system below. Having both

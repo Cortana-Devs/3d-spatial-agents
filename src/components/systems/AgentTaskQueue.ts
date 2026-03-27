@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { InteractableRegistry } from "./InteractableRegistry";
-import NavigationNetwork from "./NavigationNetwork";
+import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
 
@@ -299,7 +299,6 @@ export class AgentTaskQueue {
       return { type: "STOP" };
     }
 
-    const nav = NavigationNetwork.getInstance();
     const reg = InteractableRegistry.getInstance();
 
     switch (this.phase) {
@@ -351,27 +350,49 @@ export class AgentTaskQueue {
           this.pathRefreshTimer >= AgentTaskQueue.PATH_REFRESH_INTERVAL
         ) {
           const isFirstPath = !this.hasSetPath;
-          const result = nav.findPathDetailed(vehiclePos, targetPos);
-          this.approachPos = result.approachPos;
 
-          if (!result.pathFound || result.path.length === 0) {
+          // Offload pathfinding to Web Worker
+          if (!(this as any)._isWaitingForPath) {
+            (this as any)._isWaitingForPath = true;
+            AgentBrainClient.getInstance()
+              .findPathDetailed(vehiclePos, targetPos)
+              .then((result) => {
+                (this as any)._isWaitingForPath = false;
+                (this as any)._pendingPathResult = result;
+              })
+              .catch((e) => {
+                (this as any)._isWaitingForPath = false;
+                console.error("[AgentTaskQueue] Pathfinding worker error:", e);
+              });
+          }
+
+          if ((this as any)._pendingPathResult) {
+            const result = (this as any)._pendingPathResult;
+            (this as any)._pendingPathResult = null;
+            this.approachPos = result.approachPos;
+
+            if (!result.pathFound || result.path.length === 0) {
+              this.hasSetPath = true;
+              this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1.0;
+              return { type: "STOP" };
+            }
             this.hasSetPath = true;
-            this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1.0;
-            return { type: "STOP" };
-          }
-          this.hasSetPath = true;
-          this.pathRefreshTimer = 0;
-          if (isFirstPath) {
-            this.stuckWindowPositions = [];
-          }
+            this.pathRefreshTimer = 0;
+            if (isFirstPath) {
+              this.stuckWindowPositions = [];
+            }
 
-          if (this.currentTask?.type === "FOLLOW_PLAYER") {
+            if (this.currentTask?.type === "FOLLOW_PLAYER") {
+              if (this.approachPos) this.approachPos.y = vehiclePos.y;
+              return { type: "FOLLOW_PATH", path: result.path };
+            }
+
             if (this.approachPos) this.approachPos.y = vehiclePos.y;
             return { type: "FOLLOW_PATH", path: result.path };
+          } else {
+            // Keep current velocity/stop while waiting for path
+            return { type: "STOP" };
           }
-
-          if (this.approachPos) this.approachPos.y = vehiclePos.y;
-          return { type: "FOLLOW_PATH", path: result.path };
         }
 
         // Distance Check
