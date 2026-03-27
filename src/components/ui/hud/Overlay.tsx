@@ -8,6 +8,7 @@ import { TaskAssignmentPanel } from "../panels/TaskAssignmentPanel";
 import { CommandBar } from "./CommandBar";
 import { AgentChatPanel } from "../panels/AgentChatPanel";
 import { AgentCommunicationPanel } from "../panels/AgentCommunicationPanel";
+import { StatusBar } from "./StatusBar";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { FileEditorModal } from "../panels/FileEditorModal";
 
@@ -327,27 +328,7 @@ export default function Overlay() {
         }}
       />
 
-      {/* Debug Text */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          color: "white",
-          background: "rgba(0,0,0,0.5)",
-          padding: "10px 20px",
-          borderRadius: "20px",
-          fontFamily: "sans-serif",
-          pointerEvents: "none",
-          userSelect: "none",
-          textAlign: "center",
-          width: "80%",
-          zIndex: 10,
-        }}
-      >
-        {debugText}
-      </div>
+      <StatusBar />
 
       {/* Debug Target Info (Bottom Right) */}
       {debugTarget && (

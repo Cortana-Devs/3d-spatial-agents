@@ -17,6 +17,23 @@ export type AudioState = "idle" | "fetching" | "speaking" | "error";
 type TierName = "gemini" | "piper" | "puter" | "webspeech";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TTS status broadcast  (consumed by StatusBar UI)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TtsStatusState = "idle" | "fetching" | "speaking" | "fallback" | "error";
+
+export interface TtsStatusDetail {
+  message: string;
+  state: TtsStatusState;
+  tier?: TierName;
+}
+
+function emitTtsStatus(detail: TtsStatusDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<TtsStatusDetail>("tts-status", { detail }));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Module-level singletons  (shared across all agents / hook instances)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -479,11 +496,20 @@ export function useAudioController() {
         if (requestId === reqIdRef.current) globalSpeechLock = false;
       };
 
+      const TIER_LABELS: Record<TierName, string> = {
+        gemini: "Gemini",
+        piper: "Local Voice",
+        puter: "OpenAI",
+        webspeech: "Browser Voice",
+      };
+
       for (const tier of tiers) {
         if (requestId !== reqIdRef.current) {
           globalSpeechLock = false;
           return;
         }
+
+        emitTtsStatus({ message: TIER_LABELS[tier], state: "fetching", tier });
 
         try {
           // ── Gemini ───────────────────────────────────────────────────────
@@ -495,8 +521,9 @@ export function useAudioController() {
             }
             setCurrentAudioElement(el);
             setAudioState("speaking");
-            el.onended = releaseLock;
-            el.onerror = releaseLock;
+            emitTtsStatus({ message: TIER_LABELS[tier], state: "speaking", tier });
+            el.onended = () => { releaseLock(); emitTtsStatus({ message: "", state: "idle" }); };
+            el.onerror = () => { releaseLock(); emitTtsStatus({ message: "", state: "idle" }); };
             return;
           }
 
@@ -515,7 +542,11 @@ export function useAudioController() {
             setCurrentPhonemeSchedule(schedule);
             setCurrentBuffer(buffer);
             setAudioState("speaking");
-            setTimeout(releaseLock, buffer.duration * 1_000 + 300);
+            emitTtsStatus({ message: TIER_LABELS[tier], state: "speaking", tier });
+            setTimeout(() => {
+              releaseLock();
+              emitTtsStatus({ message: "", state: "idle" });
+            }, buffer.duration * 1_000 + 300);
             return;
           }
 
@@ -528,8 +559,9 @@ export function useAudioController() {
             }
             setCurrentAudioElement(el);
             setAudioState("speaking");
-            el.onended = releaseLock;
-            el.onerror = releaseLock;
+            emitTtsStatus({ message: TIER_LABELS[tier], state: "speaking", tier });
+            el.onended = () => { releaseLock(); emitTtsStatus({ message: "", state: "idle" }); };
+            el.onerror = () => { releaseLock(); emitTtsStatus({ message: "", state: "idle" }); };
             return;
           }
 
@@ -541,13 +573,17 @@ export function useAudioController() {
               return;
             }
             setAudioState("speaking");
-            // Estimate duration: ~65ms per character
-            setTimeout(releaseLock, Math.max(500, text.length * 65));
+            emitTtsStatus({ message: TIER_LABELS[tier], state: "speaking", tier });
+            setTimeout(() => {
+              releaseLock();
+              emitTtsStatus({ message: "", state: "idle" });
+            }, Math.max(500, text.length * 65));
             return;
           }
         } catch (err) {
           const msg = (err as Error).message;
           console.warn(`[TTS] Tier "${tier}" failed: ${msg}`);
+          emitTtsStatus({ message: `${TIER_LABELS[tier]} unavailable`, state: "fallback", tier });
 
           // Piper timeout → reset session so next warmup can retry
           if (tier === "piper") resetPiperSession();
@@ -566,6 +602,7 @@ export function useAudioController() {
 
       // Every tier failed
       setAudioState("error");
+      emitTtsStatus({ message: "Voice unavailable", state: "error" });
       globalSpeechLock = false;
     },
     [
@@ -623,6 +660,7 @@ export function useAudioController() {
   const stopSpeaking = useCallback(() => {
     reqIdRef.current++;
     globalSpeechLock = false;
+    emitTtsStatus({ message: "", state: "idle" });
 
     // Cancel Web Speech API if active
     if (typeof window !== "undefined" && window.speechSynthesis?.speaking) {
