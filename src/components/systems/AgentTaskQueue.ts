@@ -3,10 +3,10 @@ import { InteractableRegistry } from "./InteractableRegistry";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
+import { getZoneCenterPosition } from "@/config/parkRoutines";
 
 // ============================================================================
 // Task Types
-// Maps closely to the LLM tool-calling API
 // ============================================================================
 
 export type AgentTaskType =
@@ -17,31 +17,51 @@ export type AgentTaskType =
   | "SAY"
   | "FOLLOW_PLAYER"
   | "WANDER"
-  | "WAIT";
+  | "WAIT"
+  // Experiential tasks (new)
+  | "SIT"         // Navigate to bench/chair, enter seated pose for a duration
+  | "LEAN"        // Navigate near railing/surface, enter lean pose for a duration
+  | "LOOK_AT"     // Turn and hold gaze on a target point for a duration
+  | "CONTEMPLATE" // GO_TO scenic spot → LOOK_AT POIs + brief SAY reflection
+  | "EXPLORE"     // Navigate to least recently visited zone
+  | "REST"        // Navigate to Garden bench → SIT until energy recovers
+  | "COLLABORATE" // Navigate toward partner agent
+  | "PRESENT"     // Navigate to Arena podium, deliver speech
+  | "EMOTE";      // Play a gesture animation in place (no movement)
 
 export interface AgentTask {
   type: AgentTaskType;
   priority: number; // 0 = Subconscious Wander, 10 = LLM Script
-  scriptId?: string; // Groups tasks together
-  itemId?: string; // For PICK_NEARBY / INTERACT
-  destAreaId?: string; // For PLACE_INVENTORY
-  targetAreaId?: string; // For GO_TO (Semantic Zone ID mapping)
-  targetPos?: THREE.Vector3; // For GO_TO
-  duration?: number; // For WAIT
-  content?: string; // For SAY
+  scriptId?: string;
+  itemId?: string;         // For PICK_NEARBY / INTERACT / SIT (bench id)
+  destAreaId?: string;     // For PLACE_INVENTORY
+  targetAreaId?: string;   // For GO_TO (Semantic Zone ID)
+  targetPos?: THREE.Vector3;
+  duration?: number;       // For WAIT / SIT / LEAN / LOOK_AT / EMOTE
+  content?: string;        // For SAY / PRESENT (message or speech)
+  /** For LOOK_AT / CONTEMPLATE — the world-space point to face */
+  lookTarget?: THREE.Vector3;
+  /** For EMOTE — gesture name */
+  gesture?: "wave" | "nod" | "shrug" | "cheer" | "think";
+  /** For COLLABORATE — partner agent id */
+  partnerId?: string;
 }
 
 // ============================================================================
-// Task Phase State Machine (Radically flattened)
+// Task Phase State Machine
 // ============================================================================
 
 export type TaskPhase =
   | "IDLE"
   | "NAVIGATING"
-  | "ACTION_START" // Brief pause before the action happens
+  | "ACTION_START"
+  | "SEATED"        // sitting on bench
+  | "LEANING"       // leaning on surface
+  | "GAZING"        // performing LOOK_AT / CONTEMPLATE
+  | "EMOTING"       // gesture in progress
+  | "PRESENTING"    // at podium delivering speech
   | "COMPLETED";
 
-// Return type: tells useAgentBrain what steering to apply
 export interface SteeringCommand {
   type: "FOLLOW_PATH" | "ARRIVE" | "STOP" | "NONE";
   path?: THREE.Vector3[];
@@ -50,7 +70,7 @@ export interface SteeringCommand {
 }
 
 // ============================================================================
-// AgentTaskQueue — Thin Action Executor
+// AgentTaskQueue
 // ============================================================================
 
 export class AgentTaskQueue {
@@ -60,12 +80,9 @@ export class AgentTaskQueue {
   private phaseTimer: number = 0;
   private agentId: string;
 
-  // Path tracking
   private hasSetPath: boolean = false;
   private approachPos: THREE.Vector3 | null = null;
   private isCloseApproach: boolean = false;
-
-  // Stuck detection (Sliding window)
   private elapsedTime: number = 0;
   private stuckTimer: number = 0;
   private repathTimer: number = 0;
@@ -83,12 +100,18 @@ export class AgentTaskQueue {
   private static readonly WANDER_Z_MIN = -71;
   private static readonly WANDER_Z_MAX = 71;
   private static readonly MAX_RETRIES = 5;
-
-  private static readonly ARRIVAL_DIST = 2.5; // Tighter for direct atomic actions
+  private static readonly ARRIVAL_DIST = 2.5;
   private static readonly CLOSE_APPROACH_DIST = 4.0;
   private static readonly ACTION_DELAY = 0.5;
 
-  // Export singleton context (e.g. for UI panels, debug)
+  // Default durations for experiential tasks (seconds)
+  private static readonly SIT_DEFAULT_DURATION = 12.0;
+  private static readonly LEAN_DEFAULT_DURATION = 6.0;
+  private static readonly LOOKAT_DEFAULT_DURATION = 4.0;
+  private static readonly EMOTE_DEFAULT_DURATION = 2.5;
+  private static readonly PRESENT_DEFAULT_DURATION = 8.0;
+  private static readonly CONTEMPLATE_PHASES = 3; // number of POIs to look at
+
   public static readonly taskRegistries = new Map<string, AgentTaskQueue>();
 
   constructor(agentId: string) {
@@ -109,11 +132,7 @@ export class AgentTaskQueue {
     this.queue.push(task);
     this.queue.sort((a, b) => b.priority - a.priority);
 
-    // Preemption
     if (this.currentTask && task.priority > this.currentTask.priority) {
-      console.debug(
-        `[AgentTaskQueue:${this.agentId}] Preempting task ${this.currentTask.type}`,
-      );
       this.cleanupTask(this.currentTask);
       this.queue.push(this.currentTask);
       this.queue.sort((a, b) => b.priority - a.priority);
@@ -136,25 +155,31 @@ export class AgentTaskQueue {
   }
 
   public cancelScript(scriptId: string, reason: string = "Cancelled"): void {
-    const initialLen = this.queue.length;
     this.queue = this.queue.filter((t) => t.scriptId !== scriptId);
-
     if (this.currentTask?.scriptId === scriptId) {
       this.cleanupTask(this.currentTask);
       this.phase = "COMPLETED";
     }
   }
 
-  public getCurrentPhase(): TaskPhase {
-    return this.phase;
-  }
-  public getCurrentTask(): AgentTask | null {
-    return this.currentTask;
-  }
+  public getCurrentPhase(): TaskPhase { return this.phase; }
+  public getCurrentTask(): AgentTask | null { return this.currentTask; }
+
   public isBusy(): boolean {
     return (
       (this.phase !== "IDLE" && this.phase !== "COMPLETED") ||
       this.queue.length > 0
+    );
+  }
+
+  /** Returns whether the agent is in an experiential (non-movement) pose state. */
+  public isInPoseState(): boolean {
+    return (
+      this.phase === "SEATED" ||
+      this.phase === "LEANING" ||
+      this.phase === "GAZING" ||
+      this.phase === "EMOTING" ||
+      this.phase === "PRESENTING"
     );
   }
 
@@ -187,48 +212,67 @@ export class AgentTaskQueue {
     this.currentTask = this.queue.shift()!;
     this.resetState();
 
-    // Validate target/items early
     const reg = InteractableRegistry.getInstance();
+
+    /** Resolve a zone ID to a world position — checks park routes first, then placing areas. */
+    const resolveZonePos = (zoneId: string): THREE.Vector3 | null => {
+      const parkCenter = getZoneCenterPosition(zoneId);
+      if (parkCenter) return parkCenter;
+      return reg.getZoneCenter(zoneId);
+    };
 
     // Resolve Semantic Zone targets
     if (this.currentTask.type === "GO_TO" && this.currentTask.targetAreaId) {
       if (!this.currentTask.targetPos) {
-        const center = reg.getZoneCenter(this.currentTask.targetAreaId);
+        const center = resolveZonePos(this.currentTask.targetAreaId);
         if (center) {
           this.currentTask.targetPos = center;
         } else {
-          console.warn(
-            `[AgentTaskQueue:${this.agentId}] Null Zone Center for ${this.currentTask.targetAreaId}`,
-          );
           this.phase = "COMPLETED";
           return;
         }
       }
     }
 
+    // Resolve zone targets for experiential tasks
+    if (
+      (this.currentTask.type === "CONTEMPLATE" ||
+        this.currentTask.type === "REST" ||
+        this.currentTask.type === "EXPLORE") &&
+      this.currentTask.targetAreaId &&
+      !this.currentTask.targetPos
+    ) {
+      const center = resolveZonePos(this.currentTask.targetAreaId);
+      if (center) {
+        this.currentTask.targetPos = center;
+      } else {
+        this.phase = "COMPLETED";
+        return;
+      }
+    }
+
     if (this.currentTask.type === "PICK_NEARBY" && this.currentTask.itemId) {
       if (!reg.claimItem(this.currentTask.itemId, this.agentId)) {
-        console.warn(
-          `[AgentTaskQueue:${this.agentId}] Failed to claim ${this.currentTask.itemId}`,
-        );
         this.phase = "COMPLETED";
         return;
       }
     }
 
     this.phase = "NAVIGATING";
-    console.debug(
-      `[AgentTaskQueue:${this.agentId}] Started atomic task: ${this.currentTask.type}`,
-    );
 
-    // Subconscious Chatter (30% chance to mutter when starting a physical task)
+    // Subconscious chatter on task start
     if (
       this.currentTask.type !== "SAY" &&
       this.currentTask.type !== "WANDER" &&
-      Math.random() < 0.3
+      this.currentTask.type !== "EMOTE" &&
+      Math.random() < 0.25
     ) {
-      const phrase =
-        this.currentTask.type === "GO_TO"
+      const isExperiential = ["SIT", "REST", "CONTEMPLATE", "EXPLORE"].includes(
+        this.currentTask.type,
+      );
+      const phrase = isExperiential
+        ? getRandomPhrase("MOVING")
+        : this.currentTask.type === "GO_TO"
           ? getRandomPhrase("MOVING")
           : getRandomPhrase("WORKING");
       window.dispatchEvent(
@@ -240,6 +284,7 @@ export class AgentTaskQueue {
   }
 
   // --- Stuck Detection ---
+
   private recordPosition(x: number, z: number, time: number): void {
     this.stuckWindowPositions.push({ x, z, t: time });
     const cutoff = time - AgentTaskQueue.STUCK_WINDOW;
@@ -254,14 +299,15 @@ export class AgentTaskQueue {
   private isStuckByWindow(): boolean {
     if (this.stuckWindowPositions.length < 2) return false;
     const first = this.stuckWindowPositions[0];
-    const last =
-      this.stuckWindowPositions[this.stuckWindowPositions.length - 1];
+    const last = this.stuckWindowPositions[this.stuckWindowPositions.length - 1];
     if (last.t - first.t < AgentTaskQueue.STUCK_WINDOW * 0.8) return false;
     const dist = Math.hypot(last.x - first.x, last.z - first.z);
     return dist < AgentTaskQueue.STUCK_MIN_DISTANCE;
   }
 
-  // --- MAIN UPDATE LOOP ---
+  // ============================================================================
+  // MAIN UPDATE LOOP
+  // ============================================================================
 
   public update(
     delta: number,
@@ -277,259 +323,340 @@ export class AgentTaskQueue {
       if ((this.phase as string) === "IDLE") return { type: "NONE" };
     }
 
+    // ------------------------------------------------------------------
+    // INSTANT / TIMER-DRIVEN PHASES (no navigation)
+    // ------------------------------------------------------------------
+
     if (this.currentTask?.type === "SAY" || this.currentTask?.type === "WAIT") {
       if (this.phaseTimer === 0 && this.currentTask.type === "SAY") {
         window.dispatchEvent(
           new CustomEvent("agent-speak", {
             detail: {
               agentId: this.agentId,
-              text: (this.currentTask as any).message || "Hello.",
+              text: (this.currentTask as any).message || this.currentTask.content || "Hello.",
             },
           }),
         );
       }
       this.phaseTimer += delta;
-
-      // Calculate TTS speaking duration heuristically (approx 100ms per character with minimum 2s)
       let dur = this.currentTask.duration || 2.0;
       if (this.currentTask.type === "SAY") {
-        const charLength = ((this.currentTask as any).message || "").length;
-        dur = Math.max(2.0, charLength * 0.08); // 80ms per char
+        const charLen = (
+          (this.currentTask as any).message ||
+          this.currentTask.content ||
+          ""
+        ).length;
+        dur = Math.max(2.0, charLen * 0.08);
       }
+      if (this.phaseTimer > dur) this.phase = "COMPLETED";
+      return { type: "STOP" };
+    }
 
-      if (this.phaseTimer > dur) {
-        this.phase = "COMPLETED";
+    // EMOTE: play gesture in place, no movement
+    if (this.phase === "EMOTING") {
+      this.phaseTimer += delta;
+      const dur = this.currentTask?.duration ?? AgentTaskQueue.EMOTE_DEFAULT_DURATION;
+      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      return { type: "STOP" };
+    }
+
+    // SEATED: agent sitting on bench
+    if (this.phase === "SEATED") {
+      this.phaseTimer += delta;
+      const dur = this.currentTask?.duration ?? AgentTaskQueue.SIT_DEFAULT_DURATION;
+      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      return { type: "STOP" };
+    }
+
+    // LEANING: agent leaning on surface
+    if (this.phase === "LEANING") {
+      this.phaseTimer += delta;
+      const dur = this.currentTask?.duration ?? AgentTaskQueue.LEAN_DEFAULT_DURATION;
+      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      return { type: "STOP" };
+    }
+
+    // GAZING: agent looking at a target (LOOK_AT / CONTEMPLATE)
+    if (this.phase === "GAZING") {
+      this.phaseTimer += delta;
+      const dur = this.currentTask?.duration ?? AgentTaskQueue.LOOKAT_DEFAULT_DURATION;
+      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      const faceTarget = this.currentTask?.lookTarget;
+      return { type: "STOP", faceTarget };
+    }
+
+    // PRESENTING: at podium, speaking
+    if (this.phase === "PRESENTING") {
+      this.phaseTimer += delta;
+      // Speak if we haven't yet
+      if (this.phaseTimer === 0 || (this.phaseTimer < delta * 2 && this.currentTask?.content)) {
+        window.dispatchEvent(
+          new CustomEvent("agent-speak", {
+            detail: {
+              agentId: this.agentId,
+              text: this.currentTask!.content!,
+            },
+          }),
+        );
       }
+      const dur = this.currentTask?.duration ?? AgentTaskQueue.PRESENT_DEFAULT_DURATION;
+      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
       return { type: "STOP" };
     }
 
     const reg = InteractableRegistry.getInstance();
 
-    switch (this.phase) {
-      // ------------------------------------------------------------------
-      // NAVIGATING
-      // ------------------------------------------------------------------
-      case "NAVIGATING": {
-        let targetPos: THREE.Vector3 | null = null;
+    // ------------------------------------------------------------------
+    // NAVIGATING
+    // ------------------------------------------------------------------
+    if (this.phase === "NAVIGATING") {
+      let targetPos: THREE.Vector3 | null = null;
 
-        switch (this.currentTask!.type) {
-          case "GO_TO":
-            targetPos = this.currentTask!.targetPos || null;
-            break;
-          case "PICK_NEARBY":
-          case "INTERACT":
-            targetPos = reg.getWorldPosition(this.currentTask!.itemId!) || null;
-            break;
-          case "PLACE_INVENTORY":
-            targetPos =
-              reg.getAreaWorldPosition(this.currentTask!.destAreaId!) || null;
-            break;
-          case "FOLLOW_PLAYER":
-            targetPos = playerPos ? playerPos.clone() : null;
-            break;
-          case "WANDER":
-            if (!this.currentTask!.targetPos) {
-              // Generate a random spot 10m away
-              const r = 10;
-              const theta = Math.random() * Math.PI * 2;
-              this.currentTask!.targetPos = new THREE.Vector3(
-                Math.max(
-                  AgentTaskQueue.WANDER_X_MIN,
-                  Math.min(
-                    AgentTaskQueue.WANDER_X_MAX,
-                    vehiclePos.x + r * Math.cos(theta),
-                  ),
-                ),
-                vehiclePos.y,
-                Math.max(
-                  AgentTaskQueue.WANDER_Z_MIN,
-                  Math.min(
-                    AgentTaskQueue.WANDER_Z_MAX,
-                    vehiclePos.z + r * Math.sin(theta),
-                  ),
-                ),
-              );
-            }
-            targetPos = this.currentTask!.targetPos;
-            break;
+      switch (this.currentTask!.type) {
+        case "GO_TO":
+          targetPos = this.currentTask!.targetPos || null;
+          break;
+        case "PICK_NEARBY":
+        case "INTERACT":
+          targetPos = reg.getWorldPosition(this.currentTask!.itemId!) || null;
+          break;
+        case "PLACE_INVENTORY":
+          targetPos = reg.getAreaWorldPosition(this.currentTask!.destAreaId!) || null;
+          break;
+        case "FOLLOW_PLAYER":
+          targetPos = playerPos ? playerPos.clone() : null;
+          break;
+        case "WANDER": {
+          if (!this.currentTask!.targetPos) {
+            const r = 10;
+            const theta = Math.random() * Math.PI * 2;
+            this.currentTask!.targetPos = new THREE.Vector3(
+              Math.max(
+                AgentTaskQueue.WANDER_X_MIN,
+                Math.min(AgentTaskQueue.WANDER_X_MAX, vehiclePos.x + r * Math.cos(theta)),
+              ),
+              vehiclePos.y,
+              Math.max(
+                AgentTaskQueue.WANDER_Z_MIN,
+                Math.min(AgentTaskQueue.WANDER_Z_MAX, vehiclePos.z + r * Math.sin(theta)),
+              ),
+            );
+          }
+          targetPos = this.currentTask!.targetPos;
+          break;
+        }
+        // Experiential tasks that navigate first
+        case "SIT":
+          // Navigate to the bench position (stored in targetPos)
+          targetPos = this.currentTask!.targetPos || null;
+          if (!targetPos && this.currentTask!.itemId) {
+            targetPos = reg.getWorldPosition(this.currentTask!.itemId) || null;
+          }
+          break;
+        case "LEAN":
+        case "LOOK_AT":
+        case "CONTEMPLATE":
+        case "EXPLORE":
+        case "REST":
+          targetPos = this.currentTask!.targetPos || null;
+          break;
+        case "COLLABORATE":
+          // Navigate toward partner agent (position updated each tick by brain)
+          targetPos = this.currentTask!.targetPos || null;
+          break;
+        case "PRESENT":
+          // Navigate to podium
+          targetPos = this.currentTask!.targetPos || null;
+          break;
+        case "EMOTE":
+          // No navigation — jump straight to EMOTING
+          this.phase = "EMOTING";
+          this.phaseTimer = 0;
+          return { type: "STOP" };
+      }
+
+      if (!targetPos) {
+        this.phase = "COMPLETED";
+        return { type: "STOP" };
+      }
+
+      // Pathfinding
+      this.pathRefreshTimer += delta;
+      if (
+        !this.hasSetPath ||
+        this.pathRefreshTimer >= AgentTaskQueue.PATH_REFRESH_INTERVAL
+      ) {
+        if (!(this as any)._isWaitingForPath) {
+          (this as any)._isWaitingForPath = true;
+          AgentBrainClient.getInstance()
+            .findPathDetailed(vehiclePos, targetPos)
+            .then((result) => {
+              (this as any)._isWaitingForPath = false;
+              (this as any)._pendingPathResult = result;
+            })
+            .catch(() => {
+              (this as any)._isWaitingForPath = false;
+            });
         }
 
-        if (!targetPos) {
-          this.phase = "COMPLETED";
+        if ((this as any)._pendingPathResult) {
+          const result = (this as any)._pendingPathResult;
+          (this as any)._pendingPathResult = null;
+          this.approachPos = result.approachPos;
+
+          if (!result.pathFound || result.path.length === 0) {
+            this.hasSetPath = true;
+            this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1.0;
+            return { type: "STOP" };
+          }
+          this.hasSetPath = true;
+          this.pathRefreshTimer = 0;
+          if (this.approachPos) this.approachPos.y = vehiclePos.y;
+          return { type: "FOLLOW_PATH", path: result.path };
+        } else {
           return { type: "STOP" };
         }
+      }
 
-        // 1. Pathfinding
-        this.pathRefreshTimer += delta;
+      // Distance check
+      const distCheckPos = this.approachPos || targetPos;
+      const distToTarget = Math.hypot(
+        vehiclePos.x - distCheckPos.x,
+        vehiclePos.z - distCheckPos.z,
+      );
+      this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
+
+      // Arrival
+      if (distToTarget < AgentTaskQueue.ARRIVAL_DIST) {
+        const type = this.currentTask!.type;
+
         if (
-          !this.hasSetPath ||
-          this.pathRefreshTimer >= AgentTaskQueue.PATH_REFRESH_INTERVAL
+          type === "GO_TO" ||
+          type === "WANDER" ||
+          type === "EXPLORE" ||
+          type === "COLLABORATE"
         ) {
-          const isFirstPath = !this.hasSetPath;
+          this.phase = "COMPLETED";
+          return { type: "STOP" };
+        } else if (type === "FOLLOW_PLAYER") {
+          this.hasSetPath = false;
+          return { type: "ARRIVE", target: targetPos };
+        } else if (type === "SIT" || type === "REST") {
+          // Transition to SEATED
+          this.phase = "SEATED";
+          this.phaseTimer = 0;
+          return { type: "STOP" };
+        } else if (type === "LEAN") {
+          this.phase = "LEANING";
+          this.phaseTimer = 0;
+          return { type: "STOP" };
+        } else if (type === "LOOK_AT" || type === "CONTEMPLATE") {
+          this.phase = "GAZING";
+          this.phaseTimer = 0;
+          return { type: "STOP", faceTarget: this.currentTask!.lookTarget };
+        } else if (type === "PRESENT") {
+          this.phase = "PRESENTING";
+          this.phaseTimer = 0;
+          return { type: "STOP" };
+        } else {
+          this.phase = "ACTION_START";
+          this.phaseTimer = 0;
+          return { type: "STOP", faceTarget: targetPos };
+        }
+      }
 
-          // Offload pathfinding to Web Worker
-          if (!(this as any)._isWaitingForPath) {
-            (this as any)._isWaitingForPath = true;
-            AgentBrainClient.getInstance()
-              .findPathDetailed(vehiclePos, targetPos)
-              .then((result) => {
-                (this as any)._isWaitingForPath = false;
-                (this as any)._pendingPathResult = result;
-              })
-              .catch((e) => {
-                (this as any)._isWaitingForPath = false;
-                console.error("[AgentTaskQueue] Pathfinding worker error:", e);
-              });
-          }
-
-          if ((this as any)._pendingPathResult) {
-            const result = (this as any)._pendingPathResult;
-            (this as any)._pendingPathResult = null;
-            this.approachPos = result.approachPos;
-
-            if (!result.pathFound || result.path.length === 0) {
-              this.hasSetPath = true;
-              this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1.0;
-              return { type: "STOP" };
-            }
-            this.hasSetPath = true;
-            this.pathRefreshTimer = 0;
-            if (isFirstPath) {
-              this.stuckWindowPositions = [];
-            }
-
-            if (this.currentTask?.type === "FOLLOW_PLAYER") {
-              if (this.approachPos) this.approachPos.y = vehiclePos.y;
-              return { type: "FOLLOW_PATH", path: result.path };
-            }
-
-            if (this.approachPos) this.approachPos.y = vehiclePos.y;
-            return { type: "FOLLOW_PATH", path: result.path };
-          } else {
-            // Keep current velocity/stop while waiting for path
-            return { type: "STOP" };
-          }
+      // Close approach
+      if (
+        this.currentTask?.type !== "FOLLOW_PLAYER" &&
+        distToTarget < AgentTaskQueue.CLOSE_APPROACH_DIST
+      ) {
+        if (!this.isCloseApproach) {
+          this.isCloseApproach = true;
+          this.stuckWindowPositions = [];
+          const arriveTarget = distCheckPos.clone();
+          arriveTarget.y = vehiclePos.y;
+          return { type: "ARRIVE", target: arriveTarget };
         }
 
-        // Distance Check
-        const distCheckPos = this.approachPos || targetPos;
-        const distToTarget = Math.hypot(
-          vehiclePos.x - distCheckPos.x,
-          vehiclePos.z - distCheckPos.z,
-        );
-        this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
-
-        // Arrival
-        if (distToTarget < AgentTaskQueue.ARRIVAL_DIST) {
-          if (
-            this.currentTask?.type === "GO_TO" ||
-            this.currentTask?.type === "WANDER"
-          ) {
-            this.phase = "COMPLETED";
-            return { type: "STOP" };
-          } else if (this.currentTask?.type === "FOLLOW_PLAYER") {
-            this.hasSetPath = false; // keep following
-            return { type: "ARRIVE", target: targetPos };
-          } else {
-            this.phase = "ACTION_START";
-            this.phaseTimer = 0;
-            return { type: "STOP", faceTarget: targetPos };
-          }
-        }
-
-        // Close Approach (switch to direct ARRIVE)
-        if (
-          this.currentTask?.type !== "FOLLOW_PLAYER" &&
-          distToTarget < AgentTaskQueue.CLOSE_APPROACH_DIST
-        ) {
-          if (!this.isCloseApproach) {
-            this.isCloseApproach = true;
-            this.stuckWindowPositions = [];
-            const arriveTarget = distCheckPos.clone();
-            arriveTarget.y = vehiclePos.y;
-            return { type: "ARRIVE", target: arriveTarget };
-          }
-
-          this.repathTimer += delta;
-          if (this.isStuckByWindow() || this.repathTimer > 3.0) {
-            this.retryCount++;
-            if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
-              this.cleanupTask(this.currentTask);
-              this.phase = "COMPLETED"; // Give up
-              return { type: "STOP" };
-            }
-            this.repathTimer = 0;
-            this.stuckWindowPositions = [];
-          }
-          return { type: "NONE" };
-        }
-
-        // Stuck Detection for Path following
         this.repathTimer += delta;
-        if (
-          (this.isStuckByWindow() &&
-            this.elapsedTime -
-              (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
-              AgentTaskQueue.STUCK_THRESHOLD) ||
-          this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
-        ) {
+        if (this.isStuckByWindow() || this.repathTimer > 3.0) {
           this.retryCount++;
           if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
             this.cleanupTask(this.currentTask);
             this.phase = "COMPLETED";
             return { type: "STOP" };
           }
-          this.hasSetPath = false;
           this.repathTimer = 0;
+          this.stuckWindowPositions = [];
         }
-
         return { type: "NONE" };
       }
 
-      // ------------------------------------------------------------------
-      // ACTION_START: Brief pause before executing the atomic action
-      // ------------------------------------------------------------------
-      case "ACTION_START": {
-        this.phaseTimer += delta;
-        if (this.phaseTimer >= AgentTaskQueue.ACTION_DELAY) {
-          const type = this.currentTask!.type;
+      // Stuck detection
+      this.repathTimer += delta;
+      if (
+        (this.isStuckByWindow() &&
+          this.elapsedTime -
+            (this.stuckWindowPositions[0]?.t ?? this.elapsedTime) >
+            AgentTaskQueue.STUCK_THRESHOLD) ||
+        this.repathTimer > AgentTaskQueue.REPATH_INTERVAL
+      ) {
+        this.retryCount++;
+        if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
+          this.cleanupTask(this.currentTask);
+          this.phase = "COMPLETED";
+          return { type: "STOP" };
+        }
+        this.hasSetPath = false;
+        this.repathTimer = 0;
+      }
 
-          if (type === "PICK_NEARBY") {
-            if (reg.pickUp(this.currentTask!.itemId!, this.agentId)) {
-              memoryStream
-                .add(this.agentId, "ACTION", `I picked up the item.`, [
-                  `script:${this.currentTask!.scriptId}`,
-                ])
-                .catch(() => {});
-            }
-          } else if (type === "PLACE_INVENTORY") {
-            if (reg.placeItemAt(this.agentId, this.currentTask!.destAreaId!)) {
-              memoryStream
-                .add(this.agentId, "ACTION", `I placed the item down.`, [
-                  `script:${this.currentTask!.scriptId}`,
-                ])
-                .catch(() => {});
-            }
-          } else if (type === "INTERACT") {
-            window.dispatchEvent(
-              new CustomEvent("agent-interact", {
-                detail: {
-                  agentId: this.agentId,
-                  targetId: this.currentTask!.itemId!,
-                },
-              }),
-            );
+      return { type: "NONE" };
+    }
+
+    // ------------------------------------------------------------------
+    // ACTION_START: brief pause before the atomic action
+    // ------------------------------------------------------------------
+    if (this.phase === "ACTION_START") {
+      this.phaseTimer += delta;
+      if (this.phaseTimer >= AgentTaskQueue.ACTION_DELAY) {
+        const type = this.currentTask!.type;
+
+        if (type === "PICK_NEARBY") {
+          if (reg.pickUp(this.currentTask!.itemId!, this.agentId)) {
             memoryStream
-              .add(this.agentId, "ACTION", `I interacted with the object.`, [
+              .add(this.agentId, "ACTION", "I picked up the item.", [
                 `script:${this.currentTask!.scriptId}`,
               ])
               .catch(() => {});
           }
-
-          this.phase = "COMPLETED";
+        } else if (type === "PLACE_INVENTORY") {
+          if (reg.placeItemAt(this.agentId, this.currentTask!.destAreaId!)) {
+            memoryStream
+              .add(this.agentId, "ACTION", "I placed the item down.", [
+                `script:${this.currentTask!.scriptId}`,
+              ])
+              .catch(() => {});
+          }
+        } else if (type === "INTERACT") {
+          window.dispatchEvent(
+            new CustomEvent("agent-interact", {
+              detail: {
+                agentId: this.agentId,
+                targetId: this.currentTask!.itemId!,
+              },
+            }),
+          );
+          memoryStream
+            .add(this.agentId, "ACTION", "I interacted with the object.", [
+              `script:${this.currentTask!.scriptId}`,
+            ])
+            .catch(() => {});
         }
-        return { type: "STOP" };
+
+        this.phase = "COMPLETED";
       }
+      return { type: "STOP" };
     }
 
     return { type: "NONE" };

@@ -28,6 +28,12 @@ export interface AgentContext {
   };
   /** Internal drives/needs */
   drives?: string;
+  /** Zone mood context injected from ZoneInfluenceSystem */
+  zoneContext?: string;
+  /** Spatial memory summary from SpatialMemory */
+  spatialMemory?: string;
+  /** Agent personality name and trait */
+  personality?: { name: string; trait: string; speechStyle: string; bio: string };
 }
 
 export interface TraceOptions {
@@ -59,35 +65,61 @@ export async function processAgentThought(
           .join("\n")
       : "No entities nearby.";
 
+  const personalityBlock = context.personality
+    ? `You are **${context.personality.name}**, ${context.personality.trait}. ${context.personality.bio} Speak in a ${context.personality.speechStyle} style.`
+    : `You are an intelligent agent living in The Ring, a circular science park filled with discovery and possibility.`;
+
   const prompt = `
-    You are the "Conscious" mind of an intelligent research lab assistant robot. 
-    Your body relies on a Subconscious motor control system that handles basic wandering, avoiding collisions, and standing idle automatically.
+    You are a living agent in The Ring — a Guangming Science Park-inspired circular world with five distinct zones.
+    ${personalityBlock}
     
-    You have been awakened because an event occurred or one of your internal drives requires attention.
+    You have an inner life: drives that ebb and flow, spatial memories of where you have been, and preferences for certain places. You are not a task machine — you are a being in a world. When you are tired, rest. When something is beautiful, pause and appreciate it. When another agent is nearby, consider whether to engage or give them space.
 
-    ## Context
-    **Position**: {x: ${context.position.x.toFixed(1)}, y: ${context.position.y.toFixed(1)}, z: ${context.position.z.toFixed(1)}}
-    **Current Drives**: ${context.drives || "All drives balanced."}
-    **Subconscious Activity**: ${context.currentBehavior}
-    **Task Queue**: ${context.taskState ? `Phase: ${context.taskState.phase}, Script: ${context.taskState.currentScriptId || "none"}, Task: ${context.taskState.currentTask || "none"}` : "No active tasks"}
+    Your body has a Subconscious motor system that handles wandering, collision avoidance, and idle posture automatically. You are awakened when a drive is low or something needs your attention.
 
-    ## Perception (Visual)
+    ## Who You Are
+    ${context.personality?.bio ?? "A curious agent exploring The Ring."}
+
+    ## Where You Are
+    **Position**: (${context.position.x.toFixed(1)}, ${context.position.y.toFixed(1)}, ${context.position.z.toFixed(1)})
+    **Zone**: ${context.zoneContext ?? "Between zones — the ring walkway stretches around you."}
+    
+    ## Your Drives (internal needs — act on LOW ones)
+    ${context.drives || "All drives are balanced."}
+    
+    ## Your Spatial Memory
+    ${context.spatialMemory ?? "You have not explored much yet."}
+
+    ## Subconscious Activity
+    ${context.currentBehavior}
+    
+    ## Task Queue
+    ${context.taskState ? `Phase: ${context.taskState.phase}, Script: ${context.taskState.currentScriptId || "none"}, Task: ${context.taskState.currentTask || "none"}, Queued: ${context.taskState.queuedTasksCount}` : "No active tasks."}
+
+    ## Nearby Entities
     ${entityTable}
 
-    ## Memory (Past Interactions)
+    ## Memory
     ${memoryContext || "No relevant past memories."}
 
-    ## Decision Making Guidance
-    - You MUST use the provided tools to take action.
-    - If your 'Tidiness' drive is low, find an OBJECT on the floor and use 'pick_up', then 'place_at' an empty area.
-    - If you are just exploring, use 'go_to' or 'observe'.
-    - If you want to communicate, use 'say'. Output for 'say' goes directly to a Text-To-Speech engine; use unformatted, conversational language.
-    - IMPORTANT: You can call multiple tools in a single response (e.g. pick_up then place_at).
-    - If you are already running tasks, consider using 'observe' to let them finish unless there is an emergency.
+    ## Decision Guidance
+    - Use tools to act. You can call multiple tools in one response.
+    - **Energy LOW** → use 'rest' (navigates to garden bench, restores energy)
+    - **Wonder LOW** → use 'contemplate' (go to observatory/garden, appreciate a view)
+    - **Curiosity LOW** → use 'explore' (visit the zone you have been to least recently)
+    - **Social LOW** → use 'collaborate' or 'say' to connect with another agent
+    - **Tidiness LOW** → 'pick_up' an item, then 'place_at' an empty area
+    - If tasks are running, use 'observe' to let them finish unless urgency is high.
+    - 'say' output goes to TTS — keep it conversational, unformatted, 1–2 sentences.
+    - To sit: use 'sit' with a bench ID from the Perception table.
+    - To deliver a speech: use 'present' — this navigates to the Arena podium.
+    - Express yourself: use 'emote' with gesture: wave, nod, shrug, cheer, or think.
+
+    ## Zone Navigation (use in 'go_to' as zoneId)
+    observatory | workshop | garden | arena | gallery
 
     ## ID Rules
-    CRITICAL: Copy item IDs and area IDs character-for-character from the Perception table.
-    The "ID (use this)" column is the system ID. The "DisplayName" column is human-readable only — never use it as an ID.
+    CRITICAL: Copy IDs exactly from the Perception table. "ID (use this)" = system ID. "DisplayName" = human-readable only.
   `;
 
   while (attempt < MAX_RETRIES) {
@@ -100,8 +132,9 @@ export async function processAgentThought(
       const messages: ChatCompletionMessageParam[] = [
         {
           role: "system",
-          content:
-            "You are an AI assistant mapped to a 3D robot avatar. Use your provided tools to navigate, interact, and organize the lab. Keep your internal monologue brief and focused on action.",
+          content: context.personality
+            ? `You are ${context.personality.name}, ${context.personality.trait} living in The Ring science park. You have drives, spatial memory, and personality. Use your tools to act naturally based on your inner state. Speak in a ${context.personality.speechStyle} style. Keep responses focused — 1–3 tool calls max per turn.`
+            : "You are an intelligent agent in The Ring science park. Use your tools to act based on your drives and environment. Keep responses focused — 1–3 tool calls max.",
         },
         {
           role: "user",

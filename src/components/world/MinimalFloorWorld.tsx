@@ -58,9 +58,10 @@ export default function MinimalFloorWorld() {
 
   return (
     <group>
+      {/* ground-main: center Y=0, height=6 → top at Y=3, below slab bottom (3.6) */}
       <mesh
         ref={groundRef}
-        position={[hubCenter.x, hubCenter.y - 1, hubCenter.z]}
+        position={[hubCenter.x, 0, hubCenter.z]}
         receiveShadow
         userData={{
           type: "Structure",
@@ -71,7 +72,7 @@ export default function MinimalFloorWorld() {
           self.layers.enable(1);
         }}
       >
-        <boxGeometry args={[bWidth + 10, 5, bDepth + 10]} />
+        <boxGeometry args={[bWidth + 10, 6, bDepth + 10]} />
         <meshStandardMaterial color="#2a2f38" />
       </mesh>
 

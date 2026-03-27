@@ -16,12 +16,29 @@ import type { SteeringCommand } from "@/components/systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
-import {
-  getAssignedStorageTable,
-  getTableCenterPosition,
-  getWorkbenchCenterPosition,
-} from "@/config/agentRoutines";
 import { DriveManager } from "@/lib/agent-drives";
+import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
+import { POIRegistry } from "@/components/systems/POIRegistry";
+import { SpatialMemory } from "@/lib/memory/SpatialMemory";
+import { getPersonality } from "@/config/agentPersonalities";
+import {
+  getZoneCenterPosition,
+  getNearestBench,
+  ALL_ZONE_IDS,
+} from "@/config/parkRoutines";
+
+// Fallback to OfficeHub routines if park routines not active
+let _agentRoutinesModule: any = null;
+function getRoutinesModule() {
+  if (!_agentRoutinesModule) {
+    try {
+      _agentRoutinesModule = require("@/config/agentRoutines");
+    } catch {
+      _agentRoutinesModule = {};
+    }
+  }
+  return _agentRoutinesModule;
+}
 
 // Fix #1/#3: World bounds for clamping LLM-generated coordinates
 const WORLD_BOUNDS = { minX: -100, maxX: 100, minZ: -75, maxZ: 75 };
@@ -87,6 +104,11 @@ export function useAgentBrain(
   const safetyTargetRef = useRef(new THREE.Vector3(0, 0, -330));
   const toSafetyRef = useRef(new THREE.Vector3());
   const driveManagerRef = useRef(new DriveManager());
+  const spatialMemoryRef = useRef(SpatialMemory.getInstance(id));
+  const personalityRef = useRef(getPersonality(id));
+  // Zone update timer (throttle zone tracking to every 2 seconds)
+  const zoneUpdateTimer = useRef(0);
+  const poiUpdateTimer = useRef(0);
 
   // Tier 1: Per-frame allocation elimination — all reusable Vector3/Quaternion objects
   // hoisted as refs so they are never re-allocated inside useFrame callbacks.
@@ -126,71 +148,33 @@ export function useAgentBrain(
   // --- TASK QUEUE (Manual Task Assignment) ---
   const taskQueueRef = useRef(AgentTaskRegistry.getInstance().getOrCreate(id));
 
-  // --- MORNING CHECK (once per agent on start, then switch to default) ---
+  // --- STARTUP EXPLORATION (park world) ---
   const hasEnqueuedMorningCheckRef = useRef(false);
   useEffect(() => {
     if (hasEnqueuedMorningCheckRef.current) return;
-    const tableId = getAssignedStorageTable(id);
-    if (!tableId) return;
 
     const timer = setTimeout(() => {
       if (hasEnqueuedMorningCheckRef.current) return;
-      const tablePos = getTableCenterPosition(tableId);
-      if (!tablePos) return;
-
       hasEnqueuedMorningCheckRef.current = true;
+
       const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
-      const scriptId = "morning_check";
-      const priority = 10;
+      const personality = personalityRef.current;
+      const scriptId = "startup_explore";
+      const priority = 8;
 
-      queue.enqueue({
-        type: "GO_TO",
-        priority,
-        scriptId,
-        targetPos: tablePos,
-      });
-      queue.enqueue({
-        type: "WAIT",
-        priority,
-        scriptId,
-        duration: 2,
-      });
-      queue.enqueue({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        type: "MORNING_CHECK" as any,
-        priority,
-        scriptId,
-      });
-      // After storage table check, walk to main lab workbench for bench readiness
-      const benchPos = getWorkbenchCenterPosition();
-      queue.enqueue({
-        type: "GO_TO",
-        priority,
-        scriptId,
-        targetPos: benchPos,
-      });
-      queue.enqueue({
-        type: "WAIT",
-        priority,
-        scriptId,
-        duration: 2,
-      });
-      queue.enqueue({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        type: "BENCH_CHECK" as any,
-        priority,
-        scriptId,
-      });
-      queue.enqueue({
-        type: "WANDER",
-        priority: 0,
-        scriptId: "subconscious_wander",
-      });
+      // Navigate to the agent's preferred zone on startup
+      const preferredZone = personality.preferredZones[0] ?? "garden";
+      const zonePos = getZoneCenterPosition(preferredZone);
+      if (zonePos) {
+        queue.enqueue({ type: "GO_TO", priority, scriptId, targetPos: zonePos });
+        queue.enqueue({ type: "WAIT", priority, scriptId, duration: 2 });
+        queue.enqueue({ type: "EXPLORE", priority: 0, scriptId: "subconscious_explore", targetAreaId: preferredZone } as any);
+      }
 
-      console.debug(
-        `[useAgentBrain:${id}] Enqueued morning check (table: ${tableId}), then default WANDER`,
-      );
-    }, 1500);
+      queue.enqueue({ type: "WANDER", priority: 0, scriptId: "subconscious_wander" });
+
+      console.debug(`[useAgentBrain:${id}] ${personality.name} heading to preferred zone: ${preferredZone}`);
+    }, 2000 + Math.random() * 1000);
 
     return () => clearTimeout(timer);
   }, [id]);
@@ -213,7 +197,7 @@ export function useAgentBrain(
 
   // --- ANIMATION STATE ---
   const [animationState, setAnimationState] = useState<
-    "Idle" | "Walk" | "Run" | "Wave"
+    "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt"
   >("Idle");
 
   useEffect(() => {
@@ -229,10 +213,9 @@ export function useAgentBrain(
     vehicle.boundingRadius = 1.0; // TUNED: 1.0 fits the robot footprint perfectly (was 2.0)
 
     // Sync initial position — XZ from the group reference is correct.
-    // Y is *always* forced to FLOOR_Y (5.5) regardless of where groupRef.current
-    // drifted to in previous frames. This reflects the real lab floor surface
-    // at Y=5.5 (ground-main).
-    const FLOOR_Y = 5.5;
+    // Y is *always* forced to FLOOR_Y regardless of where groupRef.current
+    // drifted to in previous frames. Floor-Main-Slab top surface = Y=4.0.
+    const FLOOR_Y = 4.0;
     vehicle.position.set(
       groupRef.current.position.x,
       FLOOR_Y,
@@ -963,11 +946,48 @@ export function useAgentBrain(
         const isIdle =
           currentBehavior === "IDLE" || currentBehavior === "WANDERING";
 
+        // ── Zone influence: update drives via zone effects ──────────────────
+        const agentWorldPos = vPos.clone();
+        const currentZoneInfluence = ZoneInfluenceSystem.getCurrentZone(agentWorldPos);
+        if (currentZoneInfluence) {
+          driveManagerRef.current.applyZoneEffects(
+            currentZoneInfluence.effects,
+            delta,
+            personalityRef.current.driveWeights,
+          );
+        }
+
+        // ── Spatial memory: track zone visits ────────────────────────────
+        zoneUpdateTimer.current += delta;
+        if (zoneUpdateTimer.current >= 2.0) {
+          zoneUpdateTimer.current = 0;
+          if (currentZoneInfluence) {
+            spatialMemoryRef.current.updateZone(
+              currentZoneInfluence.zoneId,
+              currentZoneInfluence.zoneName,
+            );
+          }
+          // Update POI novelty recovery
+          poiUpdateTimer.current += 2.0;
+          if (poiUpdateTimer.current >= 30.0) {
+            poiUpdateTimer.current = 0;
+            POIRegistry.getInstance().update();
+          }
+        }
+
+        // Check if agent is in a preferred zone for belonging drive
+        const currentZoneId = currentZoneInfluence?.zoneId ?? "";
+        const isInPreferredZone = personalityRef.current.preferredZones.includes(currentZoneId);
+        const isMoving = (vehicle.velocity as unknown as THREE.Vector3).length() > 0.2;
+
         driveManagerRef.current.update(delta, {
           nearbyFloorItems: nearbyFloorCount,
           playerDistance: pDist,
           nearbyAgentCount: socialState.current !== "NONE" ? 1 : 0,
           isIdle,
+          isMoving,
+          isInPreferredZone,
+          driveWeights: personalityRef.current.driveWeights,
         });
 
         const urgentDrive = driveManagerRef.current.getUrgentDrive();
@@ -1124,16 +1144,36 @@ export function useAgentBrain(
 
           const scriptState = taskQueue.getScriptState();
 
+          // Zone context string for LLM
+          const zoneCtxStr = ZoneInfluenceSystem.getContextString(agentWorldPos);
+          const spatialMemCtxStr = spatialMemoryRef.current.toContextString();
+          const personality = personalityRef.current;
+
           // Update Brain with Semantic Zone and Drives
-          const enhancedBehavior = `${currentBehavior} (Current Zone: ${currentZone})`;
+          const enhancedBehavior = `${currentBehavior} (Zone: ${currentZoneInfluence?.zoneName ?? currentZone})`;
 
           brain
-            .update(vPos, nearbyEntities, enhancedBehavior, {
-              ...scriptState,
-              phase: taskQueue.getCurrentPhase(),
-              drives: driveContextStr, // Passed through taskState arbitrarily for now
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any)
+            .update(
+              vPos,
+              nearbyEntities,
+              enhancedBehavior,
+              {
+                ...scriptState,
+                phase: taskQueue.getCurrentPhase(),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any,
+              {
+                drives: driveContextStr,
+                zoneContext: zoneCtxStr,
+                spatialMemory: spatialMemCtxStr,
+                personality: {
+                  name: personality.name,
+                  trait: personality.trait,
+                  speechStyle: personality.speechStyle,
+                  bio: personality.bio,
+                },
+              },
+            )
             .then((decision) => {
               if (decision) {
                 // Fix #1: Guard — if a higher-priority task arrived while we were thinking, skip
@@ -1276,9 +1316,22 @@ export function useAgentBrain(
         targetDirection = velWorld.clone().applyQuaternion(qInv);
       }
 
+      // Map animation state to gait extraState
+      const gaitExtraState = (
+        animationState === "Sit" || animationState === "Rest" ? "Sit" :
+        animationState === "Lean" ? "Lean" :
+        animationState === "Think" ? "Think" :
+        animationState === "LookAt" ? "LookAt" :
+        animationState === "Work" ? "Work" :
+        animationState === "Present" ? "Present" :
+        animationState === "Wave" ? "Wave" :
+        null
+      ) as any;
+
       updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta, {
         strideLength,
         targetDirection,
+        extraState: gaitExtraState,
       });
 
       const animSpeed = smoothSpeed.current;
@@ -1290,9 +1343,28 @@ export function useAgentBrain(
           socialState.current = "COOLDOWN";
       }
 
-      let newState: "Idle" | "Walk" | "Run" | "Wave" = "Idle";
-      if (greetingState.current === "WAVING") newState = "Wave";
-      else if (animSpeed > 0.1) newState = "Walk";
+      // Determine animation state based on task queue phase
+      const taskPhase = taskQueue.getCurrentPhase();
+      const taskType = taskQueue.getCurrentTask()?.type;
+
+      let newState: "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt" = "Idle";
+      if (greetingState.current === "WAVING") {
+        newState = "Wave";
+      } else if (taskPhase === "SEATED") {
+        newState = taskType === "REST" ? "Rest" : "Sit";
+      } else if (taskPhase === "LEANING") {
+        newState = "Lean";
+      } else if (taskPhase === "GAZING") {
+        newState = taskType === "CONTEMPLATE" ? "Think" : "LookAt";
+      } else if (taskPhase === "PRESENTING") {
+        newState = "Present";
+      } else if (taskPhase === "EMOTING") {
+        newState = "Idle"; // Handled by gesture in gait
+      } else if (taskPhase === "ACTION_START" && (taskType === "INTERACT" || taskType === "PICK_NEARBY" || taskType === "PLACE_INVENTORY")) {
+        newState = "Work";
+      } else if (animSpeed > 0.1) {
+        newState = "Walk";
+      }
 
       if (newState !== animationState) setAnimationState(newState);
 

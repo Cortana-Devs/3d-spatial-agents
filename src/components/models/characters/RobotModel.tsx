@@ -6,7 +6,7 @@ import LedMouth from "@/components/models/characters/LedMouth";
 import { useGameStore } from "@/store/gameStore";
 import type { ClientBrain } from "@/components/systems/ClientBrain";
 
-type RobotAnimationState = "Idle" | "Walk" | "Run" | "Wave";
+type RobotAnimationState = "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt";
 
 const ARMOR_COLOR = "#f8fafc"; // Premium glossy white
 const ACCENT_COLOR = "#94a3b8"; // Light metallic accent

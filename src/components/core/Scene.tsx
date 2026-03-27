@@ -227,21 +227,19 @@ export default function Scene() {
         <AdaptiveEvents />
         <color attach="background" args={["#0a0c14"]} />
 
-        {/* Simple ambient light to prevent pitch black shadows before lights load or in corners */}
-        {/* <ambientLight intensity={0.2} /> */}
         <Environment preset="city" />
 
         {USE_FULL_RESEARCH_LAB ? <ResearchLabHub /> : <MinimalFloorWorld />}
 
-        <Robot groupRef={robotRef} initialPosition={[0, 5.5, 10]} />
+        <Robot groupRef={robotRef} initialPosition={[0, 4.0, 10]} />
         <Agent
           playerRef={robotRef}
-          initialPosition={[10, 5.5, 10]}
+          initialPosition={[10, 4.0, 10]}
           id="agent-01"
         />
         <Agent
           playerRef={robotRef}
-          initialPosition={[-10, 5.5, 20]}
+          initialPosition={[-10, 4.0, 20]}
           id="agent-02"
         />
 

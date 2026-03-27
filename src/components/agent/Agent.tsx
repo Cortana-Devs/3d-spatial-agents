@@ -12,7 +12,7 @@ import RobotModel from '@/components/models/characters/RobotModel';
 
 export default function Agent({
   playerRef,
-  initialPosition = [0, 5.5, 10],
+  initialPosition = [0, 4.0, 10],
   id = "agent-01",
 }: {
   playerRef: React.RefObject<THREE.Group | null>;

@@ -50,6 +50,7 @@ export class ClientBrain {
     nearbyEntities: NearbyEntity[],
     currentBehavior: string,
     taskState?: AgentContext["taskState"],
+    richContext?: Pick<AgentContext, "zoneContext" | "spatialMemory" | "personality" | "drives">,
   ): Promise<AgentDecision | null> {
     // Rate Limiting Check
     if (this.state.isThinking || !this.rateLimiter.tryConsume()) {
@@ -69,6 +70,7 @@ export class ClientBrain {
       nearbyEntities: nearbyEntities,
       currentBehavior: currentBehavior,
       taskState,
+      ...richContext,
     };
 
     try {
@@ -162,6 +164,74 @@ export class ClientBrain {
                 break;
               case "observe":
                 // explicitly do nothing
+                break;
+
+              // ── New experiential tools ──────────────────────────────────
+              case "sit":
+                tasks.push({
+                  type: "SIT",
+                  itemId: args.targetId ?? undefined,
+                  duration: 12,
+                } as AgentTask);
+                break;
+
+              case "contemplate": {
+                const zoneId = args.zoneId ?? "observatory";
+                tasks.push({
+                  type: "GO_TO",
+                  targetAreaId: zoneId,
+                } as any);
+                tasks.push({
+                  type: "CONTEMPLATE",
+                  targetAreaId: zoneId,
+                  duration: 8,
+                } as any);
+                break;
+              }
+
+              case "rest":
+                tasks.push({ type: "GO_TO", targetAreaId: "garden" } as any);
+                tasks.push({ type: "REST", targetAreaId: "garden", duration: 16 } as any);
+                break;
+
+              case "explore": {
+                const preferred = args.preferredZone ?? undefined;
+                tasks.push({
+                  type: "EXPLORE",
+                  targetAreaId: preferred ?? "gallery",
+                } as any);
+                break;
+              }
+
+              case "collaborate":
+                if (args.agentId) {
+                  if (args.topic) {
+                    tasks.push({ type: "SAY", content: `Hey, want to collaborate on ${args.topic}?` } as any);
+                  }
+                  tasks.push({
+                    type: "COLLABORATE",
+                    partnerId: args.agentId,
+                    targetAreaId: "workshop",
+                  } as any);
+                }
+                break;
+
+              case "emote":
+                if (args.gesture) {
+                  tasks.push({ type: "EMOTE", gesture: args.gesture, duration: 2.5 } as any);
+                }
+                break;
+
+              case "present":
+                if (args.topic) {
+                  tasks.push({ type: "GO_TO", targetAreaId: "arena" } as any);
+                  tasks.push({
+                    type: "PRESENT",
+                    targetAreaId: "arena",
+                    content: args.speech ?? `I want to share something about ${args.topic}.`,
+                    duration: 8,
+                  } as any);
+                }
                 break;
             }
           } catch (e) {
