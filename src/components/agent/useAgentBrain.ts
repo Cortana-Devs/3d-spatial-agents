@@ -973,8 +973,10 @@ export function useAgentBrain(
 
             // Line-of-sight check
             raycasterRef.current.set(agentEye, dir);
-            const hits =
-              raycasterRef.current.intersectObjects(collidableMeshes);
+            const hits = raycasterRef.current.intersectObjects(
+              collidableMeshes,
+              false,
+            );
             let occluded = false;
             for (const hit of hits) {
               // If hit object is closer than item (minus a small margin to allow item lying on floor)

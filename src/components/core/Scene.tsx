@@ -155,7 +155,11 @@ function CameraRig({
     raycaster.current.far = distanceToIdeal;
 
     // Intersect scene to find obstacles
-    const intersects = raycaster.current.intersectObjects(scene.children, true);
+    const collidableMeshes = useGameStore.getState().collidableMeshes;
+    const intersects = raycaster.current.intersectObjects(
+      collidableMeshes,
+      false,
+    );
 
     let finalDist = distanceToIdeal;
 

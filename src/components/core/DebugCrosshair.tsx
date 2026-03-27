@@ -59,7 +59,11 @@ export default function DebugCrosshair() {
   useFrame(() => {
     // Raycast from center
     raycaster.current.setFromCamera(centerRef.current, camera);
-    const intersects = raycaster.current.intersectObjects(scene.children, true);
+    const collidableMeshes = useGameStore.getState().collidableMeshes;
+    const intersects = raycaster.current.intersectObjects(
+      collidableMeshes,
+      false,
+    );
 
     // Filter out helpers, non-visible, our own debug marker, AND the player (Robot)
     const hit = intersects.find((i) => {
