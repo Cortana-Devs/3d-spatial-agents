@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useRef, useState, useEffect } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";

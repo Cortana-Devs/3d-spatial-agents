@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useRef, useMemo, useLayoutEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox, useTexture, Decal, Text } from '@react-three/drei';
 import * as THREE from 'three';
@@ -51,7 +51,8 @@ function ProstheticHand({ isLeft }: { isLeft: boolean }) {
   const thumbBaseRef = useRef<THREE.Group>(null);
   const thumbMidRef = useRef<THREE.Group>(null);
 
-  const gripTimer = useRef(Math.random() * 5);
+  const [gripInitial] = useState(() => Math.random() * 5);
+  const gripTimer = useRef(gripInitial);
   const gripPhase = useRef(0);
   const gripAmount = useRef(0);
 
@@ -153,8 +154,10 @@ function ProstheticHand({ isLeft }: { isLeft: boolean }) {
 function LedEyes() {
   const leftEyeRef = useRef<THREE.Mesh>(null);
   const rightEyeRef = useRef<THREE.Mesh>(null);
-  const emotionTimer = useRef(Math.random() * 5);
-  const blinkTimer = useRef(Math.random() * 3);
+  const [emotionInitial] = useState(() => Math.random() * 5);
+  const emotionTimer = useRef(emotionInitial);
+  const [blinkInitial] = useState(() => Math.random() * 3);
+  const blinkTimer = useRef(blinkInitial);
   const isBlinking = useRef(false);
   const currentEmotion = useRef(0);
   
@@ -237,6 +240,7 @@ export default React.memo(function RobotAgentModel({
   
   useLayoutEffect(() => {
     if (logoTexture) {
+      // eslint-disable-next-line react-hooks/immutability
       logoTexture.anisotropy = 4;
       logoTexture.minFilter = THREE.LinearMipmapLinearFilter;
       logoTexture.magFilter = THREE.LinearFilter;
@@ -263,6 +267,7 @@ export default React.memo(function RobotAgentModel({
   // Sync refs to joints.current for useProceduralGait
   useLayoutEffect(() => {
     if (joints.current) {
+      // eslint-disable-next-line react-hooks/immutability
       joints.current.hips = pelvisRef.current;
       joints.current.torso = spineRef.current;
       joints.current.leftHip = lHipRef.current;

@@ -13,7 +13,6 @@ import {
   CupboardUnit,
   ManagersDesk,
   ReceptionDesk,
-  Sofa,
   OfficeDoor,
 } from "./Furniture";
 
@@ -56,7 +55,6 @@ function renderFurniture(f: FurnitureDef) {
     id: f.id,
     position: f.position,
     rotation: f.rotationY,
-    ...f
   };
 
   switch (f.type) {
@@ -69,8 +67,7 @@ function renderFurniture(f: FurnitureDef) {
     case 'CupboardUnit': return <CupboardUnit {...commonProps as any} />;
     case 'ManagersDesk': return <ManagersDesk {...commonProps as any} />;
     case 'ReceptionDesk': return <ReceptionDesk {...commonProps as any} />;
-    case 'Sofa': return <Sofa {...commonProps as any} />;
-    case 'OfficeDoor': return <OfficeDoor {...commonProps as any} />;
+        case 'OfficeDoor': return <OfficeDoor {...commonProps as any} />;
     case 'FileFolder': return <FileFolder {...commonProps as any} />;
     case 'Whiteboard': return <Whiteboard {...commonProps as any} />;
     case 'ProjectorScreen': return <ProjectorScreen {...commonProps as any} />;

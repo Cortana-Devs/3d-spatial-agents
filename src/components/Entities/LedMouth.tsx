@@ -122,7 +122,7 @@ export default function LedMouth({
 
         for (let i = 0; i < count; i++) {
           const p = particleData[i];
-          let x = p.nx * mouthW;
+          const x = p.nx * mouthW;
           let y = 0;
 
           if (p.isUpper) {
@@ -174,8 +174,8 @@ export default function LedMouth({
 
         for (let i = 0; i < count; i++) {
           const p = particleData[i];
-          let x = p.nx * mouthW;
-          let y = p.isUpper 
+          const x = p.nx * mouthW;
+          const y = p.isUpper 
             ? (mouthH * p.envelope * p.cupidsBow) + (state.current.smile * p.nx * p.nx * 0.015)
             : -(mouthH * p.envelope) + (state.current.smile * p.nx * p.nx * 0.015);
 

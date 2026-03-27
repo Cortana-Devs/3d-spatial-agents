@@ -279,7 +279,7 @@ export const AgentChatPanel: React.FC = () => {
                   }
 
                   // Re-validate area
-                  let resumeAreaId = String(task.destAreaId).replace(/\s*\([A-Z]\)$/i, "").trim();
+                  const resumeAreaId = String(task.destAreaId).replace(/\s*\([A-Z]\)$/i, "").trim();
                   let resumeArea = freshRegistry.getPlacingAreaById(resumeAreaId);
                   if (!resumeArea) resumeArea = freshRegistry.getEmptyAreaByGroup(resumeAreaId);
                   if (!resumeArea) resumeArea = freshRegistry.getAreaByName(resumeAreaId);
@@ -348,7 +348,7 @@ export const AgentChatPanel: React.FC = () => {
           // === PROCEED WITH ORIGINAL FETCH_AND_PLACE LOGIC ===
 
           // Validate area exists and resolve alternatives
-          let cleanedAreaId = String(task.destAreaId)
+          const cleanedAreaId = String(task.destAreaId)
             .replace(/\s*\([A-Z]\)$/i, "")
             .trim();
           let area = registry.getPlacingAreaById(cleanedAreaId);
@@ -460,7 +460,7 @@ export const AgentChatPanel: React.FC = () => {
 
         case "PICK_NEARBY": {
           if (task.itemId) {
-            let cleanedItemId = String(task.itemId)
+            const cleanedItemId = String(task.itemId)
               .replace(/\s*\([A-Z]\)$/i, "")
               .trim();
             let item = registry.getById(cleanedItemId);
@@ -488,10 +488,10 @@ export const AgentChatPanel: React.FC = () => {
 
         case "READ_FILE": {
           if (task.itemId) {
-            let cleanedItemId = String(task.itemId)
+            const cleanedItemId = String(task.itemId)
               .replace(/\s*\([A-Z]\)$/i, "")
               .trim();
-            let item =
+            const item =
               registry.getById(cleanedItemId) ||
               registry.getByName(cleanedItemId);
 
@@ -516,12 +516,13 @@ export const AgentChatPanel: React.FC = () => {
         }
 
         case "WRITE_FILE": {
-          // @ts-ignore
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
           if (task.itemId && task.content) {
-            let cleanedItemId = String(task.itemId)
+            const cleanedItemId = String(task.itemId)
               .replace(/\s*\([A-Z]\)$/i, "")
               .trim();
-            let item =
+            const item =
               registry.getById(cleanedItemId) ||
               registry.getByName(cleanedItemId);
 
@@ -530,7 +531,8 @@ export const AgentChatPanel: React.FC = () => {
                 type: "WRITE_FILE" as any,
                 priority: 20,
                 itemId: item.id,
-                // @ts-ignore
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
                 content: task.content,
               });
               console.log(`[AgentChat] Dispatched WRITE_FILE: ${item.id}`);
@@ -548,20 +550,22 @@ export const AgentChatPanel: React.FC = () => {
         }
 
         case "COPY_FILE": {
-          // @ts-ignore
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
           if (task.itemId && task.sourceItemId) {
-            let cleanedItemId = String(task.itemId)
+            const cleanedItemId = String(task.itemId)
               .replace(/\s*\([A-Z]\)$/i, "")
               .trim();
-            // @ts-ignore
-            let cleanedSourceItemId = String(task.sourceItemId)
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+            const cleanedSourceItemId = String(task.sourceItemId)
               .replace(/\s*\([A-Z]\)$/i, "")
               .trim();
 
-            let item =
+            const item =
               registry.getById(cleanedItemId) ||
               registry.getByName(cleanedItemId);
-            let sourceItem =
+            const sourceItem =
               registry.getById(cleanedSourceItemId) ||
               registry.getByName(cleanedSourceItemId);
 

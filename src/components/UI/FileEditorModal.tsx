@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useEffect, useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 

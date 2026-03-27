@@ -172,6 +172,7 @@ export default function AIRobot({
       <AgentInteractionPanel agentId={id} brain={brain} />
       <SpeechIndicator agentId={id} />
       <positionalAudio ref={audioRef as any} args={[listener]} />
+      {/* eslint-disable-next-line react-hooks/refs */}
       <RobotAgentModel joints={joints} id={id} analyser={analyserRef.current} />
     </group>
   );

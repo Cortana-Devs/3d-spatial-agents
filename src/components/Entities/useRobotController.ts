@@ -16,7 +16,7 @@ export interface Joints {
   rightHip?: THREE.Group;
   leftKnee?: THREE.Group;
   rightKnee?: THREE.Group;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   [key: string]: any; // Allow dynamic access
 }
 
@@ -227,13 +227,13 @@ export function useRobotController(
           } else {
             // Check for nearby AI Agents (Follow Logic)
             const agents = AIManager.getInstance().vehicles;
-            let nearbyAgent: any = null;
-            let agentDist = 999;
+            const nearbyAgent: any = null;
+            const agentDist = 999;
             const myPos = groupRef.current.position;
 
             for (const v of agents) {
-              // @ts-ignore
-              if (v.id) {
+              
+              if ((v as any).id) {
                 const d = v.position.squaredDistanceTo(myPos as unknown as any);
               }
             }

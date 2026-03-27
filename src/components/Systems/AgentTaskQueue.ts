@@ -1,3 +1,4 @@
+import { getMeetingRoomPosition } from "@/config/agentRoutines";
 import * as THREE from "three";
 import { InteractableRegistry } from "./InteractableRegistry";
 import NavigationNetwork from "./NavigationNetwork";
@@ -172,8 +173,7 @@ export class AgentTaskQueue {
         
         // Hardcoded safe zones to prevent NavMesh stuck issues
         if (targetStr.includes("meeting") || targetStr.includes("conference")) {
-            const { getMeetingRoomPosition } = require("@/config/agentRoutines");
-            const pos = getMeetingRoomPosition();
+                        const pos = getMeetingRoomPosition();
             if (pos) this.currentTask.targetPos = pos;
         }
 

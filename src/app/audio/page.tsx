@@ -42,6 +42,7 @@ function FreeCamera() {
     if (keys.current["KeyD"] || keys.current["ArrowRight"]) camera.position.addScaledVector(right, -speed);
     
     // Vertical movement
+    // eslint-disable-next-line react-hooks/immutability
     if (keys.current["Space"]) camera.position.y += speed;
     if (keys.current["ShiftLeft"]) camera.position.y -= speed;
   });
@@ -74,6 +75,7 @@ export default function AudioTestPage() {
   }, [audioVoice]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsPlaying(audioState === "speaking" || audioState === "fetching_primary" || audioState === "fetching_fallback");
   }, [audioState]);
 

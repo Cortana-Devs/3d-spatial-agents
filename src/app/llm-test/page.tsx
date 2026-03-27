@@ -377,7 +377,7 @@ export default function LLMTestingDashboard() {
                 </div>
               ) : (
                 filteredLogs.map((log, i) => {
-                  let parsedReq = null;
+                  const parsedReq = null;
                   let parsedRes = null;
                   try {
                     let cleanedContent = log.response_content;
@@ -427,7 +427,7 @@ export default function LLMTestingDashboard() {
                               <span className="thoughtAction">
                                 [{parsedRes.operation || parsedRes.action}]
                               </span>{" "}
-                              "{parsedRes.thought}"
+                              &quot;{parsedRes.thought}&quot;
                             </div>
                           ) : log.agent_type === "nlp-parser" &&
                             parsedRes &&

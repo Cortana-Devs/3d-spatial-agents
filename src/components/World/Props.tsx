@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";

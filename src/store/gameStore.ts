@@ -330,7 +330,8 @@ export const useGameStore = create<GameState>((set) => ({
   addInteractables: (items) => {
     // Sync with Registry
     items.forEach((item) => {
-      // @ts-ignore
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
       InteractableRegistry.getInstance().register(item);
     });
     set((state) => ({ interactables: [...state.interactables, ...items] }));

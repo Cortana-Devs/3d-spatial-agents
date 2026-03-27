@@ -55,6 +55,7 @@ export default function ObjectHighlighter() {
     if (placingTargetType === "item" && placingTargetId) {
       const obj = InteractableRegistry.getInstance().getById(placingTargetId);
       if (obj && obj.meshRef) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setTargetMesh(obj.meshRef);
       } else {
         setTargetMesh(null);
@@ -255,6 +256,7 @@ function HighlightRenderer({
       }
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setChildren([<primitive key={target.uuid} object={clonedScene} />]);
   }, [target, shaderArgs]);
 

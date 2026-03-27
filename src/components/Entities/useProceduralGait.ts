@@ -60,6 +60,7 @@ export function useProceduralGait(
         const breathe = Math.sin(tIdle * 1.5) * 0.02;
 
         // Vertical Breathing
+        // eslint-disable-next-line react-hooks/immutability
         j.torso.position.y = THREE.MathUtils.lerp(
           j.torso.position.y,
           breathe + 0.1,

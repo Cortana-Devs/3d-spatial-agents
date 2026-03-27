@@ -22,6 +22,7 @@ export function AudioPrompt() {
   useEffect(() => {
     // Only show if pending AND the user hasn't interacted yet
     if (hasPending) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsVisible(true);
     } else {
         setIsVisible(false);

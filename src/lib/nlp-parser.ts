@@ -250,7 +250,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
           };
         }
 
-        let cleanedItemId = t.itemId.replace(/\s*\([A-Z]\)$/i, "").trim();
+        const cleanedItemId = t.itemId.replace(/\s*\([A-Z]\)$/i, "").trim();
         let item = registry.getById(cleanedItemId);
         if (!item) item = registry.getByName(cleanedItemId);
 
@@ -264,7 +264,7 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
           };
         }
 
-        let cleanedAreaId = t.destAreaId.replace(/\s*\([A-Z]\)$/i, "").trim();
+        const cleanedAreaId = t.destAreaId.replace(/\s*\([A-Z]\)$/i, "").trim();
         let area = registry.getPlacingAreaById(cleanedAreaId);
         // Try empty group slot BEFORE name match
         if (!area) area = registry.getEmptyAreaByGroup(cleanedAreaId);

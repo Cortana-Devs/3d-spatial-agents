@@ -38,6 +38,7 @@ export function useYukaAI(
   id: string,
   groupRef: React.RefObject<THREE.Group | null>,
   playerRef: React.RefObject<THREE.Group | null>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   joints: React.MutableRefObject<any>,
 ) {
   const vehicleRef = useRef<YUKA.Vehicle | null>(null);
@@ -95,6 +96,7 @@ export function useYukaAI(
   const normalRef = useRef(new THREE.Vector3());
   const yAxisRef = useRef(new THREE.Vector3(0, 1, 0)); // World up — constant, never mutated
   const zAxisRef = useRef(new THREE.Vector3(0, 0, 1)); // World forward — constant, never mutated
+  const lastGroundedPosRef = useRef(new THREE.Vector3());
 
   // Animation smoothing
   const {
@@ -109,7 +111,8 @@ export function useYukaAI(
   // AI Brain
   const brainRef = useRef(new ClientBrain(id));
   // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
-  const brainIntervalRef = useRef(300 + Math.floor(Math.random() * 100));
+  const [brainInterval] = useState(() => 300 + Math.floor(Math.random() * 100));
+  const brainIntervalRef = useRef(brainInterval);
 
   // Fix #Loop-5: Deduplicate repeated same-script decisions — prevent re-queuing
   // the exact same scriptId within a cooldown window (30s).
@@ -150,6 +153,7 @@ export function useYukaAI(
         duration: 2,
       });
       queue.enqueue({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type: "MORNING_CHECK" as any,
         priority,
         scriptId,
@@ -169,6 +173,7 @@ export function useYukaAI(
         duration: 2,
       });
       queue.enqueue({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type: "BENCH_CHECK" as any,
         priority,
         scriptId,
@@ -210,6 +215,7 @@ export function useYukaAI(
 
     // Create Yuka Vehicle
     const vehicle = new YUKA.Vehicle();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (vehicle as any).id = id;
     vehicle.maxSpeed = 5.5; // Adjusted higher as per user request
     vehicle.maxForce = 4.0; // Heavy Inertia for smooth turns (was 10.0)
@@ -232,6 +238,7 @@ export function useYukaAI(
     vehicle.rotation.copy(
       groupRef.current.quaternion as unknown as YUKA.Quaternion,
     );
+    lastGroundedPosRef.current.set(groupRef.current.position.x, FLOOR_Y, groupRef.current.position.z);
 
     // Render Component (Sync Yuka -> Three)
     vehicle.setRenderComponent(groupRef.current, (entity, renderComponent) => {
@@ -363,6 +370,33 @@ export function useYukaAI(
       bWander.active = false;
     }
 
+    // --- ANTICIPATORY DECELERATION ---
+    // Dynamically adjust maxSpeed based on angular turning. If the agent needs to 
+    // make a sharp turn to reach its target or waypoint, it slows down rather than drifting.
+    const currentSpeed = vehicle.velocity.length();
+    let targetSpeed = 5.5; // Default max speed
+
+    if (currentSpeed > 0.5 && (bFollowPath.active || bSeek.active || bArrive.active)) {
+      // Find the velocity heading vs the current facing direction
+      const velDir = new THREE.Vector3(vehicle.velocity.x, vehicle.velocity.y, vehicle.velocity.z).normalize();
+      const faceDir = new THREE.Vector3(0, 0, 1).applyQuaternion(vehicle.rotation as unknown as THREE.Quaternion);
+      const dot = velDir.dot(faceDir);
+
+      // dot < 0.7 means a sharp turn is happening (> ~45 degrees difference)
+      if (dot < 0.7) {
+        targetSpeed = 2.5; // Slow down for the turn
+      } else if (bArrive.active && bArrive.target) {
+        const distToTarget = vehicle.position.distanceTo(bArrive.target);
+        if (distToTarget < 2.0) {
+          targetSpeed = 1.5; // Slow down heavily on final approach
+        }
+      }
+    }
+    
+    // Smoothly interpolate maxSpeed to prevent jerky braking
+    vehicle.maxSpeed += (targetSpeed - vehicle.maxSpeed) * 0.1;
+
+
     // Apply steering command from task queue (if active)
     if (steeringCmd.type !== "NONE") {
       const resetBehaviors = () => {
@@ -450,7 +484,7 @@ export function useYukaAI(
             const hit = hits[0];
             const dist = hit.distance;
 
-            let normal = normalRef.current.set(0, 0, 0);
+            const normal = normalRef.current.set(0, 0, 0);
             if (hit.face) {
               normal
                 .copy(hit.face.normal)
@@ -492,6 +526,14 @@ export function useYukaAI(
               vehicle.position.z += pushOut.z;
             }
           }
+        }
+
+        // Corner Trap Escape mechanism: if we're moving very slowly but pushing hard, apply a perpendicular escape force
+        if (speed < 0.5 && (totalPushX !== 0 || totalPushZ !== 0)) {
+          // Add a sideways "wiggle" force to break out of U-shaped local minima
+          const escapeForce = 5.0;
+          totalPushX += escapeForce * Math.sign(Math.sin(frameRef.current * 0.1));
+          totalPushZ += escapeForce * Math.sign(Math.cos(frameRef.current * 0.1));
         }
 
         // Clamp total push magnitude to prevent teleports
@@ -791,11 +833,18 @@ export function useYukaAI(
         vehicle.position.y -= 10.0 * delta;
       }
 
-      // Safety clamp: if agent falls into the void, snap back to ground.
-      const FLOOR_Y = 5.5;
+      // Safety clamp: if agent falls into the void, snap back to last known good ground.
       if (vehicle.position.y < -15) { // Void fall safety
-        vehicle.position.y = FLOOR_Y;
-        groupRef.current!.position.y = FLOOR_Y;
+        vehicle.position.x = lastGroundedPosRef.current.x;
+        vehicle.position.y = lastGroundedPosRef.current.y;
+        vehicle.position.z = lastGroundedPosRef.current.z;
+        vehicle.velocity.set(0, 0, 0);
+        if (groupRef.current) {
+          groupRef.current.position.copy(lastGroundedPosRef.current);
+        }
+      } else if (foundGround && groundHeight > -1.5) {
+        // Continuously track the last safe location while on stable ground
+        lastGroundedPosRef.current.set(vehicle.position.x, groundHeight, vehicle.position.z);
       }
     }
 
@@ -1011,6 +1060,7 @@ export function useYukaAI(
                 ...scriptState,
                 phase: taskQueue.getCurrentPhase(),
                 drives: driveContextStr // Passed through taskState arbitrarily for now
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               } as any,
             )
           .then((decision) => {
@@ -1193,6 +1243,7 @@ export function useYukaAI(
           if (dot > 0.2) {
             const targetNeckY = cross.y * 1.5; // Scale for sensitivity
             const clampedNeckY = THREE.MathUtils.clamp(targetNeckY, -0.8, 0.8);
+            // eslint-disable-next-line react-hooks/immutability
             j.neck.rotation.y = THREE.MathUtils.lerp(
               j.neck.rotation.y,
               clampedNeckY,

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useMemo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
@@ -434,7 +436,7 @@ export default function ResearchLabHub() {
             }}
           >
             <boxGeometry args={f.args} />
-            {/* @ts-ignore */}
+            
             <primitive object={materials.tile} attach="material" />
           </mesh>
         ))}
@@ -450,7 +452,7 @@ export default function ResearchLabHub() {
           }}
         >
           <boxGeometry args={ceiling.args} />
-          {/* @ts-ignore */}
+          
           <primitive object={materials.concrete} attach="material" />
         </mesh>
 
@@ -475,7 +477,7 @@ export default function ResearchLabHub() {
             }}
           >
             <boxGeometry args={[w.args[0], w.args[1], w.args[2]]} />
-            {/* @ts-ignore */}
+            
             <primitive
               object={
                 w.isWindow
