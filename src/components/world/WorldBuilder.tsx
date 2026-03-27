@@ -14,7 +14,7 @@ import {
   ManagersDesk,
   ReceptionDesk,
   OfficeDoor,
-} from "./Furniture";
+} from "../models/environment/Furniture";
 
 import {
   FileFolder,
@@ -29,7 +29,7 @@ import {
   CoffeeCup,
   Telephone,
   CoffeeStation
-} from "./Props";
+} from "../models/environment/Props";
 
 // Standard materials for walls and floors
 const wallMaterial = new THREE.MeshStandardMaterial({

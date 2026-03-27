@@ -6,7 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import { Text, Text3D, Center } from "@react-three/drei";
 import { Geometry, Base, Addition } from "@react-three/csg";
-import { usePlacingArea } from "../Systems/usePlacingArea";
+import { usePlacingArea } from "@/components/systems/usePlacingArea";
 
 const woodMaterial = new THREE.MeshStandardMaterial({
   color: "#e8e8e8",

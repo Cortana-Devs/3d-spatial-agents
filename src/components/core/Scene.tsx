@@ -5,14 +5,14 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "@/lib/bvh-setup";
 import { Stats, AdaptiveEvents, Environment } from "@react-three/drei";
 import * as THREE from "three";
-import ResearchLabHub from "../World/OfficeHub";
-import Robot from "../Entities/Robot";
-import AIRobot from "../Entities/AIRobot";
-import YukaSystem from "../Systems/YukaSystem";
-import DebugCrosshair from "../Systems/DebugCrosshair";
-import ObstacleVisualizer from "../Systems/ObstacleVisualizer";
-import { PlacingAreaMarkers } from "../Systems/PlacingAreaMarkers";
-import ObjectHighlighter from "../Systems/ObjectHighlighter";
+import ResearchLabHub from "@/components/world/OfficeHub";
+import Robot from "@/components/player/Player";
+import Agent from "@/components/agent/Agent";
+import YukaSystem from "@/components/systems/YukaSystem";
+import DebugCrosshair from "@/components/core/DebugCrosshair";
+import ObstacleVisualizer from "@/components/systems/ObstacleVisualizer";
+import { PlacingAreaMarkers } from "@/components/systems/PlacingAreaMarkers";
+import ObjectHighlighter from "@/components/systems/ObjectHighlighter";
 
 import { useGameStore } from "@/store/gameStore";
 
@@ -216,12 +216,12 @@ export default function Scene() {
         <ResearchLabHub />
 
         <Robot groupRef={robotRef} initialPosition={[0, 5.5, 10]} />
-        <AIRobot
+        <Agent
           playerRef={robotRef}
           initialPosition={[10, 5.5, 10]}
           id="agent-01"
         />
-        <AIRobot
+        <Agent
           playerRef={robotRef}
           initialPosition={[-10, 5.5, 20]}
           id="agent-02"

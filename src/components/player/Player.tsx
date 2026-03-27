@@ -1,187 +1,27 @@
 /* eslint-disable react-hooks/immutability */
-import React, { useRef, useMemo, useEffect, useState } from "react";
+import React, { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
-import { useYukaAI } from "./useYukaAI";
-import { AgentInteractionPanel } from "../UI/AgentInteractionPanel";
-import { SpeechIndicator } from "../UI/SpeechIndicator";
-import { useGameStore } from "@/store/gameStore";
-import { useAudioController } from "@/lib/audio/useAudioController";
-import { useThree } from "@react-three/fiber";
-import RobotAgentModel from "./RobotAgentModel";
+import { usePlayerController, Joints } from '@/components/player/usePlayerController';
 
-export default function AIRobot({
-  playerRef,
-  initialPosition = [0, 5.5, 10],
-  id = "agent-01",
+export default function Robot({
+  controller = usePlayerController,
+  groupRef: externalRef,
+  initialPosition = [0, 5, 0],
 }: {
-  playerRef: React.RefObject<THREE.Group | null>;
+  controller?: typeof usePlayerController;
+  groupRef?: React.RefObject<THREE.Group | null>;
   initialPosition?: [number, number, number];
-  id?: string;
 }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const joints = useRef<any>({});
-
-  const { vehicle, brain, animationState } = useYukaAI(
-    id,
-    groupRef,
-    playerRef,
-    joints,
-  );
-  const isMenuOpen = useGameStore((state) => state.isMenuOpen);
-  const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
-  const setInspectedAgentId = useGameStore(
-    (state) => state.setInspectedAgentId,
-  );
-
-  const audioDistanceModel = useGameStore((state) => state.audioDistanceModel);
-  const audioRefDistance = useGameStore((state) => state.audioRefDistance);
-  const audioMaxDistance = useGameStore((state) => state.audioMaxDistance);
-  const audioRolloffFactor = useGameStore((state) => state.audioRolloffFactor);
-
-  const handleClick = (e: any) => {
-    if (isMenuOpen) {
-      e.stopPropagation();
-      setInspectedAgentId(id);
-      // console.log("Inspecting Agent:", id);
-    }
-  };
-
-  const { currentBuffer, currentAudioElement, ensureAudioContext, speak, stopSpeaking } = useAudioController();
-  const audioRef = useRef<THREE.PositionalAudio>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-
-  // Setup Listener for native positional audio
-  const { camera } = useThree();
-  const [listener] = useState(() => {
-    let existing = camera.children.find((c) => c.type === "AudioListener" || c instanceof THREE.AudioListener);
-    if (!existing) {
-      existing = new THREE.AudioListener();
-      camera.add(existing);
-    }
-    return existing as THREE.AudioListener;
-  });
+  const internalRef = useRef<THREE.Group>(null);
+  const groupRef = externalRef || internalRef;
+  const { joints } = controller(groupRef);
 
   useEffect(() => {
-    const handleSpeak = (e: any) => {
-      if (e.detail?.agentId === id && e.detail?.text) {
-        speak(e.detail.text, id, false);
-      }
-    };
-    const handleSubconsciousSpeak = (e: any) => {
-      if (e.detail?.agentId === id && e.detail?.text) {
-        speak(e.detail.text, id, true);
-      }
-    };
-    window.addEventListener("agent-speak", handleSpeak);
-    window.addEventListener("subconscious-speak", handleSubconsciousSpeak);
-    return () => {
-      window.removeEventListener("agent-speak", handleSpeak);
-      window.removeEventListener("subconscious-speak", handleSubconsciousSpeak);
-    };
-  }, [id, speak]);
-
-  useEffect(() => {
-    const handleStop = (e: any) => {
-      if (e.detail?.agentId === id) {
-        stopSpeaking();
-        if (audioRef.current && audioRef.current.isPlaying) {
-          audioRef.current.stop();
-        }
-      }
-    };
-    window.addEventListener("agent-stop", handleStop);
-    return () => window.removeEventListener("agent-stop", handleStop);
-  }, [id, stopSpeaking]);
-
-  useEffect(() => {
-    if (!audioRef.current) return;
-    try {
-      // Need to resume context on explicit user interaction elsewhere,
-      // but ensure context exists here.
-      ensureAudioContext();
-      const ctx = audioRef.current.context;
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      analyserRef.current = analyser;
-      
-      const gainNode = audioRef.current.getOutput();
-      if (gainNode) {
-        gainNode.connect(analyser);
-      }
-    } catch (e) {
-      console.warn("Audio Context init deferred", e);
+    if (groupRef.current) {
+      groupRef.current.position.set(...initialPosition);
     }
-  }, [ensureAudioContext]);
+  }, []); // Only apply initial position on mount
 
-  // Pipeline A: Streaming (Low Latency)
-  useEffect(() => {
-    if (audioRef.current && currentAudioElement) {
-      if (audioRef.current.isPlaying) audioRef.current.stop();
-      
-      const ctx = audioRef.current.context;
-      
-      // We must reclaim/reuse the source node if it already exists for this element
-      // or just create a new one if it's a new element instance.
-      try {
-        if (mediaSourceRef.current) {
-          // Three.js doesn't provide a clean "unsetSource" so we just overwrite
-        }
-        const source = ctx.createMediaElementSource(currentAudioElement);
-        mediaSourceRef.current = source;
-        audioRef.current.setNodeSource(source as any);
-        
-        // Play the element directly (this starts the stream)
-        currentAudioElement.play().catch(e => console.warn("[AIRobot] Autoplay blocked or interrupted", e));
-      } catch (e) {
-        console.warn("[AIRobot] Stream link error:", e);
-      }
-    }
-  }, [currentAudioElement]);
-
-  // Pipeline B: Local Buffer (Fallback)
-  useEffect(() => {
-    if (audioRef.current && currentBuffer) {
-      if (audioRef.current.isPlaying) audioRef.current.stop();
-      audioRef.current.setBuffer(currentBuffer);
-      audioRef.current.play();
-    }
-  }, [currentBuffer]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.setDistanceModel(audioDistanceModel);
-      audioRef.current.setRefDistance(audioRefDistance);
-      audioRef.current.setMaxDistance(audioMaxDistance);
-      audioRef.current.setRolloffFactor(audioRolloffFactor);
-    }
-  }, [audioDistanceModel, audioRefDistance, audioMaxDistance, audioRolloffFactor]);
-
-  return (
-    <group
-      ref={groupRef}
-      position={initialPosition}
-      name="AIRobot"
-      userData={{
-        type: "AI Entity",
-        id: id,
-        description: "Autonomous Research Lab Assistant",
-      }}
-      onClick={handleClick}
-    >
-      <AgentInteractionPanel agentId={id} brain={brain} />
-      <SpeechIndicator agentId={id} />
-      <positionalAudio ref={audioRef as any} args={[listener]} />
-      {/* eslint-disable-next-line react-hooks/refs */}
-      <RobotAgentModel joints={joints} id={id} analyser={analyserRef.current} />
-    </group>
-  );
-}
-
-// ----------------------------------------------------------------------------
-// Procedural "Lab Assistant" Human Model
-// ----------------------------------------------------------------------------
-function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
   const mats = useMemo(() => {
     const labCoat = new THREE.MeshStandardMaterial({
       color: 0xf5f5f0,
@@ -189,11 +29,11 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
       metalness: 0.0,
     });
     const shirt = new THREE.MeshStandardMaterial({
-      color: 0x5b9bd5,
+      color: 0x26a69a,
       roughness: 0.6,
     });
     const pants = new THREE.MeshStandardMaterial({
-      color: 0x2c3e50,
+      color: 0x34495e,
       roughness: 0.5,
       metalness: 0.1,
     });
@@ -207,7 +47,7 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
       metalness: 0.1,
     });
     const hair = new THREE.MeshStandardMaterial({
-      color: 0x3b2316,
+      color: 0x2c1a0e,
       roughness: 0.9,
     });
     const glasses = new THREE.MeshStandardMaterial({
@@ -216,7 +56,7 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
       metalness: 0.5,
     });
     const badge = new THREE.MeshStandardMaterial({
-      color: 0x2196f3,
+      color: 0x4caf50,
       roughness: 0.4,
       metalness: 0.2,
     });
@@ -268,7 +108,7 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
   }, []);
 
   return (
-    <group>
+    <group ref={groupRef} name="Robot">
       <group
         ref={(el) => {
           if (el && joints.current) joints.current.hips = el;
@@ -309,7 +149,7 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
             geometry={geos.torso}
           />
 
-          {/* ID Badge — clipped to left chest */}
+          {/* ID Badge — green badge to distinguish player */}
           <mesh
             position={[0.45, 2.0, 0.62]}
             material={mats.badge}
@@ -431,11 +271,8 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
               geometry={geos.nose}
             />
 
-            {/* Mouth — simple line */}
+            {/* Mouth */}
             <mesh
-              ref={(el) => {
-                if (el && joints.current) joints.current.mouth = el;
-              }}
               position={[0, 0.28, 0.43]}
               material={
                 new THREE.MeshStandardMaterial({ color: 0xc49080, roughness: 0.7 })
@@ -460,19 +297,19 @@ function ProceduralRobotModel({ joints, id }: { joints: any; id: string }) {
           </group>
 
           {/* Arms */}
-          <LabArm side="left" joints={joints} mats={mats} geos={geos} />
-          <LabArm side="right" joints={joints} mats={mats} geos={geos} />
+          <PlayerArm side="left" joints={joints} mats={mats} geos={geos} />
+          <PlayerArm side="right" joints={joints} mats={mats} geos={geos} />
         </group>
 
         {/* Legs */}
-        <LabLeg side="left" joints={joints} mats={mats} geos={geos} />
-        <LabLeg side="right" joints={joints} mats={mats} geos={geos} />
+        <PlayerLeg side="left" joints={joints} mats={mats} geos={geos} />
+        <PlayerLeg side="right" joints={joints} mats={mats} geos={geos} />
       </group>
     </group>
   );
 }
 
-type LabMats = {
+type PlayerMats = {
   labCoat: THREE.Material;
   shirt: THREE.Material;
   pants: THREE.Material;
@@ -485,21 +322,22 @@ type LabMats = {
   pupil: THREE.Material;
 };
 
-function LabArm({
+function PlayerArm({
   side,
   joints,
   mats,
   geos,
 }: {
   side: "left" | "right";
-  joints: React.MutableRefObject<any>;
-  mats: LabMats;
+  joints: React.MutableRefObject<Joints>;
+  mats: PlayerMats;
   geos: any;
 }) {
   const dir = side === "left" ? 1 : -1;
   return (
     <group
       ref={(el) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (!joints.current[`${side}Arm`])
           joints.current[`${side}Arm`] = {} as any;
         joints.current[`${side}Arm`]!.shoulder = el!;
@@ -512,6 +350,7 @@ function LabArm({
       <mesh position={[0, -0.7, 0]} material={mats.labCoat} castShadow receiveShadow geometry={geos.upperArm} />
       <group
         ref={(el) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (!joints.current[`${side}Arm`])
             joints.current[`${side}Arm`] = {} as any;
           joints.current[`${side}Arm`]!.elbow = el!;
@@ -544,19 +383,18 @@ function LabArm({
   );
 }
 
-function LabLeg({
+function PlayerLeg({
   side,
   joints,
   mats,
   geos,
 }: {
   side: "left" | "right";
-  joints: React.MutableRefObject<any>;
-  mats: LabMats;
+  joints: React.MutableRefObject<Joints>;
+  mats: PlayerMats;
   geos: any;
 }) {
   const dir = side === "left" ? 1 : -1;
-
   return (
     <group
       ref={(el) => {

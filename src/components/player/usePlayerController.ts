@@ -2,9 +2,9 @@ import { useRef, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
-import { useProceduralGait } from "./useProceduralGait";
-import { InteractableRegistry } from "../Systems/InteractableRegistry";
-import AIManager from "../Systems/AIManager";
+import { useProceduralGait } from '@/components/agent/useProceduralGait';
+import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
+import AIManager from "@/components/systems/AIManager";
 
 export interface Joints {
   hips?: THREE.Group;
@@ -20,12 +20,12 @@ export interface Joints {
   [key: string]: any; // Allow dynamic access
 }
 
-export function useRobotController(
+export function usePlayerController(
   groupRef: React.RefObject<THREE.Group | null>,
 ) {
   useEffect(() => {
-    // console.log("useRobotController MOUNTED");
-    // return () => console.log("useRobotController UNMOUNTED");
+    // console.log("usePlayerController MOUNTED");
+    // return () => console.log("usePlayerController UNMOUNTED");
   }, []);
 
   const collidableMeshes = useGameStore((state) => state.collidableMeshes);

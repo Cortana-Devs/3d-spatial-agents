@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AudioUnlocker } from "@/components/Audio/AudioUnlocker";
-import { AudioPrompt } from "@/components/Audio/AudioPrompt";
+import { AudioUnlocker } from '@/components/ui/audio/AudioUnlocker';
+import { AudioPrompt } from '@/components/ui/audio/AudioPrompt';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { ClientBrain } from "../Systems/ClientBrain";
+import { ClientBrain } from "@/components/systems/ClientBrain";
 import { MessageSquare, Cpu, Activity, Clock, Terminal } from "lucide-react";
 import { useGameStore } from "@/store/gameStore";
 import styles from "./AgentInteractionPanel.module.css";

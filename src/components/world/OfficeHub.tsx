@@ -3,7 +3,7 @@
 import React, { useMemo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
-import { createMaterials } from "../Systems/Materials";
+import { createMaterials } from "@/components/systems/Materials";
 import { Text } from "@react-three/drei";
 
 import {
@@ -16,7 +16,7 @@ import {
   CupboardUnit,
   ManagersDesk,
   LabWorkbench,
-} from "./Furniture";
+} from "../models/environment/Furniture";
 import { Elevator } from "./Elevator";
 import {
   FileFolder,
@@ -32,7 +32,7 @@ import {
   CoffeeCup,
   CoffeeStation,
   Telephone,
-} from "./Props";
+} from "../models/environment/Props";
 
 interface Box {
   id: string;

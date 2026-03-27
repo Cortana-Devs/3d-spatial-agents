@@ -2,7 +2,7 @@ import React, { useRef, useMemo, useLayoutEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox, useTexture, Decal, Text } from '@react-three/drei';
 import * as THREE from 'three';
-import LedMouth from './LedMouth';
+import LedMouth from '@/components/models/characters/LedMouth';
 
 const ARMOR_COLOR = '#f8fafc'; // Premium glossy white
 const ACCENT_COLOR = '#94a3b8'; // Light metallic accent
@@ -226,7 +226,7 @@ function LedEyes() {
   );
 }
 
-export default React.memo(function RobotAgentModel({ 
+export default React.memo(function RobotModel({ 
   joints, 
   analyser,
   id,

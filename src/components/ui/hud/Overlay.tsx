@@ -4,12 +4,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import GameMenu from "./GameMenu";
 import { InspectorPanel } from "./InspectorPanel";
-import { TaskAssignmentPanel } from "./TaskAssignmentPanel";
+import { TaskAssignmentPanel } from "../panels/TaskAssignmentPanel";
 import { CommandBar } from "./CommandBar";
-import { AgentChatPanel } from "./AgentChatPanel";
-import { AgentCommunicationPanel } from "./AgentCommunicationPanel";
+import { AgentChatPanel } from "../panels/AgentChatPanel";
+import { AgentCommunicationPanel } from "../panels/AgentCommunicationPanel";
 import { memoryStream } from "@/lib/memory/MemoryStream";
-import { FileEditorModal } from "./FileEditorModal";
+import { FileEditorModal } from "../panels/FileEditorModal";
 
 function formatAgentLabel(agentId: string): string {
   const match = /^agent-0*(\d+)$/.exec(agentId);
@@ -271,7 +271,7 @@ export default function Overlay() {
         if (e.code === "KeyN") {
           e.preventDefault();
           useGameStore.getState().setChatPromptVisible(false);
-          // nearbyAgentId is left set — useYukaAI will see this and set cooldown
+          // nearbyAgentId is left set — useAgentBrain will see this and set cooldown
         }
       }
     };

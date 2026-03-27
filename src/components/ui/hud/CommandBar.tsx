@@ -10,8 +10,8 @@ import {
   validateAndResolve,
 } from "@/lib/nlp-parser";
 import { parseNaturalCommand } from "@/app/actions";
-import { AgentTaskRegistry } from "@/components/Systems/AgentTaskQueue";
-import { InteractableRegistry } from "@/components/Systems/InteractableRegistry";
+import { AgentTaskRegistry } from '@/components/systems/AgentTaskQueue';
+import { InteractableRegistry } from '@/components/systems/InteractableRegistry';
 
 // ============================================================================
 // Styles

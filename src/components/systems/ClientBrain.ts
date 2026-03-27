@@ -9,7 +9,7 @@ export interface BrainState {
 }
 
 import { RateLimiter } from "@/lib/rateLimiter";
-import type { AgentTask } from "@/components/Systems/AgentTaskQueue";
+import type { AgentTask } from '@/components/systems/AgentTaskQueue';
 
 export interface AgentDecision {
   operation: "OBSERVE" | "INTERFERE_SCRIPT";

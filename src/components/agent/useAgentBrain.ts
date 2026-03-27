@@ -3,16 +3,16 @@ import { useEffect, useRef, useState } from "react";
 import * as YUKA from "yuka";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import AIManager from "../Systems/AIManager";
+import AIManager from "@/components/systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
-import { useProceduralGait } from "./useProceduralGait";
+import { useProceduralGait } from '@/components/agent/useProceduralGait';
 
-import { ClientBrain } from "../Systems/ClientBrain";
+import { ClientBrain } from "@/components/systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-core";
-import { InteractableRegistry } from "../Systems/InteractableRegistry";
-import NavigationNetwork from "../Systems/NavigationNetwork";
-import { AgentTaskRegistry } from "../Systems/AgentTaskQueue";
-import type { SteeringCommand } from "../Systems/AgentTaskQueue";
+import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
+import NavigationNetwork from "@/components/systems/NavigationNetwork";
+import { AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
+import type { SteeringCommand } from "@/components/systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
@@ -34,7 +34,7 @@ function clampToWorldBounds(pos: { x: number; y: number; z: number }) {
   };
 }
 
-export function useYukaAI(
+export function useAgentBrain(
   id: string,
   groupRef: React.RefObject<THREE.Group | null>,
   playerRef: React.RefObject<THREE.Group | null>,
@@ -185,7 +185,7 @@ export function useYukaAI(
       });
 
       console.debug(
-        `[useYukaAI:${id}] Enqueued morning check (table: ${tableId}), then default WANDER`,
+        `[useAgentBrain:${id}] Enqueued morning check (table: ${tableId}), then default WANDER`,
       );
     }, 1500);
 
@@ -876,7 +876,7 @@ export function useYukaAI(
       ) {
         // SKIP BRAIN: A conscious script is actively running — don't poll LLM
         /* console.log(
-          `[useYukaAI:${id}] Brain gate: SKIPPING (busy, priority=${taskQueue.getCurrentTask()?.priority}, phase=${taskQueue.getCurrentPhase()})`,
+          `[useAgentBrain:${id}] Brain gate: SKIPPING (busy, priority=${taskQueue.getCurrentTask()?.priority}, phase=${taskQueue.getCurrentPhase()})`,
         ); */
       } else {
 
@@ -1069,11 +1069,11 @@ export function useYukaAI(
               const currentPri = taskQueue.getCurrentTask()?.priority ?? -1;
               const decisionPri = decision.priority || 10;
               console.log(
-                `[useYukaAI:${id}] Brain decision: op=${decision.operation}, scriptId=${decision.scriptId}, tasks=${decision.tasks?.length ?? 0}, currentPri=${currentPri}, decisionPri=${decisionPri}`,
+                `[useAgentBrain:${id}] Brain decision: op=${decision.operation}, scriptId=${decision.scriptId}, tasks=${decision.tasks?.length ?? 0}, currentPri=${currentPri}, decisionPri=${decisionPri}`,
               );
               if (taskQueue.isBusy() && currentPri >= decisionPri) {
                 console.log(
-                  `[useYukaAI:${id}] Skipping brain decision (priority ${decisionPri}) — active task has priority ${currentPri}`,
+                  `[useAgentBrain:${id}] Skipping brain decision (priority ${decisionPri}) — active task has priority ${currentPri}`,
                 );
                 return;
               }
@@ -1085,7 +1085,7 @@ export function useYukaAI(
                 decision.tasks.length > 0
               ) {
                 console.log(
-                  `[useYukaAI:${id}] Brain initiating script: ${decision.scriptId}`,
+                  `[useAgentBrain:${id}] Brain initiating script: ${decision.scriptId}`,
                 );
 
                 // Generate a fallback script ID if LLM omitted it
@@ -1099,7 +1099,7 @@ export function useYukaAI(
                   now - lastScriptTimeRef.current < SCRIPT_COOLDOWN_MS
                 ) {
                   console.log(
-                    `[useYukaAI:${id}] Skipping duplicate script "${scriptId}" (cooldown: ${Math.round((SCRIPT_COOLDOWN_MS - (now - lastScriptTimeRef.current)) / 1000)}s remaining)`,
+                    `[useAgentBrain:${id}] Skipping duplicate script "${scriptId}" (cooldown: ${Math.round((SCRIPT_COOLDOWN_MS - (now - lastScriptTimeRef.current)) / 1000)}s remaining)`,
                   );
                   return;
                 }
@@ -1111,7 +1111,7 @@ export function useYukaAI(
                   // Same scriptId is MID-EXECUTION — do NOT cancel and re-issue,
                   // that would drop the carried item on the floor.
                   console.log(
-                    `[useYukaAI:${id}] Brain suppressed: script "${scriptId}" is mid-execution — will not cancel`,
+                    `[useAgentBrain:${id}] Brain suppressed: script "${scriptId}" is mid-execution — will not cancel`,
                   );
                   return;
                 }
@@ -1160,7 +1160,7 @@ export function useYukaAI(
             }
           })
           .catch((error) => {
-            console.error(`[useYukaAI:${id}] Brain update failed:`, error);
+            console.error(`[useAgentBrain:${id}] Brain update failed:`, error);
           });
         } // closing if (urgentDrive && !brain.state.isThinking)
       } // closing else (taskQueue.isBusy())

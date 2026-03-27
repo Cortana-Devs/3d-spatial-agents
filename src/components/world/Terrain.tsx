@@ -1,8 +1,8 @@
 /* eslint-disable react-hooks/purity */
 import React, { useMemo, useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { fbm } from '../Systems/Utilities';
-import { createMaterials } from '../Systems/Materials';
+import { fbm } from '@/components/systems/Utilities';
+import { createMaterials } from '@/components/systems/Materials';
 import { useGameStore, Obstacle } from '@/store/gameStore';
 
 export default function Terrain() {

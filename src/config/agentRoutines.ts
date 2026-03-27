@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { InteractableRegistry } from "@/components/Systems/InteractableRegistry";
+import { InteractableRegistry } from '@/components/systems/InteractableRegistry';
 
 // ============================================================================
 // Agent → Assigned storage table (storage room tables 6–10)

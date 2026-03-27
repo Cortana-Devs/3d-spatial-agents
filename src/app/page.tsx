@@ -1,5 +1,5 @@
-import Scene from '@/components/Core/Scene';
-import Overlay from '@/components/UI/Overlay';
+import Scene from '@/components/core/Scene';
+import Overlay from '@/components/ui/hud/Overlay';
 
 export default function Home() {
   return (

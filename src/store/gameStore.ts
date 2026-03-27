@@ -3,8 +3,8 @@ import * as THREE from "three";
 import {
   WorldObject,
   InteractableRegistry,
-} from "@/components/Systems/InteractableRegistry";
-import type { AgentTask } from "@/components/Systems/AgentTaskQueue";
+} from '@/components/systems/InteractableRegistry';
+import type { AgentTask } from '@/components/systems/AgentTaskQueue';
 
 export interface Obstacle {
   position: THREE.Vector3;

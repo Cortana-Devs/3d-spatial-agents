@@ -42,7 +42,7 @@ export type TaskPhase =
   | "ACTION_START" // Brief pause before the action happens
   | "COMPLETED";
 
-// Return type: tells useYukaAI what steering to apply
+// Return type: tells useAgentBrain what steering to apply
 export interface SteeringCommand {
   type: "FOLLOW_PATH" | "ARRIVE" | "STOP" | "NONE";
   path?: THREE.Vector3[];

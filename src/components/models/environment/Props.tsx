@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { Text } from "@react-three/drei";
-import { useInteractable } from "../Systems/useInteractable"; // Import hook
-import { usePlacingArea } from "../Systems/usePlacingArea";
+import { useInteractable } from "@/components/systems/useInteractable"; // Import hook
+import { usePlacingArea } from "@/components/systems/usePlacingArea";
 
 // --- MATERIALS ---
 const plasticWhite = new THREE.MeshStandardMaterial({

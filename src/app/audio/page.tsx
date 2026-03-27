@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { FlyControls, Grid, Environment, SoftShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
-import AIRobot from "@/components/Entities/AIRobot";
+import Agent from '@/components/agent/Agent';
 import { useAudioController } from "@/lib/audio/useAudioController";
 import { Settings2, Play, Volume2, Activity, Info, Mic2, Zap, LayoutTemplate } from "lucide-react";
 
@@ -156,7 +156,7 @@ export default function AudioTestPage() {
             </mesh>
           </group>
           
-          <AIRobot playerRef={playerRef} initialPosition={[0, 0, 0]} id="test-agent-audio" />
+          <Agent playerRef={playerRef} initialPosition={[0, 0, 0]} id="test-agent-audio" />
         </Canvas>
       </div>
 
