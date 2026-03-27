@@ -13,16 +13,16 @@
 
 .window {
     position: relative;
-    background-color: rgba(5, 5, 10, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    background-color: var(--ui-bg);
+    backdrop-filter: blur(var(--ui-blur));
+    -webkit-backdrop-filter: blur(var(--ui-blur));
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-md);
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.5),
         0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     overflow: hidden;
-    color: white;
+    color: var(--foreground);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -50,8 +50,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
-    background-color: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: var(--color-agent-bg);
+    border-bottom: 1px solid var(--ui-border);
     cursor: pointer;
     user-select: none;
     transition: background-color 0.2s;
@@ -108,8 +108,7 @@
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background-color: #06b6d4;
-    /* Cyan-500 */
+    background-color: var(--color-success);
     margin-top: 5px;
 }
 

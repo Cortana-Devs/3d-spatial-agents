@@ -1,12 +1,49 @@
 :root {
+  /** 
+   * ── CYBER-LAB DESIGN SYSTEM ──
+   * Centralized tokens for 2D UI and 3D R3F Environment consistency.
+   * See task updates for full implementation history.
+   */
+
+  /* Core Theme: Base Layers */
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Glassmorphism & UI Panels: The "Aesthetic Skeleton" */
+  --ui-bg: rgba(255, 255, 255, 0.9);
+  --ui-border: rgba(0, 0, 0, 0.1);
+  --ui-blur: 16px; /* Universal backdrop-filter blur magnitude */
+
+  /* Semantic Accent Colors: Correct use-cases defined below */
+  --color-success: #4caf50;          /* Positive actions, Active agents, Task Success */
+  --color-success-bg: rgba(76, 175, 80, 0.2);
+  --color-danger: #ef5350;           /* Erroneous states, Termination, Critical Obstacles */
+  --color-danger-bg: rgba(239, 83, 80, 0.2);
+  --color-primary: #1565c0;          /* User interactions, Selection highlights, Command links */
+  --color-primary-bg: rgba(0, 50, 200, 0.8);
+
+  /* Agent-Specific Styling: Neutral "Technical" tones for lab readouts */
+  --color-agent-text: #e0e0e0;
+  --color-agent-bg: rgba(255, 255, 255, 0.06);
+
+  /* Layout Radii: Geometric consistency across the app */
+  --radius-sm: 8px;   /* Small inputs, buttons, badges */
+  --radius-md: 14px;  /* Main UI panels (GameMenu, Inspector) */
+  --radius-lg: 20px;  /* Large hero sections or background containers */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    /* ── CYBER-LAB DARK THEME (The Primary Aesthetic) ── */
+    --background: #0a0c14; /* Cinematic Deep Blue-Black (Match R3F Canvas) */
     --foreground: #ededed;
+
+    /* Dark Mode Glass: Enhanced depth with lower opacity and higher saturation */
+    --ui-bg: rgba(10, 12, 20, 0.85);
+    --ui-border: rgba(255, 255, 255, 0.1);
+    
+    /* Subtle tweaks for dark context legibility */
+    --color-agent-bg: rgba(255, 255, 255, 0.04);
   }
 }
 

@@ -8,10 +8,10 @@
   z-index: 1490;
   display: flex;
   flex-direction: column;
-  background: rgba(10, 12, 20, 0.94);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--ui-bg);
+  backdrop-filter: blur(var(--ui-blur));
+  -webkit-backdrop-filter: blur(var(--ui-blur));
+  border-left: 1px solid var(--ui-border);
   box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
   font-family: "Inter", system-ui, sans-serif;
   animation: commSlideIn 0.25s ease-out forwards;
@@ -28,13 +28,30 @@
   }
 }
 
+@keyframes commMessageAppear {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes commNegotiationPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.25); }
+  50% { box-shadow: 0 0 12px 2px rgba(255, 193, 7, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
 .commHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--color-agent-bg);
 }
 
 .commTitle {
@@ -101,19 +118,20 @@
   border-radius: 12px;
   font-size: 13px;
   line-height: 1.45;
+  animation: commMessageAppear 0.3s ease-out forwards;
 }
 
 .commAgent {
-  background: rgba(76, 175, 80, 0.12);
-  border: 1px solid rgba(76, 175, 80, 0.25);
-  color: #e0e0e0;
+  background: var(--color-success-bg);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: var(--color-agent-text);
   align-self: flex-start;
 }
 
 .commUser {
-  background: rgba(33, 150, 243, 0.12);
-  border: 1px solid rgba(33, 150, 243, 0.25);
-  color: #e0e0e0;
+  background: var(--color-primary-bg);
+  border: 1px solid rgba(0, 50, 200, 0.4);
+  color: #fff;
   align-self: flex-end;
 }
 
@@ -128,4 +146,42 @@
 
 .commText {
   color: inherit;
+}
+
+/* Negotiation messages — item coordination between agents */
+.commNegotiation {
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  color: #e0e0e0;
+  align-self: flex-start;
+  animation: commMessageAppear 0.3s ease-out forwards, commNegotiationPulse 2s ease-in-out 0.3s;
+}
+
+.commNegotiation .commAgentLabel {
+  color: rgba(255, 193, 7, 0.7);
+}
+
+/* Separator for negotiation blocks */
+.commSeparator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.commSeparator::before,
+.commSeparator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 193, 7, 0.15);
+}
+
+.commSeparatorLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 193, 7, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }

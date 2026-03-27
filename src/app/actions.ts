@@ -1,4 +1,5 @@
 "use server";
+import { after } from "next/server";
 
 import {
   processAgentThought,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/agent-core";
 import { getGroqClient } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
+import { performWebSearch } from "@/lib/search";
 
 export async function generateAgentThought(
   context: AgentContext,
@@ -18,18 +20,23 @@ export async function generateAgentThought(
   const effectiveSessionId =
     sessionId || "unknown-session-" + crypto.randomUUID().slice(0, 8);
   try {
-    const responseText = await processAgentThought(context, memoryContext, {
+    const responseMessage = await processAgentThought(context, memoryContext, {
       requestId,
       sessionId: effectiveSessionId,
     });
-    return responseText;
+    
+    // Return a plain object for the Server Action
+    return {
+      content: responseMessage.content,
+      tool_calls: responseMessage.tool_calls,
+    };
   } catch (error) {
     console.error("Groq API Error:", error);
     // Fallback response inside the Server Action boundary
-    return JSON.stringify({
-      action: "WAIT",
-      thought: "My brain hurts (API Error).",
-    });
+    return {
+      content: "My brain hurts (API Error).",
+      tool_calls: [],
+    };
   }
 }
 
@@ -66,7 +73,7 @@ export async function generateReflection(
     const summary = completion.choices[0]?.message?.content?.trim();
     const endTime = Date.now();
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -79,13 +86,13 @@ export async function generateReflection(
       input_tokens: completion.usage?.prompt_tokens,
       output_tokens: completion.usage?.completion_tokens,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return summary;
   } catch (error: any) {
     console.error("Reflection Error:", error);
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -98,7 +105,7 @@ export async function generateReflection(
       error_code: error.code || error.status,
       error_message: error.message,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return null;
   }
@@ -130,7 +137,7 @@ export async function parseNaturalCommand(
             "You are a command parser for a 3D research lab environment. You parse natural language commands into structured JSON task objects. Always output valid JSON only, no markdown fences.\n" +
             "Available task types:\n" +
             "- FETCH_AND_PLACE: Requires itemId, destAreaId\n" +
-            "- GO_TO: Requires targetPos {x,y,z}\n" +
+            "- GO_TO: Requires targetAreaId (zone name) or targetPos {x,y,z}\n" +
             "- PICK_NEARBY: Requires itemId\n" +
             "- FOLLOW_PLAYER\n" +
             "- READ_FILE: Requires itemId. Reads a document.\n" +
@@ -151,7 +158,7 @@ export async function parseNaturalCommand(
     const endTime = Date.now();
     const serverLatency = endTime - startTime;
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -164,7 +171,7 @@ export async function parseNaturalCommand(
       input_tokens: completion.usage?.prompt_tokens,
       output_tokens: completion.usage?.completion_tokens,
       model_version: model,
-    });
+    }).catch(console.error));
 
     if (!content) {
       return {
@@ -183,7 +190,7 @@ export async function parseNaturalCommand(
     console.error("NLP Parse Error:", error);
 
     const errorLatency = Date.now() - startTime;
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -196,7 +203,7 @@ export async function parseNaturalCommand(
       error_code: error.code || error.status,
       error_message: error.message,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return {
       rawResponse: JSON.stringify({
@@ -221,6 +228,7 @@ export interface ChatResponse {
     type: string;
     itemId?: string;
     destAreaId?: string;
+    targetAreaId?: string;
     targetX?: number;
     targetZ?: number;
   }[];
@@ -254,6 +262,7 @@ export async function chatWithAgent(
 - Professional yet warm, like a helpful coworker
 - Concise — keep replies to 1-3 short sentences
 - Proactive — offer specific suggestions when the user seems unsure
+- Spoken Dialogue — Your 'reply' is sent directly to a Text-To-Speech (TTS) engine. Do NOT use markdown, asterisks, code blocks, bullet points, or complex punctuation. Talk naturally.
 
 ## Output Format (JSON ONLY)
 You MUST respond with valid JSON in this exact format:
@@ -267,10 +276,11 @@ If the user asks you to DO something (move item, go somewhere, follow, read file
 ## Available Task Types
 - FETCH_AND_PLACE: Pick up an item and place it. Requires "itemId" and "destAreaId". Use EXACT IDs from the World State.
 - FOLLOW_PLAYER: Follow the user. No extra fields needed.
-- GO_TO: Move to a location. Requires "targetX" and "targetZ" (coordinates).
+- GO_TO: Move to a location. Requires "targetAreaId" (a semantic zone name like "conference area", "meeting room", "storage") OR exact "targetX" and "targetZ" (coordinates). Use targetAreaId if coordinates are unknown.
 - READ_FILE: Read the text from a document. Requires "itemId".
 - WRITE_FILE: Write text to a document. Requires "itemId" and "content" (the text to write).
 - COPY_FILE: Copy the entire contents of one document perfectly into another document. Requires "sourceItemId" and "itemId" (destination).
+- WEB_SEARCH: Perform a web search to find information. Requires "query". This is a mental action; you will receive the results immediately and should then provide a final reply.
 - ANNOUNCE_MEETING: When the user says there is a meeting in the meeting room (or similar), respond with {"reply": "...", "tasks": [{"type": "ANNOUNCE_MEETING"}]}. Acknowledge that you will inform the others and head to the meeting room. No extra fields needed.
 
 ## Advanced Behaviors
@@ -304,7 +314,7 @@ ${worldSection}`,
   try {
     const client = getGroqClient();
 
-    const completion = await client.chat.completions.create({
+    let completion = await client.chat.completions.create({
       messages,
       model,
       temperature: 0.4,
@@ -314,11 +324,42 @@ ${worldSection}`,
       response_format: { type: "json_object" },
     });
 
-    const rawContent =
+    let rawContent =
       completion.choices[0]?.message?.content?.trim() || '{"reply": "..."}';
+
+    // --- Web Search Handling ---
+    try {
+        const parsedInitial = JSON.parse(rawContent);
+        const searchTask = parsedInitial.tasks?.find((t: any) => t.type === "WEB_SEARCH");
+        
+        if (searchTask && searchTask.query) {
+            const searchResults = await performWebSearch(searchTask.query);
+            
+            // Push the search results as a 'system' or 'user' message context update
+            messages.push({ role: "assistant", content: rawContent });
+            messages.push({ 
+                role: "user", 
+                content: `WEB SEARCH RESULTS for "${searchTask.query}":\n${JSON.stringify(searchResults)}\n\nPlease provide your final reply based on these results.` 
+            });
+
+            // Re-run
+            completion = await client.chat.completions.create({
+                messages,
+                model,
+                temperature: 0.3,
+                max_completion_tokens: 300,
+                top_p: 1,
+                stream: false,
+                response_format: { type: "json_object" },
+            });
+            rawContent = completion.choices[0]?.message?.content?.trim() || '{"reply": "..."}';
+        }
+    } catch (e) {
+        console.warn("JSON Parse or Search error in chat loop:", e);
+    }
     const endTime = Date.now();
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -331,7 +372,7 @@ ${worldSection}`,
       input_tokens: completion.usage?.prompt_tokens,
       output_tokens: completion.usage?.completion_tokens,
       model_version: model,
-    });
+    }).catch(console.error));
 
     // Parse JSON response
     try {
@@ -356,7 +397,7 @@ ${worldSection}`,
   } catch (error: any) {
     console.error("Agent Chat Error:", error);
 
-    await logAgentInteraction({
+    after(() => logAgentInteraction({
       timestamp: new Date().toISOString(),
       session_id: effectiveSessionId,
       request_id: requestId,
@@ -369,7 +410,7 @@ ${worldSection}`,
       error_code: error.code || error.status,
       error_message: error.message,
       model_version: model,
-    });
+    }).catch(console.error));
 
     return {
       reply:

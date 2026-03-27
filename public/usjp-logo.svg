@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="512" height="512">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@700&amp;display=swap');
+    </style>
+    <!-- Text Placement Arcs -->
+    <path id="top-arc" d="M 145,500 A 355,355 0 1,1 855,500" />
+    <path id="bottom-arc" d="M 145,500 A 355,355 0 0,0 855,500" />
+
+    <!-- Outer Lotus Petal Wedge (Perfect 22.5 degree interlocking tile) -->
+    <!-- The deep r=200 valley creates the sharp maroon background dart -->
+    <g id="outerPetal">
+      <path d="M 500 500 L 461 304 C 465 270, 480 248, 500 248 C 520 248, 535 270, 539 304 Z" fill="#FFF400" />
+      <path d="M 461 304 C 465 270, 480 248, 500 248 C 520 248, 535 270, 539 304" fill="none" stroke="#000000" stroke-width="3" stroke-linecap="round"/>
+      <line x1="500" y1="500" x2="539" y2="304" stroke="#000000" stroke-width="3" />
+    </g>
+
+    <!-- Inner Lotus Petal Wedge (Perfect 45 degree interlocking tile) -->
+    <g id="innerPetal">
+      <path d="M 500 500 L 466 417 C 470 380, 485 360, 500 360 C 515 360, 530 380, 534 417 Z" fill="#FFF400" />
+      <path d="M 466 417 C 470 380, 485 360, 500 360 C 515 360, 530 380, 534 417" fill="none" stroke="#000000" stroke-width="3" stroke-linecap="round"/>
+      <line x1="500" y1="500" x2="534" y2="417" stroke="#000000" stroke-width="3" />
+    </g>
+
+    <!-- Stamen -->
+    <g id="stamen">
+      <line x1="500" y1="410" x2="500" y2="330" stroke="#000000" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="500" cy="325" r="7" fill="#FFF400" stroke="#000000" stroke-width="3"/>
+      <circle cx="500" cy="325" r="2" fill="#000000"/>
+    </g>
+
+    <!-- Center White Gear Scallop Cutouts -->
+    <circle id="b16B" cx="500" cy="412" r="17" fill="#000000" />
+    <circle id="b16W" cx="500" cy="412" r="14" fill="#FFFFFF" />
+    <circle id="b8B" cx="500" cy="460" r="15" fill="#000000" />
+    <circle id="b8W" cx="500" cy="460" r="12" fill="#FFFFFF" />
+  </defs>
+
+  <!-- ================= BASE PLATE & CONCENTRIC RINGS ================= -->
+  
+  <!-- Outer Framework -->
+  <circle cx="500" cy="500" r="495" fill="#FFF400" />    <!-- Outer Thin Yellow Edge -->
+  <circle cx="500" cy="500" r="485" fill="#000000" />    <!-- Black Separator -->
+  <circle cx="500" cy="500" r="482" fill="#C1272C" />    <!-- Thick Red Ring -->
+  <circle cx="500" cy="500" r="455" fill="#000000" />    <!-- Black Separator -->
+  <circle cx="500" cy="500" r="452" fill="#FFF400" />    <!-- Thin Yellow Ring -->
+  <circle cx="500" cy="500" r="442" fill="#000000" />    <!-- Inner Black Boundary -->
+  
+  <!-- Text Band -->
+  <circle cx="500" cy="500" r="438" fill="#FFF400" />    <!-- Main Yellow Text Area -->
+  
+  <!-- Inner Framework -->
+  <circle cx="500" cy="500" r="290" fill="#000000" />    <!-- Inner Text Boundary -->
+  <circle cx="500" cy="500" r="286" fill="#C1272C" />    <!-- Thin Red Ring -->
+  <circle cx="500" cy="500" r="276" fill="#000000" />    <!-- Black Separator -->
+  <circle cx="500" cy="500" r="273" fill="#FFF400" />    <!-- Thin Yellow Ring -->
+  <circle cx="500" cy="500" r="263" fill="#000000" />    <!-- Center Boundary -->
+  
+  <!-- Maroon Center Base (The negative space that forms the darts) -->
+  <circle cx="500" cy="500" r="260" fill="#C1272C" />
+
+  <!-- ================= CONTINUOUS LOTUS PETALS ================= -->
+
+  <!-- 16 Outer Lotus Petals (Perfectly tiled) -->
+  <g id="outer-petals">
+    <use href="#outerPetal" />
+    <use href="#outerPetal" transform="rotate(22.5 500 500)" />
+    <use href="#outerPetal" transform="rotate(45 500 500)" />
+    <use href="#outerPetal" transform="rotate(67.5 500 500)" />
+    <use href="#outerPetal" transform="rotate(90 500 500)" />
+    <use href="#outerPetal" transform="rotate(112.5 500 500)" />
+    <use href="#outerPetal" transform="rotate(135 500 500)" />
+    <use href="#outerPetal" transform="rotate(157.5 500 500)" />
+    <use href="#outerPetal" transform="rotate(180 500 500)" />
+    <use href="#outerPetal" transform="rotate(202.5 500 500)" />
+    <use href="#outerPetal" transform="rotate(225 500 500)" />
+    <use href="#outerPetal" transform="rotate(247.5 500 500)" />
+    <use href="#outerPetal" transform="rotate(270 500 500)" />
+    <use href="#outerPetal" transform="rotate(292.5 500 500)" />
+    <use href="#outerPetal" transform="rotate(315 500 500)" />
+    <use href="#outerPetal" transform="rotate(337.5 500 500)" />
+  </g>
+
+  <!-- 8 Inner Lotus Petals (Perfectly tiled) -->
+  <g id="inner-petals">
+    <use href="#innerPetal" />
+    <use href="#innerPetal" transform="rotate(45 500 500)" />
+    <use href="#innerPetal" transform="rotate(90 500 500)" />
+    <use href="#innerPetal" transform="rotate(135 500 500)" />
+    <use href="#innerPetal" transform="rotate(180 500 500)" />
+    <use href="#innerPetal" transform="rotate(225 500 500)" />
+    <use href="#innerPetal" transform="rotate(270 500 500)" />
+    <use href="#innerPetal" transform="rotate(315 500 500)" />
+  </g>
+
+  <!-- 8 Stamens (Rotated to fire precisely between inner petals) -->
+  <g id="stamens">
+    <use href="#stamen" transform="rotate(22.5 500 500)" />
+    <use href="#stamen" transform="rotate(67.5 500 500)" />
+    <use href="#stamen" transform="rotate(112.5 500 500)" />
+    <use href="#stamen" transform="rotate(157.5 500 500)" />
+    <use href="#stamen" transform="rotate(202.5 500 500)" />
+    <use href="#stamen" transform="rotate(247.5 500 500)" />
+    <use href="#stamen" transform="rotate(292.5 500 500)" />
+    <use href="#stamen" transform="rotate(337.5 500 500)" />
+  </g>
+
+  <!-- ================= RESTORED WHITE/RED CENTER GEARS ================= -->
+  
+  <g id="center-gears">
+    <!-- Layer 1: 16-Scallop Black Silhouette -->
+    <circle cx="500" cy="500" r="96" fill="#000000" />
+    <g id="scallop16-black">
+      <use href="#b16B" /><use href="#b16B" transform="rotate(22.5 500 500)" /><use href="#b16B" transform="rotate(45 500 500)" /><use href="#b16B" transform="rotate(67.5 500 500)" />
+      <use href="#b16B" transform="rotate(90 500 500)" /><use href="#b16B" transform="rotate(112.5 500 500)" /><use href="#b16B" transform="rotate(135 500 500)" /><use href="#b16B" transform="rotate(157.5 500 500)" />
+      <use href="#b16B" transform="rotate(180 500 500)" /><use href="#b16B" transform="rotate(202.5 500 500)" /><use href="#b16B" transform="rotate(225 500 500)" /><use href="#b16B" transform="rotate(247.5 500 500)" />
+      <use href="#b16B" transform="rotate(270 500 500)" /><use href="#b16B" transform="rotate(292.5 500 500)" /><use href="#b16B" transform="rotate(315 500 500)" /><use href="#b16B" transform="rotate(337.5 500 500)" />
+    </g>
+
+    <!-- Layer 2: 16-Scallop White Fill -->
+    <circle cx="500" cy="500" r="93" fill="#FFFFFF" />
+    <g id="scallop16-white">
+      <use href="#b16W" /><use href="#b16W" transform="rotate(22.5 500 500)" /><use href="#b16W" transform="rotate(45 500 500)" /><use href="#b16W" transform="rotate(67.5 500 500)" />
+      <use href="#b16W" transform="rotate(90 500 500)" /><use href="#b16W" transform="rotate(112.5 500 500)" /><use href="#b16W" transform="rotate(135 500 500)" /><use href="#b16W" transform="rotate(157.5 500 500)" />
+      <use href="#b16W" transform="rotate(180 500 500)" /><use href="#b16W" transform="rotate(202.5 500 500)" /><use href="#b16W" transform="rotate(225 500 500)" /><use href="#b16W" transform="rotate(247.5 500 500)" />
+      <use href="#b16W" transform="rotate(270 500 500)" /><use href="#b16W" transform="rotate(292.5 500 500)" /><use href="#b16W" transform="rotate(315 500 500)" /><use href="#b16W" transform="rotate(337.5 500 500)" />
+    </g>
+
+    <!-- Layer 3: Inner Red Ring -->
+    <circle cx="500" cy="500" r="65" fill="#000000" />
+    <circle cx="500" cy="500" r="62" fill="#C1272C" />
+
+    <!-- Layer 4: 8-Scallop Black Silhouette -->
+    <circle cx="500" cy="500" r="47" fill="#000000" />
+    <g id="scallop8-black">
+      <use href="#b8B" /><use href="#b8B" transform="rotate(45 500 500)" /><use href="#b8B" transform="rotate(90 500 500)" /><use href="#b8B" transform="rotate(135 500 500)" />
+      <use href="#b8B" transform="rotate(180 500 500)" /><use href="#b8B" transform="rotate(225 500 500)" /><use href="#b8B" transform="rotate(270 500 500)" /><use href="#b8B" transform="rotate(315 500 500)" />
+    </g>
+
+    <!-- Layer 5: 8-Scallop White Fill -->
+    <circle cx="500" cy="500" r="44" fill="#FFFFFF" />
+    <g id="scallop8-white">
+      <use href="#b8W" /><use href="#b8W" transform="rotate(45 500 500)" /><use href="#b8W" transform="rotate(90 500 500)" /><use href="#b8W" transform="rotate(135 500 500)" />
+      <use href="#b8W" transform="rotate(180 500 500)" /><use href="#b8W" transform="rotate(225 500 500)" /><use href="#b8W" transform="rotate(270 500 500)" /><use href="#b8W" transform="rotate(315 500 500)" />
+    </g>
+
+    <!-- Layer 6: Absolute Center Yellow Dot -->
+    <circle cx="500" cy="500" r="17" fill="#000000" />
+    <circle cx="500" cy="500" r="14" fill="#FFF400" />
+  </g>
+
+  <!-- ================= TYPOGRAPHY & SEPARATORS ================= -->
+
+  <!-- Separator Dots -->
+  <circle cx="145" cy="500" r="14" fill="#000000" />
+  <circle cx="855" cy="500" r="14" fill="#000000" />
+
+  <!-- Top Text -->
+  <text font-family="'Noto Sans Sinhala', sans-serif" font-size="76" font-weight="bold" fill="#000000" letter-spacing="0">
+    <textPath href="#top-arc" startOffset="50%" text-anchor="middle" dominant-baseline="central">විජ්ජා උප්පත්තං සෙට්ඨා</textPath>
+  </text>
+  
+  <!-- Bottom Text -->
+  <text font-family="'Noto Sans Sinhala', sans-serif" font-size="76" font-weight="bold" fill="#000000" letter-spacing="0">
+    <textPath href="#bottom-arc" startOffset="50%" text-anchor="middle" dominant-baseline="central">ශ්‍රී ජයවර්ධනපුර විශ්වවිද්‍යාලය</textPath>
+  </text>
+</svg>

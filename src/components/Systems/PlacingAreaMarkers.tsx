@@ -48,18 +48,18 @@ export function PlacingAreaMarkers({
 
 // Reusable materials (created once)
 const fillMaterial = new THREE.MeshBasicMaterial({
-  color: new THREE.Color(0.1, 0.9, 0.4),
+  color: new THREE.Color("#4ade80"),
   transparent: true,
-  opacity: 0.2,
+  opacity: 0.15,
   depthWrite: false,
   side: THREE.DoubleSide,
 });
 
 const borderMaterial = new THREE.MeshBasicMaterial({
-  color: new THREE.Color(0.2, 1.0, 0.5),
+  color: new THREE.Color("#4ade80"),
   wireframe: true,
   transparent: true,
-  opacity: 0.45,
+  opacity: 0.35,
 });
 
 function AreaMarker({ area }: { area: PlacingArea }) {
@@ -117,7 +117,7 @@ function AreaMarker({ area }: { area: PlacingArea }) {
       ].map(([cx, cz], i) => (
         <mesh key={i} position={[cx, 0.15, cz]}>
           <boxGeometry args={[0.15, 0.3, 0.15]} />
-          <meshBasicMaterial color="#00ff66" transparent opacity={0.5} />
+          <meshBasicMaterial color="#4ade80" transparent opacity={0.4} />
         </mesh>
       ))}
     </group>
@@ -148,12 +148,12 @@ function PlacingTargetMarker() {
       {/* Downward pointing cone/pyramid */}
       <mesh rotation={[Math.PI, 0, 0]}>
         <coneGeometry args={[0.2, 0.5, 4]} />
-        <meshBasicMaterial color="#ffff00" transparent opacity={0.8} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.7} />
       </mesh>
       {/* Shadow/Spot on surface */}
       <mesh position={[0, -0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.1, 0.15, 16]} />
-        <meshBasicMaterial color="#ffff00" side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} transparent opacity={0.5} />
       </mesh>
     </group>
   );

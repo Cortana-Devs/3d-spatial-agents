@@ -142,7 +142,7 @@ class NavigationNetwork {
     if (this.isBuilt && hash === this.lastObstacleHash) return;
     this.lastObstacleHash = hash;
 
-    console.log(
+    console.debug(
       `[NavNetwork] Rebuilding grid: ${this.cols}x${this.rows} = ${this.cols * this.rows} cells, ${obstacles.length} obstacles`,
     );
 
@@ -169,7 +169,7 @@ class NavigationNetwork {
     for (let i = 0; i < this.grid.length; i++) {
       if (this.grid[i] === 1) walkable++;
     }
-    console.log(
+    console.debug(
       `[NavNetwork] Grid built: ${walkable} walkable / ${this.grid.length} total cells`,
     );
   }
@@ -289,9 +289,6 @@ class NavigationNetwork {
 
     // If start is blocked, find nearest walkable
     if (!this.isWalkable(startCell.col, startCell.row)) {
-      console.warn(
-        `[NavNetwork] Start cell (${startCell.col},${startCell.row}) is blocked — finding nearest walkable`,
-      );
       const alt = this.findNearestWalkable(
         startCell.col,
         startCell.row,
@@ -299,13 +296,14 @@ class NavigationNetwork {
         endCell.row,
       );
       if (!alt) {
-        console.warn(`[NavNetwork] No walkable cell near start!`);
+        console.warn(`[NavNetwork] Start cell (${startCell.col},${startCell.row}) is blocked and no fallback found!`);
         return {
           path: [],
           approachPos: to.clone(),
           pathFound: false,
         };
       }
+      console.debug(`[NavNetwork] Start cell blocked - using nearest walkable at (${alt.col},${alt.row})`);
       startCell = alt;
     }
 
@@ -313,9 +311,6 @@ class NavigationNetwork {
     // and record the actual approach position for the caller.
     let approachPos = to.clone();
     if (!this.isWalkable(endCell.col, endCell.row)) {
-      console.warn(
-        `[NavNetwork] End cell (${endCell.col},${endCell.row}) is blocked — finding nearest walkable`,
-      );
       const alt = this.findNearestWalkable(
         endCell.col,
         endCell.row,
@@ -323,7 +318,7 @@ class NavigationNetwork {
         startCell.row,
       );
       if (!alt) {
-        console.warn(`[NavNetwork] No walkable cell near end!`);
+        console.warn(`[NavNetwork] End cell (${endCell.col},${endCell.row}) is blocked and no fallback found!`);
         // Fix #3: return empty path instead of direct path into walls
         return {
           path: [],
@@ -331,6 +326,7 @@ class NavigationNetwork {
           pathFound: false,
         };
       }
+      console.debug(`[NavNetwork] End cell blocked - using nearest walkable at (${alt.col},${alt.row})`);
       endCell = alt;
       // Fix #2: The approach position is the center of the walkable cell we found
       const wp = this.gridToWorld(alt.col, alt.row);

@@ -27,13 +27,13 @@ const panelStyle: React.CSSProperties = {
   transform: "translate(-50%, -50%)",
   width: "480px",
   maxHeight: "80vh",
-  background: "rgba(10, 10, 20, 0.92)",
-  backdropFilter: "blur(20px)",
-  border: "1px solid rgba(100, 140, 255, 0.25)",
-  borderRadius: "16px",
+  background: "var(--ui-bg)",
+  backdropFilter: "blur(var(--ui-blur))",
+  border: "1px solid var(--ui-border)",
+  borderRadius: "var(--radius-md)",
   padding: "24px",
-  color: "#e0e8ff",
-  fontFamily: "'Inter', 'Segoe UI', sans-serif",
+  color: "var(--foreground)",
+  fontFamily: "inherit",
   fontSize: "14px",
   zIndex: 2000,
   boxShadow:
@@ -45,7 +45,7 @@ const headerStyle: React.CSSProperties = {
   fontSize: "18px",
   fontWeight: 700,
   margin: "0 0 4px 0",
-  color: "#a0c0ff",
+  color: "var(--color-primary)",
   letterSpacing: "-0.3px",
 };
 
@@ -63,9 +63,9 @@ const stepDotStyle = (
   height: "8px",
   borderRadius: "50%",
   background: completed
-    ? "#5080ff"
+    ? "var(--color-success)"
     : active
-      ? "#80b0ff"
+      ? "var(--color-primary)"
       : "rgba(255,255,255,0.15)",
   transition: "background 0.3s ease",
 });
@@ -73,14 +73,14 @@ const stepDotStyle = (
 const itemStyle = (selected: boolean): React.CSSProperties => ({
   padding: "10px 14px",
   margin: "4px 0",
-  borderRadius: "10px",
+  borderRadius: "var(--radius-sm)",
   cursor: "pointer",
   background: selected
-    ? "rgba(80, 128, 255, 0.25)"
-    : "rgba(255, 255, 255, 0.04)",
+    ? "var(--color-success-bg)"
+    : "var(--color-agent-bg)",
   border: selected
-    ? "1px solid rgba(80, 128, 255, 0.6)"
-    : "1px solid rgba(255, 255, 255, 0.06)",
+    ? "1px solid var(--color-success)"
+    : "1px solid var(--ui-border)",
   transition: "all 0.15s ease",
   display: "flex",
   alignItems: "center",
@@ -89,24 +89,24 @@ const itemStyle = (selected: boolean): React.CSSProperties => ({
 
 const btnStyle = (primary: boolean): React.CSSProperties => ({
   padding: "8px 20px",
-  borderRadius: "8px",
+  borderRadius: "var(--radius-sm)",
   border: "none",
   cursor: "pointer",
   fontWeight: 600,
   fontSize: "13px",
   background: primary
-    ? "linear-gradient(135deg, #3060d0, #5080ff)"
-    : "rgba(255, 255, 255, 0.08)",
-  color: primary ? "#fff" : "#8098cc",
+    ? "var(--color-success)"
+    : "var(--color-agent-bg)",
+  color: "#fff",
   transition: "all 0.15s ease",
 });
 
 const taskItemStyle: React.CSSProperties = {
   padding: "8px 12px",
   margin: "4px 0",
-  borderRadius: "8px",
-  background: "rgba(255, 255, 255, 0.04)",
-  border: "1px solid rgba(255, 255, 255, 0.06)",
+  borderRadius: "var(--radius-sm)",
+  background: "var(--color-agent-bg)",
+  border: "1px solid var(--ui-border)",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
@@ -119,9 +119,17 @@ const statusBadgeStyle = (phase: string): React.CSSProperties => ({
   fontSize: "11px",
   fontWeight: 600,
   background:
-    phase === "IDLE" ? "rgba(80, 200, 120, 0.2)" : "rgba(255, 180, 50, 0.2)",
-  color: phase === "IDLE" ? "#60d080" : "#ffb040",
+    phase === "IDLE" ? "var(--color-success-bg)" : "var(--color-danger-bg)",
+  color: phase === "IDLE" ? "var(--color-success)" : "var(--color-danger)",
 });
+
+function formatAgentLabel(agentId: string): string {
+  const match = /^agent-0*(\d+)$/.exec(agentId);
+  if (match) {
+    return `Assistance ${match[1]}`;
+  }
+  return agentId;
+}
 
 // ============================================================================
 // Component
@@ -197,8 +205,6 @@ export function TaskAssignmentPanel() {
           : null;
         return `📥 Place → ${area?.name || task.destAreaId}`;
       }
-      case "FETCH_AND_PLACE":
-        return `🔄 Fetch & Place`;
       case "FOLLOW_PLAYER":
         return `🏃 Follow Player`;
       default:
@@ -211,7 +217,7 @@ export function TaskAssignmentPanel() {
   // ==========================================================================
   const renderAgentStep = () => (
     <div>
-      <p style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}>
+      <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 12px 0", fontSize: "13px" }}>
         Select an agent to assign tasks to:
       </p>
       {agentIds.length === 0 ? (
@@ -220,7 +226,7 @@ export function TaskAssignmentPanel() {
           scene.
         </p>
       ) : (
-        agentIds.map((id) => {
+        agentIds.map((id: string) => {
           const status = AgentTaskRegistry.getInstance().getQueueStatus(id);
           return (
             <div
@@ -232,16 +238,18 @@ export function TaskAssignmentPanel() {
               }}
               onMouseEnter={(e) => {
                 if (selectedAgent !== id)
-                  e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                  e.currentTarget.style.background = "var(--color-agent-bg)";
               }}
               onMouseLeave={(e) => {
                 if (selectedAgent !== id)
-                  e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  e.currentTarget.style.background = "transparent";
               }}
             >
               <span style={{ fontSize: "20px" }}>🤖</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{id}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {formatAgentLabel(id)}
+                </div>
                 <div style={{ fontSize: "11px", color: "#6080aa" }}>
                   AI Research Lab Assistant
                 </div>
@@ -259,9 +267,12 @@ export function TaskAssignmentPanel() {
   // ==========================================================================
   const renderActionStep = () => (
     <div>
-      <p style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}>
+      <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 12px 0", fontSize: "13px" }}>
         Select action for{" "}
-        <strong style={{ color: "#80b0ff" }}>{selectedAgent}</strong>:
+        <strong style={{ color: "var(--color-success)" }}>
+          {selectedAgent ? formatAgentLabel(selectedAgent) : ""}
+        </strong>
+        :
       </p>
       {ACTIONS.map((action) => {
         // Capacity check: Can't fetch if already carrying or if queue has a fetch without a place
@@ -272,7 +283,7 @@ export function TaskAssignmentPanel() {
           const carriedItems =
             InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
           const hasPendingFetch = pendingTasks.some(
-            (t) => t.type === "PICK_NEARBY" || t.type === "FETCH_AND_PLACE",
+            (t) => t.type === "PICK_NEARBY",
           );
           const hasPendingPlace = pendingTasks.some(
             (t) => t.type === "PLACE_INVENTORY",
@@ -292,7 +303,7 @@ export function TaskAssignmentPanel() {
           const carriedItems =
             InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
           const hasPendingFetch = pendingTasks.some(
-            (t) => t.type === "PICK_NEARBY" || t.type === "FETCH_AND_PLACE",
+            (t) => t.type === "PICK_NEARBY",
           );
 
           if (carriedItems.length === 0 && !hasPendingFetch) {
@@ -344,7 +355,7 @@ export function TaskAssignmentPanel() {
       return (
         <div>
           <p
-            style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}
+            style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 12px 0", fontSize: "13px" }}
           >
             Select item to pick up:
           </p>
@@ -374,10 +385,10 @@ export function TaskAssignmentPanel() {
                   setAction(null);
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.08)")
+                  (e.currentTarget.style.background = "var(--color-agent-bg)")
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.04)")
+                  (e.currentTarget.style.background = "transparent")
                 }
               >
                 <span style={{ fontSize: "16px" }}>📦</span>
@@ -399,7 +410,7 @@ export function TaskAssignmentPanel() {
       return (
         <div>
           <p
-            style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}
+            style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 12px 0", fontSize: "13px" }}
           >
             Confirm task:
           </p>
@@ -431,7 +442,7 @@ export function TaskAssignmentPanel() {
       return (
         <div>
           <p
-            style={{ color: "#6080aa", margin: "0 0 12px 0", fontSize: "13px" }}
+            style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 12px 0", fontSize: "13px" }}
           >
             Select placing area:
           </p>
@@ -489,9 +500,12 @@ export function TaskAssignmentPanel() {
   // ==========================================================================
   const renderReviewStep = () => (
     <div>
-      <p style={{ color: "#6080aa", margin: "0 0 8px 0", fontSize: "13px" }}>
+      <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 8px 0", fontSize: "13px" }}>
         Task queue for{" "}
-        <strong style={{ color: "#80b0ff" }}>{selectedAgent}</strong>:
+        <strong style={{ color: "var(--color-success)" }}>
+          {selectedAgent ? formatAgentLabel(selectedAgent) : ""}
+        </strong>
+        :
       </p>
 
       {pendingTasks.length === 0 ? (
@@ -563,17 +577,17 @@ export function TaskAssignmentPanel() {
       >
         <div>
           <h2 style={headerStyle}>⚡ Task Assignment</h2>
-          <p style={{ color: "#6080aa", margin: 0, fontSize: "12px" }}>
+          <p style={{ color: "rgba(255,255,255,0.4)", margin: 0, fontSize: "12px" }}>
             {stepLabels[step]} — Step {step + 1} of {stepLabels.length}
           </p>
         </div>
         <button
           onClick={handleClose}
           style={{
-            background: "rgba(255, 80, 80, 0.15)",
-            border: "1px solid rgba(255, 80, 80, 0.3)",
-            color: "#ff6060",
-            borderRadius: "8px",
+            background: "var(--color-danger-bg)",
+            border: "1px solid var(--color-danger)",
+            color: "var(--color-danger)",
+            borderRadius: "var(--radius-sm)",
             padding: "6px 12px",
             cursor: "pointer",
             fontSize: "13px",
@@ -600,7 +614,7 @@ export function TaskAssignmentPanel() {
               style={{
                 fontSize: "11px",
                 color:
-                  i === step ? "#80b0ff" : i < step ? "#5080ff" : "#405070",
+                  i === step ? "var(--color-primary)" : i < step ? "var(--color-success)" : "rgba(255,255,255,0.3)",
                 fontWeight: i === step ? 600 : 400,
               }}
             >
@@ -633,13 +647,13 @@ export function TaskAssignmentPanel() {
         style={{
           marginTop: "16px",
           paddingTop: "12px",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid var(--ui-border)",
           fontSize: "11px",
-          color: "#405070",
+          color: "rgba(255,255,255,0.3)",
           textAlign: "center",
         }}
       >
-        Press <span style={{ color: "#6080aa" }}>M</span> to close • Click to
+        Press <span style={{ color: "var(--color-success)" }}>M</span> to close • Click to
         select
       </div>
     </div>

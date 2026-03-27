@@ -29,6 +29,7 @@ export class MemoryStream {
    * Heuristic importance is calculated here to avoid LLM calls.
    */
   async add(
+    agentId: string | undefined, // Added parameter
     type: MemoryType,
     content: string,
     tags: string[] = [],
@@ -37,6 +38,7 @@ export class MemoryStream {
     const importance = this.calculateHeuristicImportance(type, tags);
     const memory: MemoryObject = {
       id: uuidv4(),
+      agentId,
       type,
       content,
       timestamp: Date.now(),
@@ -60,6 +62,10 @@ export class MemoryStream {
 
     // 1. Filter
     let candidates = allMemories;
+    if (context.agentId) {
+       // Get global memories (no agentId) AND agent's own memories
+       candidates = candidates.filter(m => !m.agentId || m.agentId === context.agentId);
+    }
     if (context.tags && context.tags.length > 0) {
       candidates = candidates.filter(
         (m) =>
@@ -116,6 +122,7 @@ export class MemoryStream {
   async reset(): Promise<void> {
     await memoryStorage.clearAll();
     await this.add(
+      "system",
       "OBSERVATION",
       "SESSION_START: All previous memories have been cleared. Begin fresh observation from current state. Do not reference any earlier session.",
       ["session", "reset"],
@@ -173,6 +180,7 @@ export class MemoryStream {
         // Add Insight
         const insight: MemoryObject = {
           id: uuidv4(),
+          agentId: sessionId?.split('-')[0] || "system", // Optional mapping
           type: "THOUGHT",
           content: `[REFLECTION] ${summary}`,
           timestamp: Date.now(),

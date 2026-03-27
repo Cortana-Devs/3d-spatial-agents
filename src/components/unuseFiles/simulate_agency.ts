@@ -43,7 +43,8 @@ async function runSimulation() {
         console.log("Input Context:", JSON.stringify(contextAlone));
         const response1 = await processAgentThought(contextAlone);
         console.log("Raw Response 1:", response1);
-        const json1 = JSON.parse(response1.replace(/```json/g, '').replace(/```/g, '').trim());
+        const resp1Content = (response1 as any).content || response1;
+        const json1 = JSON.parse(resp1Content.replace(/```json/g, '').replace(/```/g, '').trim());
         console.log("Parsed Decision:", json1);
         if (json1.action === 'WANDER' || json1.action === 'WAIT') console.log("Result: PASS (Valid Action)");
         else console.log("Result: PASS (AI chose something else, but valid JSON)");
@@ -64,7 +65,8 @@ async function runSimulation() {
         console.log("Input Context:", JSON.stringify(contextPlayer));
         const response2 = await processAgentThought(contextPlayer);
         console.log("Raw Response 2:", response2);
-        const json2 = JSON.parse(response2.replace(/```json/g, '').replace(/```/g, '').trim());
+        const resp2Content = (response2 as any).content || response2;
+        const json2 = JSON.parse(resp2Content.replace(/```json/g, '').replace(/```/g, '').trim());
         console.log("Parsed Decision:", json2);
 
         if (json2.action === 'FOLLOW' && json2.targetId === 'player-01') {

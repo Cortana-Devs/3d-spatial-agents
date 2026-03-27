@@ -190,7 +190,7 @@ export default function DebugCrosshair() {
           <mesh renderOrder={999} userData={{ isDebug: true }}>
             <ringGeometry args={[0.15, 0.18, 32]} />
             <meshBasicMaterial
-              color="#00ff00"
+              color="#4ade80"
               depthTest={false}
               depthWrite={false}
               transparent
@@ -202,7 +202,7 @@ export default function DebugCrosshair() {
           <mesh renderOrder={999} userData={{ isDebug: true }}>
             <circleGeometry args={[0.03, 32]} />
             <meshBasicMaterial
-              color="#00ff00"
+              color="#4ade80"
               depthTest={false}
               depthWrite={false}
               transparent
