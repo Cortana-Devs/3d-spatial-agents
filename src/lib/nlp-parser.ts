@@ -1,9 +1,9 @@
-import { InteractableRegistry } from '@/components/systems/InteractableRegistry';
-import { AgentTaskRegistry } from '@/components/systems/AgentTaskQueue';
+import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
+import { AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
 import type {
   AgentTask,
   AgentTaskType,
-} from '@/components/systems/AgentTaskQueue';
+} from "@/components/systems/AgentTaskQueue";
 import * as THREE from "three";
 
 // ============================================================================
@@ -23,10 +23,14 @@ export function buildWorldContext(
   const registry = InteractableRegistry.getInstance();
   const taskRegistry = AgentTaskRegistry.getInstance();
 
-  // A=available, C=carried, X=claimed. LLM should only pick (A) items. (Doors are also exposed)
+  // Only include items that are NOT currently carried or claimed by others.
   let allItems = registry
     .getAll()
-    .filter((o) => o.pickable || o.type === "door");
+    .filter(
+      (o) =>
+        (o.pickable && !o.carriedBy && !registry.isItemClaimed(o.id)) ||
+        o.type === "door",
+    );
   if (origin && radius) {
     const rSq = radius * radius;
     allItems = allItems.filter(
@@ -34,25 +38,26 @@ export function buildWorldContext(
     );
   }
 
+  // Shorten formatting, omit positional tuples to save tokens. LLM doesn't need to do 3D math.
   const itemRows = allItems.map((item) => {
-    const status = item.carriedBy
-      ? "C"
-      : registry.isItemClaimed(item.id)
-        ? "X"
-        : "A";
-    const loc = item.placedInArea ? "Placed" : "OnFloor";
-    const home = item.homeAreaId || "none";
-    const pos = `(${item.position.x.toFixed(1)}, ${item.position.y.toFixed(1)}, ${item.position.z.toFixed(1)})`;
-    return `${item.id}|${item.name}|${item.type}|${status}|${loc}|Pos:${pos}|Home:${home}`;
+    const loc = item.placedInArea ? "Placed" : "Floor";
+    const home = item.homeAreaId || "-";
+    let distanceStr = "";
+    if (origin) {
+      const dist = Math.sqrt(item.position.distanceToSquared(origin));
+      distanceStr = `[${dist.toFixed(1)}m away]`;
+    }
+    return `${item.id}|${item.name}|${item.type}|${loc}|Home:${home} ${distanceStr}`.trim();
   });
   const items =
     itemRows.length > 0
-      ? `A=available,C=carried,X=claimed. Only pick (A) items.\nID|Name|Type|Status|Location|Position|HomeArea\n${itemRows.join("\n")}`
-      : "No pickable items.";
+      ? `ID|Name|Type|Location|HomeArea\n${itemRows.join("\n")}`
+      : "No pickable items nearby.";
 
   // --- Placing Areas: ALL areas, grouped by furniture for token efficiency ---
   // Format: "Furniture Name: id(E), id(O)" where E=empty, O=occupied
-  let allAreas = registry.getAllPlacingAreas();
+  // Only include empty placing areas to save tokens
+  let allAreas = registry.getAllPlacingAreas().filter((a) => !a.currentItem);
   if (origin && radius) {
     const rSq = radius * radius;
     allAreas = allAreas.filter(
@@ -71,17 +76,13 @@ export function buildWorldContext(
   }
   const areaLines: string[] = [];
   for (const [name, slots] of grouped) {
-    const slotStrs = slots.map((s) => {
-        const area = allAreas.find(a => a.id === s.id);
-        const pos = area ? `(${area.position.x.toFixed(1)}, ${area.position.y.toFixed(1)}, ${area.position.z.toFixed(1)})` : "?";
-        return `${s.id}(${s.empty ? "E" : "O"}, ${pos})`;
-    });
+    const slotStrs = slots.map((s) => s.id);
     areaLines.push(`${name}: ${slotStrs.join(", ")}`);
   }
   const areas =
     areaLines.length > 0
-      ? `E=empty, O=occupied. Only use IDs marked (E).\n${areaLines.join("\n")}`
-      : "No placing areas.";
+      ? `Available Empty Areas:\n${areaLines.join("\n")}`
+      : "No empty areas nearby.";
 
   // --- Agents ---
   const agentIds = taskRegistry.getAllAgentIds();
@@ -114,7 +115,7 @@ ${ctx.agents}
 
 TASKS: FETCH_AND_PLACE(itemId,destAreaId), PICK_NEARBY(itemId), PLACE_INVENTORY(destAreaId), FOLLOW_PLAYER(), INTERACT(itemId)
 
-RULES: Use EXACT IDs from tables. Only pick items marked (A). destAreaId MUST be an (E) empty slot. Pick IDLE agent. "move X to Y"=FETCH_AND_PLACE. "clean up"=FETCH_AND_PLACE for items with Location=OnFloor to their HomeArea. "pick up X"=PICK_NEARBY. "follow me"=FOLLOW_PLAYER. "open/close X" = INTERACT(itemId).
+RULES: Use EXACT IDs from tables. Pick an IDLE agent. "move X to Y"=FETCH_AND_PLACE. "clean up"=FETCH_AND_PLACE for items with Location=Floor to their HomeArea. "pick up X"=PICK_NEARBY. "follow me"=FOLLOW_PLAYER. "open/close X" = INTERACT(itemId).
 
 COMMAND: "${command}"
 

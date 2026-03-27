@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import AIManager from "@/components/systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
-import { useProceduralGait } from '@/components/agent/useProceduralGait';
+import { useProceduralGait } from "@/components/agent/useProceduralGait";
 
 import { ClientBrain } from "@/components/systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-core";
@@ -64,6 +64,7 @@ export function useAgentBrain(
   const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
   const greetingTimer = useRef(0);
   const socialCheckTimer = useRef(0);
+  const lastMinimapPos = useRef(new THREE.Vector3(0, -999, 0));
 
   // Player Proximity Chat State
   const playerProximityState = useRef<
@@ -195,14 +196,17 @@ export function useAgentBrain(
   // Show "Meeting in the meeting room" in thought bubble when another agent announces a meeting
   useEffect(() => {
     const handler = (e: Event) => {
-      const { agentId: targetId, message } = (e as CustomEvent<{ agentId: string; message: string }>).detail;
+      const { agentId: targetId, message } = (
+        e as CustomEvent<{ agentId: string; message: string }>
+      ).detail;
       if (targetId !== id) return;
       const brain = brainRef.current;
       brain.state.thought = message;
       brain.state.lastThoughtTime = Date.now();
     };
     window.addEventListener("agent-meeting-announcement", handler);
-    return () => window.removeEventListener("agent-meeting-announcement", handler);
+    return () =>
+      window.removeEventListener("agent-meeting-announcement", handler);
   }, [id]);
 
   // --- ANIMATION STATE ---
@@ -224,9 +228,9 @@ export function useAgentBrain(
 
     // Sync initial position — XZ from the group reference is correct.
     // Y is *always* forced to FLOOR_Y (5.5) regardless of where groupRef.current
-    // drifted to in previous frames. This reflects the real lab floor surface 
+    // drifted to in previous frames. This reflects the real lab floor surface
     // at Y=5.5 (ground-main).
-    const FLOOR_Y = 5.5; 
+    const FLOOR_Y = 5.5;
     vehicle.position.set(
       groupRef.current.position.x,
       FLOOR_Y,
@@ -238,7 +242,11 @@ export function useAgentBrain(
     vehicle.rotation.copy(
       groupRef.current.quaternion as unknown as YUKA.Quaternion,
     );
-    lastGroundedPosRef.current.set(groupRef.current.position.x, FLOOR_Y, groupRef.current.position.z);
+    lastGroundedPosRef.current.set(
+      groupRef.current.position.x,
+      FLOOR_Y,
+      groupRef.current.position.z,
+    );
 
     // Render Component (Sync Yuka -> Three)
     vehicle.setRenderComponent(groupRef.current, (entity, renderComponent) => {
@@ -341,11 +349,7 @@ export function useAgentBrain(
 
     let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
     if (!isInteractingWithPlayer) {
-      steeringCmd = taskQueue.update(
-        delta,
-        vehiclePos,
-        playerPos,
-      );
+      steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
     }
     const hasManualTask = taskQueue.isBusy();
 
@@ -371,15 +375,24 @@ export function useAgentBrain(
     }
 
     // --- ANTICIPATORY DECELERATION ---
-    // Dynamically adjust maxSpeed based on angular turning. If the agent needs to 
+    // Dynamically adjust maxSpeed based on angular turning. If the agent needs to
     // make a sharp turn to reach its target or waypoint, it slows down rather than drifting.
     const currentSpeed = vehicle.velocity.length();
     let targetSpeed = 5.5; // Default max speed
 
-    if (currentSpeed > 0.5 && (bFollowPath.active || bSeek.active || bArrive.active)) {
+    if (
+      currentSpeed > 0.5 &&
+      (bFollowPath.active || bSeek.active || bArrive.active)
+    ) {
       // Find the velocity heading vs the current facing direction
-      const velDir = new THREE.Vector3(vehicle.velocity.x, vehicle.velocity.y, vehicle.velocity.z).normalize();
-      const faceDir = new THREE.Vector3(0, 0, 1).applyQuaternion(vehicle.rotation as unknown as THREE.Quaternion);
+      const velDir = new THREE.Vector3(
+        vehicle.velocity.x,
+        vehicle.velocity.y,
+        vehicle.velocity.z,
+      ).normalize();
+      const faceDir = new THREE.Vector3(0, 0, 1).applyQuaternion(
+        vehicle.rotation as unknown as THREE.Quaternion,
+      );
       const dot = velDir.dot(faceDir);
 
       // dot < 0.7 means a sharp turn is happening (> ~45 degrees difference)
@@ -392,10 +405,9 @@ export function useAgentBrain(
         }
       }
     }
-    
+
     // Smoothly interpolate maxSpeed to prevent jerky braking
     vehicle.maxSpeed += (targetSpeed - vehicle.maxSpeed) * 0.1;
-
 
     // Apply steering command from task queue (if active)
     if (steeringCmd.type !== "NONE") {
@@ -479,7 +491,7 @@ export function useAgentBrain(
           raycaster.set(rayOrigin, dir);
           raycaster.far = 3.0;
 
-          const hits = raycaster.intersectObjects(collidableMeshes, true);
+          const hits = raycaster.intersectObjects(collidableMeshes, false);
           if (hits.length > 0) {
             const hit = hits[0];
             const dist = hit.distance;
@@ -532,8 +544,10 @@ export function useAgentBrain(
         if (speed < 0.5 && (totalPushX !== 0 || totalPushZ !== 0)) {
           // Add a sideways "wiggle" force to break out of U-shaped local minima
           const escapeForce = 5.0;
-          totalPushX += escapeForce * Math.sign(Math.sin(frameRef.current * 0.1));
-          totalPushZ += escapeForce * Math.sign(Math.cos(frameRef.current * 0.1));
+          totalPushX +=
+            escapeForce * Math.sign(Math.sin(frameRef.current * 0.1));
+          totalPushZ +=
+            escapeForce * Math.sign(Math.cos(frameRef.current * 0.1));
         }
 
         // Clamp total push magnitude to prevent teleports
@@ -600,11 +614,11 @@ export function useAgentBrain(
           // Update brain thought to reflect greeting
           brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). Greeting and offering assistance.`;
           brain.state.lastThoughtTime = Date.now();
-          
+
           window.dispatchEvent(
             new CustomEvent("subconscious-speak", {
               detail: { agentId: id, text: getRandomPhrase("GREETINGS") },
-            })
+            }),
           );
         }
       } else if (playerProximityState.current === "GREETING") {
@@ -761,21 +775,22 @@ export function useAgentBrain(
       const raycaster = raycasterRef.current;
       const rayOrigin = rayOriginRef.current;
 
+      // Cast from just above max step height to prevent snapping to high ceilings/objects
+      const MAX_STEP_UP = 2.0;
       rayOrigin.set(
         vehicle.position.x,
-        vehicle.position.y + 20.0, // Increased to match player controller robustness
+        vehicle.position.y + MAX_STEP_UP + 0.1,
         vehicle.position.z,
       );
       raycaster.set(rayOrigin, rayDirRef.current);
 
-      const hits = raycaster.intersectObjects(collidableMeshes, true);
+      const hits = raycaster.intersectObjects(collidableMeshes, false);
       let groundHeight = -100;
       let foundGround = false;
 
       // Maximum height the agent can "step up" onto.
-      // Increased to 2.0 to ensure recovery if agents ever fall below floor slab. 
+      // Increased to 2.0 to ensure recovery if agents ever fall below floor slab.
       // Higher than this is still ignored as furniture (workbenches, tables).
-      const MAX_STEP_UP = 2.0;
       const currentY = vehicle.position.y;
 
       if (hits.length > 0) {
@@ -785,8 +800,8 @@ export function useAgentBrain(
         );
 
         // Separate hits into reachable (floor-level) vs elevated (furniture)
-        let bestFloorHit = -100;  // Lowest valid surface (the actual floor)
-        let bestStepHit = -100;   // Surfaces within step-up range
+        let bestFloorHit = -100; // Lowest valid surface (the actual floor)
+        let bestStepHit = -100; // Surfaces within step-up range
 
         for (const hit of validHits) {
           if (hit.point.y >= rayOrigin.y) continue; // Above ray origin — skip
@@ -834,7 +849,8 @@ export function useAgentBrain(
       }
 
       // Safety clamp: if agent falls into the void, snap back to last known good ground.
-      if (vehicle.position.y < -15) { // Void fall safety
+      if (vehicle.position.y < -15) {
+        // Void fall safety
         vehicle.position.x = lastGroundedPosRef.current.x;
         vehicle.position.y = lastGroundedPosRef.current.y;
         vehicle.position.z = lastGroundedPosRef.current.z;
@@ -844,7 +860,11 @@ export function useAgentBrain(
         }
       } else if (foundGround && groundHeight > -1.5) {
         // Continuously track the last safe location while on stable ground
-        lastGroundedPosRef.current.set(vehicle.position.x, groundHeight, vehicle.position.z);
+        lastGroundedPosRef.current.set(
+          vehicle.position.x,
+          groundHeight,
+          vehicle.position.z,
+        );
       }
     }
 
@@ -861,7 +881,9 @@ export function useAgentBrain(
       // Throttle brain based on distance
       let shouldSkipDueToDistance = false;
       if (playerRef.current) {
-        const d = vehicle.position.distanceTo(playerRef.current.position as unknown as YUKA.Vector3);
+        const d = vehicle.position.distanceTo(
+          playerRef.current.position as unknown as YUKA.Vector3,
+        );
         if (d > 50 && Math.random() < 0.66) shouldSkipDueToDistance = true;
         else if (d > 25 && Math.random() < 0.5) shouldSkipDueToDistance = true;
       }
@@ -879,7 +901,6 @@ export function useAgentBrain(
           `[useAgentBrain:${id}] Brain gate: SKIPPING (busy, priority=${taskQueue.getCurrentTask()?.priority}, phase=${taskQueue.getCurrentPhase()})`,
         ); */
       } else {
-
         // --- DRIVE & EVENT MANAGER ---
         let currentBehavior = "IDLE";
         if (vehicle.steering.behaviors[1].active) currentBehavior = "SEEKING";
@@ -888,25 +909,31 @@ export function useAgentBrain(
 
         const registry = InteractableRegistry.getInstance();
         const vPos = vehicle.position as unknown as THREE.Vector3;
-        
+
         // Fast proximity check for Drive update (no raycast needed here, just volume sense)
         const nearbyAnyItems = registry.getNearby(vPos, 15);
-        const nearbyFloorCount = nearbyAnyItems.filter(i => i.pickable && !i.carriedBy && !i.placedInArea).length;
-        const pDist = playerRef.current ? vehicle.position.distanceTo(playerRef.current.position as unknown as YUKA.Vector3) : null;
-        const isIdle = currentBehavior === "IDLE" || currentBehavior === "WANDERING";
+        const nearbyFloorCount = nearbyAnyItems.filter(
+          (i) => i.pickable && !i.carriedBy && !i.placedInArea,
+        ).length;
+        const pDist = playerRef.current
+          ? vehicle.position.distanceTo(
+              playerRef.current.position as unknown as YUKA.Vector3,
+            )
+          : null;
+        const isIdle =
+          currentBehavior === "IDLE" || currentBehavior === "WANDERING";
 
         driveManagerRef.current.update(delta, {
-           nearbyFloorItems: nearbyFloorCount,
-           playerDistance: pDist,
-           nearbyAgentCount: socialState.current !== "NONE" ? 1 : 0,
-           isIdle
+          nearbyFloorItems: nearbyFloorCount,
+          playerDistance: pDist,
+          nearbyAgentCount: socialState.current !== "NONE" ? 1 : 0,
+          isIdle,
         });
 
         const urgentDrive = driveManagerRef.current.getUrgentDrive();
-        
+
         // FIRE CONSCIOUSNESS ONLY IF A DRIVE IS URGENT (EVENT-DRIVEN)
         if (urgentDrive && !brain.state.isThinking) {
-        
           driveManagerRef.current.markTriggered(urgentDrive.drive);
           const driveContextStr = driveManagerRef.current.toContextString();
 
@@ -919,10 +946,10 @@ export function useAgentBrain(
               id: "player-01",
               distance: pDist,
               status: "Active",
-              position: { 
-                x: playerRef.current.position.x, 
-                y: playerRef.current.position.y, 
-                z: playerRef.current.position.z 
+              position: {
+                x: playerRef.current.position.x,
+                y: playerRef.current.position.y,
+                z: playerRef.current.position.z,
               },
             });
           }
@@ -946,17 +973,21 @@ export function useAgentBrain(
 
             // Line-of-sight check
             raycasterRef.current.set(agentEye, dir);
-            const hits = raycasterRef.current.intersectObjects(collidableMeshes);
+            const hits =
+              raycasterRef.current.intersectObjects(collidableMeshes);
             let occluded = false;
             for (const hit of hits) {
-               // If hit object is closer than item (minus a small margin to allow item lying on floor)
-               if (hit.distance < dist - 0.5) {
-                 // Ignore standard flat floors/ceilings
-                 if (!hit.object.name.includes("Floor") && !hit.object.name.includes("Ceiling")) {
-                    occluded = true;
-                    break;
-                 }
-               }
+              // If hit object is closer than item (minus a small margin to allow item lying on floor)
+              if (hit.distance < dist - 0.5) {
+                // Ignore standard flat floors/ceilings
+                if (
+                  !hit.object.name.includes("Floor") &&
+                  !hit.object.name.includes("Ceiling")
+                ) {
+                  occluded = true;
+                  break;
+                }
+              }
             }
 
             if (occluded) continue; // Item is behind a wall or desk!
@@ -1020,28 +1051,31 @@ export function useAgentBrain(
                 distance: distToItem,
                 name: area.name,
                 status: isHome ? "empty (home)" : "empty",
-                position: { x: area.position.x, y: area.position.y, z: area.position.z },
+                position: {
+                  x: area.position.x,
+                  y: area.position.y,
+                  z: area.position.z,
+                },
               });
             }
           }
 
           if (floorItems.length === 0) {
-            const nearbyAreas = registry.getNearbyPlacingAreas(
-              vPos,
-              15,
-            );
+            const nearbyAreas = registry.getNearbyPlacingAreas(vPos, 15);
             for (const area of nearbyAreas) {
               if (seenAreaIds.has(area.id)) continue;
               seenAreaIds.add(area.id);
               nearbyEntities.push({
                 type: "AREA",
                 id: area.id,
-                distance: vPos.distanceTo(
-                  area.position,
-                ),
+                distance: vPos.distanceTo(area.position),
                 name: area.name,
                 status: area.currentItem ? "occupied" : "empty",
-                position: { x: area.position.x, y: area.position.y, z: area.position.z },
+                position: {
+                  x: area.position.x,
+                  y: area.position.y,
+                  z: area.position.z,
+                },
               });
             }
           }
@@ -1052,116 +1086,114 @@ export function useAgentBrain(
           const enhancedBehavior = `${currentBehavior} (Current Zone: ${currentZone})`;
 
           brain
-            .update(
-              vPos,
-              nearbyEntities,
-              enhancedBehavior,
-              {
-                ...scriptState,
-                phase: taskQueue.getCurrentPhase(),
-                drives: driveContextStr // Passed through taskState arbitrarily for now
+            .update(vPos, nearbyEntities, enhancedBehavior, {
+              ...scriptState,
+              phase: taskQueue.getCurrentPhase(),
+              drives: driveContextStr, // Passed through taskState arbitrarily for now
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } as any,
-            )
-          .then((decision) => {
-            if (decision) {
-              // Fix #1: Guard — if a higher-priority task arrived while we were thinking, skip
-              const currentPri = taskQueue.getCurrentTask()?.priority ?? -1;
-              const decisionPri = decision.priority || 10;
-              console.log(
-                `[useAgentBrain:${id}] Brain decision: op=${decision.operation}, scriptId=${decision.scriptId}, tasks=${decision.tasks?.length ?? 0}, currentPri=${currentPri}, decisionPri=${decisionPri}`,
-              );
-              if (taskQueue.isBusy() && currentPri >= decisionPri) {
+            } as any)
+            .then((decision) => {
+              if (decision) {
+                // Fix #1: Guard — if a higher-priority task arrived while we were thinking, skip
+                const currentPri = taskQueue.getCurrentTask()?.priority ?? -1;
+                const decisionPri = decision.priority || 10;
                 console.log(
-                  `[useAgentBrain:${id}] Skipping brain decision (priority ${decisionPri}) — active task has priority ${currentPri}`,
+                  `[useAgentBrain:${id}] Brain decision: op=${decision.operation}, scriptId=${decision.scriptId}, tasks=${decision.tasks?.length ?? 0}, currentPri=${currentPri}, decisionPri=${decisionPri}`,
                 );
-                return;
-              }
+                if (taskQueue.isBusy() && currentPri >= decisionPri) {
+                  console.log(
+                    `[useAgentBrain:${id}] Skipping brain decision (priority ${decisionPri}) — active task has priority ${currentPri}`,
+                  );
+                  return;
+                }
 
-              // The conscious brain has made a decision
-              if (
-                decision.operation === "INTERFERE_SCRIPT" &&
-                decision.tasks &&
-                decision.tasks.length > 0
-              ) {
-                console.log(
-                  `[useAgentBrain:${id}] Brain initiating script: ${decision.scriptId}`,
-                );
-
-                // Generate a fallback script ID if LLM omitted it
-                const scriptId = decision.scriptId || `script_${Date.now()}`;
-                const priority = decision.priority || 10;
-
-                // Fix #Loop-5: Skip if this same scriptId was fired recently (cooldown)
-                const now = Date.now();
+                // The conscious brain has made a decision
                 if (
-                  scriptId === lastScriptIdRef.current &&
-                  now - lastScriptTimeRef.current < SCRIPT_COOLDOWN_MS
+                  decision.operation === "INTERFERE_SCRIPT" &&
+                  decision.tasks &&
+                  decision.tasks.length > 0
                 ) {
                   console.log(
-                    `[useAgentBrain:${id}] Skipping duplicate script "${scriptId}" (cooldown: ${Math.round((SCRIPT_COOLDOWN_MS - (now - lastScriptTimeRef.current)) / 1000)}s remaining)`,
+                    `[useAgentBrain:${id}] Brain initiating script: ${decision.scriptId}`,
                   );
-                  return;
-                }
 
-                // Fix #Loop-2: Guard against cancelling a mid-carry script.
-                // Only cancel if the script is queued but not actively executing.
-                const activeScriptId = taskQueue.getCurrentTask()?.scriptId;
-                if (activeScriptId === scriptId) {
-                  // Same scriptId is MID-EXECUTION — do NOT cancel and re-issue,
-                  // that would drop the carried item on the floor.
-                  console.log(
-                    `[useAgentBrain:${id}] Brain suppressed: script "${scriptId}" is mid-execution — will not cancel`,
-                  );
-                  return;
-                }
+                  // Generate a fallback script ID if LLM omitted it
+                  const scriptId = decision.scriptId || `script_${Date.now()}`;
+                  const priority = decision.priority || 10;
 
-                // Safe to cancel queued (not yet running) copies of this script
-                taskQueue.cancelScript(
-                  scriptId,
-                  "Replaced by new brain decision",
-                );
-
-                // Record injection time for cooldown tracking
-                lastScriptIdRef.current = scriptId;
-                lastScriptTimeRef.current = Date.now();
-
-                // Inject the tasks into the priority queue
-                // Inject the tasks into the priority queue (Atomic insertion for AgentTaskQueue v2)
-                decision.tasks.forEach((task) => {
-                  // Clamp LLM-generated coordinates to world bounds safely
-                  if (task.type === "GO_TO" && task.targetPos) {
-                    const clamped = clampToWorldBounds(task.targetPos);
-                    task.targetPos = new THREE.Vector3(
-                      clamped.x,
-                      clamped.y,
-                      clamped.z,
+                  // Fix #Loop-5: Skip if this same scriptId was fired recently (cooldown)
+                  const now = Date.now();
+                  if (
+                    scriptId === lastScriptIdRef.current &&
+                    now - lastScriptTimeRef.current < SCRIPT_COOLDOWN_MS
+                  ) {
+                    console.log(
+                      `[useAgentBrain:${id}] Skipping duplicate script "${scriptId}" (cooldown: ${Math.round((SCRIPT_COOLDOWN_MS - (now - lastScriptTimeRef.current)) / 1000)}s remaining)`,
                     );
+                    return;
                   }
-                  
-                  taskQueue.enqueue({
-                    ...task,
-                    priority,
+
+                  // Fix #Loop-2: Guard against cancelling a mid-carry script.
+                  // Only cancel if the script is queued but not actively executing.
+                  const activeScriptId = taskQueue.getCurrentTask()?.scriptId;
+                  if (activeScriptId === scriptId) {
+                    // Same scriptId is MID-EXECUTION — do NOT cancel and re-issue,
+                    // that would drop the carried item on the floor.
+                    console.log(
+                      `[useAgentBrain:${id}] Brain suppressed: script "${scriptId}" is mid-execution — will not cancel`,
+                    );
+                    return;
+                  }
+
+                  // Safe to cancel queued (not yet running) copies of this script
+                  taskQueue.cancelScript(
                     scriptId,
+                    "Replaced by new brain decision",
+                  );
+
+                  // Record injection time for cooldown tracking
+                  lastScriptIdRef.current = scriptId;
+                  lastScriptTimeRef.current = Date.now();
+
+                  // Inject the tasks into the priority queue
+                  // Inject the tasks into the priority queue (Atomic insertion for AgentTaskQueue v2)
+                  decision.tasks.forEach((task) => {
+                    // Clamp LLM-generated coordinates to world bounds safely
+                    if (task.type === "GO_TO" && task.targetPos) {
+                      const clamped = clampToWorldBounds(task.targetPos);
+                      task.targetPos = new THREE.Vector3(
+                        clamped.x,
+                        clamped.y,
+                        clamped.z,
+                      );
+                    }
+
+                    taskQueue.enqueue({
+                      ...task,
+                      priority,
+                      scriptId,
+                    });
                   });
-                });
-              } else if (decision.operation === "OBSERVE") {
-                // The LLM chose not to interfere.
-                // We don't need to do anything, but let's ensure the subconscious is at least wandering
-                // if the queue is completely empty.
-                if (taskQueue.getCurrentPhase() === "IDLE") {
-                  taskQueue.enqueue({
-                    type: "WANDER",
-                    priority: 0,
-                    scriptId: "subconscious_wander",
-                  });
+                } else if (decision.operation === "OBSERVE") {
+                  // The LLM chose not to interfere.
+                  // We don't need to do anything, but let's ensure the subconscious is at least wandering
+                  // if the queue is completely empty.
+                  if (taskQueue.getCurrentPhase() === "IDLE") {
+                    taskQueue.enqueue({
+                      type: "WANDER",
+                      priority: 0,
+                      scriptId: "subconscious_wander",
+                    });
+                  }
                 }
               }
-            }
-          })
-          .catch((error) => {
-            console.error(`[useAgentBrain:${id}] Brain update failed:`, error);
-          });
+            })
+            .catch((error) => {
+              console.error(
+                `[useAgentBrain:${id}] Brain update failed:`,
+                error,
+              );
+            });
         } // closing if (urgentDrive && !brain.state.isThinking)
       } // closing else (taskQueue.isBusy())
     } // closing manual task & proximity state overrides
@@ -1169,153 +1201,162 @@ export function useAgentBrain(
     // --- ANIMATION UPDATE (Procedural) ---
     const frustum = frustumRef.current;
     const projScreenMatrix = projScreenMatrixRef.current;
-    projScreenMatrix.multiplyMatrices(state.camera.projectionMatrix, state.camera.matrixWorldInverse);
+    projScreenMatrix.multiplyMatrices(
+      state.camera.projectionMatrix,
+      state.camera.matrixWorldInverse,
+    );
     frustum.setFromProjectionMatrix(projScreenMatrix);
     const agentSphere = agentSphereRef.current;
     agentSphere.center.copy(vehicle.position as unknown as THREE.Vector3);
     const isVisible = frustum.intersectsSphere(agentSphere);
 
     if (isVisible) {
-    // Apply internal procedural gait engine. We must use real delta, NOT the 15x physical simulation dt.
-    const realDelta = Math.min(delta, 0.1);
-    const strideLength = 5.5; // AI agents need a longer stride for a relaxed walk
-    updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta, {
-      strideLength,
-    });
+      // Apply internal procedural gait engine. We must use real delta, NOT the 15x physical simulation dt.
+      const realDelta = Math.min(delta, 0.1);
+      const strideLength = 5.5; // AI agents need a longer stride for a relaxed walk
+      updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta, {
+        strideLength,
+      });
 
-    const animSpeed = smoothSpeed.current;
+      const animSpeed = smoothSpeed.current;
 
-    // Stop waving/chatting immediately if the agent starts moving (e.g. gets a new task)
-    if (animSpeed > 0.1) {
-      if (greetingState.current === "WAVING") greetingState.current = "NONE";
-      if (socialState.current === "CHATTING") socialState.current = "COOLDOWN";
-    }
+      // Stop waving/chatting immediately if the agent starts moving (e.g. gets a new task)
+      if (animSpeed > 0.1) {
+        if (greetingState.current === "WAVING") greetingState.current = "NONE";
+        if (socialState.current === "CHATTING")
+          socialState.current = "COOLDOWN";
+      }
 
-    let newState: "Idle" | "Walk" | "Run" | "Wave" = "Idle";
-    if (greetingState.current === "WAVING") newState = "Wave";
-    else if (animSpeed > 0.1) newState = "Walk";
+      let newState: "Idle" | "Walk" | "Run" | "Wave" = "Idle";
+      if (greetingState.current === "WAVING") newState = "Wave";
+      else if (animSpeed > 0.1) newState = "Walk";
 
-    if (newState !== animationState) setAnimationState(newState);
+      if (newState !== animationState) setAnimationState(newState);
 
-    const j = joints.current;
-    if (
-      j.hips &&
-      j.torso &&
-      j.leftArm &&
-      j.rightArm &&
-      j.leftHip &&
-      j.rightHip &&
-      j.leftKnee &&
-      j.rightKnee &&
-      j.neck
-    ) {
-      // Head Tracking Logic remains unique to AI for now (or could be extracted too)
-      const lerpFactor = 0.1;
+      const j = joints.current;
+      if (
+        j.hips &&
+        j.torso &&
+        j.leftArm &&
+        j.rightArm &&
+        j.leftHip &&
+        j.rightHip &&
+        j.leftKnee &&
+        j.rightKnee &&
+        j.neck
+      ) {
+        // Head Tracking Logic remains unique to AI for now (or could be extracted too)
+        const lerpFactor = 0.1;
 
-      // 1. Head Tracking (Player Aware)
-      if (playerRef.current) {
-        const toPlayer = new THREE.Vector3().subVectors(
-          playerRef.current.position,
-          vehicle.position,
-        );
-        const distToPlayer = toPlayer.length();
-
-        if (distToPlayer < 8.0) {
-          // Look at player within 8m
-          // Calculate local look dir
-          // We need world quaternion of the agent?
-          // Simplification: rotating the neck bone.
-          // Neck rotation is local.
-          // We need the angle difference between agent forward and vector to player.
-
-          const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(
-            groupRef.current!.quaternion,
+        // 1. Head Tracking (Player Aware)
+        if (playerRef.current) {
+          const toPlayer = new THREE.Vector3().subVectors(
+            playerRef.current.position,
+            vehicle.position,
           );
-          toPlayer.normalize();
+          const distToPlayer = toPlayer.length();
 
-          // Dot product for angle?
-          // Cross product for direction (left/right)?
-          const dot = forward.dot(toPlayer);
-          const cross = new THREE.Vector3().crossVectors(forward, toPlayer);
+          if (distToPlayer < 8.0) {
+            // Look at player within 8m
+            // Calculate local look dir
+            // We need world quaternion of the agent?
+            // Simplification: rotating the neck bone.
+            // Neck rotation is local.
+            // We need the angle difference between agent forward and vector to player.
 
-          // Clamp look angle (don't break neck)
-          // If dot > 0 (in front), we can look.
-          if (dot > 0.2) {
-            const targetNeckY = cross.y * 1.5; // Scale for sensitivity
-            const clampedNeckY = THREE.MathUtils.clamp(targetNeckY, -0.8, 0.8);
-            // eslint-disable-next-line react-hooks/immutability
-            j.neck.rotation.y = THREE.MathUtils.lerp(
-              j.neck.rotation.y,
-              clampedNeckY,
-              0.1,
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(
+              groupRef.current!.quaternion,
             );
+            toPlayer.normalize();
 
-            // Also slight head tilt
-            j.neck.rotation.x = THREE.MathUtils.lerp(
-              j.neck.rotation.x,
-              -0.1,
-              0.1,
-            );
+            // Dot product for angle?
+            // Cross product for direction (left/right)?
+            const dot = forward.dot(toPlayer);
+            const cross = new THREE.Vector3().crossVectors(forward, toPlayer);
+
+            // Clamp look angle (don't break neck)
+            // If dot > 0 (in front), we can look.
+            if (dot > 0.2) {
+              const targetNeckY = cross.y * 1.5; // Scale for sensitivity
+              const clampedNeckY = THREE.MathUtils.clamp(
+                targetNeckY,
+                -0.8,
+                0.8,
+              );
+              // eslint-disable-next-line react-hooks/immutability
+              j.neck.rotation.y = THREE.MathUtils.lerp(
+                j.neck.rotation.y,
+                clampedNeckY,
+                0.1,
+              );
+
+              // Also slight head tilt
+              j.neck.rotation.x = THREE.MathUtils.lerp(
+                j.neck.rotation.x,
+                -0.1,
+                0.1,
+              );
+            } else {
+              // Reset if behind
+              j.neck.rotation.y = THREE.MathUtils.lerp(
+                j.neck.rotation.y,
+                0,
+                0.05,
+              );
+            }
           } else {
-            // Reset if behind
+            // Idle Looking
+            const t = state.clock.elapsedTime;
             j.neck.rotation.y = THREE.MathUtils.lerp(
               j.neck.rotation.y,
-              0,
+              Math.sin(t * 0.5) * 0.3,
               0.05,
             );
           }
-        } else {
-          // Idle Looking
-          const t = state.clock.elapsedTime;
-          j.neck.rotation.y = THREE.MathUtils.lerp(
-            j.neck.rotation.y,
-            Math.sin(t * 0.5) * 0.3,
-            0.05,
+        }
+
+        if (greetingState.current === "WAVING") {
+          const waveSpeed = 12;
+          const wave = Math.sin(state.clock.elapsedTime * waveSpeed) * 0.4;
+
+          // Override arm rotation for waving
+          j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
+            j.rightArm.shoulder.rotation.x,
+            0,
+            0.1,
+          );
+          j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
+            j.rightArm.shoulder.rotation.z,
+            -2.5 + wave,
+            0.1,
+          );
+          j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
+            j.rightArm.elbow.rotation.x,
+            0,
+            0.1,
+          );
+          j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
+            j.rightArm.elbow.rotation.z,
+            -0.8 + wave * 0.2,
+            0.1,
           );
         }
-      }
-
-      if (greetingState.current === "WAVING") {
-        const waveSpeed = 12;
-        const wave = Math.sin(state.clock.elapsedTime * waveSpeed) * 0.4;
-
-        // Override arm rotation for waving
-        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.x,
-          0,
-          0.1,
-        );
-        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.z,
-          -2.5 + wave,
-          0.1,
-        );
-        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.x,
-          0,
-          0.1
-        );
-        j.rightArm.elbow.rotation.z = THREE.MathUtils.lerp(
-          j.rightArm.elbow.rotation.z,
-          -0.8 + wave * 0.2,
-          0.1
-        );
-      }
-    } // End if (j.hips && j.torso ...)
+      } // End if (j.hips && j.torso ...)
     } // End if (isVisible)
 
     // Carried items are hidden (invisible) while being transported.
     // They reappear at the destination when placed.
 
-    // Update Minimap Position
-    setAgentPosition(
-      id,
-      new THREE.Vector3(
-        vehicle.position.x,
-        vehicle.position.y,
-        vehicle.position.z,
-      ),
+    // Update Minimap Position (Throttled to reduce state updates)
+    const currentPos = new THREE.Vector3(
+      vehicle.position.x,
+      vehicle.position.y,
+      vehicle.position.z,
     );
+    if (lastMinimapPos.current.distanceToSquared(currentPos) > 1.0) {
+      lastMinimapPos.current.copy(currentPos);
+      setAgentPosition(id, currentPos);
+    }
   });
 
   return {

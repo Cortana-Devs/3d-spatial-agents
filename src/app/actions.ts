@@ -24,7 +24,7 @@ export async function generateAgentThought(
       requestId,
       sessionId: effectiveSessionId,
     });
-    
+
     // Return a plain object for the Server Action
     return {
       content: responseMessage.content,
@@ -73,39 +73,43 @@ export async function generateReflection(
     const summary = completion.choices[0]?.message?.content?.trim();
     const endTime = Date.now();
 
-    after(() => logAgentInteraction({
-      timestamp: new Date().toISOString(),
-      session_id: effectiveSessionId,
-      request_id: requestId,
-      agent_type: "memory-reflector",
-      request_type: "reflection",
-      request_content: `[SYSTEM] ${prompt}\n[USER] ${textToSummarize}`,
-      response_content: summary || "",
-      response_status: summary ? "success" : "error",
-      processing_time_ms: endTime - startTime,
-      input_tokens: completion.usage?.prompt_tokens,
-      output_tokens: completion.usage?.completion_tokens,
-      model_version: model,
-    }).catch(console.error));
+    after(() =>
+      logAgentInteraction({
+        timestamp: new Date().toISOString(),
+        session_id: effectiveSessionId,
+        request_id: requestId,
+        agent_type: "memory-reflector",
+        request_type: "reflection",
+        request_content: `[SYSTEM] ${prompt}\n[USER] ${textToSummarize}`,
+        response_content: summary || "",
+        response_status: summary ? "success" : "error",
+        processing_time_ms: endTime - startTime,
+        input_tokens: completion.usage?.prompt_tokens,
+        output_tokens: completion.usage?.completion_tokens,
+        model_version: model,
+      }).catch(console.error),
+    );
 
     return summary;
   } catch (error: any) {
     console.error("Reflection Error:", error);
 
-    after(() => logAgentInteraction({
-      timestamp: new Date().toISOString(),
-      session_id: effectiveSessionId,
-      request_id: requestId,
-      agent_type: "memory-reflector",
-      request_type: "reflection",
-      request_content: textToSummarize,
-      response_content: "",
-      response_status: "error",
-      processing_time_ms: Date.now() - startTime,
-      error_code: error.code || error.status,
-      error_message: error.message,
-      model_version: model,
-    }).catch(console.error));
+    after(() =>
+      logAgentInteraction({
+        timestamp: new Date().toISOString(),
+        session_id: effectiveSessionId,
+        request_id: requestId,
+        agent_type: "memory-reflector",
+        request_type: "reflection",
+        request_content: textToSummarize,
+        response_content: "",
+        response_status: "error",
+        processing_time_ms: Date.now() - startTime,
+        error_code: error.code || error.status,
+        error_message: error.message,
+        model_version: model,
+      }).catch(console.error),
+    );
 
     return null;
   }
@@ -158,20 +162,22 @@ export async function parseNaturalCommand(
     const endTime = Date.now();
     const serverLatency = endTime - startTime;
 
-    after(() => logAgentInteraction({
-      timestamp: new Date().toISOString(),
-      session_id: effectiveSessionId,
-      request_id: requestId,
-      agent_type: "nlp-parser",
-      request_type: "command_parse",
-      request_content: command,
-      response_content: content || "",
-      response_status: content ? "success" : "error",
-      processing_time_ms: serverLatency,
-      input_tokens: completion.usage?.prompt_tokens,
-      output_tokens: completion.usage?.completion_tokens,
-      model_version: model,
-    }).catch(console.error));
+    after(() =>
+      logAgentInteraction({
+        timestamp: new Date().toISOString(),
+        session_id: effectiveSessionId,
+        request_id: requestId,
+        agent_type: "nlp-parser",
+        request_type: "command_parse",
+        request_content: command,
+        response_content: content || "",
+        response_status: content ? "success" : "error",
+        processing_time_ms: serverLatency,
+        input_tokens: completion.usage?.prompt_tokens,
+        output_tokens: completion.usage?.completion_tokens,
+        model_version: model,
+      }).catch(console.error),
+    );
 
     if (!content) {
       return {
@@ -190,20 +196,22 @@ export async function parseNaturalCommand(
     console.error("NLP Parse Error:", error);
 
     const errorLatency = Date.now() - startTime;
-    after(() => logAgentInteraction({
-      timestamp: new Date().toISOString(),
-      session_id: effectiveSessionId,
-      request_id: requestId,
-      agent_type: "nlp-parser",
-      request_type: "command_parse",
-      request_content: command,
-      response_content: "",
-      response_status: "error",
-      processing_time_ms: errorLatency,
-      error_code: error.code || error.status,
-      error_message: error.message,
-      model_version: model,
-    }).catch(console.error));
+    after(() =>
+      logAgentInteraction({
+        timestamp: new Date().toISOString(),
+        session_id: effectiveSessionId,
+        request_id: requestId,
+        agent_type: "nlp-parser",
+        request_type: "command_parse",
+        request_content: command,
+        response_content: "",
+        response_status: "error",
+        processing_time_ms: errorLatency,
+        error_code: error.code || error.status,
+        error_message: error.message,
+        model_version: model,
+      }).catch(console.error),
+    );
 
     return {
       rawResponse: JSON.stringify({
@@ -247,64 +255,100 @@ export async function chatWithAgent(
   const model = "llama-3.1-8b-instant";
   const startTime = Date.now();
 
-  const worldSection = worldContext
-    ? `\n## Current World State (use EXACT IDs from here)\n${worldContext}`
-    : "";
+  const executeTasksTool: any = {
+    type: "function",
+    function: {
+      name: "execute_agent_tasks",
+      description:
+        "Execute physical actions or digital tasks in the research lab.",
+      parameters: {
+        type: "object",
+        properties: {
+          thought_process: {
+            type: "string",
+            description: "Your step-by-step reasoning on what to do and why.",
+          },
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                type: {
+                  type: "string",
+                  enum: [
+                    "FETCH_AND_PLACE",
+                    "FOLLOW_PLAYER",
+                    "GO_TO",
+                    "READ_FILE",
+                    "WRITE_FILE",
+                    "COPY_FILE",
+                    "WEB_SEARCH",
+                    "ANNOUNCE_MEETING",
+                  ],
+                  description: "The type of task to perform.",
+                },
+                itemId: {
+                  type: "string",
+                  description: "The EXACT ID of the item.",
+                },
+                destAreaId: {
+                  type: "string",
+                  description: "The EXACT ID of the destination area.",
+                },
+                targetAreaId: {
+                  type: "string",
+                  description: "The name of the zone/area to go to.",
+                },
+                content: {
+                  type: "string",
+                  description: "Content to write for WRITE_FILE.",
+                },
+                sourceItemId: {
+                  type: "string",
+                  description: "Source file ID for COPY_FILE.",
+                },
+                query: {
+                  type: "string",
+                  description: "Search query for WEB_SEARCH.",
+                },
+              },
+              required: ["type"],
+            },
+          },
+        },
+        required: ["thought_process", "tasks"],
+      },
+    },
+  };
 
   // Build message history for multi-turn conversation
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] =
-    [
-      {
-        role: "system",
-        content: `You are ${agentId}, an intelligent research lab assistant robot in a 3D virtual research lab. You are having a face-to-face conversation with a user.
+  const messages: any[] = [
+    {
+      role: "system",
+      content: `You are ${agentId}, a helpful research lab robot.
+CONSTRAINTS:
+- Keep spoken replies under 2 sentences.
+- Never use markdown or emojis. Talk naturally.
+- You can perform tasks using the execute_agent_tasks tool.
+- If asked to do something, call the tool AND provide a brief spoken acknowledgment.
+- If an item/location is NOT in the Context below, you CANNOT interact with it. State this clearly.
+- Note: you must hold a file to read/write it.
 
-## Personality
-- Professional yet warm, like a helpful coworker
-- Concise — keep replies to 1-3 short sentences
-- Proactive — offer specific suggestions when the user seems unsure
-- Spoken Dialogue — Your 'reply' is sent directly to a Text-To-Speech (TTS) engine. Do NOT use markdown, asterisks, code blocks, bullet points, or complex punctuation. Talk naturally.
+EXAMPLE TOOL USE:
+User: "Bring me the datapad."
+Tool Call (execute_agent_tasks): {"thought_process": "The user wants the datapad. It is on the floor.", "tasks": [{"type": "FETCH_AND_PLACE", "itemId": "datapad_1", "destAreaId": "user_desk"}]}
 
-## Output Format (JSON ONLY)
-You MUST respond with valid JSON in this exact format:
-
-If the user is just chatting (no action needed):
-{"reply": "your conversational response here"}
-
-If the user asks you to DO something (move item, go somewhere, follow, read file, write/copy file):
-{"reply": "brief acknowledgment of what you're about to do", "tasks": [{"type": "VALID_TASK_TYPE", "itemId": "exact-item-id", "...other optional fields...": "..."}]}
-
-## Available Task Types
-- FETCH_AND_PLACE: Pick up an item and place it. Requires "itemId" and "destAreaId". Use EXACT IDs from the World State.
-- FOLLOW_PLAYER: Follow the user. No extra fields needed.
-- GO_TO: Move to a location. Requires "targetAreaId" (a semantic zone name like "conference area", "meeting room", "storage") OR exact "targetX" and "targetZ" (coordinates). Use targetAreaId if coordinates are unknown.
-- READ_FILE: Read the text from a document. Requires "itemId".
-- WRITE_FILE: Write text to a document. Requires "itemId" and "content" (the text to write).
-- COPY_FILE: Copy the entire contents of one document perfectly into another document. Requires "sourceItemId" and "itemId" (destination).
-- WEB_SEARCH: Perform a web search to find information. Requires "query". This is a mental action; you will receive the results immediately and should then provide a final reply.
-- ANNOUNCE_MEETING: When the user says there is a meeting in the meeting room (or similar), respond with {"reply": "...", "tasks": [{"type": "ANNOUNCE_MEETING"}]}. Acknowledge that you will inform the others and head to the meeting room. No extra fields needed.
-
-## Advanced Behaviors
-- CRITICAL: You cannot read a file and write/copy its contents in the exact same response because you don't know the contents yet! If asked to copy a file, you must FIRST output ONLY a READ_FILE task. Once you have read it and know the contents, the user can ask you to WRITE_FILE.
-- Note: you must hold a file to read/write it. If you aren't holding it, the system will automatically make you pick it up and return it when you're done.
-
-## CRITICAL RULES
-- Use ONLY item IDs and area IDs that appear in the World State below
-- For items: only use items marked (A) = available. Never pick (C) carried or (X) claimed items.
-- For areas: only use areas marked (E) = empty. Never place in (O) occupied areas.
-- If the user asks to "clean up", "organize", or fix misplaced items, find items with Location "OnFloor" and place them in an empty slot on their "HomeArea" (or a logical empty desk if home is full).
-- If the user asks to do something but you can't find the right IDs, say so honestly in the reply and do NOT include tasks.
-- ALWAYS output valid JSON. No markdown, no extra text outside the JSON.
-${worldSection}`,
-      },
-    ];
+CONTEXT:
+${worldContext || "No items or areas nearby."}`,
+    },
+  ];
 
   // Add conversation history (limit to last 6 messages to stay under token limits)
   const recentHistory = conversationHistory.slice(-6);
   for (const msg of recentHistory) {
     messages.push({
       role: msg.role === "user" ? "user" : "assistant",
-      content:
-        msg.role === "agent" ? JSON.stringify({ reply: msg.text }) : msg.text,
+      content: msg.text,
     });
   }
 
@@ -321,96 +365,106 @@ ${worldSection}`,
       max_completion_tokens: 300,
       top_p: 1,
       stream: false,
-      response_format: { type: "json_object" },
+      tools: [executeTasksTool],
+      tool_choice: "auto",
     });
 
-    let rawContent =
-      completion.choices[0]?.message?.content?.trim() || '{"reply": "..."}';
+    let choice = completion.choices[0];
+    let reply = choice.message?.content?.trim() || "";
+    let tasks: any[] | undefined;
+
+    const extractTasks = (msg: any) => {
+      if (msg?.tool_calls?.length) {
+        for (const toolCall of msg.tool_calls) {
+          if (toolCall.function.name === "execute_agent_tasks") {
+            try {
+              const args = JSON.parse(toolCall.function.arguments);
+              if (args.tasks && Array.isArray(args.tasks)) {
+                if (!tasks) tasks = [];
+                tasks.push(...args.tasks);
+              }
+            } catch (e) {
+              console.error("Failed to parse tool arguments", e);
+            }
+          }
+        }
+      }
+    };
+
+    extractTasks(choice.message);
 
     // --- Web Search Handling ---
-    try {
-        const parsedInitial = JSON.parse(rawContent);
-        const searchTask = parsedInitial.tasks?.find((t: any) => t.type === "WEB_SEARCH");
-        
-        if (searchTask && searchTask.query) {
-            const searchResults = await performWebSearch(searchTask.query);
-            
-            // Push the search results as a 'system' or 'user' message context update
-            messages.push({ role: "assistant", content: rawContent });
-            messages.push({ 
-                role: "user", 
-                content: `WEB SEARCH RESULTS for "${searchTask.query}":\n${JSON.stringify(searchResults)}\n\nPlease provide your final reply based on these results.` 
-            });
+    const searchTask = tasks?.find((t: any) => t.type === "WEB_SEARCH");
+    if (searchTask && searchTask.query) {
+      const searchResults = await performWebSearch(searchTask.query);
 
-            // Re-run
-            completion = await client.chat.completions.create({
-                messages,
-                model,
-                temperature: 0.3,
-                max_completion_tokens: 300,
-                top_p: 1,
-                stream: false,
-                response_format: { type: "json_object" },
-            });
-            rawContent = completion.choices[0]?.message?.content?.trim() || '{"reply": "..."}';
-        }
-    } catch (e) {
-        console.warn("JSON Parse or Search error in chat loop:", e);
+      messages.push(choice.message);
+      const searchToolCall = choice.message.tool_calls?.find(
+        (tc: any) => tc.function.name === "execute_agent_tasks",
+      );
+
+      messages.push({
+        role: "tool",
+        tool_call_id: searchToolCall?.id || "unknown",
+        content: JSON.stringify(searchResults),
+      });
+
+      completion = await client.chat.completions.create({
+        messages,
+        model,
+        temperature: 0.3,
+        max_completion_tokens: 300,
+        tools: [executeTasksTool],
+        tool_choice: "auto",
+      });
+
+      choice = completion.choices[0];
+      reply = choice.message?.content?.trim() || reply;
+      extractTasks(choice.message);
     }
+
     const endTime = Date.now();
 
-    after(() => logAgentInteraction({
-      timestamp: new Date().toISOString(),
-      session_id: effectiveSessionId,
-      request_id: requestId,
-      agent_type: "agent-chat",
-      request_type: "chat_message",
-      request_content: userMessage,
-      response_content: rawContent,
-      response_status: "success",
-      processing_time_ms: endTime - startTime,
-      input_tokens: completion.usage?.prompt_tokens,
-      output_tokens: completion.usage?.completion_tokens,
-      model_version: model,
-    }).catch(console.error));
+    after(() =>
+      logAgentInteraction({
+        timestamp: new Date().toISOString(),
+        session_id: effectiveSessionId,
+        request_id: requestId,
+        agent_type: "agent-chat",
+        request_type: "chat_message",
+        request_content: userMessage,
+        response_content: reply + (tasks ? JSON.stringify(tasks) : ""),
+        response_status: "success",
+        processing_time_ms: endTime - startTime,
+        input_tokens: completion.usage?.prompt_tokens,
+        output_tokens: completion.usage?.completion_tokens,
+        model_version: model,
+      }).catch(console.error),
+    );
 
-    // Parse JSON response
-    try {
-      const parsed = JSON.parse(
-        rawContent
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim(),
-      );
-      return {
-        reply:
-          parsed.reply ||
-          parsed.response ||
-          parsed.message ||
-          "I'll get right on that!",
-        tasks: Array.isArray(parsed.tasks) ? parsed.tasks : undefined,
-      };
-    } catch {
-      // Fallback: treat raw content as plain text reply
-      return { reply: rawContent.substring(0, 200) };
-    }
+    return {
+      reply: reply || "I'll get right on that!",
+      tasks: tasks,
+    };
   } catch (error: any) {
     console.error("Agent Chat Error:", error);
 
-    after(() => logAgentInteraction({
-      timestamp: new Date().toISOString(),
-      session_id: effectiveSessionId,
-      request_id: requestId,
-      agent_type: "agent-chat",
-      request_type: "chat_message",
-      request_content: userMessage,
-      response_content: "",
-      response_status: "error",
-      processing_time_ms: Date.now() - startTime,
-      error_code: error.code || error.status,
-      error_message: error.message,
-      model_version: model,
-    }).catch(console.error));
+    after(() =>
+      logAgentInteraction({
+        timestamp: new Date().toISOString(),
+        session_id: effectiveSessionId,
+        request_id: requestId,
+        agent_type: "agent-chat",
+        request_type: "chat_message",
+        request_content: userMessage,
+        response_content: "",
+        response_status: "error",
+        processing_time_ms: Date.now() - startTime,
+        error_code: error.code || error.status,
+        error_message: error.message,
+        model_version: model,
+      }).catch(console.error),
+    );
 
     return {
       reply:

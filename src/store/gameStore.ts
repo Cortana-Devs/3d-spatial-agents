@@ -3,8 +3,8 @@ import * as THREE from "three";
 import {
   WorldObject,
   InteractableRegistry,
-} from '@/components/systems/InteractableRegistry';
-import type { AgentTask } from '@/components/systems/AgentTaskQueue';
+} from "@/components/systems/InteractableRegistry";
+import type { AgentTask } from "@/components/systems/AgentTaskQueue";
 
 export interface Obstacle {
   position: THREE.Vector3;
@@ -279,7 +279,11 @@ interface GameState {
   clearChatMessages: (agentId: string) => void;
 
   // Common agent communication log (all agents' messages in one feed)
-  commonAgentMessages: { agentId: string; role: "user" | "agent"; text: string }[];
+  commonAgentMessages: {
+    agentId: string;
+    role: "user" | "agent";
+    text: string;
+  }[];
   addCommonAgentMessage: (
     agentId: string,
     msg: { role: "user" | "agent"; text: string },
@@ -300,20 +304,26 @@ export const useGameStore = create<GameState>((set) => ({
 
   collidableMeshes: [],
   addCollidableMesh: (mesh) => {
+    const flattenedMeshes: THREE.Object3D[] = [];
     mesh.traverse((child) => {
-      if (
-        child instanceof THREE.Mesh &&
-        child.geometry &&
-        !child.geometry.boundsTree
-      ) {
-        child.geometry.computeBoundsTree();
+      if (child instanceof THREE.Mesh && child.geometry) {
+        if (!child.geometry.boundsTree) {
+          child.geometry.computeBoundsTree();
+        }
+        // Tag with parent group UUID for fast removal
+        (child as any)._groupUuid = mesh.uuid;
+        flattenedMeshes.push(child);
       }
     });
-    set((state) => ({ collidableMeshes: [...state.collidableMeshes, mesh] }));
+    set((state) => ({
+      collidableMeshes: [...state.collidableMeshes, ...flattenedMeshes],
+    }));
   },
   removeCollidableMesh: (uuid) =>
     set((state) => ({
-      collidableMeshes: state.collidableMeshes.filter((m) => m.uuid !== uuid),
+      collidableMeshes: state.collidableMeshes.filter(
+        (m: any) => m.uuid !== uuid && m._groupUuid !== uuid,
+      ),
     })),
 
   obstacles: [],
@@ -331,7 +341,7 @@ export const useGameStore = create<GameState>((set) => ({
     // Sync with Registry
     items.forEach((item) => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
+      // @ts-ignore
       InteractableRegistry.getInstance().register(item);
     });
     set((state) => ({ interactables: [...state.interactables, ...items] }));

@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
-import { useProceduralGait } from '@/components/agent/useProceduralGait';
+import { useProceduralGait } from "@/components/agent/useProceduralGait";
 import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
 import AIManager from "@/components/systems/AIManager";
 
@@ -16,7 +16,7 @@ export interface Joints {
   rightHip?: THREE.Group;
   leftKnee?: THREE.Group;
   rightKnee?: THREE.Group;
-   
+
   [key: string]: any; // Allow dynamic access
 }
 
@@ -232,7 +232,6 @@ export function usePlayerController(
             const myPos = groupRef.current.position;
 
             for (const v of agents) {
-              
               if ((v as any).id) {
                 const d = v.position.squaredDistanceTo(myPos as unknown as any);
               }
@@ -650,11 +649,15 @@ export function usePlayerController(
       inputZ /= len;
     }
 
-    const camForward = camForwardRef.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    const camForward = camForwardRef.current
+      .set(0, 0, -1)
+      .applyQuaternion(camera.quaternion);
     camForward.y = 0;
     camForward.normalize();
-    
-    const camRight = camRightRef.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
+
+    const camRight = camRightRef.current
+      .set(1, 0, 0)
+      .applyQuaternion(camera.quaternion);
     camRight.y = 0;
     camRight.normalize();
 
@@ -774,7 +777,7 @@ export function usePlayerController(
         const rayOrigin = rayOriginRef.current.copy(mesh.position);
         rayOrigin.y += 50;
         raycaster.set(rayOrigin, raycastDirRef.current);
-        const hits = raycaster.intersectObjects(collidableMeshes, true);
+        const hits = raycaster.intersectObjects(collidableMeshes, false);
         if (hits.length > 0) {
           const validHits = hits.filter(
             (h) => !h.object.name.includes("Ceiling"),
@@ -807,7 +810,9 @@ export function usePlayerController(
 
     if (lastPlayerPosLog.current.distanceToSquared(mesh.position) > 0.01) {
       lastPlayerPosLog.current.copy(mesh.position);
-      setPlayerPosition(mesh.position.clone());
+      const centerPos = mesh.position.clone();
+      centerPos.y += 6.1; // Offset exactly to head level for agent tracking
+      setPlayerPosition(centerPos);
     }
 
     const playerVel = playerVelRef.current.set(0, 0, 0);

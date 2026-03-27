@@ -4,8 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { chatWithAgent } from "@/app/actions";
 import { buildWorldContext } from "@/lib/nlp-parser";
-import { AgentTaskRegistry } from '@/components/systems/AgentTaskQueue';
-import { InteractableRegistry } from '@/components/systems/InteractableRegistry';
+import { AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
+import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { getMeetingRoomPosition } from "@/config/agentRoutines";
 import * as THREE from "three";
@@ -215,7 +215,10 @@ export const AgentChatPanel: React.FC = () => {
           // INTER-AGENT NEGOTIATION: Ask other agents if they need item
           // =============================================================
           const taskRegistry = AgentTaskRegistry.getInstance();
-          const otherAgentUsingItem = taskRegistry.getAgentUsingItem(cleanedItemId, agentId);
+          const otherAgentUsingItem = taskRegistry.getAgentUsingItem(
+            cleanedItemId,
+            agentId,
+          );
 
           // Open the common communication panel to show the negotiation
           setCommonChatOpen(true);
@@ -229,8 +232,14 @@ export const AgentChatPanel: React.FC = () => {
             // Step 2a: Another agent IS using the item — they respond
             const otherAgentName = otherAgentUsingItem;
             const responseMsg = `Yes, I'm currently working with "${itemDisplayName}". I still need it.`;
-            addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: responseMsg });
-            addChatMessage(otherAgentUsingItem, { role: "agent", text: responseMsg });
+            addCommonAgentMessage(otherAgentUsingItem, {
+              role: "agent",
+              text: responseMsg,
+            });
+            addChatMessage(otherAgentUsingItem, {
+              role: "agent",
+              text: responseMsg,
+            });
 
             // Step 3a: Requesting agent defers the task
             const deferMsg = `Understood, ${formatAgentLabel(otherAgentName)}. I'll wait — please inform me when you're finished with "${itemDisplayName}".`;
@@ -239,30 +248,57 @@ export const AgentChatPanel: React.FC = () => {
 
             // Step 4a: The other agent acknowledges
             const ackMsg = `Sure, I'll let you know once I'm done with "${itemDisplayName}".`;
-            addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: ackMsg });
-            addChatMessage(otherAgentUsingItem, { role: "agent", text: ackMsg });
+            addCommonAgentMessage(otherAgentUsingItem, {
+              role: "agent",
+              text: ackMsg,
+            });
+            addChatMessage(otherAgentUsingItem, {
+              role: "agent",
+              text: ackMsg,
+            });
 
             // Register a listener for when the other agent finishes with the item
             const handleItemReleased = (e: any) => {
-              const { agentId: releasedByAgent, itemId: releasedItemId } = e.detail;
-              if (releasedByAgent === otherAgentUsingItem && releasedItemId === cleanedItemId) {
+              const { agentId: releasedByAgent, itemId: releasedItemId } =
+                e.detail;
+              if (
+                releasedByAgent === otherAgentUsingItem &&
+                releasedItemId === cleanedItemId
+              ) {
                 // Remove listener first to prevent duplicate handling
-                window.removeEventListener("agent-item-released", handleItemReleased);
+                window.removeEventListener(
+                  "agent-item-released",
+                  handleItemReleased,
+                );
 
                 // The other agent finished — notify via communication panel
                 const notifyMsg = `I've finished using "${itemDisplayName}". It's available now, ${formatAgentLabel(agentId)}!`;
-                useGameStore.getState().addCommonAgentMessage(otherAgentUsingItem, { role: "agent", text: notifyMsg });
-                useGameStore.getState().addChatMessage(otherAgentUsingItem, { role: "agent", text: notifyMsg });
+                useGameStore
+                  .getState()
+                  .addCommonAgentMessage(otherAgentUsingItem, {
+                    role: "agent",
+                    text: notifyMsg,
+                  });
+                useGameStore.getState().addChatMessage(otherAgentUsingItem, {
+                  role: "agent",
+                  text: notifyMsg,
+                });
 
                 const resumeMsg = `Thanks! I'll go get "${itemDisplayName}" now.`;
-                useGameStore.getState().addCommonAgentMessage(agentId, { role: "agent", text: resumeMsg });
-                useGameStore.getState().addChatMessage(agentId, { role: "agent", text: resumeMsg });
+                useGameStore.getState().addCommonAgentMessage(agentId, {
+                  role: "agent",
+                  text: resumeMsg,
+                });
+                useGameStore
+                  .getState()
+                  .addChatMessage(agentId, { role: "agent", text: resumeMsg });
 
                 // Use setTimeout to let the releasing agent's state fully clear first,
                 // then directly enqueue the task (skip re-negotiation)
                 setTimeout(() => {
                   const freshRegistry = InteractableRegistry.getInstance();
-                  const freshQueue = AgentTaskRegistry.getInstance().getOrCreate(agentId);
+                  const freshQueue =
+                    AgentTaskRegistry.getInstance().getOrCreate(agentId);
 
                   // Re-validate item is still available
                   const freshItem = freshRegistry.getById(cleanedItemId);
@@ -279,10 +315,16 @@ export const AgentChatPanel: React.FC = () => {
                   }
 
                   // Re-validate area
-                  const resumeAreaId = String(task.destAreaId).replace(/\s*\([A-Z]\)$/i, "").trim();
-                  let resumeArea = freshRegistry.getPlacingAreaById(resumeAreaId);
-                  if (!resumeArea) resumeArea = freshRegistry.getEmptyAreaByGroup(resumeAreaId);
-                  if (!resumeArea) resumeArea = freshRegistry.getAreaByName(resumeAreaId);
+                  const resumeAreaId = String(task.destAreaId)
+                    .replace(/\s*\([A-Z]\)$/i, "")
+                    .trim();
+                  let resumeArea =
+                    freshRegistry.getPlacingAreaById(resumeAreaId);
+                  if (!resumeArea)
+                    resumeArea =
+                      freshRegistry.getEmptyAreaByGroup(resumeAreaId);
+                  if (!resumeArea)
+                    resumeArea = freshRegistry.getAreaByName(resumeAreaId);
 
                   if (!resumeArea) {
                     useGameStore.getState().addChatMessage(agentId, {
@@ -294,7 +336,11 @@ export const AgentChatPanel: React.FC = () => {
 
                   let finalAreaId = resumeArea.id;
                   if (resumeArea.currentItem) {
-                    const alt = findAlternativeArea(finalAreaId, freshRegistry, new Set());
+                    const alt = findAlternativeArea(
+                      finalAreaId,
+                      freshRegistry,
+                      new Set(),
+                    );
                     if (alt) finalAreaId = alt;
                     else {
                       useGameStore.getState().addChatMessage(agentId, {
@@ -449,7 +495,10 @@ export const AgentChatPanel: React.FC = () => {
               `[AgentChat] Dispatched GO_TO: (${task.targetX}, ${task.targetZ})`,
             );
           } else {
-            console.warn(`[AgentChat] GO_TO task missing target location`, task);
+            console.warn(
+              `[AgentChat] GO_TO task missing target location`,
+              task,
+            );
             useGameStore.getState().addChatMessage(agentId, {
               role: "agent",
               text: `I'm sorry, I don't know where that is.`,
@@ -517,7 +566,7 @@ export const AgentChatPanel: React.FC = () => {
 
         case "WRITE_FILE": {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
+          // @ts-ignore
           if (task.itemId && task.content) {
             const cleanedItemId = String(task.itemId)
               .replace(/\s*\([A-Z]\)$/i, "")
@@ -532,7 +581,7 @@ export const AgentChatPanel: React.FC = () => {
                 priority: 20,
                 itemId: item.id,
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
+                // @ts-ignore
                 content: task.content,
               });
               console.log(`[AgentChat] Dispatched WRITE_FILE: ${item.id}`);
@@ -551,13 +600,13 @@ export const AgentChatPanel: React.FC = () => {
 
         case "COPY_FILE": {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
+          // @ts-ignore
           if (task.itemId && task.sourceItemId) {
             const cleanedItemId = String(task.itemId)
               .replace(/\s*\([A-Z]\)$/i, "")
               .trim();
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
+            // @ts-ignore
             const cleanedSourceItemId = String(task.sourceItemId)
               .replace(/\s*\([A-Z]\)$/i, "")
               .trim();
@@ -616,15 +665,29 @@ export const AgentChatPanel: React.FC = () => {
       // Build world context restricted to the agent's spatial awareness
       const agentPos = useGameStore.getState().agentPositions[chatAgentId];
       // Guard: if position is unknown, build context without spatial filter
+      // Reduce search radius to prevent LLM payload from exceeding token limits (Groq 413)
       const ctx = agentPos
-        ? buildWorldContext(agentPos, 150)
+        ? buildWorldContext(agentPos, 30)
         : buildWorldContext();
 
-      const recentMemories = await memoryStream.retrieve({ limit: 20 });
-      const memoryContextStr =
-        recentMemories.length > 0
-          ? `\n\nRECENT MEMORIES:\n${recentMemories.map((m) => `- [${m.type}] ${m.content}`).join("\n")}`
-          : "";
+      // 1. Fetch persistent core facts (insights)
+      const coreFacts = await memoryStream.retrieve({
+        tags: ["core_fact"],
+        limit: 5,
+      });
+      // 2. Fetch immediate short-term history
+      const recentMemories = await memoryStream.retrieve({ limit: 5 });
+
+      let memoryContextStr = "";
+      if (coreFacts.length > 0 || recentMemories.length > 0) {
+        memoryContextStr = "\n\nMEMORIES:\n";
+        if (coreFacts.length > 0) {
+          memoryContextStr += `CORE FACTS (Always remember):\n${coreFacts.map((m) => `- ${m.content}`).join("\n")}\n`;
+        }
+        if (recentMemories.length > 0) {
+          memoryContextStr += `RECENT EVENTS:\n${recentMemories.map((m) => `- [${m.type}] ${m.content}`).join("\n")}`;
+        }
+      }
 
       const worldContextStr = `ITEMS:\n${ctx.items}\n\nPLACING AREAS:\n${ctx.areas}\n\nAGENTS:\n${ctx.agents}\n\nLocations: Meeting room = conference area.${memoryContextStr}`;
 
@@ -648,7 +711,7 @@ export const AgentChatPanel: React.FC = () => {
       window.dispatchEvent(
         new CustomEvent("agent-speak", {
           detail: { agentId: chatAgentId, text: response.reply },
-        })
+        }),
       );
 
       // If the LLM returned tasks, inject them into the agent's queue
@@ -695,8 +758,9 @@ export const AgentChatPanel: React.FC = () => {
         {chatMessages.map((msg, idx) => (
           <div
             key={idx}
-            className={`${styles.messageBubble} ${msg.role === "user" ? styles.messageUser : styles.messageAgent
-              }`}
+            className={`${styles.messageBubble} ${
+              msg.role === "user" ? styles.messageUser : styles.messageAgent
+            }`}
           >
             {msg.text}
           </div>

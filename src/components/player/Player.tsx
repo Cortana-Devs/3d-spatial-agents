@@ -1,7 +1,10 @@
 /* eslint-disable react-hooks/immutability */
 import React, { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
-import { usePlayerController, Joints } from '@/components/player/usePlayerController';
+import {
+  usePlayerController,
+  Joints,
+} from "@/components/player/usePlayerController";
 
 export default function Robot({
   controller = usePlayerController,
@@ -68,7 +71,23 @@ export default function Robot({
       color: 0x2e1a0e,
       roughness: 0.4,
     });
-    return { labCoat, shirt, pants, skin, shoes, hair, glasses, badge, eyeWhite, pupil };
+    const mouth = new THREE.MeshStandardMaterial({
+      color: 0xc49080,
+      roughness: 0.7,
+    });
+    return {
+      labCoat,
+      shirt,
+      pants,
+      skin,
+      shoes,
+      hair,
+      glasses,
+      badge,
+      eyeWhite,
+      pupil,
+      mouth,
+    };
   }, []);
 
   const geos = useMemo(() => {
@@ -82,8 +101,24 @@ export default function Robot({
       pen: new THREE.CylinderGeometry(0.015, 0.015, 0.2, 6),
       neck: new THREE.CylinderGeometry(0.18, 0.2, 0.3, 10),
       head: new THREE.SphereGeometry(0.45, 16, 16),
-      hairCap: new THREE.SphereGeometry(0.42, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2),
-      hairFill: new THREE.SphereGeometry(0.42, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      hairCap: new THREE.SphereGeometry(
+        0.42,
+        16,
+        16,
+        0,
+        Math.PI * 2,
+        0,
+        Math.PI / 2,
+      ),
+      hairFill: new THREE.SphereGeometry(
+        0.42,
+        16,
+        16,
+        0,
+        Math.PI * 2,
+        0,
+        Math.PI * 0.55,
+      ),
       eye: new THREE.SphereGeometry(0.08, 10, 10),
       pupil: new THREE.SphereGeometry(0.04, 8, 8),
       lens: new THREE.TorusGeometry(0.11, 0.018, 8, 16),
@@ -218,13 +253,29 @@ export default function Robot({
             />
 
             {/* Left Eye — white */}
-            <mesh position={[0.16, 0.48, 0.4]} material={mats.eyeWhite} geometry={geos.eye} />
+            <mesh
+              position={[0.16, 0.48, 0.4]}
+              material={mats.eyeWhite}
+              geometry={geos.eye}
+            />
             {/* Left Pupil */}
-            <mesh position={[0.16, 0.48, 0.47]} material={mats.pupil} geometry={geos.pupil} />
+            <mesh
+              position={[0.16, 0.48, 0.47]}
+              material={mats.pupil}
+              geometry={geos.pupil}
+            />
             {/* Right Eye — white */}
-            <mesh position={[-0.16, 0.48, 0.4]} material={mats.eyeWhite} geometry={geos.eye} />
+            <mesh
+              position={[-0.16, 0.48, 0.4]}
+              material={mats.eyeWhite}
+              geometry={geos.eye}
+            />
             {/* Right Pupil */}
-            <mesh position={[-0.16, 0.48, 0.47]} material={mats.pupil} geometry={geos.pupil} />
+            <mesh
+              position={[-0.16, 0.48, 0.47]}
+              material={mats.pupil}
+              geometry={geos.pupil}
+            />
 
             {/* Glasses — left lens frame */}
             <mesh
@@ -274,9 +325,7 @@ export default function Robot({
             {/* Mouth */}
             <mesh
               position={[0, 0.28, 0.43]}
-              material={
-                new THREE.MeshStandardMaterial({ color: 0xc49080, roughness: 0.7 })
-              }
+              material={mats.mouth}
               rotation={[0, 0, Math.PI / 2]}
               geometry={geos.mouth}
             />
@@ -320,6 +369,7 @@ type PlayerMats = {
   badge: THREE.Material;
   eyeWhite: THREE.Material;
   pupil: THREE.Material;
+  mouth: THREE.Material;
 };
 
 function PlayerArm({
@@ -345,9 +395,20 @@ function PlayerArm({
       position={[dir * 1.0, 2.2, 0]}
     >
       {/* Shoulder — lab coat */}
-      <mesh material={mats.labCoat} castShadow receiveShadow geometry={geos.shoulder} />
+      <mesh
+        material={mats.labCoat}
+        castShadow
+        receiveShadow
+        geometry={geos.shoulder}
+      />
       {/* Upper arm — lab coat sleeve */}
-      <mesh position={[0, -0.7, 0]} material={mats.labCoat} castShadow receiveShadow geometry={geos.upperArm} />
+      <mesh
+        position={[0, -0.7, 0]}
+        material={mats.labCoat}
+        castShadow
+        receiveShadow
+        geometry={geos.upperArm}
+      />
       <group
         ref={(el) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -358,7 +419,12 @@ function PlayerArm({
         position={[0, -1.4, 0]}
       >
         {/* Elbow — rolled-up sleeve cuff */}
-        <mesh material={mats.labCoat} castShadow receiveShadow geometry={geos.elbow} />
+        <mesh
+          material={mats.labCoat}
+          castShadow
+          receiveShadow
+          geometry={geos.elbow}
+        />
         {/* Forearm — exposed skin (sleeves rolled up) */}
         <mesh
           position={[0, -0.6, 0]}
@@ -370,12 +436,29 @@ function PlayerArm({
         {/* Hand with Fingers */}
         <group position={[0, -1.3, 0]}>
           {/* Palm */}
-          <mesh material={mats.skin} castShadow position={[0, -0.05, 0]} geometry={geos.palm} />
+          <mesh
+            material={mats.skin}
+            castShadow
+            position={[0, -0.05, 0]}
+            geometry={geos.palm}
+          />
           {/* Thumb */}
-          <mesh material={mats.skin} castShadow position={[-dir * 0.12, -0.05, 0.05]} rotation={[Math.PI / 8, 0, -dir * Math.PI / 6]} geometry={geos.thumb} />
+          <mesh
+            material={mats.skin}
+            castShadow
+            position={[-dir * 0.12, -0.05, 0.05]}
+            rotation={[Math.PI / 8, 0, (-dir * Math.PI) / 6]}
+            geometry={geos.thumb}
+          />
           {/* Fingers */}
           {[-0.07, 0, 0.07].map((x, i) => (
-            <mesh key={`finger-${i}`} material={mats.skin} castShadow position={[x, -0.22 - (i === 1 ? 0.02 : 0), 0]} geometry={i === 1 ? geos.finger2 : geos.finger1} />
+            <mesh
+              key={`finger-${i}`}
+              material={mats.skin}
+              castShadow
+              position={[x, -0.22 - (i === 1 ? 0.02 : 0), 0]}
+              geometry={i === 1 ? geos.finger2 : geos.finger1}
+            />
           ))}
         </group>
       </group>
@@ -417,7 +500,12 @@ function PlayerLeg({
         position={[0, -1.5, 0]}
       >
         {/* Knee joint */}
-        <mesh material={mats.pants} castShadow receiveShadow geometry={geos.knee} />
+        <mesh
+          material={mats.pants}
+          castShadow
+          receiveShadow
+          geometry={geos.knee}
+        />
         {/* Lower leg — dark pants */}
         <mesh
           position={[0, -0.75, 0]}
