@@ -76,7 +76,7 @@ export default function AudioTestPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsPlaying(audioState === "speaking" || audioState === "fetching_primary" || audioState === "fetching_fallback");
+    setIsPlaying(audioState === "speaking" || audioState === "fetching");
   }, [audioState]);
 
   const playerRef = useRef<THREE.Group>(null);

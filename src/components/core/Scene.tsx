@@ -3,7 +3,8 @@
 import React, { useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "@/lib/bvh-setup";
-import { Stats, AdaptiveEvents, Environment } from "@react-three/drei";
+import { AdaptiveEvents, Environment } from "@react-three/drei";
+import DynamicStatsIsland from "@/components/ui/DynamicStatsIsland";
 import * as THREE from "three";
 import ResearchLabHub from "@/components/world/OfficeHub";
 import Robot from "@/components/player/Player";
@@ -202,12 +203,15 @@ export default function Scene() {
     <div style={{ width: "100vw", height: "100vh" }}>
       <Canvas
         shadows
+        frameloop="always"
         dpr={[1, 1.5]}
         performance={{ min: 0.5 }}
         camera={{ position: [0, 10, -20], fov: 60 }}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.2,
+          powerPreference: "high-performance",
+          antialias: false,
         }}
       >
         <AdaptiveEvents />
@@ -239,7 +243,7 @@ export default function Scene() {
 
         <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
 
-        <Stats />
+        <DynamicStatsIsland />
       </Canvas>
     </div>
   );

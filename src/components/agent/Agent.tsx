@@ -6,6 +6,7 @@ import { AgentInteractionPanel } from "@/components/ui/panels/AgentInteractionPa
 import { SpeechIndicator } from "@/components/ui/hud/SpeechIndicator";
 import { useGameStore } from "@/store/gameStore";
 import { useAudioController } from "@/lib/audio/useAudioController";
+import { useAgentAudio } from "@/lib/audio/useAgentAudio";
 import { useThree } from "@react-three/fiber";
 import RobotModel from '@/components/models/characters/RobotModel';
 
@@ -46,7 +47,13 @@ export default function Agent({
     }
   };
 
-  const { currentBuffer, currentAudioElement, ensureAudioContext, speak, stopSpeaking } = useAudioController();
+  const {
+    currentBuffer,
+    currentPhonemeSchedule,
+    currentAudioElement,
+    speak,
+    stopSpeaking,
+  } = useAudioController();
   const audioRef = useRef<THREE.PositionalAudio>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
@@ -95,24 +102,27 @@ export default function Agent({
   }, [id, stopSpeaking]);
 
   useEffect(() => {
-    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
     try {
-      // Need to resume context on explicit user interaction elsewhere,
-      // but ensure context exists here.
-      ensureAudioContext();
-      const ctx = audioRef.current.context;
+      // Use the PositionalAudio's own context — the AudioUnlocker will resume it
+      // after a user gesture. Calling ensureAudioContext() here would attempt an
+      // early resume() before any gesture, producing a browser autoplay warning.
+      const ctx = audio.context;
+      if (ctx.state === "closed") return;
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 64;
       analyserRef.current = analyser;
-      
-      const gainNode = audioRef.current.getOutput();
+
+      const gainNode = audio.getOutput();
       if (gainNode) {
         gainNode.connect(analyser);
       }
     } catch (e) {
-      console.warn("Audio Context init deferred", e);
+      console.warn("Audio analyser setup deferred", e);
     }
-  }, [ensureAudioContext]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pipeline A: Streaming (Low Latency)
   useEffect(() => {
@@ -139,14 +149,7 @@ export default function Agent({
     }
   }, [currentAudioElement]);
 
-  // Pipeline B: Local Buffer (Fallback)
-  useEffect(() => {
-    if (audioRef.current && currentBuffer) {
-      if (audioRef.current.isPlaying) audioRef.current.stop();
-      audioRef.current.setBuffer(currentBuffer);
-      audioRef.current.play();
-    }
-  }, [currentBuffer]);
+  useAgentAudio(audioRef, currentBuffer, currentPhonemeSchedule);
 
   useEffect(() => {
     if (audioRef.current) {

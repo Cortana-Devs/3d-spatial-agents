@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AudioUnlocker } from '@/components/ui/audio/AudioUnlocker';
 import { AudioPrompt } from '@/components/ui/audio/AudioPrompt';
+import { VoiceProvider } from '@/lib/audio/VoiceProvider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,9 +28,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-        <AudioUnlocker />
-        <AudioPrompt />
-        {children}
+        <VoiceProvider>
+          <AudioUnlocker />
+          <AudioPrompt />
+          {children}
+        </VoiceProvider>
       </body>
     </html>
   );
