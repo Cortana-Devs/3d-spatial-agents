@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
-import * as THREE from "three";
 import { glassMaterial, structuralMetalMaterial, soffitMaterial, doorHandleMaterial } from "./DonutMaterials";
 import { 
   outerWallSegmentGeo, innerWallSegmentGeo,

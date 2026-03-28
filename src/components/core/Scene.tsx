@@ -6,16 +6,7 @@ import "@/lib/bvh-setup";
 import { AdaptiveEvents, Environment, BakeShadows } from "@react-three/drei";
 import DynamicStatsIsland from "@/components/ui/DynamicStatsIsland";
 import * as THREE from "three";
-<<<<<<< HEAD
 import SceneWorldRoot from "@/components/core/scene/SceneWorldRoot";
-=======
-import ResearchLabHub from "@/components/world/OfficeHub";
-import DonutLabWorld from "@/components/world/donut/DonutLabWorld";
-
-/** Set true to load the full lab (walls, furniture, props). False = floor + agents only. */
-const USE_FULL_RESEARCH_LAB = false;
-const USE_DONUT_LAB = true;
->>>>>>> donut-redesign
 import Robot from "@/components/player/Player";
 import Agent from "@/components/agent/Agent";
 import YukaSystem from "@/components/systems/YukaSystem";
@@ -76,10 +67,6 @@ function CameraRig({
     const onClick = () => {
       if (document.pointerLockElement !== gl.domElement) {
         try {
-          // requestPointerLock() returns a Promise. If the user hits ESC or code
-          // calls exitPointerLock() before it settles, Chrome rejects with:
-          // SecurityError: The user has exited the lock before this request was completed.
-          // That must be handled or Next.js / the runtime reports it as an uncaught error.
           void gl.domElement.requestPointerLock().catch(() => {
             /* aborted — expected when menu opens or user cancels lock */
           });
@@ -124,8 +111,6 @@ function CameraRig({
       .add(new THREE.Vector3(0, 5.5, 0));
 
     if (isInspecting) {
-      // Zoom Logic (Inspector Mode)
-      // Position camera slightly in front and above the agent
       const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(
         currentTarget.quaternion,
       );
@@ -139,10 +124,6 @@ function CameraRig({
       return;
     }
 
-    // Calculate Rotation from Yaw/Pitch
-    // Z- is forward in standard Three.js camera space when rotation is 0,
-    // but our orbit controls usually treat Z+ or Z- as start.
-    // Let's assume standard Euler YXZ order for FPS/TPS cameras.
     const quat = new THREE.Quaternion();
     quat.setFromEuler(
       new THREE.Euler(
@@ -153,8 +134,7 @@ function CameraRig({
       ),
     );
 
-    // Define Offset (Right 2.5, Up 0.5, Back 8.0)
-    // Adjust these values to tune the "Over-the-shoulder" feel
+    // Define Offset (Right 2.5, Up 0.5, Back 12.0)
     const offset = new THREE.Vector3(2.5, 0.5, 12.0);
     offset.applyQuaternion(quat);
 
@@ -162,7 +142,6 @@ function CameraRig({
     const idealPos = robotHead.clone().add(offset);
 
     // Collision Detection
-    // Raycast from head to idealPos to prevent clipping through walls
     const direction = idealPos.clone().sub(robotHead);
     const distanceToIdeal = direction.length();
     direction.normalize();
@@ -170,7 +149,6 @@ function CameraRig({
     raycaster.current.set(robotHead, direction);
     raycaster.current.far = distanceToIdeal;
 
-    // Intersect scene to find obstacles
     const collidableMeshes = useGameStore.getState().collidableMeshes;
     const intersects = raycaster.current.intersectObjects(
       collidableMeshes,
@@ -180,7 +158,6 @@ function CameraRig({
     let finalDist = distanceToIdeal;
 
     for (const hit of intersects) {
-      // Skip the player itself
       let isPlayer = false;
       let obj: THREE.Object3D | null = hit.object;
       while (obj) {
@@ -193,18 +170,11 @@ function CameraRig({
 
       if (isPlayer) continue;
 
-      // Found a valid obstacle
-      // Bring camera closer: hit.distance - cushion
       finalDist = Math.max(0.5, hit.distance - 0.5);
       break;
     }
 
-    // Update Camera Position
     camera.position.copy(robotHead).add(direction.multiplyScalar(finalDist));
-
-    // Update Camera Rotation
-    // In standard TPS, camera looks parallel to the "forward" direction defined by yaw/pitch
-    // We can just set the quaternion we calculated earlier
     camera.setRotationFromQuaternion(quat);
   });
 
@@ -235,31 +205,22 @@ export default function Scene() {
         <Environment preset="city" />
         <BakeShadows />
 
-<<<<<<< HEAD
+        {/* SceneWorldRoot dispatches to DonutLabWorld (via sceneWorldConfig "donut" mode) */}
         <SceneWorldRoot />
 
-        {/* Spawns on the donut annulus (inner ~38, outer ~95); keep clear of center hole. */}
-        <Robot groupRef={robotRef} initialPosition={[72, 4.0, 0]} />
+        {/*
+          Spawn on the interior ring floor (z=72 is safely inside the outer wall at r=95).
+          Agents start nearby so they're visible on first load.
+        */}
+        <Robot groupRef={robotRef} initialPosition={[0, 5.0, 72]} />
         <Agent
           playerRef={robotRef}
-          initialPosition={[50, 4.0, 52]}
-=======
-        {USE_DONUT_LAB ? <DonutLabWorld /> : USE_FULL_RESEARCH_LAB ? <ResearchLabHub /> : null}
-
-        <Robot groupRef={robotRef} initialPosition={[0, 4.0, 60]} />
-        <Agent
-          playerRef={robotRef}
-          initialPosition={[20, 4.0, 50]}
->>>>>>> donut-redesign
+          initialPosition={[18, 5.0, 52]}
           id="agent-01"
         />
         <Agent
           playerRef={robotRef}
-<<<<<<< HEAD
-          initialPosition={[-55, 4.0, 48]}
-=======
-          initialPosition={[-25, 4.0, 45]}
->>>>>>> donut-redesign
+          initialPosition={[-22, 5.0, 48]}
           id="agent-02"
         />
 

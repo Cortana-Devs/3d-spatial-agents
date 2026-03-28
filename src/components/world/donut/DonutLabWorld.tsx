@@ -5,9 +5,9 @@ import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
 import { POIRegistry } from "@/components/systems/POIRegistry";
 import DonutFloor from "./DonutFloor";
 import DonutWalls from "./DonutWalls";
-import DonutCenterPark from "./DonutCenterPark";
+import DonutCenterPark, { getTerrainHeight } from "./DonutCenterPark";
 import { buildDonutObstacles } from "./DonutObstacles";
-import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, DEFAULT_RING_OUTER_RADIUS } from "./labFloorConstants";
+import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, DEFAULT_RING_OUTER_RADIUS, ENV_PROP_SCALE_FACTOR } from "./labFloorConstants";
 
 // --- Curated Dream Park Layout ---
 const treeData = [
@@ -28,12 +28,26 @@ const benchData = [
 function getDonutInteractables() {
   const items: any[] = [];
   
-  // Register benches for sitting
+  // Bench seat height in world units (local 0.42 * scale factor).
+  // The player group Y for sitting = bench_seat_world_Y - player_hips_local_Y
+  // player_hips_local_Y = 3.3 (from Player.tsx hips group position)
+  const BENCH_SEAT_LOCAL_Y = 0.42;
+  const PLAYER_HIPS_LOCAL_Y = 3.3;
   benchData.forEach((b, i) => {
+    const lx = b.position[0];
+    const lz = b.position[2];
+    // terrain height at this bench position (relative to park group y=0)
+    const terrainY = getTerrainHeight(lx, lz);
+    const benchSeatWorldY = DEFAULT_LAB_HUB.y + terrainY + (BENCH_SEAT_LOCAL_Y * ENV_PROP_SCALE_FACTOR);
+    const sitGroupY = benchSeatWorldY - PLAYER_HIPS_LOCAL_Y;
     items.push({
       id: `bench-park-${i}`,
       type: "chair",
-      position: new THREE.Vector3(DEFAULT_LAB_HUB.x + b.position[0], DEFAULT_LAB_HUB.y, DEFAULT_LAB_HUB.z + b.position[2]),
+      position: new THREE.Vector3(
+        DEFAULT_LAB_HUB.x + lx,
+        sitGroupY,
+        DEFAULT_LAB_HUB.z + lz,
+      ),
       rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(b.rotation[0], b.rotation[1], b.rotation[2])),
       name: "Park Bench",
       description: "A solid wood and metal bench facing the center park.",

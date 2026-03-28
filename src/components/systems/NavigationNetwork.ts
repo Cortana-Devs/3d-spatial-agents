@@ -168,7 +168,7 @@ class NavigationNetwork {
       }
     }
 
-    if (SCENE_WORLD_MODE === "minimal") {
+    if (SCENE_WORLD_MODE === "minimal" || SCENE_WORLD_MODE === "donut") {
       this.carveCircularVoid(
         DEFAULT_LAB_HUB.x,
         DEFAULT_LAB_HUB.z,

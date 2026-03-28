@@ -9,7 +9,7 @@ const POND_RADIUS = 16.0;
 const DOCK_X = 15.3;
 
 // --- Path & Terrain Math ---
-const getTerrainHeight = (x: number, z: number) => {
+export const getTerrainHeight = (x: number, z: number): number => {
   const distance = Math.sqrt(x*x + z*z);
   const distToDock = Math.hypot(x - DOCK_X, z - 0);
   
