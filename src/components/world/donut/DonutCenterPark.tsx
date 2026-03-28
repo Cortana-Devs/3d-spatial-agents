@@ -2,42 +2,47 @@ import React, { useMemo, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, extend } from "@react-three/fiber";
 import { shaderMaterial } from "@react-three/drei";
-import { grassMaterial, pondBottomMat, concreteMaterial, floorMaterial } from "./DonutMaterials";
+import { pondBottomMat } from "./DonutMaterials";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, ENV_PROP_SCALE_FACTOR } from "./labFloorConstants";
+import { useGameStore } from "@/store/gameStore";
 
 const POND_RADIUS = 16.0;
 const DOCK_X = 15.3;
 
-// --- Path & Terrain Math ---
+// --- Path & Terrain Math (convex-only: no dark pits) ---
 export const getTerrainHeight = (x: number, z: number): number => {
-  const distance = Math.sqrt(x*x + z*z);
-  const distToDock = Math.hypot(x - DOCK_X, z - 0);
-  
-  let dockBlend = 0;
-  if (distToDock < 4.0) {
-    dockBlend = Math.pow(1 - (distToDock / 4.0), 2);
+  const distance = Math.sqrt(x * x + z * z);
+  const distToDock = Math.hypot(x - DOCK_X, z);
+
+  // 1. Pond basin — cubic ease from bank to deep
+  if (distance < POND_RADIUS - 2.5) return -0.6;
+  if (distance < POND_RADIUS) {
+    const t = (distance - (POND_RADIUS - 2.5)) / 2.5;
+    return -0.6 + t * t * (3 - 2 * t) * 0.8;
   }
 
-  let y = 0;
-  if (distance < POND_RADIUS - 2.0) {
-    y = -0.6; // Deep basin
-  } else if (distance < POND_RADIUS) {
-    // Smoother cubic easing for the pond bank
-    const t = (distance - (POND_RADIUS - 2.0)) / 2.0;
-    y = -0.6 + (t * t * (3 - 2 * t)) * 0.9;
-  } else {
-    // Elegant, curated rolling hills that reach up to 1.5 height
-    const noise = Math.sin(x * 0.15) * Math.cos(z * 0.15) * 1.5;
-    // Plus a grand hill on one side for the oak tree
-    const bigHill = Math.max(0, 1 - Math.hypot(x + 15, z - 15) / 20) * 2.5;
-    const edgeBlend = Math.min(1, (DEFAULT_RING_INNER_RADIUS - distance) / 4);
-    y = 0.3 + (noise + bigHill) * edgeBlend;
+  // 2. Gentle convex terrain outside pond — only additive bumps, never pits
+  //    abs(sin*cos) stays in [0,1] so no negative values → no dark concave shadows
+  const ripple = Math.abs(Math.sin(x * 0.13) * Math.cos(z * 0.13)) * 0.5;
+
+  // 3. Curated hills under tree positions only
+  const oakHill    = Math.max(0, 1.0 - Math.hypot(x + 14, z - 16) * 0.1) * 1.6;
+  const cherryHill = Math.max(0, 1.0 - Math.hypot(x - 18, z - 20) * 0.12) * 1.0;
+  const pineHill   = Math.max(0, 1.0 - Math.hypot(x + 22, z + 15) * 0.1) * 0.8;
+
+  let h = 0.25 + ripple + oakHill + cherryHill + pineHill;
+
+  // 4. Flatten dock area
+  if (distToDock < 4.5) {
+    const t = 1.0 - distToDock / 4.5;
+    h = h * (1 - t) + (-0.05 * t);
   }
-  
-  if (dockBlend > 0 && distance >= POND_RADIUS - 2.0) {
-    y = y * (1 - dockBlend) + 0.4 * dockBlend;
-  }
-  return y - 0.75;
+
+  // 5. Taper to flat near park edge
+  const edgeT = Math.max(0, (distance - DEFAULT_RING_INNER_RADIUS + 5) / 5);
+  h *= 1.0 - Math.min(1, edgeT);
+
+  return h;
 };
 
 // --- Low Poly Geometries ---
@@ -46,233 +51,315 @@ const pineLeavesGeo = new THREE.ConeGeometry(2, 5, 5);
 const oakLeavesGeo = new THREE.IcosahedronGeometry(2.5, 1);
 const cherryLeavesGeo = new THREE.IcosahedronGeometry(2.2, 1);
 
+const grassMat = new THREE.MeshStandardMaterial({ color: 0x5a9468, roughness: 1.0, metalness: 0 });
 const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9, flatShading: true });
 const pineLeavesMat = new THREE.MeshStandardMaterial({ color: 0x2d4c1e, roughness: 0.8, flatShading: true });
 const oakLeavesMat = new THREE.MeshStandardMaterial({ color: 0x4a6b36, roughness: 0.8, flatShading: true });
 const cherryLeavesMat = new THREE.MeshStandardMaterial({ color: 0xffb7c5, roughness: 0.8, flatShading: true });
+const petalMat = new THREE.MeshStandardMaterial({ color: 0xffc8d5, roughness: 0.9 });
 
 const lilyPadGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.02, 16, 1, false, 0, Math.PI * 1.7);
 const lilyPadMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.9 });
+const lilyFlowerGeo = new THREE.ConeGeometry(0.12, 0.2, 6);
+const lilyFlowerMat = new THREE.MeshStandardMaterial({ color: 0xfff0f5, roughness: 0.6 });
 const pathMat = new THREE.MeshStandardMaterial({ color: 0xeae1d0, roughness: 1.0, flatShading: true, side: THREE.DoubleSide });
 
 const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.9 });
 const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.9 });
-// Base bench width = 1.6 (real-world metres). widthScale multiplies only the X (length) axis.
 const benchWidth = 1.6;
 const seatPlankGeo = new THREE.BoxGeometry(benchWidth, 0.04, 0.08);
 const backPlankGeo = new THREE.BoxGeometry(benchWidth, 0.08, 0.04);
 const legVerticalGeo = new THREE.BoxGeometry(0.04, 0.4, 0.04);
 const legHorizontalGeo = new THREE.BoxGeometry(0.04, 0.04, 0.45);
 const armRestGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
-// Max instances: one extra-wide bench (widthScale 2.8) has extra leg columns
-const MAX_BENCH_INSTANCES = 8; // generous upper bound for a single wide bench
+const MAX_BENCH_INSTANCES = 8;
 
-const fishBodyGeo = new THREE.SphereGeometry(0.12, 16, 16); fishBodyGeo.scale(1, 1.5, 3);
-const fishTailGeo = new THREE.BoxGeometry(0.02, 0.25, 0.3); fishTailGeo.translate(0, 0, -0.15);
-const fishFinGeo = new THREE.BoxGeometry(0.2, 0.02, 0.15);
-const koiColors = [0xff4400, 0xeeeeee, 0x222222, 0xffbb00, 0xff2222];
+// Fish geometry — smaller, natural koi scale
+const fishBodyGeo = new THREE.SphereGeometry(0.1, 12, 8); fishBodyGeo.scale(1, 0.55, 2.2);
+const fishTailGeo = new THREE.ConeGeometry(0.08, 0.2, 6); fishTailGeo.translate(0, 0, 0);
+const koiColors = [0xee4411, 0xf5f5ee, 0x111111, 0xffaa00, 0xff3333, 0xffcc88];
 
-// --- Custom Optimized Water Shader ---
+// --- Upgraded Water Shader with depth, foam edge, caustic ripple ---
 const StylizedWaterMaterial = shaderMaterial(
-  { uTime: 0, uColor: new THREE.Color(0x2288cc), uFoamColor: new THREE.Color(0xffffff) },
-  // vertex shader
+  { uTime: 0, uDeepColor: new THREE.Color(0x1a5c8a), uShallowColor: new THREE.Color(0x4aadcc), uFoamColor: new THREE.Color(0xd0eeff) },
   `
     varying vec2 vUv;
-    varying vec3 vPosition;
+    varying vec3 vWorldPos;
+    varying float vDepth;
     uniform float uTime;
     void main() {
       vUv = uv;
       vec3 pos = position;
-      float wave1 = sin(pos.x * 0.2 + uTime * 1.0) * 0.04;
-      float wave2 = cos(pos.y * 0.2 + uTime * 0.8) * 0.04;
-      pos.z += wave1 + wave2;
-      vPosition = pos;
+      // Multi-frequency gentle waves in XZ (pond is flat, rotation applied outside)
+      float w1 = sin(pos.x * 0.35 + uTime * 0.9) * 0.06;
+      float w2 = cos(pos.z * 0.28 + uTime * 1.1) * 0.05;
+      float w3 = sin(pos.x * 0.18 - pos.z * 0.22 + uTime * 0.7) * 0.035;
+      pos.z += w1 + w2 + w3;
+      vDepth = (w1 + w2 + w3 + 0.15) / 0.3;
+      vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     }
   `,
-  // fragment shader
   `
     varying vec2 vUv;
-    varying vec3 vPosition;
-    uniform vec3 uColor;
+    varying vec3 vWorldPos;
+    varying float vDepth;
+    uniform float uTime;
+    uniform vec3 uDeepColor;
+    uniform vec3 uShallowColor;
     uniform vec3 uFoamColor;
     void main() {
-      float waveDepth = smoothstep(-0.04, 0.04, vPosition.z);
-      vec3 finalColor = mix(uColor, uFoamColor, waveDepth * 0.3);
-      gl_FragColor = vec4(finalColor, 0.65);
+      // Depth-based color blend (deep=blue, shallow=cyan)
+      vec3 waterColor = mix(uDeepColor, uShallowColor, clamp(vDepth, 0.0, 1.0));
+
+      // Caustic shimmer — cheap additive ripple pattern
+      float caustic = abs(sin(vWorldPos.x * 0.8 + uTime * 1.3) * cos(vWorldPos.z * 0.7 + uTime * 1.1)) * 0.12;
+      waterColor += caustic;
+
+      // Fresnel-like edge foam using UV distance from center
+      float dist = length(vUv - 0.5) * 2.0;
+      float foam = smoothstep(0.82, 0.98, dist) * 0.4;
+      waterColor = mix(waterColor, uFoamColor, foam);
+
+      gl_FragColor = vec4(waterColor, 0.78);
     }
   `,
-  (mat) => {
-    if (mat) {
-      mat.transparent = true;
-      mat.depthWrite = false;
-    }
-  }
+  (mat) => { if (mat) { mat.transparent = true; mat.depthWrite = false; } }
 );
 extend({ StylizedWaterMaterial });
 
 // --- Ecosystem Logic ---
 type SharedKoi = { id: number; pos: THREE.Vector3; alive: boolean; die: () => void; };
-const sharedEcosystem = { kois: [] as SharedKoi[], arowanaPos: new THREE.Vector3(0, -100, 0) };
+const sharedEcosystem = { kois: [] as SharedKoi[], arowanaPos: new THREE.Vector3(0, -200, 0) };
 
-function Fish({ id, onDie }: { id: number, onDie: (id: number) => void }) {
+// Seeded pseudo-random: deterministic per-fish, no allocation per frame
+function seededRand(seed: number) { const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+
+function Fish({ id, onDie }: { id: number; onDie: (id: number) => void }) {
   const groupRef = React.useRef<THREE.Group>(null);
-  const tailRef = React.useRef<THREE.Mesh>(null);
-  const [color] = React.useState(() => koiColors[id % koiColors.length]);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color, roughness: 0.2, metalness: 0.1 }), [color]);
-  
+  const tailRef  = React.useRef<THREE.Mesh>(null);
+  const color = koiColors[id % koiColors.length];
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.15 }), [color]);
+
+  // Per-fish personality — set ONCE at mount, never changes
+  const personality = useMemo(() => ({
+    speed:         0.15 + seededRand(id * 3)    * 0.25,   // 0.15–0.40 (graceful koi pace)
+    preferredDepth: -0.45 - seededRand(id * 7)  * 0.55,   // -0.45 to -1.0
+    wanderFreq:    0.25  + seededRand(id * 11)  * 0.25,   // unique wander tempo
+    wanderPhase:   seededRand(id * 13)          * Math.PI * 2,
+    tailPhase:     seededRand(id * 17)          * Math.PI * 2,
+    scale:         0.28  + seededRand(id * 19)  * 0.14,   // 0.28–0.42 world units (natural koi)
+    startAngle:    seededRand(id * 23)          * Math.PI * 2,
+    startRadius:   3     + seededRand(id * 29)  * (POND_RADIUS - 5),
+  }), [id]);
+
   const state = React.useRef({
-    pos: new THREE.Vector3((Math.random()-0.5)*(POND_RADIUS-2), -0.7 - Math.random()*0.2, (Math.random()-0.5)*(POND_RADIUS-2)),
-    vel: new THREE.Vector3(0, 0, 1),
-    speed: 0.3 + Math.random() * 0.4,
-    wanderAngle: Math.random() * Math.PI * 2
+    pos: new THREE.Vector3(
+      Math.sin(personality.startAngle) * personality.startRadius,
+      personality.preferredDepth,
+      Math.cos(personality.startAngle) * personality.startRadius,
+    ),
+    vel: new THREE.Vector3(Math.sin(personality.startAngle + Math.PI / 2), 0, Math.cos(personality.startAngle + Math.PI / 2)),
   });
 
   React.useEffect(() => {
-    const koi = { id, pos: state.current.pos, alive: true, die: () => onDie(id) };
+    const koi: SharedKoi = { id, pos: state.current.pos, alive: true, die: () => onDie(id) };
     sharedEcosystem.kois.push(koi);
     return () => {
       koi.alive = false;
       sharedEcosystem.kois = sharedEcosystem.kois.filter(k => k.id !== id);
     };
   }, [id, onDie]);
-  
-  const v1 = useMemo(() => new THREE.Vector3(), []);
-  const v2 = useMemo(() => new THREE.Vector3(), []);
 
-  useFrame((_, delta) => {
+  const steerVec = useMemo(() => new THREE.Vector3(), []);
+  const moveVec  = useMemo(() => new THREE.Vector3(), []);
+
+  useFrame((state3, delta) => {
     if (!groupRef.current || !tailRef.current) return;
-    const s = state.current;
-    
-    s.wanderAngle += (Math.random() - 0.5) * 0.05;
-    s.vel.x += (Math.sin(s.wanderAngle) - s.vel.x) * 0.05;
-    s.vel.z += (Math.cos(s.wanderAngle) - s.vel.z) * 0.05;
-    
+    const s       = state.current;
+    const p       = personality;
+    const t       = state3.clock.elapsedTime;
+    const dt      = Math.min(delta, 0.05); // cap so no tunneling on lag spikes
+
+    // 1. Deterministic sinusoidal wander — zero per-frame allocation or random calls
+    const wanderX = Math.sin(t * p.wanderFreq       + p.wanderPhase);
+    const wanderZ = Math.cos(t * p.wanderFreq * 0.8 + p.wanderPhase + 1.3);
+    steerVec.set(wanderX, 0, wanderZ);
+    s.vel.lerp(steerVec, 1.2 * dt);   // smooth, delta-scaled
+
+    // 2. Flee arowana when close
+    const aD = s.pos.distanceTo(sharedEcosystem.arowanaPos);
+    if (aD < 9.0) {
+      steerVec.subVectors(s.pos, sharedEcosystem.arowanaPos).setY(0).normalize();
+      s.vel.lerp(steerVec, 5.0 * dt);
+    }
+
+    // 3. Weak schooling — very subtle cohesion toward nearest neighbor
+    let nearestD = Infinity;
+    let nearestKoi: SharedKoi | null = null;
+    for (const koi of sharedEcosystem.kois) {
+      if (koi.id === id || !koi.alive) continue;
+      const d = s.pos.distanceTo(koi.pos);
+      if (d < nearestD) { nearestD = d; nearestKoi = koi; }
+    }
+    if (nearestKoi && nearestD > 7.0 && nearestD < 14.0) {
+      steerVec.subVectors(nearestKoi.pos, s.pos).setY(0).normalize();
+      s.vel.lerp(steerVec, 0.4 * dt);
+    }
+
+    // 4. Pond boundary confinement (smooth, not hard clamp)
     const dist = Math.hypot(s.pos.x, s.pos.z);
-    if (dist > POND_RADIUS - 2.0) {
-      v1.set(-s.pos.x, 0, -s.pos.z).normalize();
-      s.vel.lerp(v1, 0.1);
-      if (dist > POND_RADIUS - 1.0) {
-        s.pos.x = (s.pos.x / dist) * (POND_RADIUS - 1.0);
-        s.pos.z = (s.pos.z / dist) * (POND_RADIUS - 1.0);
+    if (dist > POND_RADIUS - 2.5) {
+      steerVec.set(-s.pos.x, 0, -s.pos.z).normalize();
+      s.vel.lerp(steerVec, Math.min(1, (dist - (POND_RADIUS - 2.5)) * 1.5) * 8 * dt);
+      if (dist > POND_RADIUS - 0.8) {
+        s.pos.x = (s.pos.x / dist) * (POND_RADIUS - 0.8);
+        s.pos.z = (s.pos.z / dist) * (POND_RADIUS - 0.8);
       }
     }
-    
-    if (s.vel.lengthSq() < 0.01) {
-      s.vel.x = Math.sin(s.wanderAngle);
-      s.vel.z = Math.cos(s.wanderAngle);
-    }
-    
-    let currentSpeed = s.speed;
-    if (s.pos.distanceTo(sharedEcosystem.arowanaPos) < 10.0) {
-      v1.subVectors(s.pos, sharedEcosystem.arowanaPos).setY(0).normalize();
-      s.vel.lerp(v1, 0.2);
-      currentSpeed *= 3.0;
-    }
-    
+
+    // 5. Move
+    const speed = aD < 9.0 ? p.speed * 3.5 : p.speed;
     s.vel.y = 0;
-    v2.copy(s.vel).normalize().multiplyScalar(currentSpeed * delta);
-    s.pos.add(v2);
-    s.pos.y = Math.max(-1.1, Math.min(-0.5, s.pos.y));
-    
+    if (s.vel.lengthSq() < 0.001) s.vel.set(1, 0, 0);
+    moveVec.copy(s.vel).normalize().multiplyScalar(speed * dt);
+    s.pos.add(moveVec);
+
+    // 6. Depth variation: gentle sinusoidal bobbing
+    s.pos.y = THREE.MathUtils.lerp(
+      s.pos.y,
+      p.preferredDepth + Math.sin(t * 0.35 + p.wanderPhase) * 0.1,
+      3.0 * dt,
+    );
+
+    // 7. Apply transform
     groupRef.current.position.copy(s.pos);
-    
+
     const targetRot = Math.atan2(s.vel.x, s.vel.z);
     let diff = targetRot - groupRef.current.rotation.y;
     while (diff < -Math.PI) diff += Math.PI * 2;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    groupRef.current.rotation.y += diff * 0.1;
-    tailRef.current.rotation.y = Math.sin(_.clock.elapsedTime * 15 * currentSpeed) * 0.3;
+    while (diff >  Math.PI) diff -= Math.PI * 2;
+    groupRef.current.rotation.y += diff * Math.min(1, 3.0 * dt); // smooth turn
+
+    // 8. Tail: frequency and amplitude proportional to speed — no jitter at slow pace
+    const tailFreq = 4.0 + speed * 18;
+    const tailAmp  = 0.12 + speed * 1.5;
+    tailRef.current.rotation.y = Math.sin(t * tailFreq + p.tailPhase) * tailAmp;
   });
-  
+
   return (
-    <group ref={groupRef} scale={[1.2 * ENV_PROP_SCALE_FACTOR, 1.2 * ENV_PROP_SCALE_FACTOR, 1.2 * ENV_PROP_SCALE_FACTOR]}>
+    <group ref={groupRef} scale={personality.scale}>
       <mesh geometry={fishBodyGeo} material={mat} castShadow />
-      <mesh ref={tailRef} geometry={fishTailGeo} material={mat} position={[0, 0, -0.35]} castShadow />
+      <mesh ref={tailRef} geometry={fishTailGeo} material={mat} position={[0, 0, -0.22]} />
     </group>
   );
 }
 
-function Arowana() {
-  const groupRef = React.useRef<THREE.Group>(null);
-  const state = React.useRef({ pos: new THREE.Vector3(0, -0.8, 0), vel: new THREE.Vector3(1, 0, 0), speed: 1.2, wanderAngle: 0, hunger: 50 });
-  const aroMat = useMemo(() => new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.8, roughness: 0.2 }), []);
-  
-  const v1 = useMemo(() => new THREE.Vector3(), []);
-  const v2 = useMemo(() => new THREE.Vector3(), []);
+// Arowana body geometry — elongated predator shape (instantiated once)
+const aroBodyGeo   = new THREE.SphereGeometry(1, 12, 8); aroBodyGeo.scale(0.28, 0.18, 0.9);
+const aroTailGeo   = new THREE.ConeGeometry(0.22, 0.55, 8); aroTailGeo.rotateX(Math.PI / 2);
+const aroDorsalGeo = new THREE.BoxGeometry(0.04, 0.25, 0.45);
 
-  useFrame((_, delta) => {
+function Arowana() {
+  const groupRef  = React.useRef<THREE.Group>(null);
+  const tailRef   = React.useRef<THREE.Mesh>(null);
+  const state = React.useRef({
+    pos: new THREE.Vector3(0, -0.75, 0),
+    vel: new THREE.Vector3(1, 0, 0),
+    speed:       1.0,
+    wanderAngle: 0.0,
+    hunger:      30,
+  });
+  const aroMat    = useMemo(() => new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.7, roughness: 0.25 }), []);
+  const steerVec  = useMemo(() => new THREE.Vector3(), []);
+  const moveVec   = useMemo(() => new THREE.Vector3(), []);
+
+  useFrame((stateR, delta) => {
     if (!groupRef.current) return;
-    const s = state.current;
-    s.hunger += delta * 2;
+    const s  = state.current;
+    const dt = Math.min(delta, 0.05);
+    s.hunger += dt * 1.5;
+
     let hasTarget = false;
-    
-    if (s.hunger > 60) {
-      let closestDist = Infinity;
-      let closestKoi: SharedKoi | null = null;
+    if (s.hunger > 55) {
+      let closest = Infinity;
+      let target: SharedKoi | null = null;
       for (const koi of sharedEcosystem.kois) {
         if (!koi.alive) continue;
         const d = s.pos.distanceTo(koi.pos);
-        if (d < closestDist) { closestDist = d; closestKoi = koi; }
+        if (d < closest) { closest = d; target = koi; }
       }
-      if (closestKoi) {
-        if (closestDist < 2.5) { closestKoi.die(); s.hunger = 0; }
+      if (target) {
+        if (closest < 1.8) { target.die(); s.hunger = 0; }
         else {
-          v1.subVectors(closestKoi.pos, s.pos).setY(0).normalize();
+          steerVec.subVectors(target.pos, s.pos).setY(0).normalize();
+          s.vel.lerp(steerVec, 1.5 * dt); // arowana turns slowly — large fish
           hasTarget = true;
         }
       }
     }
-    
-    if (hasTarget) {
-      s.vel.lerp(v1, 0.08); s.speed = 3.5;
-    } else {
-      s.wanderAngle += (Math.random() - 0.5) * 0.05;
-      s.vel.x += (Math.sin(s.wanderAngle) - s.vel.x) * 0.02;
-      s.vel.z += (Math.cos(s.wanderAngle) - s.vel.z) * 0.02;
-      s.speed = 1.2;
-    }
-    
+
+    if (!hasTarget) {
+      // Deterministic wander — no per-frame random
+      const t = stateR.clock.elapsedTime;
+      s.vel.x += (Math.sin(t * 0.22) - s.vel.x) * 0.6 * dt;
+      s.vel.z += (Math.cos(t * 0.18) - s.vel.z) * 0.6 * dt;
+      s.speed = 0.9;
+    } else { s.speed = 2.8; }
+
+    // Boundary
     const dist = Math.hypot(s.pos.x, s.pos.z);
-    if (dist > POND_RADIUS - 2.0) {
-      v2.set(-s.pos.x, 0, -s.pos.z).normalize();
-      s.vel.lerp(v2, 0.1);
-      if (dist > POND_RADIUS - 1.0) {
-        s.pos.x = (s.pos.x / dist) * (POND_RADIUS - 1.0);
-        s.pos.z = (s.pos.z / dist) * (POND_RADIUS - 1.0);
+    if (dist > POND_RADIUS - 2.5) {
+      steerVec.set(-s.pos.x, 0, -s.pos.z).normalize();
+      s.vel.lerp(steerVec, 4 * dt);
+      if (dist > POND_RADIUS - 0.8) {
+        s.pos.x = (s.pos.x / dist) * (POND_RADIUS - 0.8);
+        s.pos.z = (s.pos.z / dist) * (POND_RADIUS - 0.8);
       }
     }
-    
+
     s.vel.y = 0;
-    v2.copy(s.vel).normalize().multiplyScalar(s.speed * delta);
-    s.pos.add(v2);
-    s.pos.y = Math.max(-1.1, Math.min(-0.5, s.pos.y));
-    
+    if (s.vel.lengthSq() < 0.001) s.vel.set(1, 0, 0);
+    moveVec.copy(s.vel).normalize().multiplyScalar(s.speed * dt);
+    s.pos.add(moveVec);
+    s.pos.y = THREE.MathUtils.lerp(s.pos.y, -0.7, dt * 2);
+
     groupRef.current.position.copy(s.pos);
     sharedEcosystem.arowanaPos.copy(s.pos);
+
     const targetRot = Math.atan2(s.vel.x, s.vel.z);
     let diff = targetRot - groupRef.current.rotation.y;
-    while(diff < -Math.PI) diff += Math.PI * 2;
-    while(diff > Math.PI) diff -= Math.PI * 2;
-    groupRef.current.rotation.y += diff * 0.08;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    while (diff >  Math.PI) diff -= Math.PI * 2;
+    groupRef.current.rotation.y += diff * Math.min(1, 1.2 * dt); // slow deliberate turns
+
+    // Tail wag
+    if (tailRef.current) {
+      tailRef.current.rotation.z = Math.sin(stateR.clock.elapsedTime * (4 + s.speed * 3)) * (0.1 + s.speed * 0.08);
+    }
   });
-  
+
+  // Scale: arowana ~40cm real = 0.9 world units body length
   return (
-    <group ref={groupRef} scale={[0.15 * ENV_PROP_SCALE_FACTOR, 0.15 * ENV_PROP_SCALE_FACTOR, 0.15 * ENV_PROP_SCALE_FACTOR]}>
-      <mesh material={aroMat} castShadow>
-        <sphereGeometry args={[1, 32, 16]} />
-      </mesh>
+    <group ref={groupRef} scale={[0.9, 0.9, 0.9]}>
+      <mesh geometry={aroBodyGeo} material={aroMat} castShadow />
+      <mesh ref={tailRef} geometry={aroTailGeo} material={aroMat} position={[0, 0, -0.9]} castShadow />
+      <mesh geometry={aroDorsalGeo} material={aroMat} position={[0, 0.19, -0.1]} castShadow />
     </group>
   );
 }
 
 function PondEcosystem() {
-  const [kois, setKois] = React.useState<{id: number}[]>(Array.from({ length: 45 }).map((_, i) => ({ id: i }))); // Larger pond, more fish!
-  const nextId = React.useRef(45);
-  const handleDie = React.useCallback((id: number) => setKois(p => p.filter(k => k.id !== id)), []);
+  const [kois, setKois] = React.useState<{ id: number }[]>(
+    Array.from({ length: 12 }, (_, i) => ({ id: i }))
+  );
+  const nextId = React.useRef(12);
+  const handleDie = React.useCallback((id: number) =>
+    setKois(p => p.filter(k => k.id !== id)), []);
 
   React.useEffect(() => {
-    const intv = setInterval(() => setKois(p => p.length < 55 ? [...p, { id: nextId.current++ }] : p), 2000);
+    const intv = setInterval(() =>
+      setKois(p => p.length < 15 ? [...p, { id: nextId.current++ }] : p), 4000);
     return () => clearInterval(intv);
   }, []);
 
@@ -284,25 +371,26 @@ function PondEcosystem() {
   );
 }
 
+
 function LilyPads() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const count = 35;
   useLayoutEffect(() => {
     if (!meshRef.current) return;
     const dummy = new THREE.Object3D();
-    for(let i=0; i<count; i++){
+    for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const r = POND_RADIUS - Math.random() * 4 - 1; 
+      const r = POND_RADIUS - Math.random() * 4 - 1;
       dummy.position.set(Math.sin(angle) * r, -0.19, Math.cos(angle) * r);
       dummy.rotation.set(0, Math.random() * Math.PI, 0);
       const s = 0.5 + Math.random() * 0.7;
-      dummy.scale.set(s,s,s);
+      dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
     }
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, []);
-  
+
   return <instancedMesh ref={meshRef} args={[lilyPadGeo, lilyPadMat, count]} receiveShadow />;
 }
 
@@ -329,7 +417,7 @@ function Benches({ data }: { data: { position: number[], rotation: number[], wid
       groupDummy.scale.setScalar(ENV_PROP_SCALE_FACTOR);
       groupDummy.updateMatrix();
 
-      const addPart = (ref: any, countKey: keyof typeof c, pos: [number,number,number], rot: [number,number,number]=[0,0,0], scaleX = 1) => {
+      const addPart = (ref: any, countKey: keyof typeof c, pos: [number, number, number], rot: [number, number, number] = [0, 0, 0], scaleX = 1) => {
         dummy.position.set(...pos); dummy.rotation.set(...rot);
         dummy.scale.set(scaleX, 1, 1); // only stretch along X (bench length axis)
         dummy.updateMatrix(); dummy.applyMatrix4(groupDummy.matrix);
@@ -337,10 +425,10 @@ function Benches({ data }: { data: { position: number[], rotation: number[], wid
       };
 
       // Seat planks — stretched full width
-      addPart(seatRef, 'seat', [0, 0.42, 0.15],  [0,0,0], ws);
-      addPart(seatRef, 'seat', [0, 0.42, 0.05],  [0,0,0], ws);
-      addPart(seatRef, 'seat', [0, 0.42, -0.05], [0,0,0], ws);
-      addPart(seatRef, 'seat', [0, 0.42, -0.15], [0,0,0], ws);
+      addPart(seatRef, 'seat', [0, 0.42, 0.15], [0, 0, 0], ws);
+      addPart(seatRef, 'seat', [0, 0.42, 0.05], [0, 0, 0], ws);
+      addPart(seatRef, 'seat', [0, 0.42, -0.05], [0, 0, 0], ws);
+      addPart(seatRef, 'seat', [0, 0.42, -0.15], [0, 0, 0], ws);
 
       // Back planks — stretched full width
       addPart(backRef, 'back', [0, 0.55, -0.22], [0.15, 0, 0], ws);
@@ -362,20 +450,20 @@ function Benches({ data }: { data: { position: number[], rotation: number[], wid
 
       // Arm rests only at the two outer ends
       addPart(armRef, 'arm', [-hw, 0.55, 0.05], [-0.05, 0, 0]);
-      addPart(armRef, 'arm', [ hw, 0.55, 0.05], [-0.05, 0, 0]);
+      addPart(armRef, 'arm', [hw, 0.55, 0.05], [-0.05, 0, 0]);
     });
 
-    [seatRef, backRef, legHRef, legVRef, armRef].forEach(r => { if(r.current) r.current.instanceMatrix.needsUpdate = true });
+    [seatRef, backRef, legHRef, legVRef, armRef].forEach(r => { if (r.current) r.current.instanceMatrix.needsUpdate = true });
   }, [data]);
 
   // Count upper bounds with the scale in mind
-  const maxSeats  = data.reduce((s, b) => s + 4, 0);     // 4 planks per bench
-  const maxBacks  = data.reduce((s, b) => s + 3, 0);     // 3 back planks
+  const maxSeats = data.reduce((s, b) => s + 4, 0);     // 4 planks per bench
+  const maxBacks = data.reduce((s, b) => s + 3, 0);     // 3 back planks
   const ws0 = data[0]?.widthScale ?? 1;
   const numSupports0 = ws0 > 1.5 ? 5 : 2;
-  const maxLegH  = data.reduce((s, b) => s + (( (b.widthScale??1) > 1.5 ? 5 : 2 )), 0);
-  const maxLegV  = maxLegH * 3;
-  const maxArm   = data.length * 2;
+  const maxLegH = data.reduce((s, b) => s + (((b.widthScale ?? 1) > 1.5 ? 5 : 2)), 0);
+  const maxLegV = maxLegH * 3;
+  const maxArm = data.length * 2;
 
   return (
     <group>
@@ -388,7 +476,7 @@ function Benches({ data }: { data: { position: number[], rotation: number[], wid
   );
 }
 
-function Trees({ data, type }: { data: {x:number, z:number, scale:number}[], type: 'pine'|'oak'|'cherry' }) {
+function Trees({ data, type }: { data: { x: number, z: number, scale: number }[], type: 'pine' | 'oak' | 'cherry' }) {
   const partsPerTree = type === 'pine' ? 3 : 4;
   const trunkRef = useRef<THREE.InstancedMesh>(null);
   const leavesRef = useRef<THREE.InstancedMesh>(null);
@@ -398,26 +486,26 @@ function Trees({ data, type }: { data: {x:number, z:number, scale:number}[], typ
   useLayoutEffect(() => {
     if (!trunkRef.current || !leavesRef.current) return;
     const dummy = new THREE.Object3D();
-    let seed = type==='pine'?1:type==='oak'?42:100;
-    const random = () => { const x = Math.sin(seed++)*10000; return x - Math.floor(x); };
+    let seed = type === 'pine' ? 1 : type === 'oak' ? 42 : 100;
+    const random = () => { const x = Math.sin(seed++) * 10000; return x - Math.floor(x); };
 
     data.forEach((tree, id) => {
       const { x, z, scale: originalScale } = tree;
       const scale = originalScale * ENV_PROP_SCALE_FACTOR;
       const baseY = getTerrainHeight(x, z);
-      dummy.position.set(x, baseY + 2*scale, z);
-      dummy.rotation.set(0, random()*0.2, 0); dummy.scale.set(scale, scale, scale);
+      dummy.position.set(x, baseY + 2 * scale, z);
+      dummy.rotation.set(0, random() * 0.2, 0); dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix(); trunkRef.current!.setMatrixAt(id, dummy.matrix);
-      
-      for(let p=0; p<partsPerTree; p++) {
+
+      for (let p = 0; p < partsPerTree; p++) {
         if (type === 'pine') {
-          dummy.position.set(x, baseY + (3+p*1.5)*scale, z);
-          dummy.rotation.set(0, random()*Math.PI, 0);
-          dummy.scale.setScalar(scale*(1-p*0.2));
+          dummy.position.set(x, baseY + (3 + p * 1.5) * scale, z);
+          dummy.rotation.set(0, random() * Math.PI, 0);
+          dummy.scale.setScalar(scale * (1 - p * 0.2));
         } else {
-          dummy.position.set(x + (random()-0.5)*2*scale, baseY + (3.5+random()*1.5)*scale, z + (random()-0.5)*2*scale);
-          dummy.rotation.set(random()*Math.PI, random()*Math.PI, random()*Math.PI);
-          dummy.scale.setScalar(scale*(0.8+random()*0.4));
+          dummy.position.set(x + (random() - 0.5) * 2 * scale, baseY + (3.5 + random() * 1.5) * scale, z + (random() - 0.5) * 2 * scale);
+          dummy.rotation.set(random() * Math.PI, random() * Math.PI, random() * Math.PI);
+          dummy.scale.setScalar(scale * (0.8 + random() * 0.4));
         }
         dummy.updateMatrix(); leavesRef.current!.setMatrixAt(id * partsPerTree + p, dummy.matrix);
       }
@@ -429,7 +517,7 @@ function Trees({ data, type }: { data: {x:number, z:number, scale:number}[], typ
   return (
     <group>
       <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, data.length]} castShadow receiveShadow />
-      <instancedMesh ref={leavesRef} args={[leavesGeo, leavesMat, data.length*partsPerTree]} castShadow receiveShadow />
+      <instancedMesh ref={leavesRef} args={[leavesGeo, leavesMat, data.length * partsPerTree]} castShadow receiveShadow />
     </group>
   );
 }
@@ -440,15 +528,15 @@ function AnimatedPond() {
     geo.rotateX(-Math.PI / 2); // Put it flat
     return geo;
   }, []);
-  
+
   const matRef = useRef<THREE.ShaderMaterial>(null);
-  
+
   useFrame((state) => {
     if (matRef.current) {
       matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
     }
   });
-  
+
   return (
     <mesh geometry={pondGeo} position={[0, -0.20, 0]}>
       {/* @ts-ignore custom shader material syntax */}
@@ -474,14 +562,14 @@ export default function DonutCenterPark({ benchData, treeData }: { benchData: an
     };
 
     for (let i = 0; i <= steps; i++) {
-      const t = i / steps; 
+      const t = i / steps;
       const pos = getPathPos(t);
       const posNext = getPathPos((t + 0.005) % 1.0);
-      
+
       let dx = posNext.x - pos.x;
       let dz = posNext.z - pos.z;
       let len = Math.hypot(dx, dz);
-      
+
       const nx = -dz / len;
       const nz = dx / len;
 
@@ -494,7 +582,7 @@ export default function DonutCenterPark({ benchData, treeData }: { benchData: an
 
       vertices.push(xLeft, getTerrainHeight(xLeft, zLeft) + 0.05, zLeft);
       vertices.push(xRight, getTerrainHeight(xRight, zRight) + 0.05, zRight);
-      
+
       uvs.push(0, t * 15);
       uvs.push(1, t * 15);
 
@@ -520,39 +608,64 @@ export default function DonutCenterPark({ benchData, treeData }: { benchData: an
     geo.rotateX(-Math.PI / 2); // Lay it flat
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-        pos.setY(i, getTerrainHeight(pos.getX(i), pos.getZ(i))); 
+      pos.setY(i, getTerrainHeight(pos.getX(i), pos.getZ(i)));
     }
     geo.computeVertexNormals();
     geo.computeBoundingBox();
     geo.computeBoundingSphere();
     return geo;
   }, []);
-  
+
   const pondBottomGeo = useMemo(() => new THREE.CylinderGeometry(POND_RADIUS + 0.5, POND_RADIUS - 1.0, 1.0, 64), []);
 
   return (
     <group position={[DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.y, DEFAULT_LAB_HUB.z]}>
-      {/* Terrain - we enable layer 1 here for raycasting so agents walk on the hills! */}
-      <mesh geometry={terrainGeo} material={grassMaterial} position={[0, 0, 0]} receiveShadow onUpdate={(self) => self.layers.enable(1)} />
+      {/* Park-specific lighting */}
+      <pointLight position={[0, 10, 0]} color="#fff5e0" intensity={1.8} distance={65} decay={1.8} castShadow />
+      <pointLight position={[0, 2.5, 0]} color="#4ca8cc" intensity={0.9} distance={28} decay={2} />
+      <hemisphereLight args={["#c8eeff", "#5a9468", 0.55]} />
+
+      {/* Terrain — layer 1 for walkable raycasting */}
+      <mesh geometry={terrainGeo} material={grassMat} position={[0, 0, 0]} receiveShadow onUpdate={(self) => self.layers.enable(1)} />
       <mesh geometry={pathGeo} material={pathMat} position={[0, 0, 0]} receiveShadow onUpdate={(self) => self.layers.enable(1)} />
       <mesh geometry={pondBottomGeo} material={pondBottomMat} position={[0, -0.95, 0]} receiveShadow />
-      
+
       {/* Pond */}
       <AnimatedPond />
       <PondEcosystem />
       <LilyPads />
-      
+
+      {/* Invisible collision floor over pond so player doesn't sink */}
+      <mesh
+        position={[0, -0.72, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        visible={false}
+        onUpdate={(self) => {
+          self.layers.enable(1);
+          useGameStore.getState().addCollidableMesh(self);
+        }}
+      >
+        <circleGeometry args={[POND_RADIUS, 48]} />
+        <meshBasicMaterial />
+      </mesh>
+
       <Trees data={treeData.filter(t => t.type === 'oak')} type="oak" />
       <Trees data={treeData.filter(t => t.type === 'cherry')} type="cherry" />
       <Trees data={treeData.filter(t => t.type === 'pine')} type="pine" />
-      
-      {/* Dock */}
-      <group position={[DOCK_X, -0.10, 0]} scale={[ENV_PROP_SCALE_FACTOR, ENV_PROP_SCALE_FACTOR, ENV_PROP_SCALE_FACTOR]}>
-        <mesh geometry={new THREE.BoxGeometry(3.5, 0.1, 4)} material={benchWoodMat} castShadow receiveShadow onUpdate={(self) => self.layers.enable(1)} />
-        <mesh geometry={new THREE.CylinderGeometry(0.1, 0.1, 1.5)} material={benchWoodMat} position={[-1.5, -0.7, -1.8]} />
-        <mesh geometry={new THREE.CylinderGeometry(0.1, 0.1, 1.5)} material={benchWoodMat} position={[1.5, -0.7, 1.8]} />
+
+      {/* Dock — at waterline, pre-scaled geometry */}
+      <group position={[DOCK_X, -0.18, 0]}>
+        <mesh
+          geometry={new THREE.BoxGeometry(3.5 * ENV_PROP_SCALE_FACTOR, 0.1 * ENV_PROP_SCALE_FACTOR, 4.0 * ENV_PROP_SCALE_FACTOR)}
+          material={benchWoodMat} castShadow receiveShadow
+          onUpdate={(self) => self.layers.enable(1)}
+        />
+        <mesh geometry={new THREE.CylinderGeometry(0.12 * ENV_PROP_SCALE_FACTOR, 0.12 * ENV_PROP_SCALE_FACTOR, 1.8 * ENV_PROP_SCALE_FACTOR)}
+          material={benchWoodMat} position={[-1.6 * ENV_PROP_SCALE_FACTOR, -0.85 * ENV_PROP_SCALE_FACTOR, -1.9 * ENV_PROP_SCALE_FACTOR]} />
+        <mesh geometry={new THREE.CylinderGeometry(0.12 * ENV_PROP_SCALE_FACTOR, 0.12 * ENV_PROP_SCALE_FACTOR, 1.8 * ENV_PROP_SCALE_FACTOR)}
+          material={benchWoodMat} position={[1.6 * ENV_PROP_SCALE_FACTOR, -0.85 * ENV_PROP_SCALE_FACTOR, 1.9 * ENV_PROP_SCALE_FACTOR]} />
       </group>
-      
+
       <Benches data={benchData} />
     </group>
   );
