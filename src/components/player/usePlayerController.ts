@@ -882,9 +882,10 @@ export function usePlayerController(
 
     if (isSitting) {
       const t = stateRoot.clock.getElapsedTime();
-      j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 2.6, 0.1);
-      j.hips.position.z = THREE.MathUtils.lerp(j.hips.position.z, 0.0, 0.1);
-      j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, -0.25, 0.1);
+      // hips stay at their natural position (3.3) — the group itself is snapped to bench height
+      j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 3.3, 0.12);
+      j.hips.position.z = THREE.MathUtils.lerp(j.hips.position.z, 0.0, 0.12);
+      j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, -0.2, 0.1);
       j.neck.rotation.x = Math.sin(t * 8) * 0.05;
       j.neck.rotation.y = Math.sin(t * 2) * 0.1;
 
