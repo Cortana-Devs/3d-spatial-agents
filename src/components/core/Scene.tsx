@@ -3,14 +3,15 @@
 import React, { useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "@/lib/bvh-setup";
-import { AdaptiveEvents, Environment } from "@react-three/drei";
+import { AdaptiveEvents, Environment, BakeShadows } from "@react-three/drei";
 import DynamicStatsIsland from "@/components/ui/DynamicStatsIsland";
 import * as THREE from "three";
 import ResearchLabHub from "@/components/world/OfficeHub";
-import MinimalFloorWorld from "@/components/world/MinimalFloorWorld";
+import DonutLabWorld from "@/components/world/donut/DonutLabWorld";
 
 /** Set true to load the full lab (walls, furniture, props). False = floor + agents only. */
 const USE_FULL_RESEARCH_LAB = false;
+const USE_DONUT_LAB = true;
 import Robot from "@/components/player/Player";
 import Agent from "@/components/agent/Agent";
 import YukaSystem from "@/components/systems/YukaSystem";
@@ -228,18 +229,19 @@ export default function Scene() {
         <color attach="background" args={["#0a0c14"]} />
 
         <Environment preset="city" />
+        <BakeShadows />
 
-        {USE_FULL_RESEARCH_LAB ? <ResearchLabHub /> : <MinimalFloorWorld />}
+        {USE_DONUT_LAB ? <DonutLabWorld /> : USE_FULL_RESEARCH_LAB ? <ResearchLabHub /> : null}
 
-        <Robot groupRef={robotRef} initialPosition={[0, 4.0, 10]} />
+        <Robot groupRef={robotRef} initialPosition={[0, 4.0, 60]} />
         <Agent
           playerRef={robotRef}
-          initialPosition={[10, 4.0, 10]}
+          initialPosition={[20, 4.0, 50]}
           id="agent-01"
         />
         <Agent
           playerRef={robotRef}
-          initialPosition={[-10, 4.0, 20]}
+          initialPosition={[-25, 4.0, 45]}
           id="agent-02"
         />
 
