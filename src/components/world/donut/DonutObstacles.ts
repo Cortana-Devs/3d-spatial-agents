@@ -4,12 +4,7 @@ import { DEFAULT_LAB_HUB, DEFAULT_RING_OUTER_RADIUS } from "./labFloorConstants"
 
 // Park layout — must match DonutLabWorld.tsx
 const POND_RADIUS = 16.0;
-const BENCH_POSITIONS: [number, number, number][] = [
-  [15.5, 0, 0],
-  [-14, 0, 10],
-  [0, 0, -22],
-  [16, 0, 24],
-];
+// Only the fishing dock bench remains — obstacle inlined directly below.
 const TREE_POSITIONS: [number, number][] = [
   [-14, 16],
   [18, 20],
@@ -123,21 +118,15 @@ export function buildDonutObstacles(): Obstacle[] {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 5. BENCHES — flat OBB matching bench footprint (width 1.6 * scale ≈ 5)
+  // 5. BENCH — one wide dock bench (widthScale 2.8)
+  //    halfExtents.x = benchHalfWidth * widthScale = 2.8 * 2.8 ≈ 7.8
+  //    halfExtents.z = bench depth, rotation = -PI/2 (oriented N-S along dock)
   // ─────────────────────────────────────────────────────────────────────────
-  const BENCH_ROTATIONS = [
-    -Math.PI / 2,       // bench 0 — dock
-    Math.PI / 5,        // bench 1 — near oak
-    0,                  // bench 2 — south
-    Math.PI / 1.5,      // bench 3 — east
-  ];
-  BENCH_POSITIONS.forEach(([bx, , bz], idx) => {
-    obstacles.push({
-      position: new THREE.Vector3(cx + bx, cy, cz + bz),
-      halfExtents: new THREE.Vector3(2.8, 2.5, 1.2), // bench footprint (scaled)
-      rotation: BENCH_ROTATIONS[idx] ?? 0,
-      type: "furniture",
-    });
+  obstacles.push({
+    position: new THREE.Vector3(cx + 15.5, cy, cz + 0),
+    halfExtents: new THREE.Vector3(7.8, 2.5, 1.2), // wide footprint for 3-player bench
+    rotation: -Math.PI / 2,
+    type: "furniture",
   });
 
   return obstacles;
