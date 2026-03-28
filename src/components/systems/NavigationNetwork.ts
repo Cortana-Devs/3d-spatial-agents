@@ -48,11 +48,11 @@ class NavigationNetwork {
   // Agent's physical bounding radius is 1.0.
   private padding: number = 0.8;
 
-  // World bounds (from wall_layout.md: 200 wide × 150 deep)
-  private minX: number = -100;
-  private maxX: number = 100;
-  private minZ: number = -75;
-  private maxZ: number = 75;
+  // World bounds (from Donut Research Lab: 160 max radius)
+  private minX: number = -160;
+  private maxX: number = 160;
+  private minZ: number = -160;
+  private maxZ: number = 160;
 
   private cols: number;
   private rows: number;

@@ -3,10 +3,19 @@
 import React, { useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "@/lib/bvh-setup";
-import { AdaptiveEvents, Environment } from "@react-three/drei";
+import { AdaptiveEvents, Environment, BakeShadows } from "@react-three/drei";
 import DynamicStatsIsland from "@/components/ui/DynamicStatsIsland";
 import * as THREE from "three";
+<<<<<<< HEAD
 import SceneWorldRoot from "@/components/core/scene/SceneWorldRoot";
+=======
+import ResearchLabHub from "@/components/world/OfficeHub";
+import DonutLabWorld from "@/components/world/donut/DonutLabWorld";
+
+/** Set true to load the full lab (walls, furniture, props). False = floor + agents only. */
+const USE_FULL_RESEARCH_LAB = false;
+const USE_DONUT_LAB = true;
+>>>>>>> donut-redesign
 import Robot from "@/components/player/Player";
 import Agent from "@/components/agent/Agent";
 import YukaSystem from "@/components/systems/YukaSystem";
@@ -224,7 +233,9 @@ export default function Scene() {
         <color attach="background" args={["#0a0c14"]} />
 
         <Environment preset="city" />
+        <BakeShadows />
 
+<<<<<<< HEAD
         <SceneWorldRoot />
 
         {/* Spawns on the donut annulus (inner ~38, outer ~95); keep clear of center hole. */}
@@ -232,11 +243,23 @@ export default function Scene() {
         <Agent
           playerRef={robotRef}
           initialPosition={[50, 4.0, 52]}
+=======
+        {USE_DONUT_LAB ? <DonutLabWorld /> : USE_FULL_RESEARCH_LAB ? <ResearchLabHub /> : null}
+
+        <Robot groupRef={robotRef} initialPosition={[0, 4.0, 60]} />
+        <Agent
+          playerRef={robotRef}
+          initialPosition={[20, 4.0, 50]}
+>>>>>>> donut-redesign
           id="agent-01"
         />
         <Agent
           playerRef={robotRef}
+<<<<<<< HEAD
           initialPosition={[-55, 4.0, 48]}
+=======
+          initialPosition={[-25, 4.0, 45]}
+>>>>>>> donut-redesign
           id="agent-02"
         />
 
