@@ -6,11 +6,7 @@ import "@/lib/bvh-setup";
 import { AdaptiveEvents, Environment } from "@react-three/drei";
 import DynamicStatsIsland from "@/components/ui/DynamicStatsIsland";
 import * as THREE from "three";
-import ResearchLabHub from "@/components/world/OfficeHub";
-import MinimalFloorWorld from "@/components/world/MinimalFloorWorld";
-
-/** Set true to load the full lab (walls, furniture, props). False = floor + agents only. */
-const USE_FULL_RESEARCH_LAB = false;
+import SceneWorldRoot from "@/components/core/scene/SceneWorldRoot";
 import Robot from "@/components/player/Player";
 import Agent from "@/components/agent/Agent";
 import YukaSystem from "@/components/systems/YukaSystem";
@@ -229,17 +225,18 @@ export default function Scene() {
 
         <Environment preset="city" />
 
-        {USE_FULL_RESEARCH_LAB ? <ResearchLabHub /> : <MinimalFloorWorld />}
+        <SceneWorldRoot />
 
-        <Robot groupRef={robotRef} initialPosition={[0, 4.0, 10]} />
+        {/* Spawns on the donut annulus (inner ~38, outer ~95); keep clear of center hole. */}
+        <Robot groupRef={robotRef} initialPosition={[72, 4.0, 0]} />
         <Agent
           playerRef={robotRef}
-          initialPosition={[10, 4.0, 10]}
+          initialPosition={[50, 4.0, 52]}
           id="agent-01"
         />
         <Agent
           playerRef={robotRef}
-          initialPosition={[-10, 4.0, 20]}
+          initialPosition={[-55, 4.0, 48]}
           id="agent-02"
         />
 

@@ -79,7 +79,6 @@ export function useAgentBrain(
   const socialTimer = useRef(0);
   const socialTarget = useRef<YUKA.Vehicle | null>(null);
   const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
-  const greetingTimer = useRef(0);
   const socialCheckTimer = useRef(0);
   const lastMinimapPos = useRef(new THREE.Vector3(0, -999, 0));
 
@@ -581,8 +580,6 @@ export function useAgentBrain(
           socialState.current === "NONE"
         ) {
           playerProximityState.current = "GREETING";
-          greetingState.current = "WAVING";
-          greetingTimer.current = 0;
           vehicle.velocity.set(0, 0, 0);
 
           // Face the player
@@ -617,12 +614,6 @@ export function useAgentBrain(
       } else if (playerProximityState.current === "GREETING") {
         // Keep the agent stopped and facing the player while greeting
         vehicle.velocity.set(0, 0, 0);
-
-        // Wave timeout: Stop waving after 4 seconds even if player is still there
-        greetingTimer.current += delta;
-        if (greetingTimer.current > 4.0 && greetingState.current === "WAVING") {
-          greetingState.current = "NONE";
-        }
 
         // Check if prompt was dismissed (N pressed)
         if (!storeState.chatPromptVisible && !storeState.isChatOpen) {

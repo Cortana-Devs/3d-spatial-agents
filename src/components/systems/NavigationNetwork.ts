@@ -1,6 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import * as THREE from "three";
+import { SCENE_WORLD_MODE } from "@/components/core/scene/sceneWorldConfig";
+import {
+  DEFAULT_LAB_HUB,
+  DEFAULT_RING_INNER_RADIUS,
+} from "@/components/world/labFloorConstants";
 
 /**
  * Obstacle data interface – matches the shape stored in gameStore.
@@ -139,7 +144,7 @@ class NavigationNetwork {
    * so redundant rebuilds are skipped.
    */
   public rebuildGrid(obstacles: ObstacleData[]): void {
-    const hash = this.computeObstacleHash(obstacles);
+    const hash = `${this.computeObstacleHash(obstacles)}|${SCENE_WORLD_MODE}`;
     if (this.isBuilt && hash === this.lastObstacleHash) return;
     this.lastObstacleHash = hash;
 
@@ -161,6 +166,14 @@ class NavigationNetwork {
         // Sphere obstacle: block cells within radius + padding
         this.carveSphere(ob.position, ob.radius);
       }
+    }
+
+    if (SCENE_WORLD_MODE === "minimal") {
+      this.carveCircularVoid(
+        DEFAULT_LAB_HUB.x,
+        DEFAULT_LAB_HUB.z,
+        DEFAULT_RING_INNER_RADIUS,
+      );
     }
 
     this.isBuilt = true;
@@ -246,6 +259,21 @@ class NavigationNetwork {
           if (dx * dx + dz * dz <= totalR * totalR) {
             this.grid[this.cellIndex(c, r)] = 0;
           }
+        }
+      }
+    }
+  }
+
+  /** Block grid cells whose centers lie inside the hole (minimal donut world). */
+  private carveCircularVoid(cx: number, cz: number, radius: number): void {
+    const r2 = radius * radius;
+    for (let row = 0; row < this.rows; row++) {
+      for (let col = 0; col < this.cols; col++) {
+        const wp = this.gridToWorld(col, row);
+        const dx = wp.x - cx;
+        const dz = wp.z - cz;
+        if (dx * dx + dz * dz < r2) {
+          this.grid[this.cellIndex(col, row)] = 0;
         }
       }
     }
