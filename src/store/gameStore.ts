@@ -307,17 +307,35 @@ export const useGameStore = create<GameState>((set) => ({
     const flattenedMeshes: THREE.Object3D[] = [];
     mesh.traverse((child) => {
       if (child instanceof THREE.Mesh && child.geometry) {
+        // 1. Check if this specific mesh is already registered to avoid duplicates
+        const alreadyExists = useGameStore
+          .getState()
+          .collidableMeshes.some((m) => m.uuid === child.uuid);
+        if (alreadyExists) return;
+
+        // 2. Safety check: ensure the geometry has a valid position attribute before BVH computation
+        const position = child.geometry.attributes?.position;
+        if (!position || position.count === undefined) {
+          // If we're missing position, we can't build a BVH yet. 
+          // This can happen in early React render cycles for some built-in geometries.
+          return;
+        }
+
         if (!child.geometry.boundsTree) {
           child.geometry.computeBoundsTree();
         }
+
         // Tag with parent group UUID for fast removal
         (child as any)._groupUuid = mesh.uuid;
         flattenedMeshes.push(child);
       }
     });
-    set((state) => ({
-      collidableMeshes: [...state.collidableMeshes, ...flattenedMeshes],
-    }));
+
+    if (flattenedMeshes.length > 0) {
+      set((state) => ({
+        collidableMeshes: [...state.collidableMeshes, ...flattenedMeshes],
+      }));
+    }
   },
   removeCollidableMesh: (uuid) =>
     set((state) => ({

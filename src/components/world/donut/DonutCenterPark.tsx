@@ -402,6 +402,12 @@ function Benches({ data }: { data: { position: number[], rotation: number[], wid
   const legVRef = useRef<THREE.InstancedMesh>(null);
   const armRef = useRef<THREE.InstancedMesh>(null);
 
+  // Bench dimensions aligned to player scale
+  // Player scale is ~3.06, player width ~1.5 world units.
+  // Standard bench width 1.6 * ENV_SCALE 3.06 ≈ 4.9 world units (fits 2-3 players).
+  const BENCH_LENGTH = benchWidth; // 1.6
+  const BENCH_HEIGHT = 0.48;     // local Y for seat (matches PLAYER_HIPS_LOCAL_Y 3.3 adjustment)
+
   useLayoutEffect(() => {
     if (!seatRef.current || !backRef.current || !legHRef.current || !legVRef.current || !armRef.current) return;
     const dummy = new THREE.Object3D();
@@ -409,9 +415,11 @@ function Benches({ data }: { data: { position: number[], rotation: number[], wid
     let c = { seat: 0, back: 0, legH: 0, legV: 0, arm: 0 };
 
     data.forEach((b) => {
-      const ws = b.widthScale ?? 1;  // width scale multiplier (default 1 = original size)
-      const hw = benchWidth * ws * 0.5; // half-width in local units (before ENV scale)
+      const ws = b.widthScale ?? 1;
+      const hw = BENCH_LENGTH * ws * 0.5;
       const terrainY = getTerrainHeight(b.position[0], b.position[2]);
+      
+      // Bench origin is at base center
       groupDummy.position.set(b.position[0], terrainY, b.position[2]);
       groupDummy.rotation.set(b.rotation[0], b.rotation[1], b.rotation[2]);
       groupDummy.scale.setScalar(ENV_PROP_SCALE_FACTOR);
@@ -419,65 +427,91 @@ function Benches({ data }: { data: { position: number[], rotation: number[], wid
 
       const addPart = (ref: any, countKey: keyof typeof c, pos: [number, number, number], rot: [number, number, number] = [0, 0, 0], scaleX = 1) => {
         dummy.position.set(...pos); dummy.rotation.set(...rot);
-        dummy.scale.set(scaleX, 1, 1); // only stretch along X (bench length axis)
+        dummy.scale.set(scaleX, 1, 1);
         dummy.updateMatrix(); dummy.applyMatrix4(groupDummy.matrix);
         ref.current.setMatrixAt(c[countKey]++, dummy.matrix);
       };
 
-      // Seat planks — stretched full width
-      addPart(seatRef, 'seat', [0, 0.42, 0.15], [0, 0, 0], ws);
-      addPart(seatRef, 'seat', [0, 0.42, 0.05], [0, 0, 0], ws);
-      addPart(seatRef, 'seat', [0, 0.42, -0.05], [0, 0, 0], ws);
-      addPart(seatRef, 'seat', [0, 0.42, -0.15], [0, 0, 0], ws);
+      // Seat planks
+      addPart(seatRef, 'seat', [0, BENCH_HEIGHT, 0.15], [0, 0, 0], ws);
+      addPart(seatRef, 'seat', [0, BENCH_HEIGHT, 0.05], [0, 0, 0], ws);
+      addPart(seatRef, 'seat', [0, BENCH_HEIGHT, -0.05], [0, 0, 0], ws);
+      addPart(seatRef, 'seat', [0, BENCH_HEIGHT, -0.15], [0, 0, 0], ws);
 
-      // Back planks — stretched full width
-      addPart(backRef, 'back', [0, 0.55, -0.22], [0.15, 0, 0], ws);
-      addPart(backRef, 'back', [0, 0.68, -0.25], [0.15, 0, 0], ws);
-      addPart(backRef, 'back', [0, 0.81, -0.28], [0.15, 0, 0], ws);
+      // Back planks
+      addPart(backRef, 'back', [0, BENCH_HEIGHT + 0.15, -0.22], [0.15, 0, 0], ws);
+      addPart(backRef, 'back', [0, BENCH_HEIGHT + 0.3, -0.25], [0.15, 0, 0], ws);
+      addPart(backRef, 'back', [0, BENCH_HEIGHT + 0.45, -0.28], [0.15, 0, 0], ws);
 
-      // Leg columns: front+back at each support X-position
-      // For wide benches add intermediate supports at 1/3 and 2/3 spacing
-      const legXPositions: number[] = ws > 1.5
-        ? [-hw, -hw * 0.34, 0, hw * 0.34, hw]  // 5 supports for wide bench
-        : [-hw, hw];                             // 2 end supports for standard bench
-
-      legXPositions.forEach(lx => {
-        addPart(legHRef, 'legH', [lx, 0.4, 0]);
-        addPart(legVRef, 'legV', [lx, 0.2, 0.18]);
-        addPart(legVRef, 'legV', [lx, 0.2, -0.18]);
-        addPart(legVRef, 'legV', [lx, 0.6, -0.22], [0.15, 0, 0]);
+      const supportX = ws > 1.5 ? [-hw, -hw * 0.34, 0, hw * 0.34, hw] : [-hw, hw];
+      supportX.forEach(lx => {
+        addPart(legHRef, 'legH', [lx, BENCH_HEIGHT - 0.05, 0]);
+        addPart(legVRef, 'legV', [lx, (BENCH_HEIGHT - 0.05) * 0.5, 0.18]);
+        addPart(legVRef, 'legV', [lx, (BENCH_HEIGHT - 0.05) * 0.5, -0.18]);
+        addPart(legVRef, 'legV', [lx, BENCH_HEIGHT + 0.2, -0.22], [0.15, 0, 0]);
       });
 
-      // Arm rests only at the two outer ends
-      addPart(armRef, 'arm', [-hw, 0.55, 0.05], [-0.05, 0, 0]);
-      addPart(armRef, 'arm', [hw, 0.55, 0.05], [-0.05, 0, 0]);
+      addPart(armRef, 'arm', [-hw, BENCH_HEIGHT + 0.15, 0.05], [-0.05, 0, 0]);
+      addPart(armRef, 'arm', [hw, BENCH_HEIGHT + 0.15, 0.05], [-0.05, 0, 0]);
     });
 
     [seatRef, backRef, legHRef, legVRef, armRef].forEach(r => { if (r.current) r.current.instanceMatrix.needsUpdate = true });
   }, [data]);
 
-  // Count upper bounds with the scale in mind
-  const maxSeats = data.reduce((s, b) => s + 4, 0);     // 4 planks per bench
-  const maxBacks = data.reduce((s, b) => s + 3, 0);     // 3 back planks
-  const ws0 = data[0]?.widthScale ?? 1;
-  const numSupports0 = ws0 > 1.5 ? 5 : 2;
-  const maxLegH = data.reduce((s, b) => s + (((b.widthScale ?? 1) > 1.5 ? 5 : 2)), 0);
-  const maxLegV = maxLegH * 3;
-  const maxArm = data.length * 2;
+  const totalBenches = data.length;
+  const maxLegSupport = data.reduce((acc, b) => acc + ((b.widthScale ?? 1) > 1.5 ? 5 : 2), 0);
 
   return (
     <group>
-      <instancedMesh ref={seatRef} args={[seatPlankGeo, benchWoodMat, maxSeats]} castShadow />
-      <instancedMesh ref={backRef} args={[backPlankGeo, benchWoodMat, maxBacks]} castShadow />
-      <instancedMesh ref={legHRef} args={[legHorizontalGeo, benchMetalMat, maxLegH]} castShadow />
-      <instancedMesh ref={legVRef} args={[legVerticalGeo, benchMetalMat, maxLegV]} castShadow />
-      <instancedMesh ref={armRef} args={[armRestGeo, benchMetalMat, maxArm]} castShadow />
+      <instancedMesh ref={seatRef} args={[seatPlankGeo, benchWoodMat, totalBenches * 4]} castShadow />
+      <instancedMesh ref={backRef} args={[backPlankGeo, benchWoodMat, totalBenches * 3]} castShadow />
+      <instancedMesh ref={legHRef} args={[legHorizontalGeo, benchMetalMat, maxLegSupport]} castShadow />
+      <instancedMesh ref={legVRef} args={[legVerticalGeo, benchMetalMat, maxLegSupport * 3]} castShadow />
+      <instancedMesh ref={armRef} args={[armRestGeo, benchMetalMat, totalBenches * 2]} castShadow />
     </group>
   );
 }
 
+function CherryPetals({ data }: { data: { x: number, z: number, scale: number }[] }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const count = data.length * 40;
+  const petals = useMemo(() => {
+    return Array.from({ length: count }, (_, i) => {
+      const tree = data[Math.floor(i / 40)];
+      return {
+        tree,
+        x: (Math.random() - 0.5) * 6 * tree.scale,
+        y: 4 + Math.random() * 8,
+        z: (Math.random() - 0.5) * 6 * tree.scale,
+        speed: 0.5 + Math.random() * 0.5,
+        rotSpeed: Math.random() * 2,
+        phase: Math.random() * Math.PI * 2,
+      };
+    });
+  }, [data, count]);
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const dummy = new THREE.Object3D();
+    const t = state.clock.elapsedTime;
+    petals.forEach((p, i) => {
+      const y = ((p.y - t * p.speed) % 12 + 12) % 12 - 1.5;
+      const x = p.tree.x + p.x + Math.sin(t * 0.5 + p.phase) * 0.5;
+      const z = p.tree.z + p.z + Math.cos(t * 0.3 + p.phase) * 0.5;
+      dummy.position.set(x, y, z);
+      dummy.rotation.set(t * p.rotSpeed, t * p.rotSpeed * 0.5, 0);
+      dummy.scale.setScalar(0.05 + Math.sin(t + p.phase) * 0.02);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return <instancedMesh ref={meshRef} args={[new THREE.PlaneGeometry(0.1, 0.1), petalMat, count]} />;
+}
+
 function Trees({ data, type }: { data: { x: number, z: number, scale: number }[], type: 'pine' | 'oak' | 'cherry' }) {
-  const partsPerTree = type === 'pine' ? 3 : 4;
+  const partsPerTree = type === 'pine' ? 4 : 6; // Increased density
   const trunkRef = useRef<THREE.InstancedMesh>(null);
   const leavesRef = useRef<THREE.InstancedMesh>(null);
   const leavesGeo = type === 'pine' ? pineLeavesGeo : type === 'oak' ? oakLeavesGeo : cherryLeavesGeo;
@@ -501,11 +535,14 @@ function Trees({ data, type }: { data: { x: number, z: number, scale: number }[]
         if (type === 'pine') {
           dummy.position.set(x, baseY + (3 + p * 1.5) * scale, z);
           dummy.rotation.set(0, random() * Math.PI, 0);
-          dummy.scale.setScalar(scale * (1 - p * 0.2));
+          dummy.scale.setScalar(scale * (1 - p * 0.15));
         } else {
-          dummy.position.set(x + (random() - 0.5) * 2 * scale, baseY + (3.5 + random() * 1.5) * scale, z + (random() - 0.5) * 2 * scale);
+          // More organic canopy clustering
+          const radius = (1.5 + random() * 1.5) * scale;
+          const angle = random() * Math.PI * 2;
+          dummy.position.set(x + Math.sin(angle) * radius, baseY + (4 + random() * 2) * scale, z + Math.cos(angle) * radius);
           dummy.rotation.set(random() * Math.PI, random() * Math.PI, random() * Math.PI);
-          dummy.scale.setScalar(scale * (0.8 + random() * 0.4));
+          dummy.scale.setScalar(scale * (0.8 + random() * 0.5));
         }
         dummy.updateMatrix(); leavesRef.current!.setMatrixAt(id * partsPerTree + p, dummy.matrix);
       }
@@ -514,10 +551,20 @@ function Trees({ data, type }: { data: { x: number, z: number, scale: number }[]
     leavesRef.current.instanceMatrix.needsUpdate = true;
   }, [data, type]);
 
+  // Wind sway
+  useFrame((state) => {
+    if (!leavesRef.current) return;
+    const t = state.clock.elapsedTime;
+    const sway = Math.sin(t * 0.5) * 0.04;
+    leavesRef.current.rotation.z = sway;
+    leavesRef.current.rotation.x = Math.cos(t * 0.4) * 0.03;
+  });
+
   return (
     <group>
       <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, data.length]} castShadow receiveShadow />
       <instancedMesh ref={leavesRef} args={[leavesGeo, leavesMat, data.length * partsPerTree]} castShadow receiveShadow />
+      {type === 'cherry' && <CherryPetals data={data} />}
     </group>
   );
 }
@@ -541,6 +588,31 @@ function AnimatedPond() {
     <mesh geometry={pondGeo} position={[0, -0.20, 0]}>
       {/* @ts-ignore custom shader material syntax */}
       <stylizedWaterMaterial ref={matRef} />
+    </mesh>
+  );
+}
+
+function PondCollision() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const { addCollidableMesh, removeCollidableMesh } = useGameStore();
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    const mesh = meshRef.current;
+    mesh.layers.enable(1);
+    addCollidableMesh(mesh);
+    return () => removeCollidableMesh(mesh.uuid);
+  }, [addCollidableMesh, removeCollidableMesh]);
+
+  return (
+    <mesh
+      ref={meshRef}
+      position={[0, -0.72, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      visible={false}
+    >
+      <circleGeometry args={[POND_RADIUS, 48]} />
+      <meshBasicMaterial transparent opacity={0} />
     </mesh>
   );
 }
@@ -636,18 +708,7 @@ export default function DonutCenterPark({ benchData, treeData }: { benchData: an
       <LilyPads />
 
       {/* Invisible collision floor over pond so player doesn't sink */}
-      <mesh
-        position={[0, -0.72, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        visible={false}
-        onUpdate={(self) => {
-          self.layers.enable(1);
-          useGameStore.getState().addCollidableMesh(self);
-        }}
-      >
-        <circleGeometry args={[POND_RADIUS, 48]} />
-        <meshBasicMaterial />
-      </mesh>
+      <PondCollision />
 
       <Trees data={treeData.filter(t => t.type === 'oak')} type="oak" />
       <Trees data={treeData.filter(t => t.type === 'cherry')} type="cherry" />
