@@ -132,9 +132,9 @@ export function usePlayerController(
   }, [keyBindings]);
 
   // Physics Constants
-  const walkSpeed = 3.5;
-  const runSpeed = 8.5; // Faster sprint for better contrast
-  const sneakSpeed = 1.5;
+  const walkSpeed = 4.5;   // ~1.4 m/s equivalent — natural walk pace
+  const runSpeed = 9.5;    // ~3 m/s equivalent — comfortable sprint
+  const sneakSpeed = 1.8;
   const jumpForce = 20.0;
   const gravity = -50.0;
   const radius = 0.6; // TUNED: 0.6 perfectly fits the robot model footprint (was 0.8)
@@ -144,9 +144,9 @@ export function usePlayerController(
 
   // Gait Engine
   const gait = useProceduralGait(joints, {
-    strideLength: 6.0,
-    leanFactor: 0.1,
-    bankFactor: 0.08,
+    strideLength: 4.5,  // Controls animation cycle tempo (lower = steps per unit distance)
+    leanFactor: 0.12,   // Slight forward lean during movement
+    bankFactor: 0.09,   // Hip sway for natural weight shift
   });
 
   const interactables = useGameStore((state) => state.interactables);
@@ -767,7 +767,7 @@ export function usePlayerController(
           const dx = proposedX - ob.position.x;
           const dz = proposedZ - ob.position.z;
           const distSq = dx * dx + dz * dz;
-          const minDist = radius + ob.radius;
+          const minDist = radius + (ob.radius ?? 0);
 
           // Note: Sphere obstacles currently ignore height (infinite cylinder)
           // We could add height check here too if needed, but keeping legacy behavior for walls
@@ -844,12 +844,14 @@ export function usePlayerController(
     if (isMoving) {
       playerVel.copy(moveDir).multiplyScalar(currentSpeed);
     }
-    const playerStride = isSprinting ? 7.5 : 6.0;
+    // Walk uses shorter stride (more steps per unit) so cycle tempo feels right at 4.5 speed.
+    // Run uses longer stride matching faster pace with bigger leg swing.
+    const playerStride = isSprinting ? 5.5 : 4.5;
 
     gait.update(playerVel, dt, {
       strideLength: playerStride,
-      leanFactor: 0.1,
-      bankFactor: 0.08,
+      leanFactor: isSprinting ? 0.18 : 0.12,   // More lean when running
+      bankFactor: isSprinting ? 0.11 : 0.09,   // More hip sway when running
     });
 
     const j = joints.current;

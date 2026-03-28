@@ -54,10 +54,11 @@ export function useProceduralGait(
 
       // ── Speed smoothing ──────────────────────────────────────────────────
       const rawSpeed = velocity.length();
-      smoothSpeed.current = THREE.MathUtils.lerp(smoothSpeed.current, rawSpeed, 0.1);
+      // Faster lerp (0.2) = snappier start/stop response without feeling jittery
+      smoothSpeed.current = THREE.MathUtils.lerp(smoothSpeed.current, rawSpeed, 0.2);
       const animSpeed = smoothSpeed.current;
 
-      const dynamicStride = Math.max(0.8, rawSpeed * 0.4);
+      const dynamicStride = Math.max(0.8, rawSpeed * 0.35);
       const stride = customOptions.strideLength ?? dynamicStride;
       const lean = customOptions.leanFactor ?? defaultLean;
       const bank = customOptions.bankFactor ?? defaultBank;
@@ -334,46 +335,75 @@ export function useProceduralGait(
         j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, 0, f);
         j.hips.rotation.y = THREE.MathUtils.lerp(j.hips.rotation.y, 0, f);
       } else {
-        // WALK
-        const minAmp = 0.2;
-        const speedFactor = Math.min(animSpeed / 4.0, 1.0);
-        const legAmp = minAmp + speedFactor * 0.4;
-        const kneeAmp = minAmp + speedFactor * 0.45;
-        const armAmp = minAmp + speedFactor * 0.55;
+        // WALK / RUN
+        // speedFactor: 0 at rest → 1.0 at walk (4.5) → ~1.7 at run (9.5)
+        // Clamped for legs/knees so run doesn't over-extend, but armAmp allowed higher
+        const rawFactor = animSpeed / 5.0;  // reference: natural walk speed
+        const speedFactor = Math.min(rawFactor, 1.6);  // unclamped to distinguish walk vs run
+        const legFactor  = Math.min(rawFactor, 1.0);   // leg swing saturates at run threshold
+        const kneeFactor = Math.min(rawFactor, 1.15);  // slight extra knee lift when running
 
-        j.hips.position.x = THREE.MathUtils.lerp(j.hips.position.x, 0, 0.1);
+        // Minimum amplitude only kicks in above a tiny movement speed — avoids phantom swing
+        const minAmp = 0.08;
+        const legAmp  = minAmp + legFactor  * 0.52;  // max ~0.60 rad at full walk
+        const kneeAmp = minAmp + kneeFactor * 0.60;  // max ~0.77 rad — pronounced bend
+        const armAmp  = minAmp + speedFactor * 0.48; // continues scaling into run
 
-        j.leftHip.rotation.x = Math.sin(walkTime.current) * legAmp;
-        j.rightHip.rotation.x = Math.sin(walkTime.current + Math.PI) * legAmp;
+        // ── Hips — lateral weight-shift (left/right) ────────────────────────
+        // Half-cycle shift: hip shifts toward the planted foot
+        const hipShift = Math.sin(walkTime.current) * 0.08 * legFactor;
+        j.hips.position.x = THREE.MathUtils.lerp(j.hips.position.x, hipShift, 0.12);
 
-        const leftKneePhase = Math.sin(walkTime.current - Math.PI / 2);
-        const rightKneePhase = Math.sin(walkTime.current + Math.PI / 2);
-        j.leftKnee.rotation.x = Math.max(0, leftKneePhase * kneeAmp);
+        // ── Legs ────────────────────────────────────────────────────────────
+        j.leftHip.rotation.x  = Math.sin(walkTime.current)            * legAmp;
+        j.rightHip.rotation.x = Math.sin(walkTime.current + Math.PI)  * legAmp;
+
+        // Knee bends only on the swing (backward) phase — natural gait
+        const leftKneePhase  = Math.sin(walkTime.current - Math.PI * 0.45);
+        const rightKneePhase = Math.sin(walkTime.current + Math.PI * 0.55);
+        j.leftKnee.rotation.x  = Math.max(0, leftKneePhase  * kneeAmp);
         j.rightKnee.rotation.x = Math.max(0, rightKneePhase * kneeAmp);
 
-        const targetLeftShoulder = Math.sin(walkTime.current + Math.PI) * armAmp - 0.1;
-        const targetRightShoulder = Math.sin(walkTime.current) * armAmp - 0.1;
-        j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.x, targetLeftShoulder, 0.15);
-        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.x, targetRightShoulder, 0.15);
+        // ── Arms — counter-swing opposite to legs ────────────────────────────
+        const targetLeftShoulder  = Math.sin(walkTime.current + Math.PI) * armAmp - 0.08;
+        const targetRightShoulder = Math.sin(walkTime.current)           * armAmp - 0.08;
+        j.leftArm.shoulder.rotation.x  = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.x,  targetLeftShoulder,  0.18);
+        j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.x, targetRightShoulder, 0.18);
 
-        const leftElbowBend = -0.3 - Math.max(0, Math.sin(walkTime.current + Math.PI)) * 0.5;
-        const rightElbowBend = -0.3 - Math.max(0, Math.sin(walkTime.current)) * 0.5;
-        j.leftArm.elbow.rotation.x = THREE.MathUtils.lerp(j.leftArm.elbow.rotation.x, leftElbowBend, 0.15);
-        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(j.rightArm.elbow.rotation.x, rightElbowBend, 0.15);
+        // Elbow naturally bends more on backswing — gives arm that pumping motion
+        const leftBackswing  = Math.max(0, Math.sin(walkTime.current + Math.PI));
+        const rightBackswing = Math.max(0, Math.sin(walkTime.current));
+        const elbowBaseWalk  = -0.25 - speedFactor * 0.12; // elbows tuck more when running
+        const leftElbowBend  = elbowBaseWalk - leftBackswing  * (0.4 + speedFactor * 0.2);
+        const rightElbowBend = elbowBaseWalk - rightBackswing * (0.4 + speedFactor * 0.2);
+        j.leftArm.elbow.rotation.x  = THREE.MathUtils.lerp(j.leftArm.elbow.rotation.x,  leftElbowBend,  0.18);
+        j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(j.rightArm.elbow.rotation.x, rightElbowBend, 0.18);
 
-        const bounce = (Math.cos(walkTime.current * 2) * -0.5 + 0.5) * 0.05 * speedFactor;
-        j.torso.position.y = THREE.MathUtils.lerp(j.torso.position.y, bounce + 0.1, 0.2);
+        // Slight outward arm splay reduces at higher speed (arms come in when running)
+        const armOutSplay = 0.18 - speedFactor * 0.06;
+        j.leftArm.shoulder.rotation.z  = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.z,   armOutSplay, 0.1);
+        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.z,  -armOutSplay, 0.1);
 
-        const shoulderTwist = Math.sin(walkTime.current) * 0.12 * speedFactor;
-        j.torso.rotation.y = THREE.MathUtils.lerp(j.torso.rotation.y, -shoulderTwist, 0.1);
+        // ── Torso bounce — double-step pattern (two bobs per full stride) ────
+        // abs(sin) produces two peaks per cycle — matches real human vertical oscillation
+        const bounceIntensity = 0.04 + speedFactor * 0.025; // more bounce when running
+        const bounce = Math.abs(Math.sin(walkTime.current)) * bounceIntensity;
+        j.torso.position.y = THREE.MathUtils.lerp(j.torso.position.y, bounce + 0.05, 0.25);
 
-        const forwardLean = Math.min(animSpeed * lean, 0.25);
-        j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, forwardLean, 0.08);
+        // ── Shoulder counter-rotation (trunk rotation) ────────────────────────
+        const shoulderTwist = Math.sin(walkTime.current) * (0.10 + speedFactor * 0.06);
+        j.torso.rotation.y = THREE.MathUtils.lerp(j.torso.rotation.y, -shoulderTwist, 0.12);
 
-        const walkSway = Math.sin(walkTime.current) * bank * speedFactor;
-        j.torso.rotation.z = THREE.MathUtils.lerp(j.torso.rotation.z, walkSway, 0.1);
+        // ── Hip counter-rotation (opposite to shoulders) ─────────────────────
+        j.hips.rotation.y = THREE.MathUtils.lerp(j.hips.rotation.y, shoulderTwist * 1.2, 0.12);
 
-        j.hips.rotation.y = THREE.MathUtils.lerp(j.hips.rotation.y, walkSway * 1.5, 0.1);
+        // ── Forward lean — increases with speed ───────────────────────────────
+        const forwardLean = Math.min(animSpeed * lean, 0.30);
+        j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, forwardLean, 0.10);
+
+        // ── Lateral sway ─────────────────────────────────────────────────────
+        const walkSway = Math.sin(walkTime.current) * bank * legFactor;
+        j.torso.rotation.z = THREE.MathUtils.lerp(j.torso.rotation.z, walkSway, 0.10);
       }
     },
     [joints, defaultLean, defaultBank],

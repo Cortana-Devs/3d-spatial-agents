@@ -8,7 +8,7 @@ import type { AgentTask } from "@/components/systems/AgentTaskQueue";
 
 export interface Obstacle {
   position: THREE.Vector3;
-  radius: number;
+  radius?: number;  // used by sphere obstacles; omit when using halfExtents (OBB)
   type?: "wall" | "furniture" | "cupboard" | "door";
   // OBB (Oriented Bounding Box) fields — if halfExtents is set, render as box
   halfExtents?: THREE.Vector3; // half-width, half-height, half-depth

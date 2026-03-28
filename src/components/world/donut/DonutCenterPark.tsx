@@ -57,12 +57,15 @@ const pathMat = new THREE.MeshStandardMaterial({ color: 0xeae1d0, roughness: 1.0
 
 const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.9 });
 const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.9 });
+// Base bench width = 1.6 (real-world metres). widthScale multiplies only the X (length) axis.
 const benchWidth = 1.6;
 const seatPlankGeo = new THREE.BoxGeometry(benchWidth, 0.04, 0.08);
 const backPlankGeo = new THREE.BoxGeometry(benchWidth, 0.08, 0.04);
 const legVerticalGeo = new THREE.BoxGeometry(0.04, 0.4, 0.04);
 const legHorizontalGeo = new THREE.BoxGeometry(0.04, 0.04, 0.45);
 const armRestGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
+// Max instances: one extra-wide bench (widthScale 2.8) has extra leg columns
+const MAX_BENCH_INSTANCES = 8; // generous upper bound for a single wide bench
 
 const fishBodyGeo = new THREE.SphereGeometry(0.12, 16, 16); fishBodyGeo.scale(1, 1.5, 3);
 const fishTailGeo = new THREE.BoxGeometry(0.02, 0.25, 0.3); fishTailGeo.translate(0, 0, -0.15);
@@ -304,7 +307,7 @@ function LilyPads() {
 }
 
 // --- Scenery ---
-function Benches({ data }: { data: { position: number[], rotation: number[] }[] }) {
+function Benches({ data }: { data: { position: number[], rotation: number[], widthScale?: number }[] }) {
   const seatRef = useRef<THREE.InstancedMesh>(null);
   const backRef = useRef<THREE.InstancedMesh>(null);
   const legHRef = useRef<THREE.InstancedMesh>(null);
@@ -318,40 +321,69 @@ function Benches({ data }: { data: { position: number[], rotation: number[] }[] 
     let c = { seat: 0, back: 0, legH: 0, legV: 0, arm: 0 };
 
     data.forEach((b) => {
+      const ws = b.widthScale ?? 1;  // width scale multiplier (default 1 = original size)
+      const hw = benchWidth * ws * 0.5; // half-width in local units (before ENV scale)
       const terrainY = getTerrainHeight(b.position[0], b.position[2]);
       groupDummy.position.set(b.position[0], terrainY, b.position[2]);
       groupDummy.rotation.set(b.rotation[0], b.rotation[1], b.rotation[2]);
       groupDummy.scale.setScalar(ENV_PROP_SCALE_FACTOR);
       groupDummy.updateMatrix();
 
-      const addPart = (ref: any, countKey: keyof typeof c, pos: [number,number,number], rot: [number,number,number]=[0,0,0]) => {
-        dummy.position.set(...pos); dummy.rotation.set(...rot); dummy.scale.setScalar(1);
+      const addPart = (ref: any, countKey: keyof typeof c, pos: [number,number,number], rot: [number,number,number]=[0,0,0], scaleX = 1) => {
+        dummy.position.set(...pos); dummy.rotation.set(...rot);
+        dummy.scale.set(scaleX, 1, 1); // only stretch along X (bench length axis)
         dummy.updateMatrix(); dummy.applyMatrix4(groupDummy.matrix);
         ref.current.setMatrixAt(c[countKey]++, dummy.matrix);
       };
 
-      addPart(seatRef, 'seat', [0, 0.42, 0.15]); addPart(seatRef, 'seat', [0, 0.42, 0.05]);
-      addPart(seatRef, 'seat', [0, 0.42, -0.05]); addPart(seatRef, 'seat', [0, 0.42, -0.15]);
-      addPart(backRef, 'back', [0, 0.55, -0.22], [0.15, 0, 0]); addPart(backRef, 'back', [0, 0.68, -0.25], [0.15, 0, 0]);
-      addPart(backRef, 'back', [0, 0.81, -0.28], [0.15, 0, 0]);
-      addPart(legHRef, 'legH', [-0.7, 0.4, 0]); addPart(legHRef, 'legH', [0.7, 0.4, 0]);
-      addPart(legVRef, 'legV', [-0.7, 0.2, 0.18]); addPart(legVRef, 'legV', [-0.7, 0.2, -0.18]);
-      addPart(legVRef, 'legV', [-0.7, 0.6, -0.22], [0.15, 0, 0]);
-      addPart(legVRef, 'legV', [0.7, 0.2, 0.18]); addPart(legVRef, 'legV', [0.7, 0.2, -0.18]);
-      addPart(legVRef, 'legV', [0.7, 0.6, -0.22], [0.15, 0, 0]);
-      addPart(armRef, 'arm', [-0.7, 0.55, 0.05], [-0.05, 0, 0]); addPart(armRef, 'arm', [0.7, 0.55, 0.05], [-0.05, 0, 0]);
+      // Seat planks — stretched full width
+      addPart(seatRef, 'seat', [0, 0.42, 0.15],  [0,0,0], ws);
+      addPart(seatRef, 'seat', [0, 0.42, 0.05],  [0,0,0], ws);
+      addPart(seatRef, 'seat', [0, 0.42, -0.05], [0,0,0], ws);
+      addPart(seatRef, 'seat', [0, 0.42, -0.15], [0,0,0], ws);
+
+      // Back planks — stretched full width
+      addPart(backRef, 'back', [0, 0.55, -0.22], [0.15, 0, 0], ws);
+      addPart(backRef, 'back', [0, 0.68, -0.25], [0.15, 0, 0], ws);
+      addPart(backRef, 'back', [0, 0.81, -0.28], [0.15, 0, 0], ws);
+
+      // Leg columns: front+back at each support X-position
+      // For wide benches add intermediate supports at 1/3 and 2/3 spacing
+      const legXPositions: number[] = ws > 1.5
+        ? [-hw, -hw * 0.34, 0, hw * 0.34, hw]  // 5 supports for wide bench
+        : [-hw, hw];                             // 2 end supports for standard bench
+
+      legXPositions.forEach(lx => {
+        addPart(legHRef, 'legH', [lx, 0.4, 0]);
+        addPart(legVRef, 'legV', [lx, 0.2, 0.18]);
+        addPart(legVRef, 'legV', [lx, 0.2, -0.18]);
+        addPart(legVRef, 'legV', [lx, 0.6, -0.22], [0.15, 0, 0]);
+      });
+
+      // Arm rests only at the two outer ends
+      addPart(armRef, 'arm', [-hw, 0.55, 0.05], [-0.05, 0, 0]);
+      addPart(armRef, 'arm', [ hw, 0.55, 0.05], [-0.05, 0, 0]);
     });
 
     [seatRef, backRef, legHRef, legVRef, armRef].forEach(r => { if(r.current) r.current.instanceMatrix.needsUpdate = true });
   }, [data]);
 
+  // Count upper bounds with the scale in mind
+  const maxSeats  = data.reduce((s, b) => s + 4, 0);     // 4 planks per bench
+  const maxBacks  = data.reduce((s, b) => s + 3, 0);     // 3 back planks
+  const ws0 = data[0]?.widthScale ?? 1;
+  const numSupports0 = ws0 > 1.5 ? 5 : 2;
+  const maxLegH  = data.reduce((s, b) => s + (( (b.widthScale??1) > 1.5 ? 5 : 2 )), 0);
+  const maxLegV  = maxLegH * 3;
+  const maxArm   = data.length * 2;
+
   return (
     <group>
-      <instancedMesh ref={seatRef} args={[seatPlankGeo, benchWoodMat, data.length * 4]} castShadow />
-      <instancedMesh ref={backRef} args={[backPlankGeo, benchWoodMat, data.length * 3]} castShadow />
-      <instancedMesh ref={legHRef} args={[legHorizontalGeo, benchMetalMat, data.length * 2]} castShadow />
-      <instancedMesh ref={legVRef} args={[legVerticalGeo, benchMetalMat, data.length * 6]} castShadow />
-      <instancedMesh ref={armRef} args={[armRestGeo, benchMetalMat, data.length * 2]} castShadow />
+      <instancedMesh ref={seatRef} args={[seatPlankGeo, benchWoodMat, maxSeats]} castShadow />
+      <instancedMesh ref={backRef} args={[backPlankGeo, benchWoodMat, maxBacks]} castShadow />
+      <instancedMesh ref={legHRef} args={[legHorizontalGeo, benchMetalMat, maxLegH]} castShadow />
+      <instancedMesh ref={legVRef} args={[legVerticalGeo, benchMetalMat, maxLegV]} castShadow />
+      <instancedMesh ref={armRef} args={[armRestGeo, benchMetalMat, maxArm]} castShadow />
     </group>
   );
 }

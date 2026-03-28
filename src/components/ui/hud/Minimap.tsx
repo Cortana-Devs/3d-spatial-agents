@@ -53,15 +53,29 @@ export function Minimap() {
         };
 
         // 1. Draw Static Geometry (Obstacles - Walls, Furniture collisions)
-        ctx.fillStyle = "rgba(140, 150, 180, 0.3)"; // Muted blue-grey for structure
         obstacles.forEach(ob => {
             const p = worldToCanvas(ob.position.x, ob.position.z);
-            const r = ob.radius * worldScale;
 
-            // Draw simple circles for obstacles
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, Math.max(2, r), 0, Math.PI * 2);
-            ctx.fill();
+            if (ob.halfExtents) {
+                // OBB — draw a rotated rectangle
+                const w = ob.halfExtents.x * 2 * worldScale;
+                const h = ob.halfExtents.z * 2 * worldScale;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(-(ob.rotation ?? 0));
+                ctx.fillStyle = ob.type === "wall"
+                    ? "rgba(100, 120, 160, 0.35)"
+                    : "rgba(140, 150, 180, 0.25)";
+                ctx.fillRect(-w / 2, -h / 2, w, h);
+                ctx.restore();
+            } else if (ob.radius) {
+                // Sphere — draw circle
+                const r = ob.radius * worldScale;
+                ctx.fillStyle = "rgba(140, 150, 180, 0.3)";
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(2, r), 0, Math.PI * 2);
+                ctx.fill();
+            }
         });
 
         // 2. Draw Interactables (Active items - highlight them)

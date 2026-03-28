@@ -17,11 +17,10 @@ const treeData = [
   { x: 12, z: -20, scale: 0.9, type: 'cherry' as const }, // Second cherry blossom near water
 ];
 
+// Only the fishing dock bench remains. widthScale stretches the bench along its length axis.
+// widthScale 2.8 × default width 1.6 × ENV_PROP_SCALE_FACTOR 3.06 ≈ 13.7 world-units — fits 3 players.
 const benchData = [
-  { position: [15.5, 0, 0], rotation: [0, -Math.PI / 2, 0] }, // Dock bench
-  { position: [-14, 0, 10], rotation: [0, Math.PI / 5, 0] }, // Overlooking pond near oak
-  { position: [0, 0, -22], rotation: [0, 0, 0] },            
-  { position: [16, 0, 24], rotation: [0, Math.PI / 1.5, 0] } 
+  { position: [15.5, 0, 0], rotation: [0, -Math.PI / 2, 0], widthScale: 2.8 }, // Dock bench (3-player wide)
 ];
 
 // --- Interactables Registration ---
@@ -36,21 +35,29 @@ function getDonutInteractables() {
   benchData.forEach((b, i) => {
     const lx = b.position[0];
     const lz = b.position[2];
-    // terrain height at this bench position (relative to park group y=0)
     const terrainY = getTerrainHeight(lx, lz);
     const benchSeatWorldY = DEFAULT_LAB_HUB.y + terrainY + (BENCH_SEAT_LOCAL_Y * ENV_PROP_SCALE_FACTOR);
     const sitGroupY = benchSeatWorldY - PLAYER_HIPS_LOCAL_Y;
-    items.push({
-      id: `bench-park-${i}`,
-      type: "chair",
-      position: new THREE.Vector3(
-        DEFAULT_LAB_HUB.x + lx,
-        sitGroupY,
-        DEFAULT_LAB_HUB.z + lz,
-      ),
-      rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(b.rotation[0], b.rotation[1], b.rotation[2])),
-      name: "Park Bench",
-      description: "A solid wood and metal bench facing the center park.",
+    const ws = (b as any).widthScale ?? 1;
+    // Register 3 sit positions spread across the bench width
+    const seatSpacing = 1.6 * ws * ENV_PROP_SCALE_FACTOR * 0.28; // spacing between sit slots in world units
+    const rotQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(b.rotation[0], b.rotation[1], b.rotation[2]));
+    const slotLabels = ["Left", "Center", "Right"];
+    const slotOffsets = ws > 1 ? [-seatSpacing, 0, seatSpacing] : [0];
+    slotOffsets.forEach((offset, si) => {
+      const localOffset = new THREE.Vector3(offset, 0, 0).applyQuaternion(rotQ);
+      items.push({
+        id: `bench-park-${i}${ws > 1 ? `-${si}` : ""}`,
+        type: "chair",
+        position: new THREE.Vector3(
+          DEFAULT_LAB_HUB.x + lx + localOffset.x,
+          sitGroupY,
+          DEFAULT_LAB_HUB.z + lz + localOffset.z,
+        ),
+        rotation: rotQ,
+        name: ws > 1 ? `Dock Bench (${slotLabels[si]})` : "Park Bench",
+        description: "A wide solid wood bench at the fishing dock.",
+      });
     });
   });
 

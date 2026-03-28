@@ -169,11 +169,18 @@ class NavigationNetwork {
     }
 
     if (SCENE_WORLD_MODE === "minimal" || SCENE_WORLD_MODE === "donut") {
+      // Carve the center park pond from the nav grid
       this.carveCircularVoid(
         DEFAULT_LAB_HUB.x,
         DEFAULT_LAB_HUB.z,
         DEFAULT_RING_INNER_RADIUS,
       );
+    }
+
+    if (SCENE_WORLD_MODE === "donut") {
+      // Also block everything OUTSIDE the outer glass wall (r > 95)
+      // This stops agents from being routed out of the building entirely.
+      this.carveOuterVoid(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.z, 95);
     }
 
     this.isBuilt = true;
@@ -259,6 +266,21 @@ class NavigationNetwork {
           if (dx * dx + dz * dz <= totalR * totalR) {
             this.grid[this.cellIndex(c, r)] = 0;
           }
+        }
+      }
+    }
+  }
+
+  /** Block all grid cells OUTSIDE the given circle radius (for outer boundary walls). */
+  private carveOuterVoid(cx: number, cz: number, radius: number): void {
+    const r2 = radius * radius;
+    for (let row = 0; row < this.rows; row++) {
+      for (let col = 0; col < this.cols; col++) {
+        const wp = this.gridToWorld(col, row);
+        const dx = wp.x - cx;
+        const dz = wp.z - cz;
+        if (dx * dx + dz * dz > r2) {
+          this.grid[this.cellIndex(col, row)] = 0;
         }
       }
     }
