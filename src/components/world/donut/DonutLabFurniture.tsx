@@ -524,6 +524,7 @@ export default function DonutLabFurniture() {
         <CupboardUnit
           key={`cupboard-donut-${i}`}
           position={ringPos(angle, OUTER_WALK - 2)}
+          rotation={faceCenter(angle)}
           label={(i + 1).toString()}
           userData={{
             type: "Furniture",

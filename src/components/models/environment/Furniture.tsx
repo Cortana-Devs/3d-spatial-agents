@@ -7,46 +7,76 @@ import { useGameStore } from "@/store/gameStore";
 import { Text, Text3D, Center } from "@react-three/drei";
 import { Geometry, Base, Addition } from "@react-three/csg";
 import { usePlacingArea } from "@/components/systems/usePlacingArea";
+import {
+  appleWhiteMaterial,
+  appleDarkMaterial,
+  appleAluminumMaterial,
+  appleSpaceGreyMaterial,
+  appleAccentRed,
+  appleAccentBlue,
+  applePremiumWood,
+  appleScreenMaterial,
+  appleDeviceScreenOff,
+  appleDeviceScreenOn,
+  neonGlowBlue,
+} from "../../world/donut/DonutMaterials";
 
-const woodMaterial = new THREE.MeshStandardMaterial({
-  color: "#e8e8e8",
-  roughness: 0.35,
-  metalness: 0.02,
-});
-const metalMaterial = new THREE.MeshStandardMaterial({
-  color: "#b8bcc4",
-  roughness: 0.2,
-  metalness: 0.8,
-});
-const whitePlastic = new THREE.MeshStandardMaterial({
-  color: "#f0f2f5",
-  roughness: 0.25,
-  metalness: 0.02,
-});
-const glassMaterial = new THREE.MeshPhysicalMaterial({
-  color: "#c8e0f0",
-  transmission: 0.92,
-  opacity: 0.4,
-  transparent: true,
-  roughness: 0.05,
-});
+// Map local legacy material names directly to the High-Performance Apple Design System tokens
+const woodMaterial = applePremiumWood;
+const metalMaterial = appleAluminumMaterial;
+const whitePlastic = appleWhiteMaterial;
+const glassMaterial = appleScreenMaterial; // Will be optimized transparent glass in DonutMaterials
 const lightGlowMaterial = new THREE.MeshBasicMaterial({ color: "#f0f4ff" });
-const lightOffMaterial = new THREE.MeshStandardMaterial({ color: "#555555" });
+const lightOffMaterial = appleDeviceScreenOff;
 
-// Shared Materials for deduplication
-const cushionMaterial = new THREE.MeshStandardMaterial({ color: "#2c3e50", roughness: 0.8 });
-const primaryMetalMaterial = new THREE.MeshStandardMaterial({ color: "#d0d4da", roughness: 0.3, metalness: 0.4 });
-const secondaryMetalMaterial = new THREE.MeshStandardMaterial({ color: "#d0d4da", roughness: 0.35, metalness: 0.02 });
-const filingCabinetMaterial = new THREE.MeshStandardMaterial({ color: "#3a5a6e", roughness: 0.7 });
-const offWhiteMaterial = new THREE.MeshStandardMaterial({ color: "#eef0f4", roughness: 0.2, metalness: 0.05 });
-const darkSlateMaterial = new THREE.MeshStandardMaterial({ color: "#2a3a3e", roughness: 0.3, metalness: 0.1 });
-const serverRackMaterial = new THREE.MeshStandardMaterial({ color: "#3a4a4e", roughness: 0.5, metalness: 0.05 });
-const lightPanelMaterial = new THREE.MeshStandardMaterial({ color: "#c8ccd2", roughness: 0.4 });
-const switchPlateMaterial = new THREE.MeshStandardMaterial({ color: "#eeeeee" });
-const switchToggleMaterial = new THREE.MeshStandardMaterial({ color: "#ffffff" });
+const cushionMaterial = appleDarkMaterial;
+const primaryMetalMaterial = appleAluminumMaterial;
+const secondaryMetalMaterial = appleSpaceGreyMaterial;
+const filingCabinetMaterial = appleSpaceGreyMaterial;
+const offWhiteMaterial = appleWhiteMaterial;
+const darkSlateMaterial = appleDarkMaterial;
+const serverRackMaterial = appleSpaceGreyMaterial;
+const lightPanelMaterial = appleWhiteMaterial;
+const switchPlateMaterial = appleWhiteMaterial;
+const switchToggleMaterial = appleWhiteMaterial;
 const indicatorOnMaterial = new THREE.MeshBasicMaterial({ color: "#00ff00" });
 const indicatorOffMaterial = new THREE.MeshBasicMaterial({ color: "#ff0000" });
-const accentGreenMaterial = new THREE.MeshStandardMaterial({ color: "#00c8a0", roughness: 0.3, metalness: 0.4 });
+const accentGreenMaterial = new THREE.MeshStandardMaterial({ color: "#00c8a0", roughness: 0.3, metalness: 0.4 }); // Lab accent teal — intentional deviation from Apple palette
+
+const pcCaseMaterial = appleDarkMaterial;
+const doorNeonMaterial = neonGlowBlue;
+const doorHandleBaseMaterial = appleSpaceGreyMaterial;
+const doorHandleRingOn = new THREE.MeshBasicMaterial({ color: "#00ff00" });
+const doorHandleRingOff = new THREE.MeshBasicMaterial({ color: "#ff0000" });
+
+const receptionMainMaterial = appleSpaceGreyMaterial;
+const receptionTopMaterial = appleAluminumMaterial;
+const receptionPadMaterial = appleDarkMaterial;
+
+const cupboardBaseMaterial = appleDarkMaterial;
+const cupboardLegMaterial = appleSpaceGreyMaterial;
+const cupboardBodyGlass = new THREE.MeshPhysicalMaterial({
+  color: "#f5f5f7",
+  roughness: 0.05,
+  metalness: 0.1,
+  transmission: 0.9,
+  transparent: true,
+  opacity: 0.2,
+  thickness: 0.5,
+});
+const cupboardShelfMaterial = new THREE.MeshPhysicalMaterial({
+  color: "#fff",
+  metalness: 0.9,
+  roughness: 0.1,
+  transmission: 0.2,
+  transparent: true,
+  opacity: 0.8,
+});
+const cupboardDrawerMaterial = appleWhiteMaterial;
+const darkWoodMaterial = applePremiumWood;
+const cupboardFasciaMaterial = appleSpaceGreyMaterial;
+const cupboardNeonMaterial = neonGlowBlue;
+
 
 // --- CEILING LIGHT ---
 export interface CeilingLightProps {
@@ -824,40 +854,29 @@ export function LabWorkbench({
         <boxGeometry args={[14, 0.1, 5]} />
       </mesh>
 
-      {/* Steel H-frame legs */}
-      {[
-        [-benchWidth / 2 + 1.5, -benchDepth / 2 + 1],
-        [benchWidth / 2 - 1.5, -benchDepth / 2 + 1],
-        [-benchWidth / 2 + 1.5, benchDepth / 2 - 1],
-        [benchWidth / 2 - 1.5, benchDepth / 2 - 1],
-      ].map(([x, z], i) => (
-        <mesh
-          key={`wbleg-${i}`}
-          position={[x, (topHeight - topThickness / 2) / 2, z]}
-          castShadow
-          material={metalMaterial}
-        >
-          <boxGeometry args={[1, topHeight - topThickness / 2, 1]} />
-        </mesh>
-      ))}
-      {/* Center support legs */}
-      {[
-        [0, -benchDepth / 2 + 1],
-        [0, benchDepth / 2 - 1],
-      ].map(([x, z], i) => (
-        <mesh
-          key={`wbleg-c-${i}`}
-          position={[x, (topHeight - topThickness / 2) / 2, z]}
-          castShadow
-          material={metalMaterial}
-        >
-          <boxGeometry args={[1, topHeight - topThickness / 2, 1]} />
-        </mesh>
-      ))}
-
-      {/* Cross bracing / lower shelf rail */}
-      <mesh position={[0, 1.0, 0]} castShadow material={metalMaterial}>
-        <boxGeometry args={[benchWidth - 3, 0.3, benchDepth - 2]} />
+      {/* Steel Frame (Legs & Bracing) merged with CSG */}
+      <mesh castShadow material={metalMaterial}>
+        <Geometry useGroups>
+          <Base position={[0, 1.0, 0]} material={metalMaterial}>
+            <boxGeometry args={[benchWidth - 3, 0.3, benchDepth - 2]} />
+          </Base>
+          {[
+            [-benchWidth / 2 + 1.5, -benchDepth / 2 + 1],
+            [benchWidth / 2 - 1.5, -benchDepth / 2 + 1],
+            [-benchWidth / 2 + 1.5, benchDepth / 2 - 1],
+            [benchWidth / 2 - 1.5, benchDepth / 2 - 1],
+            [0, -benchDepth / 2 + 1],
+            [0, benchDepth / 2 - 1],
+          ].map(([x, z], i) => (
+            <Addition
+              key={`wbleg-all-${i}`}
+              position={[x, (topHeight - topThickness / 2) / 2, z]}
+              material={metalMaterial}
+            >
+              <boxGeometry args={[1, topHeight - topThickness / 2, 1]} />
+            </Addition>
+          ))}
+        </Geometry>
       </mesh>
 
       {/* Lower utility shelf */}
@@ -1154,7 +1173,7 @@ export function DesktopPC({
       <mesh
         position={[0, 1.5, 0]}
         castShadow
-        material={new THREE.MeshStandardMaterial({ color: "#111" })}
+        material={pcCaseMaterial}
       >
         <boxGeometry args={[4, 2.5, 0.2]} />
       </mesh>
@@ -1327,13 +1346,13 @@ export function OfficeDoor({
         </mesh>
         <mesh
           position={[0, 0, 1.15]}
-          material={new THREE.MeshBasicMaterial({ color: "#00ffff" })}
+          material={neonGlowBlue}
         >
           <boxGeometry args={[0.2, 28, 0.1]} />
         </mesh>
         <mesh
           position={[0, 0, -1.15]}
-          material={new THREE.MeshBasicMaterial({ color: "#00ffff" })}
+          material={neonGlowBlue}
         >
           <boxGeometry args={[0.2, 28, 0.1]} />
         </mesh>
@@ -1344,13 +1363,13 @@ export function OfficeDoor({
         </mesh>
         <mesh
           position={[0, 0, 1.15]}
-          material={new THREE.MeshBasicMaterial({ color: "#00ffff" })}
+          material={neonGlowBlue}
         >
           <boxGeometry args={[0.2, 28, 0.1]} />
         </mesh>
         <mesh
           position={[0, 0, -1.15]}
-          material={new THREE.MeshBasicMaterial({ color: "#00ffff" })}
+          material={neonGlowBlue}
         >
           <boxGeometry args={[0.2, 28, 0.1]} />
         </mesh>
@@ -1367,13 +1386,13 @@ export function OfficeDoor({
       </mesh>
       <mesh
         position={[0, 31, 1]}
-        material={new THREE.MeshBasicMaterial({ color: "#00ffff" })}
+        material={neonGlowBlue}
       >
         <boxGeometry args={[16, 0.5, 0.2]} />
       </mesh>
       <mesh
         position={[0, 31, -1]}
-        material={new THREE.MeshBasicMaterial({ color: "#00ffff" })}
+        material={neonGlowBlue}
       >
         <boxGeometry args={[16, 0.5, 0.2]} />
       </mesh>
@@ -1400,18 +1419,14 @@ export function OfficeDoor({
         <mesh
           position={[0, 15, 0]}
           rotation={[Math.PI / 2, 0, 0]}
-          material={new THREE.MeshStandardMaterial({ color: "#222" })}
+          material={doorHandleBaseMaterial}
         >
           <cylinderGeometry args={[2, 2, 0.6, 32]} />
         </mesh>
         <mesh
           position={[0, 15, 0.35]}
-          material={
-            new THREE.MeshBasicMaterial({
-              color: isOpen ? "#00ff00" : "#ff0000",
-            })
-          }
         >
+          <primitive object={isOpen ? doorHandleRingOn : doorHandleRingOff} attach="material" />
           <ringGeometry args={[1, 1.2, 32]} />
         </mesh>
 
@@ -1523,9 +1538,7 @@ export function ReceptionDesk({
         position={[0, 2, 0]}
         castShadow
         receiveShadow
-        material={
-          new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.2 })
-        }
+        material={receptionMainMaterial}
       >
         <boxGeometry args={[20, 4, 6]} />
       </mesh>
@@ -1533,7 +1546,7 @@ export function ReceptionDesk({
       {/* Counter Top */}
       <mesh
         position={[0, 4.1, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#444" })}
+        material={receptionTopMaterial}
       >
         <boxGeometry args={[20, 0.2, 6]} />
       </mesh>
@@ -1541,7 +1554,7 @@ export function ReceptionDesk({
       {/* Leather Pad */}
       <mesh
         position={[0, 4.21, -0.5]}
-        material={new THREE.MeshStandardMaterial({ color: "#111" })}
+        material={appleDarkMaterial}
       >
         <boxGeometry args={[16.0, 0.02, 4.0]} />
       </mesh>
@@ -1650,10 +1663,6 @@ export function ManagersDesk({
     addCollidableMesh,
     removeCollidableMesh,
   ]);
-  const darkWood = new THREE.MeshStandardMaterial({
-    color: "#3e2723",
-    roughness: 0.4,
-  });
 
   return (
     <group
@@ -1663,7 +1672,7 @@ export function ManagersDesk({
       userData={userData}
     >
       {/* Executive Desktop */}
-      <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={darkWood}>
+      <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={darkWoodMaterial}>
         <boxGeometry args={[16, 0.5, 8]} />
       </mesh>
 
@@ -1687,11 +1696,11 @@ export function ManagersDesk({
         position={[-6, 1.8, 0]}
         castShadow
         receiveShadow
-        material={darkWood}
+        material={darkWoodMaterial}
       >
         <boxGeometry args={[3, 3.6, 6]} />
       </mesh>
-      <mesh position={[6, 1.8, 0]} castShadow receiveShadow material={darkWood}>
+      <mesh position={[6, 1.8, 0]} castShadow receiveShadow material={darkWoodMaterial}>
         <boxGeometry args={[3, 3.6, 6]} />
       </mesh>
       {/* Modesty Panel */}
@@ -1699,14 +1708,14 @@ export function ManagersDesk({
         position={[0, 2.5, -2]}
         castShadow
         receiveShadow
-        material={darkWood}
+        material={darkWoodMaterial}
       >
         <boxGeometry args={[10, 3, 0.2]} />
       </mesh>
       {/* Leather Pad */}
       <mesh
         position={[0, 4.06, -0.5]}
-        material={new THREE.MeshStandardMaterial({ color: "#111" })}
+        material={pcCaseMaterial}
       >
         <boxGeometry args={[15.6, 0.02, 6.0]} />
       </mesh>
@@ -1783,45 +1792,32 @@ export function CupboardUnit({
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Base Plinth (Solid) */}
-      <mesh position={[0, baseHeight / 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w, baseHeight, d]} />
-        <meshStandardMaterial color="#111" roughness={0.5} />
+      {/* Base Plinth and Legs (CSG Merged) */}
+      <mesh castShadow receiveShadow>
+        <Geometry useGroups>
+          <Base position={[0, baseHeight / 2, 0]} material={cupboardBaseMaterial}>
+            <boxGeometry args={[w, baseHeight, d]} />
+          </Base>
+          {[
+            [-w / 2 + 0.4, -d / 2 + 0.4],
+            [w / 2 - 0.4, -d / 2 + 0.4],
+            [-w / 2 + 0.4, d / 2 - 0.4],
+            [w / 2 - 0.4, d / 2 - 0.4],
+          ].map(([lx, lz], li) => (
+            <Addition
+              key={`leg-${li}`}
+              position={[lx, baseHeight + legHeight / 2, lz]}
+              material={cupboardLegMaterial}
+            >
+              <boxGeometry args={[0.4, legHeight, 0.4]} />
+            </Addition>
+          ))}
+        </Geometry>
       </mesh>
 
-      {/* Support Legs (4 corners) */}
-      {[
-        [-w / 2 + 0.4, -d / 2 + 0.4],
-        [w / 2 - 0.4, -d / 2 + 0.4],
-        [-w / 2 + 0.4, d / 2 - 0.4],
-        [w / 2 - 0.4, d / 2 - 0.4],
-      ].map(([lx, lz], li) => (
-        <mesh
-          key={`leg-${li}`}
-          position={[lx, baseHeight + legHeight / 2, lz]}
-          castShadow
-        >
-          <boxGeometry args={[0.4, legHeight, 0.4]} />
-          <meshStandardMaterial color="#222" metalness={0.6} roughness={0.3} />
-        </mesh>
-      ))}
-
       {/* Main Cabinet Body (Glass) - Raised above legs */}
-      <mesh
-        position={[0, baseHeight + legHeight + (h - baseHeight) / 2, 0]}
-        castShadow
-        receiveShadow
-      >
+      <mesh position={[0, baseHeight + legHeight + (h - baseHeight) / 2, 0]} material={cupboardBodyGlass}>
         <boxGeometry args={[w - 0.2, h - baseHeight, d - 0.2]} />
-        <meshPhysicalMaterial
-          color="#aaddff" // Light blue tint
-          roughness={0.1}
-          metalness={0.1}
-          transmission={0.9} // Glass effect
-          transparent={true}
-          opacity={0.3}
-          thickness={0.5}
-        />
       </mesh>
 
       {/* Internal Placement Volume (Shared for all sides) */}
@@ -1846,53 +1842,24 @@ export function CupboardUnit({
         );
       })}
 
-      {/* Glowing Number at Top (Rotating billboard style or 4-sided text?) */}
-      {/* Let's make it 4-sided text so it's visible from all angles */}
-      {/* Top Fascia & Integrated Numbers (Sitting on Top) */}
+      {/* Top Fascia & Number (Sitting on Top - FRONT ONLY) */}
       <group position={[0, h + legHeight + 0.75, 0]}>
-        {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((rot, i) => (
-          <group key={`fascia-${i}`} rotation={[0, rot, 0]}>
-            <mesh position={[0, 0, d / 2 + 0.05]} receiveShadow>
-              <boxGeometry args={[w - 0.2, 1.5, 0.1]} />
-              <meshPhysicalMaterial
-                color="#000000" // Dark tint
-                roughness={0.1}
-                metalness={0.9}
-                transmission={0.8} // See-through
-                transparent={true}
-                opacity={0.5}
-              />
-            </mesh>
+        <mesh position={[0, 0, d / 2 + 0.05]} material={cupboardFasciaMaterial}>
+          <boxGeometry args={[w - 0.2, 1.5, 0.1]} />
+        </mesh>
 
-            {/* Integrated Number */}
-            <group position={[0, 0, d / 2 + 0.12]}>
-              <Center>
-                <Text3D
-                  font="/fonts/helvetiker_regular.typeface.json"
-                  size={1.2}
-                  height={0.1}
-                  curveSegments={12}
-                  bevelEnabled
-                  bevelThickness={0.01}
-                  bevelSize={0.01}
-                  bevelOffset={0}
-                  bevelSegments={3}
-                >
-                  {label}
-                  <meshStandardMaterial
-                    color="#ffffff"
-                    emissive="#ffffff"
-                    emissiveIntensity={0.8}
-                    toneMapped={false}
-                  />
-                </Text3D>
-              </Center>
-            </group>
-          </group>
-        ))}
+        <Text
+          position={[0, 0, d / 2 + 0.12]}
+          fontSize={1.2}
+          color="#ffffff"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {label}
+        </Text>
       </group>
 
-      {/* 3 Levels (Faces on 4 sides) */}
+      {/* 3 Levels (Faces on FRONT ONLY) */}
       {Array.from({ length: levels }).map((_, levelIndex) => {
         const levelNum = levelIndex + 1;
         const yPos =
@@ -1903,56 +1870,31 @@ export function CupboardUnit({
             {/* Physical Shelf Floor */}
             <mesh
               position={[0, -levelHeight / 2 + 0.05, 0]}
-              castShadow
-              receiveShadow
+              material={cupboardShelfMaterial}
             >
               <boxGeometry args={[w - 0.2, 0.05, d - 0.2]} />
-              <meshPhysicalMaterial
-                color="#000000"
-                metalness={0.8}
-                roughness={0.2}
-                transmission={0.2}
-                transparent={true}
-                opacity={0.8}
-              />
             </mesh>
 
-            {/* 4 Faces */}
-            {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((rot, sideIndex) => (
-              <group key={`side-${sideIndex}`} rotation={[0, rot, 0]}>
-                {/* Drawer Face / Panel */}
-                {/* Positioned slightly out from center */}
-                <mesh position={[0, 0, d / 2]} castShadow>
-                  <boxGeometry args={[w - 0.5, levelHeight - 0.2, 0.1]} />
-                  <meshPhysicalMaterial
-                    color="#ffffff"
-                    roughness={0.1}
-                    metalness={0.1}
-                    transmission={0.9} // More clear
-                    transparent={true}
-                    opacity={0.2} // Less opaque
-                  />
-                </mesh>
+            {/* Front Face Drawer & Panel ONLY */}
+            <group rotation={[0, 0, 0]}>
+              <mesh position={[0, 0, d / 2]} material={cupboardDrawerMaterial}>
+                <boxGeometry args={[w - 0.5, levelHeight - 0.2, 0.1]} />
+              </mesh>
 
-                {/* Handle with Neon Strip (Thinner and sleeker) */}
-                <mesh position={[0, -0.5, d / 2 + 0.1]}>
-                  <boxGeometry args={[w - 2, 0.05, 0.05]} />
-                  <meshBasicMaterial color="#00ffff" />
-                </mesh>
+              <mesh position={[0, -0.5, d / 2 + 0.1]} material={cupboardNeonMaterial}>
+                <boxGeometry args={[w - 2, 0.05, 0.05]} />
+              </mesh>
 
-                {/* Level Label */}
-                <Text
-                  position={[0, 0.2, d / 2 + 0.06]}
-                  fontSize={0.8}
-                  color="white"
-                  anchorX="center"
-                  anchorY="middle"
-                  // font prop removed to use default (typeface.json is invalid for Text)
-                >
-                  {`Level 0${levelNum}`}
-                </Text>
-              </group>
-            ))}
+              <Text
+                position={[0, 0.2, d / 2 + 0.06]}
+                fontSize={0.8}
+                color="white"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {`Level 0${levelNum}`}
+              </Text>
+            </group>
           </group>
         );
       })}
@@ -2003,42 +1945,6 @@ function CupboardLevel({
       >
         <boxGeometry args={slabDimensions} />
       </mesh>
-
-      {/* Visual Slot Markers (Projected on the shelf floor) */}
-      {/* Shelf floor is at y = -dimensions[1]/2. We want markers just above it. */}
-      {slotOffsets.map((offset, i) => (
-        <group
-          key={`slot-mark-${i}`}
-          position={[offset[0], -dimensions[1] / 2 + 0.1, offset[1]]}
-        >
-          {/* Glowing Frame */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[1.0, 1.2, 32]} />
-            <meshBasicMaterial
-              color="#00ffff"
-              transparent
-              opacity={0.3}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          {/* Faint Pad */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[1.0, 32]} />
-            <meshBasicMaterial color="#00ffff" transparent opacity={0.05} />
-          </mesh>
-          {/* Slot Number */}
-          <Text
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 1.6]}
-            fontSize={0.4}
-            color="#00ffff"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {`Slot ${i + 1}`}
-          </Text>
-        </group>
-      ))}
     </group>
   );
 }

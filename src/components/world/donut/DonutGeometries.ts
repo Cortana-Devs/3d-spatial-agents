@@ -55,3 +55,30 @@ export const doorHandleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.5, 8);
 
 export const outerRingGeometry = new THREE.TorusGeometry(DEFAULT_RING_OUTER_RADIUS, 0.4, 16, Math.floor(DEFAULT_RING_CURVE_SEGMENTS / 2));
 outerRingGeometry.rotateX(Math.PI / 2);
+
+// Environment Elements
+export const trunkGeo = new THREE.CylinderGeometry(0.2, 0.4, 4, 5);
+export const pineLeavesGeo = new THREE.ConeGeometry(2, 5, 5);
+export const oakLeavesGeo = new THREE.IcosahedronGeometry(2.5, 1);
+export const cherryLeavesGeo = new THREE.IcosahedronGeometry(2.2, 1);
+export const lilyPadGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.02, 16, 1, false, 0, Math.PI * 1.7);
+export const lilyFlowerGeo = new THREE.ConeGeometry(0.12, 0.2, 6);
+export const seatPlankGeo = new THREE.BoxGeometry(1.6, 0.04, 0.08);
+export const backPlankGeo = new THREE.BoxGeometry(1.6, 0.08, 0.04);
+export const legVerticalGeo = new THREE.BoxGeometry(0.04, 0.4, 0.04);
+export const legHorizontalGeo = new THREE.BoxGeometry(0.04, 0.04, 0.45);
+export const armRestGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
+
+export const fishBodyGeo = new THREE.SphereGeometry(0.1, 12, 8); 
+fishBodyGeo.scale(1, 0.55, 2.2);
+
+export const fishTailGeo = new THREE.ConeGeometry(0.08, 0.2, 6); 
+fishTailGeo.translate(0, 0, 0);
+
+export const aroBodyGeo = new THREE.SphereGeometry(1, 12, 8); 
+aroBodyGeo.scale(0.28, 0.18, 0.9);
+
+export const aroTailGeo = new THREE.ConeGeometry(0.22, 0.55, 8); 
+aroTailGeo.rotateX(Math.PI / 2);
+
+export const aroDorsalGeo = new THREE.BoxGeometry(0.04, 0.25, 0.45);
