@@ -799,6 +799,7 @@ export function usePlayerController(
       let groundHeight = -10;
       if (collidableMeshes.length > 0) {
         const raycaster = raycasterRef.current;
+        raycaster.layers.set(1); // Ensure only walkable surfaces (Layer 1) are hit
         const rayOrigin = rayOriginRef.current.copy(mesh.position);
         rayOrigin.y += 50;
         raycaster.set(rayOrigin, raycastDirRef.current);
