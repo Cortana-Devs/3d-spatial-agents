@@ -231,7 +231,7 @@ export class AgentTaskQueue {
 
     this.phase = "NAVIGATING";
 
-    if (!["SAY", "WANDER", "EMOTE"].includes(this.currentTask.type) && Math.random() < 0.25) {
+    if (!["SAY", "WANDER", "EMOTE"].includes(this.currentTask.type) && Math.random() < 0.05) {
       const moveTaskTypes = ["SIT", "REST", "CONTEMPLATE", "EXPLORE", "GO_TO", "FOLLOW_PLAYER", "FOLLOW_PATH", "COLLABORATE", "REST_IN_POD"];
       const phrase = moveTaskTypes.includes(this.currentTask.type)
         ? getRandomPhrase("MOVING") : getRandomPhrase("WORKING");

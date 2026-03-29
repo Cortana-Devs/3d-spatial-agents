@@ -408,6 +408,8 @@ export function useAudioController() {
   >(null);
   const [currentAudioElement, setCurrentAudioElement] =
     useState<HTMLAudioElement | null>(null);
+  /** Tracks the active HTMLAudioElement without putting it in speak() deps (avoids cascade re-renders). */
+  const currentAudioElementRef = useRef<HTMLAudioElement | null>(null);
   const reqIdRef = useState(() => ({ current: 0 }))[0];
   const speakRef = useRef<
     ((text: string, agentId?: string, isSubconscious?: boolean) => Promise<void>) | null
@@ -470,13 +472,15 @@ export function useAudioController() {
         return;
       }
 
-      // Clear previous audio
+      // Clear previous audio (use ref so speak() does not depend on React state)
       setCurrentBuffer(null);
       setCurrentPhonemeSchedule(null);
-      if (currentAudioElement) {
-        currentAudioElement.pause();
-        currentAudioElement.src = "";
+      const prevEl = currentAudioElementRef.current;
+      if (prevEl) {
+        prevEl.pause();
+        prevEl.src = "";
       }
+      currentAudioElementRef.current = null;
       setCurrentAudioElement(null);
 
       const piperVoiceId =
@@ -523,6 +527,7 @@ export function useAudioController() {
               globalSpeechLock = false;
               return;
             }
+            currentAudioElementRef.current = el;
             setCurrentAudioElement(el);
             setAudioState("speaking");
             emitTtsStatus({ message: TIER_LABELS[tier], state: "speaking", tier });
@@ -561,6 +566,7 @@ export function useAudioController() {
               globalSpeechLock = false;
               return;
             }
+            currentAudioElementRef.current = el;
             setCurrentAudioElement(el);
             setAudioState("speaking");
             emitTtsStatus({ message: TIER_LABELS[tier], state: "speaking", tier });
@@ -609,12 +615,7 @@ export function useAudioController() {
       emitTtsStatus({ message: "Voice unavailable", state: "error" });
       globalSpeechLock = false;
     },
-    [
-      ensureAudioContext,
-      currentAudioElement,
-      reqIdRef,
-      voiceSettings,
-    ],
+    [ensureAudioContext, reqIdRef, voiceSettings],
   );
 
   speakRef.current = speak;
@@ -673,13 +674,15 @@ export function useAudioController() {
 
     setCurrentBuffer(null);
     setCurrentPhonemeSchedule(null);
-    if (currentAudioElement) {
-      currentAudioElement.pause();
-      currentAudioElement.src = "";
+    const el = currentAudioElementRef.current;
+    if (el) {
+      el.pause();
+      el.src = "";
     }
+    currentAudioElementRef.current = null;
     setCurrentAudioElement(null);
     setAudioState("idle");
-  }, [currentAudioElement, reqIdRef]);
+  }, [reqIdRef]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
