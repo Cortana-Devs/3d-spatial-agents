@@ -23,6 +23,16 @@ export interface HearingEvent {
   timestamp: number;
 }
 
+/**
+ * PerceptionInterrupt represents a stimulus that requires immediate sub-frame attention.
+ */
+export interface PerceptionInterrupt {
+  type: "AUDIO_STARTLE" | "VISUAL_ALERT";
+  position: THREE.Vector3;
+  priority: number;
+  timestamp: number;
+}
+
 type HearingCallback = (event: HearingEvent) => void;
 
 /**
@@ -51,6 +61,7 @@ export class SensorySystem {
   private agentId: string;
   private workingMemory: Map<string, PerceptionRecord> = new Map();
   private recentNoises: HearingEvent[] = [];
+  private pendingInterrupt: PerceptionInterrupt | null = null;
   
   // Configuration
   private visionFov: number = Math.PI * 0.7; // ~126 degrees
@@ -140,9 +151,30 @@ export class SensorySystem {
     return Array.from(this.workingMemory.values());
   }
 
-  public recordNoise(event: HearingEvent) {
+  public recordNoise(event: HearingEvent, agentPos: THREE.Vector3) {
     if (event.emitterId === this.agentId) return;
     this.recentNoises.push(event);
+
+    // If noise is very close/loud, inject an immediate interrupt
+    const dist = agentPos.distanceTo(event.position);
+    if (dist < event.loudness * 0.8) {
+      if (!this.pendingInterrupt || this.pendingInterrupt.priority < event.loudness) {
+        this.pendingInterrupt = {
+          type: "AUDIO_STARTLE",
+          position: event.position.clone(),
+          priority: event.loudness,
+          timestamp: event.timestamp
+        };
+      }
+    }
+  }
+
+  public getPendingInterrupt(): PerceptionInterrupt | null {
+    return this.pendingInterrupt;
+  }
+
+  public clearInterrupt() {
+    this.pendingInterrupt = null;
   }
 
   public getRecentNoises(): HearingEvent[] {

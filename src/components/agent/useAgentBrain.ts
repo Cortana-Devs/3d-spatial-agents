@@ -29,6 +29,7 @@ import {
 import { SensorySystem, HearingBus, type HearingEvent } from "@/lib/SensorySystem";
 import { UtilityBrain } from "@/lib/UtilityBrain";
 import { InterestMap } from "@/store/InterestMap";
+import { SpatialFamiliarity } from "@/lib/SpatialFamiliarity";
 
 // Radial bounds for the Donut Lab (Circular Ring)
 const RING_INNER_RADIUS = 39; // Align with 38 inner void
@@ -121,6 +122,7 @@ export function useAgentBrain(
   // Zone update timer (throttle zone tracking to every 2 seconds)
   const zoneUpdateTimer = useRef(0);
   const poiUpdateTimer = useRef(0);
+  const familiarityRef = useRef<SpatialFamiliarity>(new SpatialFamiliarity());
   const stuckTimer = useRef(0);
   const lastStuckCheckPos = useRef(new THREE.Vector3());
 
@@ -201,17 +203,11 @@ export function useAgentBrain(
 
     // Subscribe to hearing bus
     const unsubHearing = HearingBus.subscribe((event) => {
-      sensorySystemRef.current.recordNoise(event);
-
-      // Reaction logic: If noise is loud (> 8m) and agent is idle/wandering, look at it
-      if (event.loudness > 8.0 && (queue.getCurrentTask()?.priority ?? 0) <= 0) {
-        queue.enqueue({
-          type: "LOOK_AT",
-          priority: 2, // Interrupts wander (0) but not LLM scripts (10)
-          lookTarget: event.position,
-          duration: 3,
-          scriptId: "noise_reaction",
-        });
+      if (vehicleRef.current) {
+        sensorySystemRef.current.recordNoise(
+          event, 
+          vehicleRef.current.position as unknown as THREE.Vector3
+        );
       }
     });
 
@@ -466,6 +462,26 @@ export function useAgentBrain(
 
     // Smoothly interpolate maxSpeed to prevent jerky braking
     vehicle.maxSpeed += (targetSpeed - vehicle.maxSpeed) * 0.1;
+
+    // --- PHASE 1: REACTIVE INTERRUPTS (Sub-frame) ---
+    // Expert Review Feedback: Audio reaction should be immediate (<16ms)
+    const pendingInterrupt = sensorySystemRef.current.getPendingInterrupt();
+    if (pendingInterrupt && pendingInterrupt.type === "AUDIO_STARTLE") {
+      // If idle/wandering or low priority task, immediately snap head and enqueue body task
+      if ((taskQueue.getCurrentTask()?.priority ?? 0) <= 2) {
+        // 1. Enqueue proper behavioral task if not already reacting
+        if (taskQueue.getCurrentTask()?.scriptId !== "noise_reaction") {
+          taskQueue.enqueue({
+            type: "LOOK_AT",
+            priority: 3, // Higher than WANDER (0) and standard LOOK_AT (2)
+            lookTarget: pendingInterrupt.position.clone(),
+            duration: 3,
+            scriptId: "noise_reaction"
+          });
+        }
+        sensorySystemRef.current.clearInterrupt();
+      }
+    }
 
     // Apply steering command from task queue (if active)
     if (steeringCmd.type !== "NONE") {
@@ -843,6 +859,9 @@ export function useAgentBrain(
       if (socialTimer.current > 3.0) socialState.current = "NONE";
     }
 
+    // Record familiarity (Phase 3: Individual Dispersion)
+    familiarityRef.current.visit(vehicle.position as unknown as THREE.Vector3, delta);
+
     // --- PHYSICS (Gravity / Ground Detection) ---
     // FIX: Runs every frame (was every-other-frame, causing missed ground + free-fall)
     // FIX: Agents no longer walk on workbenches — max step-up height limits Y snapping
@@ -1045,6 +1064,9 @@ export function useAgentBrain(
               currentZoneInfluence.zoneName,
             );
           }
+          // Decay individual familiarity (Expert Review)
+          familiarityRef.current.decay(2.0);
+          
           // Update POI novelty recovery
           poiUpdateTimer.current += 2.0;
           if (poiUpdateTimer.current >= 30.0) {
@@ -1351,7 +1373,8 @@ export function useAgentBrain(
            const localTasks = utilityBrainRef.current.evaluate(
              driveManagerRef.current.drives,
              vPos,
-             spatialMemoryRef.current
+             spatialMemoryRef.current,
+             familiarityRef.current
            );
            
            if (localTasks && localTasks.length > 0) {

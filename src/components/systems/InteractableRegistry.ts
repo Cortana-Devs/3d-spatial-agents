@@ -155,7 +155,10 @@ export class InteractableRegistry {
   public claimItem(itemId: string, agentId: string): boolean {
     if (this.claimedItems.has(itemId)) return false;
     const obj = this.objects.get(itemId);
-    if (!obj || !obj.pickable || obj.carriedBy) return false;
+    if (!obj || obj.carriedBy) return false;
+    
+    // We can claim pickable items (for picking up) Or stationary items (for sitting)
+    // No pickable restriction anymore, just carriedOrOccupied
     this.claimedItems.set(itemId, agentId);
     return true;
   }
@@ -363,16 +366,29 @@ export class InteractableRegistry {
     return Array.from(this.objects.values());
   }
 
-  public getNearby(position: THREE.Vector3, radius: number): WorldObject[] {
+  public getNearby(position: THREE.Vector3, radius: number, type?: string): WorldObject[] {
     const nearby: WorldObject[] = [];
     const rSq = radius * radius;
     for (const obj of this.objects.values()) {
       if (obj.carriedBy) continue;
+      if (type && obj.type !== type) continue;
       if (obj.position.distanceToSquared(position) < rSq) {
         nearby.push(obj);
       }
     }
     return nearby;
+  }
+
+  /**
+   * Finds the nearest item of a certain type that is not carried OR claimed.
+   * Prevents "Target Stutter" (Expert Review Phase 4).
+   */
+  public findNearestAvailable(position: THREE.Vector3, radius: number, type: string): WorldObject | null {
+    const items = this.getNearby(position, radius, type)
+      .filter(i => !this.isItemClaimed(i.id))
+      .sort((a, b) => a.position.distanceToSquared(position) - b.position.distanceToSquared(position));
+    
+    return items[0] || null;
   }
 
   public getAllCarriedBy(actorId: string): WorldObject[] {
