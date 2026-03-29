@@ -3,7 +3,7 @@ import { InteractableRegistry } from "./InteractableRegistry";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
-import { getZoneCenterPosition } from "@/config/parkRoutines";
+import { getZoneCenterPosition } from "@/config/donutLabRoutines";
 
 // ============================================================================
 // Task Types
@@ -158,12 +158,29 @@ export class AgentTaskQueue {
     this.queue = this.queue.filter((t) => t.scriptId !== scriptId);
     if (this.currentTask?.scriptId === scriptId) {
       this.cleanupTask(this.currentTask);
-      this.phase = "COMPLETED";
+      this.setPhase("COMPLETED");
     }
   }
 
   public getCurrentPhase(): TaskPhase { return this.phase; }
   public getCurrentTask(): AgentTask | null { return this.currentTask; }
+
+  private setPhase(newPhase: TaskPhase): void {
+    const oldPhase = this.phase;
+    this.phase = newPhase;
+
+    if (newPhase === "COMPLETED" && oldPhase !== "COMPLETED") {
+      // Notify brain to satisfy drives
+      window.dispatchEvent(
+        new CustomEvent("agent-task-completed", {
+          detail: {
+            agentId: this.agentId,
+            taskType: this.currentTask?.type || "UNKNOWN",
+          },
+        })
+      );
+    }
+  }
 
   public isBusy(): boolean {
     return (
@@ -228,7 +245,7 @@ export class AgentTaskQueue {
         if (center) {
           this.currentTask.targetPos = center;
         } else {
-          this.phase = "COMPLETED";
+          this.setPhase("COMPLETED");
           return;
         }
       }
@@ -246,14 +263,14 @@ export class AgentTaskQueue {
       if (center) {
         this.currentTask.targetPos = center;
       } else {
-        this.phase = "COMPLETED";
+        this.setPhase("COMPLETED");
         return;
       }
     }
 
     if (this.currentTask.type === "PICK_NEARBY" && this.currentTask.itemId) {
       if (!reg.claimItem(this.currentTask.itemId, this.agentId)) {
-        this.phase = "COMPLETED";
+        this.setPhase("COMPLETED");
         return;
       }
     }
@@ -348,7 +365,7 @@ export class AgentTaskQueue {
         ).length;
         dur = Math.max(2.0, charLen * 0.08);
       }
-      if (this.phaseTimer > dur) this.phase = "COMPLETED";
+      if (this.phaseTimer > dur) this.setPhase("COMPLETED");
       return { type: "STOP" };
     }
 
@@ -356,7 +373,7 @@ export class AgentTaskQueue {
     if (this.phase === "EMOTING") {
       this.phaseTimer += delta;
       const dur = this.currentTask?.duration ?? AgentTaskQueue.EMOTE_DEFAULT_DURATION;
-      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      if (this.phaseTimer >= dur) this.setPhase("COMPLETED");
       return { type: "STOP" };
     }
 
@@ -364,7 +381,7 @@ export class AgentTaskQueue {
     if (this.phase === "SEATED") {
       this.phaseTimer += delta;
       const dur = this.currentTask?.duration ?? AgentTaskQueue.SIT_DEFAULT_DURATION;
-      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      if (this.phaseTimer >= dur) this.setPhase("COMPLETED");
       return { type: "STOP" };
     }
 
@@ -372,7 +389,7 @@ export class AgentTaskQueue {
     if (this.phase === "LEANING") {
       this.phaseTimer += delta;
       const dur = this.currentTask?.duration ?? AgentTaskQueue.LEAN_DEFAULT_DURATION;
-      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      if (this.phaseTimer >= dur) this.setPhase("COMPLETED");
       return { type: "STOP" };
     }
 
@@ -380,7 +397,7 @@ export class AgentTaskQueue {
     if (this.phase === "GAZING") {
       this.phaseTimer += delta;
       const dur = this.currentTask?.duration ?? AgentTaskQueue.LOOKAT_DEFAULT_DURATION;
-      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      if (this.phaseTimer >= dur) this.setPhase("COMPLETED");
       const faceTarget = this.currentTask?.lookTarget;
       return { type: "STOP", faceTarget };
     }
@@ -400,7 +417,7 @@ export class AgentTaskQueue {
         );
       }
       const dur = this.currentTask?.duration ?? AgentTaskQueue.PRESENT_DEFAULT_DURATION;
-      if (this.phaseTimer >= dur) this.phase = "COMPLETED";
+      if (this.phaseTimer >= dur) this.setPhase("COMPLETED");
       return { type: "STOP" };
     }
 
@@ -428,18 +445,16 @@ export class AgentTaskQueue {
           break;
         case "WANDER": {
           if (!this.currentTask!.targetPos) {
-            const r = 10;
+            // Radial Wander: pick a point on the donut ring midline
+            const innerR = 41; // Clamped from 39 inner bounds
+            const outerR = 92; // Clamped from 94 outer bounds
+            const dist = innerR + Math.random() * (outerR - innerR);
             const theta = Math.random() * Math.PI * 2;
+            
             this.currentTask!.targetPos = new THREE.Vector3(
-              Math.max(
-                AgentTaskQueue.WANDER_X_MIN,
-                Math.min(AgentTaskQueue.WANDER_X_MAX, vehiclePos.x + r * Math.cos(theta)),
-              ),
+              dist * Math.cos(theta),
               vehiclePos.y,
-              Math.max(
-                AgentTaskQueue.WANDER_Z_MIN,
-                Math.min(AgentTaskQueue.WANDER_Z_MAX, vehiclePos.z + r * Math.sin(theta)),
-              ),
+              dist * Math.sin(theta)
             );
           }
           targetPos = this.currentTask!.targetPos;
@@ -476,7 +491,7 @@ export class AgentTaskQueue {
       }
 
       if (!targetPos) {
-        this.phase = "COMPLETED";
+        this.setPhase("COMPLETED");
         return { type: "STOP" };
       }
 
@@ -536,7 +551,7 @@ export class AgentTaskQueue {
           type === "EXPLORE" ||
           type === "COLLABORATE"
         ) {
-          this.phase = "COMPLETED";
+          this.setPhase("COMPLETED");
           return { type: "STOP" };
         } else if (type === "FOLLOW_PLAYER") {
           this.hasSetPath = false;
@@ -583,7 +598,7 @@ export class AgentTaskQueue {
           this.retryCount++;
           if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
             this.cleanupTask(this.currentTask);
-            this.phase = "COMPLETED";
+            this.setPhase("COMPLETED");
             return { type: "STOP" };
           }
           this.repathTimer = 0;
@@ -604,7 +619,7 @@ export class AgentTaskQueue {
         this.retryCount++;
         if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) {
           this.cleanupTask(this.currentTask);
-          this.phase = "COMPLETED";
+          this.setPhase("COMPLETED");
           return { type: "STOP" };
         }
         this.hasSetPath = false;
@@ -654,7 +669,7 @@ export class AgentTaskQueue {
             .catch(() => {});
         }
 
-        this.phase = "COMPLETED";
+        this.setPhase("COMPLETED");
       }
       return { type: "STOP" };
     }

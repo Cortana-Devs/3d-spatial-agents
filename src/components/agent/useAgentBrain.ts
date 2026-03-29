@@ -25,30 +25,37 @@ import {
   getZoneCenterPosition,
   getNearestBench,
   ALL_ZONE_IDS,
-} from "@/config/parkRoutines";
+} from "@/config/donutLabRoutines";
 
-// Fallback to OfficeHub routines if park routines not active
-let _agentRoutinesModule: any = null;
-function getRoutinesModule() {
-  if (!_agentRoutinesModule) {
-    try {
-      _agentRoutinesModule = require("@/config/agentRoutines");
-    } catch {
-      _agentRoutinesModule = {};
-    }
+// Radial bounds for the Donut Lab (Circular Ring)
+const RING_INNER_RADIUS = 39; // Align with 38 inner void
+const MAX_SAFE_RADIUS = 94; // Align with 95 outer wall
+
+function clampToDonutRing(pos: { x: number; y: number; z: number }) {
+  const distSq = pos.x * pos.x + pos.z * pos.z;
+  const dist = Math.sqrt(distSq);
+  
+  // If outside the outer wall, pull back slightly inside the bounds
+  if (dist > MAX_SAFE_RADIUS) {
+    const scale = (MAX_SAFE_RADIUS - 1.0) / dist;
+    return {
+      x: pos.x * scale,
+      y: pos.y,
+      z: pos.z * scale,
+    };
   }
-  return _agentRoutinesModule;
-}
+  
+  // If inside the inner hole, push out gently
+  if (dist < RING_INNER_RADIUS + 1.5) {
+    const scale = (RING_INNER_RADIUS + 2.5) / dist;
+    return {
+      x: pos.x * scale,
+      y: pos.y,
+      z: pos.z * scale,
+    };
+  }
 
-// Fix #1/#3: World bounds for clamping LLM-generated coordinates
-const WORLD_BOUNDS = { minX: -100, maxX: 100, minZ: -75, maxZ: 75 };
-
-function clampToWorldBounds(pos: { x: number; y: number; z: number }) {
-  return {
-    x: Math.max(WORLD_BOUNDS.minX, Math.min(WORLD_BOUNDS.maxX, pos.x)),
-    y: pos.y,
-    z: Math.max(WORLD_BOUNDS.minZ, Math.min(WORLD_BOUNDS.maxZ, pos.z)),
-  };
+  return pos;
 }
 
 export function useAgentBrain(
@@ -108,6 +115,8 @@ export function useAgentBrain(
   // Zone update timer (throttle zone tracking to every 2 seconds)
   const zoneUpdateTimer = useRef(0);
   const poiUpdateTimer = useRef(0);
+  const stuckTimer = useRef(0);
+  const lastStuckCheckPos = useRef(new THREE.Vector3());
 
   // Tier 1: Per-frame allocation elimination — all reusable Vector3/Quaternion objects
   // hoisted as refs so they are never re-allocated inside useFrame callbacks.
@@ -134,9 +143,9 @@ export function useAgentBrain(
 
   // AI Brain
   const brainRef = useRef(new ClientBrain(id));
-  // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
-  const [brainInterval] = useState(() => 300 + Math.floor(Math.random() * 100));
-  const brainIntervalRef = useRef(brainInterval);
+  // Brain cooldown: 45s wall-clock to match drive cooldowns and conserve API tokens
+  const lastBrainCallTimeRef = useRef(0);
+  const BRAIN_COOLDOWN_SEC = 45;
 
   // Fix #Loop-5: Deduplicate repeated same-script decisions — prevent re-queuing
   // the exact same scriptId within a cooldown window (30s).
@@ -152,17 +161,48 @@ export function useAgentBrain(
   useEffect(() => {
     if (hasEnqueuedMorningCheckRef.current) return;
 
+    const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
+    const driveManager = driveManagerRef.current;
+
+    /** Hook up task completion events to satisfy drives */
+    const handleTaskCompletion = (e: any) => {
+      if (e.detail.agentId !== id) return;
+      const taskType = e.detail.taskType;
+      console.log(`[useAgentBrain:${id}] Task completed: ${taskType} - Satisfying drives.`);
+      
+      switch (taskType) {
+        case "REST":
+        case "SIT":
+          driveManager.satisfy("energy");
+          break;
+        case "CONTEMPLATE":
+          driveManager.satisfy("wonder");
+          break;
+        case "EXPLORE":
+          driveManager.satisfy("curiosity");
+          break;
+        case "COLLABORATE":
+        case "SAY":
+          driveManager.satisfy("social");
+          break;
+        case "PLACE_INVENTORY":
+          driveManager.satisfy("tidiness");
+          break;
+      }
+    };
+
+    window.addEventListener("agent-task-completed", handleTaskCompletion);
+
     const timer = setTimeout(() => {
       if (hasEnqueuedMorningCheckRef.current) return;
       hasEnqueuedMorningCheckRef.current = true;
 
-      const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
       const personality = personalityRef.current;
       const scriptId = "startup_explore";
       const priority = 8;
 
       // Navigate to the agent's preferred zone on startup
-      const preferredZone = personality.preferredZones[0] ?? "garden";
+      const preferredZone = personality.preferredZones[0] ?? "center-park";
       const zonePos = getZoneCenterPosition(preferredZone);
       if (zonePos) {
         queue.enqueue({ type: "GO_TO", priority, scriptId, targetPos: zonePos });
@@ -271,7 +311,7 @@ export function useAgentBrain(
 
     // 3. Wander (Idle)
     const wander = new YUKA.WanderBehavior();
-    wander.weight = 0.5;
+    wander.active = false; // Turned off completely to prevent fighting with LLM tasks
     vehicle.steering.add(wander); // Index 3
 
     // 4. Separation
@@ -532,15 +572,8 @@ export function useAgentBrain(
           }
         }
 
-        // Corner Trap Escape mechanism: if we're moving very slowly but pushing hard, apply a perpendicular escape force
-        if (speed < 0.5 && (totalPushX !== 0 || totalPushZ !== 0)) {
-          // Add a sideways "wiggle" force to break out of U-shaped local minima
-          const escapeForce = 5.0;
-          totalPushX +=
-            escapeForce * Math.sign(Math.sin(frameRef.current * 0.1));
-          totalPushZ +=
-            escapeForce * Math.sign(Math.cos(frameRef.current * 0.1));
-        }
+        // Removed manual corner escape wiggle because it caused left/right jitter.
+        // YUKA's steering/pathfinder will solve stalemates via route recalculations.
 
         // Clamp total push magnitude to prevent teleports
         const pushMag = Math.sqrt(
@@ -556,6 +589,35 @@ export function useAgentBrain(
         vehicle.velocity.z += totalPushZ;
 
         raycaster.far = Infinity;
+      }
+
+      // --- STUCK DETECTION AND RECOVERY ---
+      // If the agent is trying to move (speed > 0.5) but the position displacement is 
+      // minimal (< 0.2m) over several seconds, they are likely stuck against 
+      // an obstacle or in a Navmesh hole.
+      const moveSpeed = vehicle.velocity.length();
+      if (moveSpeed > 0.5 && (bArrive.active || bFollowPath.active)) {
+        const distMoved = vehicle.position.distanceTo(lastStuckCheckPos.current as unknown as YUKA.Vector3);
+        if (distMoved < 0.1) {
+          stuckTimer.current += delta;
+        } else {
+          stuckTimer.current = 0;
+          lastStuckCheckPos.current.copy(vehicle.position as unknown as THREE.Vector3);
+        }
+
+        // Recovery: Abort the current task and fall back to WANDER
+        if (stuckTimer.current > 4.0) {
+          console.warn(`[useAgentBrain:${id}] Agent stuck for 4s - Aborting task queue and fallback to wander.`);
+          const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
+          queue.cancel();
+          stuckTimer.current = 0;
+          bArrive.active = false;
+          bFollowPath.active = false;
+          queue.enqueue({ type: "WANDER", priority: 0, scriptId: "stuck_recovery_wander" });
+        }
+      } else {
+        stuckTimer.current = 0;
+        lastStuckCheckPos.current.copy(vehicle.position as unknown as THREE.Vector3);
       }
     }
 
@@ -851,36 +913,29 @@ export function useAgentBrain(
         );
       }
 
-      const clampedX = Math.max(
-        WORLD_BOUNDS.minX,
-        Math.min(WORLD_BOUNDS.maxX, vehicle.position.x),
-      );
-      const clampedZ = Math.max(
-        WORLD_BOUNDS.minZ,
-        Math.min(WORLD_BOUNDS.maxZ, vehicle.position.z),
-      );
-
-      const hitMinX =
-        clampedX <= WORLD_BOUNDS.minX + 0.01 && vehicle.velocity.x < 0;
-      const hitMaxX =
-        clampedX >= WORLD_BOUNDS.maxX - 0.01 && vehicle.velocity.x > 0;
-      const hitMinZ =
-        clampedZ <= WORLD_BOUNDS.minZ + 0.01 && vehicle.velocity.z < 0;
-      const hitMaxZ =
-        clampedZ >= WORLD_BOUNDS.maxZ - 0.01 && vehicle.velocity.z > 0;
-
-      vehicle.position.x = clampedX;
-      vehicle.position.z = clampedZ;
-
-      // Prevent "ice skating" at boundaries by cancelling outward velocity
-      // and giving a tiny inward bias so wander naturally recovers.
-      if (hitMinX || hitMaxX) {
-        vehicle.velocity.x = hitMinX ? 0.15 : -0.15;
+      // Radial Donut Ring Soft Clamping
+      const dist = Math.sqrt(vehicle.position.x * vehicle.position.x + vehicle.position.z * vehicle.position.z);
+      
+      // Soft clamp: Hit Outer Wall
+      if (dist > MAX_SAFE_RADIUS && dist > 0.001) {
+        const penetration = dist - MAX_SAFE_RADIUS;
+        const pushMag = penetration * 5.0; // Acts like a spring restoring force
+        vehicle.velocity.x -= (vehicle.position.x / dist) * pushMag;
+        vehicle.velocity.z -= (vehicle.position.z / dist) * pushMag;
       }
-      if (hitMinZ || hitMaxZ) {
-        vehicle.velocity.z = hitMinZ ? 0.15 : -0.15;
+      
+      // Soft clamp: Hit Inner Void
+      if (dist < RING_INNER_RADIUS + 1 && dist > 0.001) {
+        const penetration = (RING_INNER_RADIUS + 1) - dist;
+        const pushMag = penetration * 5.0;
+        vehicle.velocity.x += (vehicle.position.x / dist) * pushMag;
+        vehicle.velocity.z += (vehicle.position.z / dist) * pushMag;
       }
     }
+
+    // --- BRAIN PULSE ---
+    const now = Date.now() / 1000;
+    const canThink = now - lastBrainCallTimeRef.current > BRAIN_COOLDOWN_SEC;
 
     // --- BRAIN UPDATE ---
     // SKIP BRAIN IF MANUAL TASK IS ACTIVE (Task Queue Override)
@@ -891,7 +946,10 @@ export function useAgentBrain(
       playerProximityState.current === "CHATTING"
     ) {
       // SKIP BRAIN: Agent is interacting with player — thoughts are set by proximity state machine
-    } else if (frameRef.current % brainIntervalRef.current === 0) {
+    } else if (canThink) {
+      // Triggered: update time
+      lastBrainCallTimeRef.current = now;
+
       // Throttle brain based on distance
       let shouldSkipDueToDistance = false;
       if (playerRef.current) {
@@ -1232,8 +1290,9 @@ export function useAgentBrain(
                   // Inject the tasks into the priority queue (Atomic insertion for AgentTaskQueue v2)
                   decision.tasks.forEach((task) => {
                     // Clamp LLM-generated coordinates to world bounds safely
+                    // (Ensure they land in walkable donut lab area)
                     if (task.type === "GO_TO" && task.targetPos) {
-                      const clamped = clampToWorldBounds(task.targetPos);
+                      const clamped = clampToDonutRing(task.targetPos);
                       task.targetPos = new THREE.Vector3(
                         clamped.x,
                         clamped.y,

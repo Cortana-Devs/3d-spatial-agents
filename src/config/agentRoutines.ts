@@ -1,13 +1,14 @@
 import * as THREE from "three";
 import { InteractableRegistry } from '@/components/systems/InteractableRegistry';
+import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
 
 // ============================================================================
-// Agent → Assigned storage table (storage room tables 6–10)
+// Agent → Assigned storage table (donut-lab storage cupboards 1–5)
 // ============================================================================
 
 const AGENT_ASSIGNED_TABLE: Record<string, string> = {
-  "agent-01": "storage-table-6",
-  "agent-02": "storage-table-7",
+  "agent-01": "cupboard-donut-1",
+  "agent-02": "cupboard-donut-2",
 };
 
 export function getAssignedStorageTable(agentId: string): string | null {
@@ -15,21 +16,15 @@ export function getAssignedStorageTable(agentId: string): string | null {
 }
 
 // ============================================================================
-// Storage table → Expected item IDs (checklist for morning check)
+// Storage cupboard → Expected item IDs (checklist for morning check)
 // ============================================================================
 
 const STORAGE_TABLE_CHECKLISTS: Record<string, string[]> = {
-  "storage-table-6": ["storage-table-6-laptop", "storage-table-6-protocols"],
-  "storage-table-7": [
-    "storage-table-7-sample-logs",
-    "storage-table-7-backup-drive",
-  ],
-  "storage-table-8": ["storage-table-8-sops", "storage-table-8-manuals"],
-  "storage-table-9": ["storage-table-9-laptop", "storage-table-9-usb"],
-  "storage-table-10": [
-    "storage-table-10-archive",
-    "storage-table-10-archive-usb",
-  ],
+  "cupboard-donut-1": ["cupboard-donut-1-laptop", "cupboard-donut-1-protocols"],
+  "cupboard-donut-2": ["cupboard-donut-2-sample-logs", "cupboard-donut-2-backup-drive"],
+  "cupboard-donut-3": ["cupboard-donut-3-sops", "cupboard-donut-3-manuals"],
+  "cupboard-donut-4": ["cupboard-donut-4-laptop", "cupboard-donut-4-usb"],
+  "cupboard-donut-5": ["cupboard-donut-5-archive", "cupboard-donut-5-archive-usb"],
 };
 
 export function getStorageTableChecklist(tableId: string): string[] {
@@ -37,63 +32,38 @@ export function getStorageTableChecklist(tableId: string): string[] {
 }
 
 // ============================================================================
-// Table center position (for GO_TO target)
+// Table center position (for GO_TO target) — dynamic from InteractableRegistry
 // ============================================================================
 
 export function getTableCenterPosition(tableId: string): THREE.Vector3 | null {
   const registry = InteractableRegistry.getInstance();
   const areas = registry.getPlacingAreasForTable(tableId);
   if (areas.length === 0) return null;
-  const first = areas[0];
-  return first.position.clone();
+  return areas[0].position.clone();
 }
 
 // ============================================================================
-// Main lab workbench helpers (bench readiness check)
+// Main lab workbench helpers — dynamic from InteractableRegistry
 // ============================================================================
 
-// Hard-coded from OfficeHub layout: Main Lab Workbench at (-40, 4, -5)
-const WORKBENCH_CENTER_DUP = new THREE.Vector3(-40, 4, -5);
-const WORKBENCH_ALLOWED_ITEM_IDS_DUP = new Set<string>(["red-file-01"]); // logbook
-
-export function getWorkbenchCenterPosition(): THREE.Vector3 {
-  return WORKBENCH_CENTER.clone();
-}
-
-/**
- * Returns IDs of stray pickable items near the main lab workbench.
- * Core equipment (tube rack, analyzer, logbook) are allowed; everything
- * else within the radius is treated as clutter.
- */
-function getWorkbenchStrayItemsDup(
-  registry: InteractableRegistry,
-  radius: number = 10,
-): string[] {
-  const nearby = registry.getNearby(WORKBENCH_CENTER_DUP, radius);
-  return nearby
-    .filter((obj) => obj.pickable && !obj.carriedBy)
-    .filter((obj) => !WORKBENCH_ALLOWED_ITEM_IDS_DUP.has(obj.id))
-    .map((obj) => obj.id);
-}
-
-// ============================================================================
-// Main lab workbench helpers (bench readiness check)
-// ============================================================================
-
-// Hard-coded from OfficeHub layout: Main Lab Workbench at (-40, 4, -5)
-const WORKBENCH_CENTER = new THREE.Vector3(-40, 4, -5);
 const WORKBENCH_ALLOWED_ITEM_IDS = new Set<string>(["red-file-01"]); // logbook
 
-/**
- * Returns IDs of stray pickable items near the main lab workbench.
- * Core equipment (tube rack, analyzer, logbook) are allowed; everything
- * else within the radius is treated as clutter.
- */
+export function getWorkbenchCenterPosition(): THREE.Vector3 | null {
+  const registry = InteractableRegistry.getInstance();
+  // Look up the actual registered workbench position dynamically
+  const areas = registry.getPlacingAreasForTable("main-lab-bench");
+  if (areas.length > 0) return areas[0].position.clone();
+  // Fallback: use the core-lab zone center
+  return ZoneInfluenceSystem.getZoneById("core-lab")?.center.clone() ?? null;
+}
+
 export function getWorkbenchStrayItems(
   registry: InteractableRegistry,
   radius: number = 10,
 ): string[] {
-  const nearby = registry.getNearby(WORKBENCH_CENTER, radius);
+  const center = getWorkbenchCenterPosition();
+  if (!center) return [];
+  const nearby = registry.getNearby(center, radius);
   return nearby
     .filter((obj) => obj.pickable && !obj.carriedBy)
     .filter((obj) => !WORKBENCH_ALLOWED_ITEM_IDS.has(obj.id))
@@ -101,25 +71,12 @@ export function getWorkbenchStrayItems(
 }
 
 // ============================================================================
-// Meeting room (conference room) — single target for ANNOUNCE_MEETING
+// Conference area — dynamic from ZoneInfluenceSystem
 // ============================================================================
 
-/** Table id for the conference table in the meeting room (placing areas: conf-table-center, etc.) */
-export const CONFERENCE_TABLE_ID = "conf-table";
-
-/**
- * Hub center from OfficeHub layout (0, 4, 0). Conference room: table at (50, 4, -47.5), door at (50, 4, -20).
- * Table obstacle carves roughly x 29..71, z -58..-36 (with padding). We target a point clearly in the
- * walkable corridor between door and table so pathfinding never aims into the table or a wall.
- */
-const HUB_CENTER = { x: 0, y: 4, z: 0 };
-const MEETING_ROOM_WALKABLE = new THREE.Vector3(
-  HUB_CENTER.x + 50,
-  HUB_CENTER.y,
-  HUB_CENTER.z - 28,
-);
-
-/** Returns a walkable position in the conference room for GO_TO (meeting room). */
 export function getMeetingRoomPosition(): THREE.Vector3 | null {
-  return MEETING_ROOM_WALKABLE.clone();
+  const zone = ZoneInfluenceSystem.getZoneById("conference-area");
+  if (!zone) return null;
+  // Offset slightly from zone center into the walkable floor
+  return new THREE.Vector3(zone.center.x, zone.center.y, zone.center.z + 6);
 }

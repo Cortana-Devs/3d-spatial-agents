@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { generateAgentThought } from "@/app/actions";
 import type { AgentContext, NearbyEntity } from "@/lib/agent-core";
+import { ALL_ZONE_IDS, getNearestBench } from "@/config/donutLabRoutines";
+import { SpatialMemory } from "@/lib/memory/SpatialMemory";
 
 export interface BrainState {
   thought: string;
@@ -92,6 +94,14 @@ export class ClientBrain {
         contextTags.push(`script:${taskState.currentScriptId}`);
       }
 
+      // Fix D: Include zone-specific tags for location-aware memory retrieval
+      if (richContext?.zoneContext) {
+        const zoneMatch = richContext.zoneContext.match(/Zone: ([a-z0-9-]+)/i);
+        if (zoneMatch) {
+          contextTags.push(`zone:${zoneMatch[1]}`);
+        }
+      }
+
       const relevantMemories = await memoryStream.retrieve({
         agentId: this.id, // Added agent filter
         tags: contextTags,
@@ -167,16 +177,27 @@ export class ClientBrain {
                 break;
 
               // ── New experiential tools ──────────────────────────────────
-              case "sit":
+              case "sit": {
+                const targetId = args.targetId ?? undefined;
+                let targetPos = undefined;
+                
+                // If no specific bench ID, find the nearest one from registry-known benches
+                if (!targetId) {
+                  const nearest = getNearestBench(position);
+                  if (nearest) targetPos = nearest;
+                }
+
                 tasks.push({
                   type: "SIT",
-                  itemId: args.targetId ?? undefined,
+                  itemId: targetId,
+                  targetPos: targetPos,
                   duration: 12,
                 } as AgentTask);
                 break;
+              }
 
               case "contemplate": {
-                const zoneId = args.zoneId ?? "observatory";
+                const zoneId = args.zoneId ?? "center-park";
                 tasks.push({
                   type: "GO_TO",
                   targetAreaId: zoneId,
@@ -190,15 +211,18 @@ export class ClientBrain {
               }
 
               case "rest":
-                tasks.push({ type: "GO_TO", targetAreaId: "garden" } as any);
-                tasks.push({ type: "REST", targetAreaId: "garden", duration: 16 } as any);
+                tasks.push({ type: "GO_TO", targetAreaId: "break-room" } as any);
+                tasks.push({ type: "REST", targetAreaId: "break-room", duration: 16 } as any);
                 break;
 
               case "explore": {
-                const preferred = args.preferredZone ?? undefined;
+                const history = SpatialMemory.getInstance(this.id);
+                const targetAreaId = args.preferredZone 
+                  ?? history.getLeastVisitedZone(ALL_ZONE_IDS);
+                
                 tasks.push({
                   type: "EXPLORE",
-                  targetAreaId: preferred ?? "gallery",
+                  targetAreaId: targetAreaId,
                 } as any);
                 break;
               }
@@ -211,7 +235,7 @@ export class ClientBrain {
                   tasks.push({
                     type: "COLLABORATE",
                     partnerId: args.agentId,
-                    targetAreaId: "workshop",
+                    targetAreaId: "core-lab",
                   } as any);
                 }
                 break;
@@ -224,10 +248,10 @@ export class ClientBrain {
 
               case "present":
                 if (args.topic) {
-                  tasks.push({ type: "GO_TO", targetAreaId: "arena" } as any);
+                  tasks.push({ type: "GO_TO", targetAreaId: "conference-area" } as any);
                   tasks.push({
                     type: "PRESENT",
-                    targetAreaId: "arena",
+                    targetAreaId: "conference-area",
                     content: args.speech ?? `I want to share something about ${args.topic}.`,
                     duration: 8,
                   } as any);

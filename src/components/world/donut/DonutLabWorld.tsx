@@ -119,11 +119,12 @@ export default function DonutLabWorld() {
       moodLabel: "contemplative", environmentDescription: "A calm dock by the koi pond."
     });
 
-    // 3. Research Wing
+    // 3. Research Ring Interior
     zoneSystem.register({
-      zoneId: "interior-ring", zoneName: "Research Wing",
-      center: new THREE.Vector3(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.y, DEFAULT_LAB_HUB.z),
-      radius: DEFAULT_RING_OUTER_RADIUS, // Checks distance from center
+      zoneId: "interior-ring", zoneName: "Research Ring",
+      // Offset center to a point on the ring midline (radius ~66.5) so go_to doesn't target the pond center
+      center: new THREE.Vector3(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.y, DEFAULT_LAB_HUB.z + 66.5),
+      radius: DEFAULT_RING_OUTER_RADIUS, 
       effects: { focus: 2.0, belonging: 2.0 },
       moodLabel: "focused", environmentDescription: "The sweeping wooden floor of the research facility."
     });
@@ -131,7 +132,8 @@ export default function DonutLabWorld() {
     // 4. Exterior Plaza
     zoneSystem.register({
       zoneId: "exterior-plaza", zoneName: "Exterior Plaza",
-      center: new THREE.Vector3(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.y, DEFAULT_LAB_HUB.z),
+      // Offset center to a point on the ring midline (radius ~66.5)
+      center: new THREE.Vector3(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.y, DEFAULT_LAB_HUB.z - 66.5),
       radius: 160,
       effects: { curiosity: 1.0, social: 0.8 },
       moodLabel: "expansive", environmentDescription: "The open air plaza overlooking the region."

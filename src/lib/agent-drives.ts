@@ -83,8 +83,8 @@ export const DRIVE_CONFIGS: Record<keyof AgentDrives, DriveConfig> = {
   },
   energy: {
     threshold: 30,
-    decayRate: 0.8,          // depletes ~1/s while moving (additional decay from zone)
-    satisfyAmount: 50,
+    decayRate: 1.2,          // depletes faster while moving; restored by resting
+    satisfyAmount: 60,       // Large boost on task completion
     cooldownSec: 45,          // don't spam "I'm tired" LLM calls
     label: "Energy",
   },
@@ -156,7 +156,7 @@ export class DriveManager {
       isIdle: boolean;
       isMoving: boolean;
       isInPreferredZone: boolean;
-      driveWeights?: Partial<Record<string, number>>;
+      driveWeights?: Partial<Record<keyof AgentDrives, number>>;
     },
   ): void {
     const {
@@ -169,7 +169,7 @@ export class DriveManager {
       driveWeights = {},
     } = context;
 
-    const w = (key: string) => driveWeights[key] ?? 1.0;
+    const w = (key: keyof AgentDrives) => driveWeights[key] ?? 1.0;
 
     // --- Tidiness ---
     if (nearbyFloorItems > 0) {
@@ -279,10 +279,10 @@ export class DriveManager {
    * Apply zone influence effects to all drives.
    * Separate from update() so zone effects are cleanly decoupled.
    */
-  applyZoneEffects(
+  public applyZoneEffects(
     effects: Partial<Record<keyof AgentDrives, number>>,
     deltaSec: number,
-    driveWeights: Partial<Record<string, number>> = {},
+    driveWeights: Partial<Record<keyof AgentDrives, number>> = {},
   ): void {
     for (const [key, rate] of Object.entries(effects) as [
       keyof AgentDrives,

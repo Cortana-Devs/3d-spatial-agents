@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
-import { Text, Text3D, Center } from "@react-three/drei";
+import { Text, Text3D, Center, Bvh } from "@react-three/drei";
 import { Geometry, Base, Addition } from "@react-three/csg";
 import { usePlacingArea } from "@/components/systems/usePlacingArea";
 import {
@@ -455,40 +455,28 @@ export function ConferenceTable({
     removeCollidableMesh,
   ]);
   return (
+    <Bvh firstHitOnly>
     <group
       ref={groupRef}
       position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* PERFECT PERFORMANCE: 1 Draw Call for the entire table using CSG */}
-      <mesh
-        ref={surfaceRef}
-        castShadow
-        receiveShadow
-        onUpdate={(self) => {
-          self.layers.enable(1); // Enable Layer 1 for raycasting
-        }}
-      >
-        <Geometry useGroups>
-          <Base position={[0, 4, 0]} material={offWhiteMaterial}>
-            <boxGeometry args={[40, 0.8, 20]} />
-          </Base>
-          
-          <Addition position={[-15, 2, -7.5]} material={metalMaterial}>
-            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-          </Addition>
-          <Addition position={[15, 2, -7.5]} material={metalMaterial}>
-            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-          </Addition>
-          <Addition position={[-15, 2, 7.5]} material={metalMaterial}>
-            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-          </Addition>
-          <Addition position={[15, 2, 7.5]} material={metalMaterial}>
-            <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
-          </Addition>
-        </Geometry>
-      </mesh>
+      <group>
+        {/* Table Top */}
+        <mesh position={[0, 4, 0]} material={offWhiteMaterial} castShadow receiveShadow onUpdate={(self) => { self.layers.enable(1); }}>
+          <boxGeometry args={[40, 0.8, 20]} />
+        </mesh>
+        
+        {/* Table Legs */}
+        {[-15, 15].map((x) => (
+          [-7.5, 7.5].map((z) => (
+             <mesh key={`leg-${x}-${z}`} position={[x, 2, z]} material={metalMaterial} castShadow>
+               <cylinderGeometry args={[0.5, 0.5, 4, 8]} />
+             </mesh>
+          ))
+        ))}
+      </group>
 
       {/* Center Placing Area */}
       <mesh ref={centerRef} position={[0, 4.4, 0]} visible={false}>
@@ -542,6 +530,7 @@ export function ConferenceTable({
 
       {children}
     </group>
+    </Bvh>
   );
 }
 
@@ -649,6 +638,7 @@ export function OfficeDesk({
     removeCollidableMesh,
   ]);
   return (
+    <Bvh firstHitOnly>
     <group
       ref={groupRef}
       position={new THREE.Vector3(position[0], position[1], position[2])}
@@ -723,6 +713,7 @@ export function OfficeDesk({
       )}
       {children}
     </group>
+    </Bvh>
   );
 }
 
@@ -819,6 +810,7 @@ export function LabWorkbench({
   }, [posVec, rotation, addObstacles, removeObstacles, addCollidableMesh, removeCollidableMesh]);
 
   return (
+    <Bvh firstHitOnly>
     <group
       ref={groupRef}
       position={new THREE.Vector3(position[0], position[1], position[2])}
@@ -854,30 +846,29 @@ export function LabWorkbench({
         <boxGeometry args={[14, 0.1, 5]} />
       </mesh>
 
-      {/* Steel Frame (Legs & Bracing) merged with CSG */}
-      <mesh castShadow material={metalMaterial}>
-        <Geometry useGroups>
-          <Base position={[0, 1.0, 0]} material={metalMaterial}>
-            <boxGeometry args={[benchWidth - 3, 0.3, benchDepth - 2]} />
-          </Base>
-          {[
-            [-benchWidth / 2 + 1.5, -benchDepth / 2 + 1],
-            [benchWidth / 2 - 1.5, -benchDepth / 2 + 1],
-            [-benchWidth / 2 + 1.5, benchDepth / 2 - 1],
-            [benchWidth / 2 - 1.5, benchDepth / 2 - 1],
-            [0, -benchDepth / 2 + 1],
-            [0, benchDepth / 2 - 1],
-          ].map(([x, z], i) => (
-            <Addition
-              key={`wbleg-all-${i}`}
-              position={[x, (topHeight - topThickness / 2) / 2, z]}
-              material={metalMaterial}
-            >
-              <boxGeometry args={[1, topHeight - topThickness / 2, 1]} />
-            </Addition>
-          ))}
-        </Geometry>
-      </mesh>
+      {/* Steel Frame (Legs & Bracing) - Standalone Meshes */}
+      <group>
+        <mesh position={[0, 1.0, 0]} material={metalMaterial} castShadow>
+          <boxGeometry args={[benchWidth - 3, 0.3, benchDepth - 2]} />
+        </mesh>
+        {[
+          [-benchWidth / 2 + 1.5, -benchDepth / 2 + 1],
+          [benchWidth / 2 - 1.5, -benchDepth / 2 + 1],
+          [-benchWidth / 2 + 1.5, benchDepth / 2 - 1],
+          [benchWidth / 2 - 1.5, benchDepth / 2 - 1],
+          [0, -benchDepth / 2 + 1],
+          [0, benchDepth / 2 - 1],
+        ].map(([x, z], i) => (
+          <mesh
+            key={`wbleg-all-${i}`}
+            position={[x, (topHeight - topThickness / 2) / 2, z]}
+            material={metalMaterial}
+            castShadow
+          >
+            <boxGeometry args={[1, topHeight - topThickness / 2, 1]} />
+          </mesh>
+        ))}
+      </group>
 
       {/* Lower utility shelf */}
       <mesh position={[0, 1.2, 0]} castShadow receiveShadow material={serverRackMaterial}>
@@ -886,6 +877,7 @@ export function LabWorkbench({
 
       {children}
     </group>
+    </Bvh>
   );
 }
 
@@ -1786,34 +1778,35 @@ export function CupboardUnit({
   ]);
 
   return (
+    <Bvh firstHitOnly>
     <group
       ref={groupRef}
       position={new THREE.Vector3(...position)}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
-      {/* Base Plinth and Legs (CSG Merged) */}
-      <mesh castShadow receiveShadow>
-        <Geometry useGroups>
-          <Base position={[0, baseHeight / 2, 0]} material={cupboardBaseMaterial}>
-            <boxGeometry args={[w, baseHeight, d]} />
-          </Base>
-          {[
-            [-w / 2 + 0.4, -d / 2 + 0.4],
-            [w / 2 - 0.4, -d / 2 + 0.4],
-            [-w / 2 + 0.4, d / 2 - 0.4],
-            [w / 2 - 0.4, d / 2 - 0.4],
-          ].map(([lx, lz], li) => (
-            <Addition
-              key={`leg-${li}`}
-              position={[lx, baseHeight + legHeight / 2, lz]}
-              material={cupboardLegMaterial}
-            >
-              <boxGeometry args={[0.4, legHeight, 0.4]} />
-            </Addition>
-          ))}
-        </Geometry>
-      </mesh>
+      {/* Base Plinth and Legs */}
+      <group>
+        <mesh position={[0, baseHeight / 2, 0]} material={cupboardBaseMaterial} castShadow receiveShadow>
+          <boxGeometry args={[w, baseHeight, d]} />
+        </mesh>
+        {[
+          [-w / 2 + 0.4, -d / 2 + 0.4],
+          [w / 2 - 0.4, -d / 2 + 0.4],
+          [-w / 2 + 0.4, d / 2 - 0.4],
+          [w / 2 - 0.4, d / 2 - 0.4],
+        ].map(([lx, lz], li) => (
+          <mesh
+            key={`leg-${li}`}
+            position={[lx, baseHeight + legHeight / 2, lz]}
+            material={cupboardLegMaterial}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[0.4, legHeight, 0.4]} />
+          </mesh>
+        ))}
+      </group>
 
       {/* Main Cabinet Body (Glass) - Raised above legs */}
       <mesh position={[0, baseHeight + legHeight + (h - baseHeight) / 2, 0]} material={cupboardBodyGlass}>
@@ -1899,6 +1892,7 @@ export function CupboardUnit({
         );
       })}
     </group>
+    </Bvh>
   );
 }
 

@@ -4,7 +4,7 @@ import React, { useMemo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { createMaterials } from "@/components/systems/Materials";
-import { Text } from "@react-three/drei";
+import { Text, Bvh } from "@react-three/drei";
 
 import {
   OfficeChair,
@@ -418,7 +418,8 @@ export default function ResearchLabHub() {
         <meshStandardMaterial color="#2a2f38" />
       </mesh>
 
-      {/* Enclosed Building Structure */}
+      {/* Enclosed Building Structure (BVH Accelerated Collision Mesh) */}
+      <Bvh firstHitOnly>
       <group ref={buildingRef}>
         {/* Floor (Tile) */}
         {floors.map((f, i) => (
@@ -497,6 +498,7 @@ export default function ResearchLabHub() {
           </mesh>
         ))}
       </group>
+      </Bvh>
 
       {/* FURNITURE & DOORS (Interactive Components) */}
 
@@ -748,6 +750,7 @@ export default function ResearchLabHub() {
             hubCenter.y,
             hubCenter.z - 60,
           ]}
+          rotation={Math.PI}
           label={(i + 1).toString()}
           userData={{
             type: "Furniture",
