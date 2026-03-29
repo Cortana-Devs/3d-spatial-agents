@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { ClientBrain } from "@/components/systems/ClientBrain";
+import { ClientBrain } from "@/systems/ClientBrain";
 import * as THREE from "three";
 import { Maximize2, Minimize2, Cpu, Activity, Clock } from "lucide-react";
 import styles from "./ThoughtBubble.module.css";

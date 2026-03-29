@@ -178,9 +178,9 @@ class NavigationNetwork {
     }
 
     if (SCENE_WORLD_MODE === "donut") {
-      // Also block everything OUTSIDE the outer glass wall (r > 95)
+      // Also block everything OUTSIDE the outer glass wall (r > 94)
       // This stops agents from being routed out of the building entirely.
-      this.carveOuterVoid(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.z, 95);
+      this.carveOuterVoid(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.z, 94);
     }
 
     this.isBuilt = true;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
+import { getPodDeployExitPosition } from "@/config/agentPods";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "@/lib/bvh-setup";
 import { AdaptiveEvents, Environment, BakeShadows } from "@react-three/drei";
@@ -9,11 +10,11 @@ import * as THREE from "three";
 import SceneWorldRoot from "@/components/core/scene/SceneWorldRoot";
 import Robot from "@/components/player/Player";
 import Agent from "@/components/agent/Agent";
-import YukaSystem from "@/components/systems/YukaSystem";
+import YukaSystem from "@/components/core/YukaSystem";
 import DebugCrosshair from "@/components/core/DebugCrosshair";
-import ObstacleVisualizer from "@/components/systems/ObstacleVisualizer";
-import { PlacingAreaMarkers } from "@/components/systems/PlacingAreaMarkers";
-import ObjectHighlighter from "@/components/systems/ObjectHighlighter";
+import ObstacleVisualizer from "@/components/world/debug/ObstacleVisualizer";
+import { PlacingAreaMarkers } from "@/components/world/debug/PlacingAreaMarkers";
+import ObjectHighlighter from "@/components/world/debug/ObjectHighlighter";
 
 import { useGameStore } from "@/store/gameStore";
 
@@ -184,6 +185,19 @@ function CameraRig({
 export default function Scene() {
   const robotRef = useRef<THREE.Group>(null);
 
+  useEffect(() => {
+    useGameStore.getState().initPods();
+  }, []);
+
+  const exit1 = getPodDeployExitPosition("pod-01");
+  const exit2 = getPodDeployExitPosition("pod-02");
+  const agent01Pos: [number, number, number] = exit1
+    ? [exit1.x, exit1.y, exit1.z]
+    : [18, 5.0, 52];
+  const agent02Pos: [number, number, number] = exit2
+    ? [exit2.x, exit2.y, exit2.z]
+    : [-22, 5.0, 48];
+
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       <Canvas
@@ -215,12 +229,12 @@ export default function Scene() {
         <Robot groupRef={robotRef} initialPosition={[0, 5.0, 72]} />
         <Agent
           playerRef={robotRef}
-          initialPosition={[18, 5.0, 52]}
+          initialPosition={agent01Pos}
           id="agent-01"
         />
         <Agent
           playerRef={robotRef}
-          initialPosition={[-22, 5.0, 48]}
+          initialPosition={agent02Pos}
           id="agent-02"
         />
 

@@ -3,8 +3,8 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import { useProceduralGait } from "@/components/agent/useProceduralGait";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
-import AIManager from "@/components/systems/AIManager";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
+import AIManager from "@/systems/AIManager";
 
 export interface Joints {
   hips?: THREE.Group;
@@ -223,6 +223,12 @@ export function usePlayerController(
             } else if (nearest.type === "door") {
               setDebugText("Toggling Door...");
               useGameStore.getState().setInteractionTarget(nearest.id);
+            } else if (nearest.type === "pod") {
+              setDebugText("Agent pod — use Deploy / Recall");
+              useGameStore.getState().setFocusedPodId(nearest.id);
+              if (document.pointerLockElement) {
+                document.exitPointerLock();
+              }
             }
           } else {
             // Check for nearby AI Agents (Follow Logic)
@@ -799,6 +805,7 @@ export function usePlayerController(
       let groundHeight = -10;
       if (collidableMeshes.length > 0) {
         const raycaster = raycasterRef.current;
+        raycaster.layers.set(1); // Ensure only walkable surfaces (Layer 1) are hit
         const rayOrigin = rayOriginRef.current.copy(mesh.position);
         rayOrigin.y += 50;
         raycaster.set(rayOrigin, raycastDirRef.current);

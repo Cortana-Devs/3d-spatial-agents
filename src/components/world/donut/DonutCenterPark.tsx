@@ -45,38 +45,39 @@ export const getTerrainHeight = (x: number, z: number): number => {
   return h;
 };
 
-// --- Low Poly Geometries ---
-const trunkGeo = new THREE.CylinderGeometry(0.2, 0.4, 4, 5);
-const pineLeavesGeo = new THREE.ConeGeometry(2, 5, 5);
-const oakLeavesGeo = new THREE.IcosahedronGeometry(2.5, 1);
-const cherryLeavesGeo = new THREE.IcosahedronGeometry(2.2, 1);
+import {
+  trunkGeo,
+  pineLeavesGeo,
+  oakLeavesGeo,
+  cherryLeavesGeo,
+  lilyPadGeo,
+  lilyFlowerGeo,
+  seatPlankGeo,
+  backPlankGeo,
+  legVerticalGeo,
+  legHorizontalGeo,
+  armRestGeo,
+  fishBodyGeo,
+  fishTailGeo,
+} from "./DonutGeometries";
+import {
+  grassMaterial as grassMat,
+  trunkMat,
+  pineLeavesMat,
+  oakLeavesMat,
+  cherryLeavesMat,
+  petalMat,
+  lilyPadMat,
+  lilyFlowerMat,
+  pathMat,
+  benchWoodMat,
+  benchMetalMat,
+} from "./DonutMaterials";
 
-const grassMat = new THREE.MeshStandardMaterial({ color: 0x5a9468, roughness: 1.0, metalness: 0 });
-const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9, flatShading: true });
-const pineLeavesMat = new THREE.MeshStandardMaterial({ color: 0x2d4c1e, roughness: 0.8, flatShading: true });
-const oakLeavesMat = new THREE.MeshStandardMaterial({ color: 0x4a6b36, roughness: 0.8, flatShading: true });
-const cherryLeavesMat = new THREE.MeshStandardMaterial({ color: 0xffb7c5, roughness: 0.8, flatShading: true });
-const petalMat = new THREE.MeshStandardMaterial({ color: 0xffc8d5, roughness: 0.9 });
-
-const lilyPadGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.02, 16, 1, false, 0, Math.PI * 1.7);
-const lilyPadMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.9 });
-const lilyFlowerGeo = new THREE.ConeGeometry(0.12, 0.2, 6);
-const lilyFlowerMat = new THREE.MeshStandardMaterial({ color: 0xfff0f5, roughness: 0.6 });
-const pathMat = new THREE.MeshStandardMaterial({ color: 0xeae1d0, roughness: 1.0, flatShading: true, side: THREE.DoubleSide });
-
-const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.9 });
-const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.9 });
 const benchWidth = 1.6;
-const seatPlankGeo = new THREE.BoxGeometry(benchWidth, 0.04, 0.08);
-const backPlankGeo = new THREE.BoxGeometry(benchWidth, 0.08, 0.04);
-const legVerticalGeo = new THREE.BoxGeometry(0.04, 0.4, 0.04);
-const legHorizontalGeo = new THREE.BoxGeometry(0.04, 0.04, 0.45);
-const armRestGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const MAX_BENCH_INSTANCES = 8;
 
 // Fish geometry — smaller, natural koi scale
-const fishBodyGeo = new THREE.SphereGeometry(0.1, 12, 8); fishBodyGeo.scale(1, 0.55, 2.2);
-const fishTailGeo = new THREE.ConeGeometry(0.08, 0.2, 6); fishTailGeo.translate(0, 0, 0);
 const koiColors = [0xee4411, 0xf5f5ee, 0x111111, 0xffaa00, 0xff3333, 0xffcc88];
 
 // --- Upgraded Water Shader with depth, foam edge, caustic ripple ---

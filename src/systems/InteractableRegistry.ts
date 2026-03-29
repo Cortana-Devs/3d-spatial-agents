@@ -1,50 +1,27 @@
 import * as THREE from "three";
+import { HearingBus } from "@/lib/SensorySystem";
+import type { PlacingArea, WorldObject } from "@/types/world";
 
-export interface WorldObject {
-  id: string;
-  name: string;
-  type:
-    | "file"
-    | "laptop"
-    | "pendrive"
-    | "coffeecup"
-    | "generic"
-    | "sofa"
-    | "chair"
-    | "whiteboard"
-    | "projector_screen"
-    | "tv"
-    | "coffee_machine"
-    | "telephone"
-    | "pc"
-    | "switch"
-    | "door";
-  position: THREE.Vector3;
-  description?: string;
-  pickable: boolean;
-  carriedBy: string | null; // null = on ground, 'player' or agent-id
-  placedInArea?: string | null; // ID of the PlacingArea this item sits on, or null if on floor
-  homeAreaId?: string | null; // ID of the default PlacingArea this item belongs to
-  meshRef?: THREE.Object3D;
-  isOpen?: boolean; // Used for doors
-}
-
-export interface PlacingArea {
-  id: string;
-  name: string;
-  groupId?: string;
-  groupName?: string;
-  slotIndex?: number;
-  position: THREE.Vector3;
-  rotation: THREE.Quaternion; // world rotation of surface
-  currentItem: string | null; // ID of placed WorldObject or null for empty slot
-  dimensions: [number, number, number]; // width, height, depth of surface slab
-  meshRef?: THREE.Object3D;
-}
+export type { PlacingArea, WorldObject } from "@/types/world";
 
 // Reusable temp objects to avoid per-frame allocations
 const _tempWorldPos = new THREE.Vector3();
 const _tempQuat = new THREE.Quaternion();
+
+/** Works for THREE.Vector3, YUKA.Vector3, or any { x, y, z } — avoids prototype mismatches. */
+function distSq3(
+  ax: number,
+  ay: number,
+  az: number,
+  bx: number,
+  by: number,
+  bz: number,
+): number {
+  const dx = ax - bx;
+  const dy = ay - by;
+  const dz = az - bz;
+  return dx * dx + dy * dy + dz * dz;
+}
 
 export class InteractableRegistry {
   private static instance: InteractableRegistry;
@@ -102,13 +79,20 @@ export class InteractableRegistry {
   /**
    * Dynamically infer the semantic zone name based on the nearest placing area group.
    * This gives the LLM context of *where* it is (e.g. "Storage Table 6" instead of just coordinates).
+   *
+   * Accepts duck-typed positions (YUKA.Vector3 has x/y/z but not THREE.Vector3 methods).
    */
-  public getSemanticZone(position: THREE.Vector3): string {
+  public getSemanticZone(position: { x: number; y: number; z: number }): string {
     let nearestDistSq = Infinity;
     let nearestGrpName = "Hallway/Open Space";
 
+    const px = position.x;
+    const py = position.y;
+    const pz = position.z;
+
     for (const area of this.placingAreas.values()) {
-      const distSq = position.distanceToSquared(area.position);
+      const ap = area.position;
+      const distSq = distSq3(px, py, pz, ap.x, ap.y, ap.z);
       if (distSq < nearestDistSq) {
         nearestDistSq = distSq;
         nearestGrpName = area.groupName || area.groupId || "Unknown Area";
@@ -155,7 +139,10 @@ export class InteractableRegistry {
   public claimItem(itemId: string, agentId: string): boolean {
     if (this.claimedItems.has(itemId)) return false;
     const obj = this.objects.get(itemId);
-    if (!obj || !obj.pickable || obj.carriedBy) return false;
+    if (!obj || obj.carriedBy) return false;
+    
+    // We can claim pickable items (for picking up) Or stationary items (for sitting)
+    // No pickable restriction anymore, just carriedOrOccupied
     this.claimedItems.set(itemId, agentId);
     return true;
   }
@@ -363,16 +350,29 @@ export class InteractableRegistry {
     return Array.from(this.objects.values());
   }
 
-  public getNearby(position: THREE.Vector3, radius: number): WorldObject[] {
+  public getNearby(position: THREE.Vector3, radius: number, type?: string): WorldObject[] {
     const nearby: WorldObject[] = [];
     const rSq = radius * radius;
     for (const obj of this.objects.values()) {
       if (obj.carriedBy) continue;
+      if (type && obj.type !== type) continue;
       if (obj.position.distanceToSquared(position) < rSq) {
         nearby.push(obj);
       }
     }
     return nearby;
+  }
+
+  /**
+   * Finds the nearest item of a certain type that is not carried OR claimed.
+   * Prevents "Target Stutter" (Expert Review Phase 4).
+   */
+  public findNearestAvailable(position: THREE.Vector3, radius: number, type: string): WorldObject | null {
+    const items = this.getNearby(position, radius, type)
+      .filter(i => !this.isItemClaimed(i.id))
+      .sort((a, b) => a.position.distanceToSquared(position) - b.position.distanceToSquared(position));
+    
+    return items[0] || null;
   }
 
   public getAllCarriedBy(actorId: string): WorldObject[] {
@@ -392,6 +392,8 @@ export class InteractableRegistry {
     const obj = this.objects.get(objectId);
     if (!obj || !obj.pickable || obj.carriedBy) return false;
 
+    const soundPos = this.getWorldPosition(objectId)?.clone() ?? obj.position.clone();
+
     obj.carriedBy = actorId;
 
     // Remove claim now that we actually have the item
@@ -410,6 +412,13 @@ export class InteractableRegistry {
     if (obj.meshRef) {
       obj.meshRef.visible = false;
     }
+
+    HearingBus.emit({
+      emitterId: actorId,
+      position: soundPos,
+      loudness: 6,
+      type: "interact",
+    });
 
     return true;
   }
@@ -541,6 +550,17 @@ export class InteractableRegistry {
     }
 
     area.currentItem = objectId;
+
+    const placeSound = this.getAreaWorldPosition(areaId)?.clone();
+    if (placeSound) {
+      HearingBus.emit({
+        emitterId: objectId,
+        position: placeSound,
+        loudness: 8,
+        type: "interact",
+      });
+    }
+
     return true;
   }
 

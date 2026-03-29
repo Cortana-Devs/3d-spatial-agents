@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useGameStore } from "@/store/gameStore";
-import AIManager from './AIManager';
+import AIManager from "@/systems/AIManager";
+import { InterestMap } from '@/store/InterestMap';
 
 export default function YukaSystem() {
     const aiManager = AIManager.getInstance();
@@ -10,8 +11,10 @@ export default function YukaSystem() {
     useFrame((state, delta) => {
         if (isMenuOpen || isMenuPanelOpen) return;
         // Update the global AI manager
-        // Yuka handles its own internal time, but we pass delta for smooth updates
         aiManager.update(delta);
+        
+        // Update the environmental interest heatmap
+        InterestMap.getInstance().update(delta);
     });
 
     return null; // Logic only, no visuals

@@ -2,46 +2,14 @@ import { getGroqClient, rotateGroqKey } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
 import { AGENT_TOOLS } from "./agent-tools";
 import { performWebSearch } from "./search";
-import type { ChatCompletionMessage, ChatCompletionMessageParam, ChatCompletionToolMessageParam } from "groq-sdk/resources/chat/completions";
+import type {
+  ChatCompletionMessage,
+  ChatCompletionMessageParam,
+  ChatCompletionToolMessageParam,
+} from "groq-sdk/resources/chat/completions";
+import type { AgentContext, NearbyEntity, TraceOptions } from "@/types/agent";
 
-export interface NearbyEntity {
-  type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE', 'OBJECT'
-  id?: string;
-  distance: number;
-  status?: string; // e.g., 'Moving', 'Idle', 'carried by ...'
-  objectType?: string; // For OBJECT entities: 'file', 'laptop', etc.
-  name?: string; // Human-readable name
-  position?: { x: number; y: number; z: number };
-}
-
-export interface AgentContext {
-  position: { x: number; y: number; z: number };
-  nearbyEntities: NearbyEntity[];
-  currentBehavior: string;
-  /** Current task queue state — undefined if no queue is available */
-  taskState?: {
-    currentScriptId: string | null;
-    currentTask: string | null;
-    currentPriority: number;
-    queuedTasksCount: number;
-    phase: string;
-  };
-  /** Internal drives/needs */
-  drives?: string;
-  /** Zone mood context injected from ZoneInfluenceSystem */
-  zoneContext?: string;
-  /** Spatial memory summary from SpatialMemory */
-  spatialMemory?: string;
-  /** Agent personality name and trait */
-  personality?: { name: string; trait: string; speechStyle: string; bio: string };
-}
-
-export interface TraceOptions {
-  sessionId: string;
-  requestId: string;
-  conversationId?: string;
-  userId?: string;
-}
+export type { AgentContext, NearbyEntity, TraceOptions } from "@/types/agent";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -53,73 +21,87 @@ export async function processAgentThought(
   const MAX_RETRIES = 3;
   let attempt = 0;
 
-  // Context Compression: Convert entities to Markdown Table
+  // Context Compression: Convert entities to Markdown Table (Truncated to top 5 closest for 8B token budget)
   const entityTable =
     context.nearbyEntities.length > 0
-      ? `| Type | ID (use this) | DisplayName | Dist | AbsolutePos | Status |\n|---|---|---|---|---|---|\n` +
+      ? `| Type | ID (use this) | DisplayName | Dist | Status |\n|---|---|---|---|---|\n` +
         context.nearbyEntities
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, 5)
           .map(
             (e) =>
-              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${parseFloat(e.distance.toString()).toFixed(1)}m | ${e.position ? `(${e.position.x.toFixed(1)}, ${e.position.y.toFixed(1)}, ${e.position.z.toFixed(1)})` : "-"} | ${e.status || "-"} |`,
+              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${e.distance.toFixed(1)}m | ${e.status || "-"} |`,
           )
           .join("\n")
       : "No entities nearby.";
 
   const personalityBlock = context.personality
-    ? `You are **${context.personality.name}**, ${context.personality.trait}. ${context.personality.bio} Speak in a ${context.personality.speechStyle} style.`
-    : `You are an intelligent agent living in The Ring, a circular science park filled with discovery and possibility.`;
+    ? `You are **${context.personality.name}**, ${context.personality.trait}. ${context.personality.bio} You are a high-value researcher at the Donut Research Lab. Speak in a ${context.personality.speechStyle} style.`
+    : `You are an intelligent agent in the Donut Research Lab, a circular research facility with a garden at its center and specialized lab sectors around the ring.`;
 
   const prompt = `
-    You are a living agent in The Ring — a Guangming Science Park-inspired circular world with five distinct zones.
-    ${personalityBlock}
-    
-    You have an inner life: drives that ebb and flow, spatial memories of where you have been, and preferences for certain places. You are not a task machine — you are a being in a world. When you are tired, rest. When something is beautiful, pause and appreciate it. When another agent is nearby, consider whether to engage or give them space.
+You are ${context.personality?.name ?? "an agent"} — ${context.personality?.trait ?? "a researcher"} — at the Donut Research Lab.
+${personalityBlock}
 
-    Your body has a Subconscious motor system that handles wandering, collision avoidance, and idle posture automatically. You are awakened when a drive is low or something needs your attention.
+## Your Environment (The Donut Ring)
+The Donut Lab is a recursive circular ring subdivided into 8 semantic sectors. You navigate primarily between these sectors.
+**Available Point-of-Interest (POI) IDs for 'go_to' or 'contemplate':**
+- 'center-park' (Zen Garden / Pond)
+- 'fishing-dock' (Waterfall / Wooden Dock)
+- 'core-lab' (Main Research Area)
+- 'data-analysis' (Server Racks / High-Perf Compute)
+- 'break-room' (Kitchen / Coffee / Lounge)
+- 'conference-area' (Meeting Arena / Podium)
+- 'interior-ring' (Main Circular Walkway)
+- 'exterior-plaza' (Outer Deck / Observation)
 
-    ## Who You Are
-    ${context.personality?.bio ?? "A curious agent exploring The Ring."}
+## Agent Pods (Resting Chambers)
+There are specialized **Agent Pods** (appearing as 'pod' in your perception) located along the outer walls of the lab. These are high-tech resting chambers where you can dock to fully recharge your systems and enter a low-power state. They are your primary home base.
 
-    ## Where You Are
-    **Position**: (${context.position.x.toFixed(1)}, ${context.position.y.toFixed(1)}, ${context.position.z.toFixed(1)})
-    **Zone**: ${context.zoneContext ?? "Between zones — the ring walkway stretches around you."}
-    
-    ## Your Drives (internal needs — act on LOW ones)
-    ${context.drives || "All drives are balanced."}
-    
-    ## Your Spatial Memory
-    ${context.spatialMemory ?? "You have not explored much yet."}
+## Your State
+- **Position**: (${context.position.x.toFixed(1)}, ${context.position.y.toFixed(1)}, ${context.position.z.toFixed(1)})
+- **Current Sector**: ${context.zoneContext ?? "Unknown transitional corridor"}
+- **Behavior**: ${context.currentBehavior}
+- **Your Assigned Pod**: ${context.assignedPodId ?? "No pod currently assigned"}
 
-    ## Subconscious Activity
-    ${context.currentBehavior}
-    
-    ## Task Queue
-    ${context.taskState ? `Phase: ${context.taskState.phase}, Script: ${context.taskState.currentScriptId || "none"}, Task: ${context.taskState.currentTask || "none"}, Queued: ${context.taskState.queuedTasksCount}` : "No active tasks."}
+## Your Current State
+${context.drives || "All drives balanced."}
 
-    ## Nearby Entities
-    ${entityTable}
+Your physical needs (rest, tidying, exploring) are managed automatically.
+Focus on social interaction, responding to what you observe, and personality-driven expression.
 
-    ## Memory
-    ${memoryContext || "No relevant past memories."}
+## Spatial Memory (Recent Visits)
+${context.spatialMemory ?? "No recorded logs."}
 
-    ## Decision Guidance
-    - Use tools to act. You can call multiple tools in one response.
-    - **Energy LOW** → use 'rest' (navigates to garden bench, restores energy)
-    - **Wonder LOW** → use 'contemplate' (go to observatory/garden, appreciate a view)
-    - **Curiosity LOW** → use 'explore' (visit the zone you have been to least recently)
-    - **Social LOW** → use 'collaborate' or 'say' to connect with another agent
-    - **Tidiness LOW** → 'pick_up' an item, then 'place_at' an empty area
-    - If tasks are running, use 'observe' to let them finish unless urgency is high.
-    - 'say' output goes to TTS — keep it conversational, unformatted, 1–2 sentences.
-    - To sit: use 'sit' with a bench ID from the Perception table.
-    - To deliver a speech: use 'present' — this navigates to the Arena podium.
-    - Express yourself: use 'emote' with gesture: wave, nod, shrug, cheer, or think.
+## Task Queue
+${context.taskState ? `Phase: ${context.taskState.phase} | Script: ${context.taskState.currentScriptId ?? "none"} | Task: ${context.taskState.currentTask ?? "none"} | Queued: ${context.taskState.queuedTasksCount}` : "No active tasks."}
 
-    ## Zone Navigation (use in 'go_to' as zoneId)
-    observatory | workshop | garden | arena | gallery
+## Local Perception (World Entities)
+${entityTable}
 
-    ## ID Rules
-    CRITICAL: Copy IDs exactly from the Perception table. "ID (use this)" = system ID. "DisplayName" = human-readable only.
+## Core Context & Memory
+${memoryContext || "Clear environment."}
+
+## Navigation Zones (use as zoneId in go_to)
+| Zone ID | Location |
+|---|---|
+| center-park | Interior garden with pond and arowana fish |
+| fishing-dock | Calm dock beside the koi pond |
+| core-lab | North sector — chemistry and biology workbenches |
+| data-analysis | East sector — desktop computers and analysis stations |
+| break-room | South sector — sofas, TV, coffee machine |
+| conference-area | West sector — conference table and manager's desk |
+| interior-ring | The full curved research ring corridor |
+| exterior-plaza | Outdoor plaza outside the building |
+
+## Rules
+- Use tools to act. 1–3 tool calls max per turn.
+- 'say' goes to TTS — 1–2 short conversational sentences, no formatting.
+- 'present' → navigates to conference-area podium.
+- 'sit' → use an ID from the Perception table.
+- 'emote' gestures: wave, nod, shrug, cheer, think.
+- If tasks are running, use 'observe' unless a drive is critically LOW.
+- CRITICAL: Copy entity IDs exactly from the Perception table above.
   `;
 
   while (attempt < MAX_RETRIES) {
@@ -133,8 +115,8 @@ export async function processAgentThought(
         {
           role: "system",
           content: context.personality
-            ? `You are ${context.personality.name}, ${context.personality.trait} living in The Ring science park. You have drives, spatial memory, and personality. Use your tools to act naturally based on your inner state. Speak in a ${context.personality.speechStyle} style. Keep responses focused — 1–3 tool calls max per turn.`
-            : "You are an intelligent agent in The Ring science park. Use your tools to act based on your drives and environment. Keep responses focused — 1–3 tool calls max.",
+            ? `You are ${context.personality.name}, ${context.personality.trait} in the Donut Research Lab. You have drives, spatial memory, and personality. Use your tools to act naturally. Speak in a ${context.personality.speechStyle} style. 1–3 tool calls max per turn.`
+            : "You are an intelligent agent in the Donut Research Lab. Use your tools to act based on your drives and environment. 1–3 tool calls max.",
         },
         {
           role: "user",

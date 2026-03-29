@@ -46,8 +46,7 @@ export class AgentBrainClient {
       case "ERROR":
         console.error("[AgentBrainClient] Error from worker:", data.error);
         break;
-      case "PATH_RESULT":
-      case "VISIBILITY_RESULT": {
+      case "PATH_RESULT": {
         const cbs = this.callbacks.get(data.id);
         if (cbs) {
           cbs.resolve(data);

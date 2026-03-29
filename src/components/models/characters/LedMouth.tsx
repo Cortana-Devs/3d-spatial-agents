@@ -50,6 +50,9 @@ export default function LedMouth({
     smile: 0,
   });
 
+  /** Reused frequency buffer — avoids per-frame GC from `new Uint8Array` during speech. */
+  const freqDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+
   // Pre-calculate all static math for the 128 particles to save thousands of operations per frame
   const particleData = useMemo(() => {
     const data = [];
@@ -79,7 +82,12 @@ export default function LedMouth({
     let vol = 0, bass = 0, mid = 0, treble = 0;
 
     if (analyser) {
-      const data = new Uint8Array(analyser.frequencyBinCount);
+      const n = analyser.frequencyBinCount;
+      let data = freqDataRef.current;
+      if (!data || data.length !== n) {
+        data = new Uint8Array(n);
+        freqDataRef.current = data;
+      }
       analyser.getByteFrequencyData(data);
       
       for (let i = 0; i < data.length; i++) {

@@ -1,9 +1,6 @@
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
-import { AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
-import type {
-  AgentTask,
-  AgentTaskType,
-} from "@/components/systems/AgentTaskQueue";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
+import { AgentTaskRegistry } from "@/systems/AgentTaskQueue";
+import type { AgentTask } from "@/systems/AgentTaskQueue";
 import * as THREE from "three";
 
 // ============================================================================

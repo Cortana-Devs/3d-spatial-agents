@@ -71,3 +71,79 @@ export const glassMaterial = new THREE.MeshStandardMaterial({
 // Here we provide a custom shader material that combines realistic shading with vertex waves.
 export const pondBottomMat = new THREE.MeshStandardMaterial({ color: 0x3a5b4c, roughness: 1.0 });
 
+// --- APPLE DESIGN SYSTEM (2026 High-Performance Standard) ---
+
+export const appleWhiteMaterial = new THREE.MeshStandardMaterial({
+  color: "#f5f5f7",
+  roughness: 0.15,
+  metalness: 0.05,
+});
+
+export const appleDarkMaterial = new THREE.MeshStandardMaterial({
+  color: "#1c1c1e",
+  roughness: 0.25,
+  metalness: 0.1,
+});
+
+export const appleAluminumMaterial = new THREE.MeshStandardMaterial({
+  color: "#d3d3d6",
+  roughness: 0.35,
+  metalness: 0.9,
+});
+
+export const appleSpaceGreyMaterial = new THREE.MeshStandardMaterial({
+  color: "#6e6e73",
+  roughness: 0.4,
+  metalness: 0.85,
+});
+
+export const appleAccentBlue = new THREE.MeshStandardMaterial({
+  color: "#007aff",
+  roughness: 0.2,
+  metalness: 0.2,
+});
+
+export const appleAccentRed = new THREE.MeshStandardMaterial({
+  color: "#ff3b30",
+  roughness: 0.3,
+  metalness: 0.1,
+});
+
+export const applePremiumWood = new THREE.MeshStandardMaterial({
+  color: "#a67c52", // Light walnut / oak warm tone typical in Apple Stores
+  roughness: 0.6,
+  metalness: 0.05,
+});
+
+export const neonGlowBlue = new THREE.MeshBasicMaterial({ color: "#00ffff" });
+
+export const appleScreenMaterial = new THREE.MeshStandardMaterial({
+  color: "#4488ff",
+  emissive: "#001133",
+});
+
+export const appleDeviceScreenOff = new THREE.MeshStandardMaterial({
+  color: "#000000",
+  roughness: 0.05,
+  metalness: 0.8,
+});
+
+export const appleDeviceScreenOn = new THREE.MeshStandardMaterial({
+  color: "#ffffff",
+  roughness: 0.1,
+  metalness: 0.1,
+  emissive: "#ffffff",
+  emissiveIntensity: 0.8,
+});
+
+// Environment Elements
+export const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9, flatShading: true });
+export const pineLeavesMat = new THREE.MeshStandardMaterial({ color: 0x2d4c1e, roughness: 0.8, flatShading: true });
+export const oakLeavesMat = new THREE.MeshStandardMaterial({ color: 0x4a6b36, roughness: 0.8, flatShading: true });
+export const cherryLeavesMat = new THREE.MeshStandardMaterial({ color: 0xffb7c5, roughness: 0.8, flatShading: true });
+export const petalMat = new THREE.MeshStandardMaterial({ color: 0xffc8d5, roughness: 0.9 });
+export const lilyPadMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.9 });
+export const lilyFlowerMat = new THREE.MeshStandardMaterial({ color: 0xfff0f5, roughness: 0.6 });
+export const pathMat = new THREE.MeshStandardMaterial({ color: 0xeae1d0, roughness: 1.0, flatShading: true, side: THREE.DoubleSide });
+export const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.9 });
+export const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.9 });

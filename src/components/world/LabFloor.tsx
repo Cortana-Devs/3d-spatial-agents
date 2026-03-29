@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
-import { createMaterials } from "@/components/systems/Materials";
+import { createMaterials } from "@/systems/Materials";
 import { createRingExtrudeGeometry } from "@/components/world/donutFloorGeometry";
 import {
   DEFAULT_LAB_HUB,

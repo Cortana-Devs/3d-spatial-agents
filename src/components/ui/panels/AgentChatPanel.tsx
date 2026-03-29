@@ -4,8 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { chatWithAgent } from "@/app/actions";
 import { buildWorldContext } from "@/lib/nlp-parser";
-import { AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
+import { AgentTaskRegistry } from "@/systems/AgentTaskQueue";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { getMeetingRoomPosition } from "@/config/agentRoutines";
 import * as THREE from "three";
@@ -352,11 +352,17 @@ export const AgentChatPanel: React.FC = () => {
                   }
 
                   // Directly enqueue without re-negotiation
+                  const resumedScriptId = `chat_resumed_${Date.now()}`;
                   freshQueue.enqueue({
-                    type: "FETCH_AND_PLACE" as any,
+                    type: "PICK_NEARBY",
                     priority: 20,
-                    scriptId: `chat_resumed_${Date.now()}`,
+                    scriptId: resumedScriptId,
                     itemId: cleanedItemId,
+                  });
+                  freshQueue.enqueue({
+                    type: "PLACE_INVENTORY",
+                    priority: 20,
+                    scriptId: resumedScriptId,
                     destAreaId: finalAreaId,
                   });
 
@@ -455,11 +461,17 @@ export const AgentChatPanel: React.FC = () => {
 
           // AgentTaskQueue will claim the item when the task actually starts
 
+          const scriptId = `chat_${Date.now()}`;
           queue.enqueue({
-            type: "FETCH_AND_PLACE" as any,
+            type: "PICK_NEARBY",
             priority: 20,
-            scriptId: `chat_${Date.now()}`,
+            scriptId,
             itemId: cleanedItemId,
+          });
+          queue.enqueue({
+            type: "PLACE_INVENTORY",
+            priority: 20,
+            scriptId,
             destAreaId: resolvedAreaId,
           });
 

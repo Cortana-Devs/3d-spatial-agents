@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import * as THREE from "three";
-import { InteractableRegistry } from "./InteractableRegistry";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
 
 export function usePlacingArea(
   meshRef: React.RefObject<THREE.Object3D | null>,

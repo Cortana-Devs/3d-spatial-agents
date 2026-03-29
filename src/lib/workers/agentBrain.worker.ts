@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import NavigationNetwork from "@/components/systems/NavigationNetwork";
+import NavigationNetwork from "@/systems/NavigationNetwork";
 
 // src/lib/workers/agentBrain.worker.ts
 // Web Worker for offloading Agent Brain computations:
@@ -16,11 +16,6 @@ export type AgentWorkerRequest =
         start: { x: number; y: number; z: number };
         end: { x: number; y: number; z: number };
       };
-    }
-  | {
-      type: "CHECK_VISIBILITY";
-      id: string;
-      payload: { agentEye: [number, number, number]; items: any[] };
     };
 
 export type AgentWorkerResponse =
@@ -32,7 +27,6 @@ export type AgentWorkerResponse =
       path: { x: number; y: number; z: number }[];
       approachPos: { x: number; y: number; z: number };
     }
-  | { type: "VISIBILITY_RESULT"; id: string; visibleItemIds: string[] }
   | { type: "ERROR"; error: string };
 
 let isInitialized = false;
@@ -81,16 +75,6 @@ self.onmessage = async (event: MessageEvent<AgentWorkerRequest>) => {
             y: result.approachPos.y,
             z: result.approachPos.z,
           },
-        });
-        break;
-
-      case "CHECK_VISIBILITY":
-        // TODO: Perform frustum culling or math-based occlusion checks
-        // off-thread using shared geometry bounds.
-        postResponse({
-          type: "VISIBILITY_RESULT",
-          id: (event.data as any).id,
-          visibleItemIds: payload.items.map((i: any) => i.id), // Mock: return all
         });
         break;
 

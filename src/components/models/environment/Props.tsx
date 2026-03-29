@@ -4,35 +4,21 @@ import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { Text } from "@react-three/drei";
-import { useInteractable } from "@/components/systems/useInteractable"; // Import hook
-import { usePlacingArea } from "@/components/systems/usePlacingArea";
-
-// --- MATERIALS ---
-const plasticWhite = new THREE.MeshStandardMaterial({
-  color: "#eeeeee",
-  roughness: 0.2,
-});
-const plasticBlack = new THREE.MeshStandardMaterial({
-  color: "#111111",
-  roughness: 0.3,
-});
-const metalRed = new THREE.MeshStandardMaterial({
-  color: "#cc0000",
-  roughness: 0.3,
-  metalness: 0.6,
-});
-const paperBlue = new THREE.MeshStandardMaterial({
-  color: "#0066cc",
-  roughness: 0.8,
-});
-const paperWhite = new THREE.MeshStandardMaterial({
-  color: "#ffffff",
-  roughness: 0.9,
-});
-const paperRed = new THREE.MeshStandardMaterial({
-  color: "#ff3333",
-  roughness: 0.9,
-});
+import { useInteractable } from "@/components/world/useInteractable"; // Import hook
+import { usePlacingArea } from "@/components/world/usePlacingArea";
+import {
+  appleWhiteMaterial,
+  appleDarkMaterial,
+  appleAluminumMaterial,
+  appleSpaceGreyMaterial,
+  appleAccentRed,
+  appleAccentBlue,
+  applePremiumWood,
+  appleScreenMaterial,
+  appleDeviceScreenOff,
+  appleDeviceScreenOn,
+  neonGlowBlue,
+} from "../../world/donut/DonutMaterials";
 
 // --- FIRE EXTINGUISHER ---
 export function FireExtinguisher({
@@ -54,22 +40,22 @@ export function FireExtinguisher({
       userData={userData}
     >
       {/* Tank */}
-      <mesh position={[0, 1.5, 0]} castShadow material={metalRed}>
+      <mesh position={[0, 1.5, 0]} castShadow material={appleAccentRed}>
         <cylinderGeometry args={[0.5, 0.5, 3, 16]} />
       </mesh>
       {/* Top Dome */}
-      <mesh position={[0, 3.0, 0]} castShadow material={metalRed}>
+      <mesh position={[0, 3.0, 0]} castShadow material={appleAccentRed}>
         <sphereGeometry args={[0.5, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
       {/* Nozzle/Hose */}
       <mesh
         position={[0.3, 2.8, 0]}
         rotation={[0, 0, -0.5]}
-        material={plasticBlack}
+        material={appleSpaceGreyMaterial}
       >
         <cylinderGeometry args={[0.1, 0.1, 0.8]} />
       </mesh>
-      <mesh position={[0.6, 2.5, 0]} material={plasticBlack}>
+      <mesh position={[0.6, 2.5, 0]} material={appleSpaceGreyMaterial}>
         <cylinderGeometry args={[0.15, 0.15, 1.5]} />
       </mesh>
     </group>
@@ -94,7 +80,7 @@ export function FileFolder({
   useInteractable(meshRef, userData);
 
   const material =
-    color === "blue" ? paperBlue : color === "red" ? paperRed : paperWhite;
+    color === "blue" ? appleAccentBlue : color === "red" ? appleAccentRed : appleWhiteMaterial;
 
   return (
     <group ref={meshRef} position={position} rotation={[0, rotation, 0]}>
@@ -174,16 +160,16 @@ export function Whiteboard({
       userData={userData}
     >
       {/* Legs/Frame */}
-      <mesh position={[-4, 3, 0]} material={plasticBlack}>
+      <mesh position={[-4, 3, 0]} material={appleSpaceGreyMaterial}>
         <cylinderGeometry args={[0.2, 0.2, 6]} />
       </mesh>
-      <mesh position={[4, 3, 0]} material={plasticBlack}>
+      <mesh position={[4, 3, 0]} material={appleSpaceGreyMaterial}>
         <cylinderGeometry args={[0.2, 0.2, 6]} />
       </mesh>
       <mesh
         position={[0, 1, 0]}
         rotation={[0, 0, Math.PI / 2]}
-        material={plasticBlack}
+        material={appleSpaceGreyMaterial}
       >
         <cylinderGeometry args={[0.2, 0.2, 8]} />
       </mesh>
@@ -194,7 +180,7 @@ export function Whiteboard({
         castShadow
         receiveShadow
         material={
-          new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.1 })
+          appleWhiteMaterial
         }
       >
         <boxGeometry args={[8, 4, 0.2]} />
@@ -202,7 +188,7 @@ export function Whiteboard({
       {/* Frame Border */}
       <mesh
         position={[0, 4, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#aaaaaa" })}
+        material={appleAluminumMaterial}
       >
         <boxGeometry args={[8.2, 4.2, 0.1]} />
       </mesh>
@@ -210,7 +196,7 @@ export function Whiteboard({
       {/* Tray */}
       <mesh
         position={[0, 2.1, 0.3]}
-        material={new THREE.MeshStandardMaterial({ color: "#aaaaaa" })}
+        material={appleAluminumMaterial}
       >
         <boxGeometry args={[6, 0.2, 0.4]} />
       </mesh>
@@ -242,7 +228,7 @@ export function ProjectorScreen({
         position={[0, 15, 0.2]}
         receiveShadow
         material={
-          new THREE.MeshStandardMaterial({ color: "#fff", roughness: 0.5 })
+          appleWhiteMaterial
         }
       >
         <boxGeometry args={[20, 12, 0.1]} />
@@ -250,7 +236,7 @@ export function ProjectorScreen({
       {/* Frame / Casing */}
       <mesh
         position={[0, 21.5, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#222" })}
+        material={appleSpaceGreyMaterial}
       >
         <boxGeometry args={[22, 1, 1]} />
       </mesh>
@@ -276,7 +262,7 @@ export function Laptop({
       {/* Base */}
       <mesh
         position={[0, 0.1, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#333" })}
+        material={appleSpaceGreyMaterial}
       >
         <boxGeometry args={[2.5, 0.2, 1.8]} />
       </mesh>
@@ -284,17 +270,14 @@ export function Laptop({
       <group position={[0, 0.2, -0.8]} rotation={[0.4, 0, 0]}>
         <mesh
           position={[0, 0.8, 0]}
-          material={new THREE.MeshStandardMaterial({ color: "#222" })}
+          material={appleSpaceGreyMaterial}
         >
           <boxGeometry args={[2.5, 1.6, 0.1]} />
         </mesh>
         <mesh
           position={[0, 0.8, 0.06]}
           material={
-            new THREE.MeshStandardMaterial({
-              color: "#4488ff",
-              emissive: "#001133",
-            })
+            appleScreenMaterial
           }
         >
           <planeGeometry args={[2.3, 1.4]} />
@@ -326,14 +309,14 @@ export function PenDrive({
       <mesh
         position={[0, 0.1, 0]}
         material={
-          new THREE.MeshStandardMaterial({ color: "#00ffff", metalness: 0.8 })
+          appleAccentBlue
         }
       >
         <boxGeometry args={[0.8, 0.2, 0.2]} />
       </mesh>
       <mesh
         position={[0.5, 0.1, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#111" })}
+        material={appleDarkMaterial}
       >
         <boxGeometry args={[0.3, 0.21, 0.21]} />
       </mesh>
@@ -429,7 +412,7 @@ export function SmallRack({
         position={[0, 2, 0]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#554433" })}
+        material={applePremiumWood}
       >
         <boxGeometry args={[4, 4, 2]} />
       </mesh>
@@ -448,14 +431,14 @@ export function SmallRack({
       <mesh
         position={[0, 3, 0]}
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#443322" })}
+        material={applePremiumWood}
       >
         <boxGeometry args={[3.8, 0.1, 1.8]} />
       </mesh>
       <mesh
         position={[0, 1, 0]}
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#443322" })}
+        material={applePremiumWood}
       >
         <boxGeometry args={[3.8, 0.1, 1.8]} />
       </mesh>
@@ -519,7 +502,7 @@ export function FlowerPot({
       <mesh
         position={[0, 0.5, 0]}
         castShadow
-        material={new THREE.MeshStandardMaterial({ color: "#cc5500" })}
+        material={appleAccentRed}
       >
         <cylinderGeometry args={[0.6, 0.4, 1.0, 16]} />
       </mesh>
@@ -527,7 +510,7 @@ export function FlowerPot({
       <mesh
         position={[0, 1.5, 0]}
         castShadow
-        material={new THREE.MeshStandardMaterial({ color: "#228822" })}
+        material={appleSpaceGreyMaterial}
       >
         <dodecahedronGeometry args={[0.8]} />
       </mesh>
@@ -674,7 +657,7 @@ export function Sofa({
         position={[0, 1.5, 0]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#334455" })}
+        material={appleAluminumMaterial}
       >
         <boxGeometry args={[8, 1.5, 3]} />
       </mesh>
@@ -683,7 +666,7 @@ export function Sofa({
         position={[0, 3, -1.2]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#334455" })}
+        material={appleAluminumMaterial}
       >
         <boxGeometry args={[8, 2, 0.6]} />
       </mesh>
@@ -692,7 +675,7 @@ export function Sofa({
         position={[-3.6, 2.5, 0]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#334455" })}
+        material={appleAluminumMaterial}
       >
         <boxGeometry args={[0.8, 1.5, 3]} />
       </mesh>
@@ -700,7 +683,7 @@ export function Sofa({
         position={[3.6, 2.5, 0]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#334455" })}
+        material={appleAluminumMaterial}
       >
         <boxGeometry args={[0.8, 1.5, 3]} />
       </mesh>
@@ -763,20 +746,20 @@ export function TV({
       <mesh
         position={[0, 4, 0]}
         castShadow
-        material={new THREE.MeshStandardMaterial({ color: "#111" })}
+        material={appleDarkMaterial}
       >
         <boxGeometry args={[8, 4.5, 0.2]} />
       </mesh>
       <mesh
         position={[0, 4, 0.11]}
-        material={new THREE.MeshStandardMaterial({ color: "#000" })}
+        material={appleDeviceScreenOff}
       >
         <planeGeometry args={[7.6, 4.2]} />
       </mesh>
       {/* Stand */}
       <mesh
         position={[0, 1, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#222" })}
+        material={appleSpaceGreyMaterial}
       >
         <cylinderGeometry args={[0.5, 2, 2]} />
       </mesh>
@@ -807,12 +790,12 @@ export function CoffeeMachine({
         position={[0, 1.5, 0]}
         castShadow
         material={
-          new THREE.MeshStandardMaterial({ color: "#111", metalness: 0.5 })
+          appleDarkMaterial
         }
       >
         <boxGeometry args={[2, 3, 2]} />
       </mesh>
-      <mesh position={[0, 3, 0]} material={plasticBlack}>
+      <mesh position={[0, 3, 0]} material={appleSpaceGreyMaterial}>
         <cylinderGeometry args={[0.5, 0.5, 0.5]} />
       </mesh>
     </group>
@@ -840,7 +823,7 @@ export function CoffeeCup({
       <mesh
         position={[0, 0.25, 0]}
         castShadow
-        material={new THREE.MeshStandardMaterial({ color: "#fff" })}
+        material={appleWhiteMaterial}
       >
         <cylinderGeometry args={[0.25, 0.2, 0.5]} />
       </mesh>
@@ -870,7 +853,7 @@ export function Telephone({
       {/* Base */}
       <mesh
         position={[0, 0.2, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#222" })}
+        material={appleSpaceGreyMaterial}
       >
         <boxGeometry args={[1.5, 0.4, 1.5]} />
       </mesh>
@@ -878,7 +861,7 @@ export function Telephone({
       <mesh
         position={[0, 0.6, 0]}
         rotation={[0, 0, Math.PI / 2]}
-        material={new THREE.MeshStandardMaterial({ color: "#222" })}
+        material={appleSpaceGreyMaterial}
       >
         <cylinderGeometry args={[0.2, 0.2, 2]} />
       </mesh>
@@ -886,7 +869,7 @@ export function Telephone({
       <mesh
         position={[0, 0.41, 0.3]}
         rotation={[-0.2, 0, 0]}
-        material={new THREE.MeshStandardMaterial({ color: "#555" })}
+        material={appleAluminumMaterial}
       >
         <planeGeometry args={[0.8, 0.6]} />
       </mesh>
@@ -962,7 +945,7 @@ export function CoffeeStation({
         position={[0, 2, 0]}
         castShadow
         receiveShadow
-        material={new THREE.MeshStandardMaterial({ color: "#333" })}
+        material={appleSpaceGreyMaterial}
       >
         <boxGeometry args={[6, 4, 3]} />
       </mesh>

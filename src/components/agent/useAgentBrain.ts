@@ -3,53 +3,54 @@ import { useEffect, useRef, useState } from "react";
 import * as YUKA from "yuka";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import AIManager from "@/components/systems/AIManager";
+import AIManager from "@/systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
 import { useProceduralGait } from "@/components/agent/useProceduralGait";
+import { useAgentVehicle } from "@/components/agent/useAgentVehicle";
 
-import { ClientBrain } from "@/components/systems/ClientBrain";
-import type { NearbyEntity } from "@/lib/agent-core";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
-import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
-import { AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
-import type { SteeringCommand } from "@/components/systems/AgentTaskQueue";
+import { ClientBrain } from "@/systems/ClientBrain";
+import type { NearbyEntity } from "@/lib/agent-brain";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
+import { AgentTaskQueue, AgentTaskRegistry } from "@/systems/AgentTaskQueue";
+import type { SteeringCommand } from "@/systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
 import { DriveManager } from "@/lib/agent-drives";
-import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
-import { POIRegistry } from "@/components/systems/POIRegistry";
+import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
+import { POIRegistry } from "@/systems/POIRegistry";
 import { SpatialMemory } from "@/lib/memory/SpatialMemory";
 import { getPersonality } from "@/config/agentPersonalities";
+import { 
+  getZoneCenterPosition, 
+  getNearestBench, 
+  ALL_ZONE_IDS 
+} from "@/config/donutLabRoutines";
 import {
-  getZoneCenterPosition,
-  getNearestBench,
-  ALL_ZONE_IDS,
-} from "@/config/parkRoutines";
-
-// Fallback to OfficeHub routines if park routines not active
-let _agentRoutinesModule: any = null;
-function getRoutinesModule() {
-  if (!_agentRoutinesModule) {
-    try {
-      _agentRoutinesModule = require("@/config/agentRoutines");
-    } catch {
-      _agentRoutinesModule = {};
-    }
-  }
-  return _agentRoutinesModule;
-}
-
-// Fix #1/#3: World bounds for clamping LLM-generated coordinates
-const WORLD_BOUNDS = { minX: -100, maxX: 100, minZ: -75, maxZ: 75 };
-
-function clampToWorldBounds(pos: { x: number; y: number; z: number }) {
-  return {
-    x: Math.max(WORLD_BOUNDS.minX, Math.min(WORLD_BOUNDS.maxX, pos.x)),
-    y: pos.y,
-    z: Math.max(WORLD_BOUNDS.minZ, Math.min(WORLD_BOUNDS.maxZ, pos.z)),
-  };
-}
+  SensorySystem,
+  HearingBus,
+  type HearingEvent,
+  type PerceptionRecord,
+} from "@/lib/SensorySystem";
+import { UtilityBrain } from "@/lib/UtilityBrain";
+import { InterestMap } from "@/store/InterestMap";
+import { SpatialFamiliarity } from "@/lib/SpatialFamiliarity";
+import {
+  clampToDonutRing,
+  getEffectiveCooldownSec,
+  resolveCurrentBehavior,
+} from "@/lib/agent-brain-utils";
+import { MAX_SAFE_RADIUS, RING_INNER_RADIUS } from "@/constants/world";
+import { getPodDeployExitPosition } from "@/config/agentPods";
+import {
+  MAX_STEP_UP,
+  PLAYER_COOLDOWN_TIME,
+  PLAYER_GREET_DISTANCE,
+  PLAYER_LEAVE_DISTANCE,
+  SCRIPT_COOLDOWN_MS,
+  STUCK_TIMER_THRESHOLD_SEC,
+} from "@/constants/agent";
+import { UTILITY_CHECK_INTERVAL_MS } from "@/constants/brain";
 
 export function useAgentBrain(
   id: string,
@@ -73,23 +74,14 @@ export function useAgentBrain(
   const followingAgentId = useGameStore((state) => state.followingAgentId);
   const setAgentPosition = useGameStore((state) => state.setAgentPosition);
 
-  // Social State (Robot-Robot Interaction)
-
-  const socialState = useRef<"NONE" | "CHATTING" | "COOLDOWN">("NONE");
-  const socialTimer = useRef(0);
-  const socialTarget = useRef<YUKA.Vehicle | null>(null);
-  const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
-  const socialCheckTimer = useRef(0);
   const lastMinimapPos = useRef(new THREE.Vector3(0, -999, 0));
+  const lastPerceivedEntitiesRef = useRef<PerceptionRecord[]>([]);
 
   // Player Proximity Chat State
   const playerProximityState = useRef<
     "NONE" | "GREETING" | "CHATTING" | "COOLDOWN"
   >("NONE");
   const playerProximityCooldown = useRef(0);
-  const PLAYER_GREET_DISTANCE = 6.0;
-  const PLAYER_LEAVE_DISTANCE = 10.0;
-  const PLAYER_COOLDOWN_TIME = 15.0;
 
   // Optimization Refs
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -105,9 +97,19 @@ export function useAgentBrain(
   const driveManagerRef = useRef(new DriveManager());
   const spatialMemoryRef = useRef(SpatialMemory.getInstance(id));
   const personalityRef = useRef(getPersonality(id));
+  const sensorySystemRef = useRef<SensorySystem>(new SensorySystem(id));
+  const utilityBrainRef = useRef<UtilityBrain>(new UtilityBrain(id));
+  const lastUtilityCheckTimeRef = useRef(0);
   // Zone update timer (throttle zone tracking to every 2 seconds)
   const zoneUpdateTimer = useRef(0);
   const poiUpdateTimer = useRef(0);
+  const familiarityRef = useRef<SpatialFamiliarity>(new SpatialFamiliarity());
+  const stuckTimer = useRef(0);
+  const lastStuckCheckPos = useRef(new THREE.Vector3());
+  const prevTaskPhaseRef = useRef<string>("IDLE");
+  const autoRestIdleSecRef = useRef(0);
+  /** Seconds of sustained empty queue before auto REST_IN_POD */
+  const AUTO_REST_IDLE_SEC = 12;
 
   // Tier 1: Per-frame allocation elimination — all reusable Vector3/Quaternion objects
   // hoisted as refs so they are never re-allocated inside useFrame callbacks.
@@ -122,6 +124,8 @@ export function useAgentBrain(
   const zAxisRef = useRef(new THREE.Vector3(0, 0, 1)); // World forward — constant, never mutated
   const lastGroundedPosRef = useRef(new THREE.Vector3());
 
+  useAgentVehicle(id, groupRef, obstacles, vehicleRef, lastGroundedPosRef);
+
   // Animation smoothing
   const {
     update: updateGait,
@@ -134,15 +138,13 @@ export function useAgentBrain(
 
   // AI Brain
   const brainRef = useRef(new ClientBrain(id));
-  // Randomize update interval to prevent API spikes (300-400 frames ~ 5-7s)
-  const [brainInterval] = useState(() => 300 + Math.floor(Math.random() * 100));
-  const brainIntervalRef = useRef(brainInterval);
+  /** Seconds since epoch; LLM cooldown from getEffectiveCooldownSec */
+  const lastBrainCallTimeRef = useRef(0);
 
   // Fix #Loop-5: Deduplicate repeated same-script decisions — prevent re-queuing
   // the exact same scriptId within a cooldown window (30s).
   const lastScriptIdRef = useRef<string>("");
   const lastScriptTimeRef = useRef<number>(0);
-  const SCRIPT_COOLDOWN_MS = 30_000;
 
   // --- TASK QUEUE (Manual Task Assignment) ---
   const taskQueueRef = useRef(AgentTaskRegistry.getInstance().getOrCreate(id));
@@ -152,17 +154,58 @@ export function useAgentBrain(
   useEffect(() => {
     if (hasEnqueuedMorningCheckRef.current) return;
 
+    const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
+    const driveManager = driveManagerRef.current;
+
+    /** Hook up task completion events to satisfy drives */
+    const handleTaskCompletion = (e: any) => {
+      if (e.detail.agentId !== id) return;
+      const taskType = e.detail.taskType;
+      console.log(`[useAgentBrain:${id}] Task completed: ${taskType} - Satisfying drives.`);
+      
+      switch (taskType) {
+        case "REST":
+        case "SIT":
+          driveManager.satisfy("energy");
+          break;
+        case "CONTEMPLATE":
+          driveManager.satisfy("wonder");
+          break;
+        case "EXPLORE":
+          driveManager.satisfy("curiosity");
+          break;
+        case "COLLABORATE":
+        case "SAY":
+          driveManager.satisfy("social");
+          break;
+        case "PLACE_INVENTORY":
+          driveManager.satisfy("tidiness");
+          break;
+      }
+    };
+
+    window.addEventListener("agent-task-completed", handleTaskCompletion);
+
+    // Subscribe to hearing bus
+    const unsubHearing = HearingBus.subscribe((event) => {
+      if (vehicleRef.current) {
+        sensorySystemRef.current.recordNoise(
+          event, 
+          vehicleRef.current.position as unknown as THREE.Vector3
+        );
+      }
+    });
+
     const timer = setTimeout(() => {
       if (hasEnqueuedMorningCheckRef.current) return;
       hasEnqueuedMorningCheckRef.current = true;
 
-      const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
       const personality = personalityRef.current;
       const scriptId = "startup_explore";
       const priority = 8;
 
       // Navigate to the agent's preferred zone on startup
-      const preferredZone = personality.preferredZones[0] ?? "garden";
+      const preferredZone = personality.preferredZones[0] ?? "center-park";
       const zonePos = getZoneCenterPosition(preferredZone);
       if (zonePos) {
         queue.enqueue({ type: "GO_TO", priority, scriptId, targetPos: zonePos });
@@ -175,7 +218,11 @@ export function useAgentBrain(
       console.debug(`[useAgentBrain:${id}] ${personality.name} heading to preferred zone: ${preferredZone}`);
     }, 2000 + Math.random() * 1000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      unsubHearing();
+      window.removeEventListener("agent-task-completed", handleTaskCompletion);
+    };
   }, [id]);
 
   // Show "Meeting in the meeting room" in thought bubble when another agent announces a meeting
@@ -194,98 +241,63 @@ export function useAgentBrain(
       window.removeEventListener("agent-meeting-announcement", handler);
   }, [id]);
 
+  // Pod deploy / recall from player UI
+  useEffect(() => {
+    const onDeploy = (e: Event) => {
+      const { agentId, podId } = (e as CustomEvent<{ agentId: string; podId: string }>)
+        .detail;
+      if (agentId !== id) return;
+      const q = AgentTaskRegistry.getInstance().getOrCreate(id);
+      q.exitDock();
+      const exitPos = getPodDeployExitPosition(podId);
+      if (exitPos) {
+        q.enqueue({
+          type: "GO_TO",
+          priority: 30,
+          scriptId: "pod_deploy",
+          targetPos: exitPos,
+        });
+      }
+      q.enqueue({
+        type: "WANDER",
+        priority: 0,
+        scriptId: "subconscious_wander",
+      });
+    };
+    const onRecall = (e: Event) => {
+      const { agentId, podId } = (e as CustomEvent<{ agentId: string; podId: string }>)
+        .detail;
+      if (agentId !== id) return;
+      const q = AgentTaskRegistry.getInstance().getOrCreate(id);
+      q.cancelScript("subconscious_wander");
+      q.cancelScript("subconscious_explore");
+      q.cancelScript("auto_rest");
+      q.cancelScript("auto_rest_observe");
+      q.enqueue({
+        type: "REST_IN_POD",
+        priority: 25,
+        podId,
+        scriptId: "player_recall",
+      });
+    };
+    window.addEventListener("agent-deploy-from-pod", onDeploy as EventListener);
+    window.addEventListener("agent-recall-to-pod", onRecall as EventListener);
+    return () => {
+      window.removeEventListener(
+        "agent-deploy-from-pod",
+        onDeploy as EventListener,
+      );
+      window.removeEventListener(
+        "agent-recall-to-pod",
+        onRecall as EventListener,
+      );
+    };
+  }, [id]);
+
   // --- ANIMATION STATE ---
   const [animationState, setAnimationState] = useState<
     "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt"
   >("Idle");
-
-  useEffect(() => {
-    if (!groupRef.current) return;
-
-    // Create Yuka Vehicle
-    const vehicle = new YUKA.Vehicle();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (vehicle as any).id = id;
-    vehicle.maxSpeed = 5.5; // Adjusted higher as per user request
-    vehicle.maxForce = 4.0; // Heavy Inertia for smooth turns (was 10.0)
-    vehicle.mass = 2.0;
-    vehicle.boundingRadius = 1.0; // TUNED: 1.0 fits the robot footprint perfectly (was 2.0)
-
-    // Sync initial position — XZ from the group reference is correct.
-    // Y is *always* forced to FLOOR_Y regardless of where groupRef.current
-    // drifted to in previous frames. Floor-Main-Slab top surface = Y=4.0.
-    const FLOOR_Y = 4.0;
-    vehicle.position.set(
-      groupRef.current.position.x,
-      FLOOR_Y,
-      groupRef.current.position.z,
-    );
-    // Also correct the Three.js mesh so the render-sync callback doesn't
-    // immediately write a stale sunken Y back on the first Yuka update tick.
-    groupRef.current.position.y = FLOOR_Y;
-    vehicle.rotation.copy(
-      groupRef.current.quaternion as unknown as YUKA.Quaternion,
-    );
-    lastGroundedPosRef.current.set(
-      groupRef.current.position.x,
-      FLOOR_Y,
-      groupRef.current.position.z,
-    );
-
-    // Render Component (Sync Yuka -> Three)
-    vehicle.setRenderComponent(groupRef.current, (entity, renderComponent) => {
-      const mesh = renderComponent as THREE.Group;
-      mesh.position.copy(entity.position as unknown as THREE.Vector3);
-      mesh.quaternion.copy(entity.rotation as unknown as THREE.Quaternion);
-    });
-
-    // --- BEHAVIORS ---
-
-    // --- Rebuild navigation grid whenever obstacles change ---
-    AgentBrainClient.getInstance().initNav(obstacles);
-
-    // Fix #5/#8: Removed YUKA ObstacleAvoidanceBehavior — wall avoidance is
-    // handled exclusively by the raycaster-based system below. Having both
-    // caused double-counted avoidance forces that overpowered path-following.
-
-    // 0. Follow Path (Primary Movement)
-    const followPath = new YUKA.FollowPathBehavior();
-    followPath.active = false;
-    // Fix #13: Increased from 0.8 to 2.0 (matches cell size) so deflected
-    // agents don't loop back trying to reach a skipped waypoint.
-    followPath.nextWaypointDistance = 2.0;
-    vehicle.steering.add(followPath); // Index 0
-
-    // 1. Seek (Legacy / Short distance)
-    const seek = new YUKA.SeekBehavior(new YUKA.Vector3());
-    seek.active = false;
-    vehicle.steering.add(seek); // Index 1
-
-    // 2. Arrive (Final stopping)
-    const arrive = new YUKA.ArriveBehavior(new YUKA.Vector3());
-    arrive.active = false;
-    // Fix #6: Higher deceleration so agent gets closer before stopping
-    arrive.deceleration = 5.0;
-    arrive.tolerance = 0.3;
-    vehicle.steering.add(arrive); // Index 2
-
-    // 3. Wander (Idle)
-    const wander = new YUKA.WanderBehavior();
-    wander.weight = 0.5;
-    vehicle.steering.add(wander); // Index 3
-
-    // 4. Separation
-    const separation = new YUKA.SeparationBehavior(aiManager.vehicles);
-    separation.weight = 5.0;
-    vehicle.steering.add(separation); // Index 4
-
-    vehicleRef.current = vehicle;
-    aiManager.addEntity(vehicle);
-
-    return () => {
-      aiManager.removeEntity(vehicle);
-    };
-  }, [obstacles]);
 
   // Set raycaster to only intersect with objects on Layer 1 (Collidables)
   useEffect(() => {
@@ -335,35 +347,73 @@ export function useAgentBrain(
       playerPos = playerRef.current.position;
     }
 
-    const isInteractingWithPlayer =
-      playerProximityState.current === "GREETING" ||
-      playerProximityState.current === "CHATTING";
+    const pauseForOpenChat = playerProximityState.current === "CHATTING";
+
+    const store = useGameStore.getState();
+    const myPodId = store.getPodIdForAgent(id);
 
     let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
-    if (!isInteractingWithPlayer) {
+    if (!pauseForOpenChat) {
       steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
     }
+
+    const phaseNow = taskQueue.getCurrentPhase();
+    if (phaseNow === "DOCKED" && prevTaskPhaseRef.current !== "DOCKED") {
+      const pid = taskQueue.getCurrentTask()?.podId;
+      if (pid) {
+        useGameStore.getState().setPodDeployed(pid, false);
+      }
+    }
+    prevTaskPhaseRef.current = phaseNow;
+
     const hasManualTask = taskQueue.isBusy();
 
-    // Fix #27: Always disable wander when a manual task is active
-    // Fix #5/#8: Updated indices after removing ObstacleAvoidanceBehavior
+    // Auto return to pod after sustained idle (empty queue, deployed)
+    {
+      const podSnap = myPodId ? store.pods[myPodId] : null;
+      if (
+        myPodId &&
+        podSnap &&
+        podSnap.assignedAgentId === id &&
+        podSnap.isDeployed &&
+        followingAgentId !== id &&
+        playerProximityState.current !== "GREETING" &&
+        playerProximityState.current !== "CHATTING" &&
+        !pauseForOpenChat &&
+        phaseNow !== "DOCKED"
+      ) {
+        if (
+          taskQueue.getCurrentPhase() === "IDLE" &&
+          taskQueue.getQueueLength() === 0
+        ) {
+          autoRestIdleSecRef.current += delta;
+          if (autoRestIdleSecRef.current >= AUTO_REST_IDLE_SEC) {
+            autoRestIdleSecRef.current = 0;
+            taskQueue.enqueue({
+              type: "REST_IN_POD",
+              priority: 14,
+              podId: myPodId,
+              scriptId: "auto_rest",
+            });
+          }
+        } else {
+          autoRestIdleSecRef.current = 0;
+        }
+      } else {
+        autoRestIdleSecRef.current = 0;
+      }
+    }
+
     const bFollowPath = vehicle.steering
       .behaviors[0] as YUKA.FollowPathBehavior;
     const bSeek = vehicle.steering.behaviors[1] as YUKA.SeekBehavior;
     const bArrive = vehicle.steering.behaviors[2] as YUKA.ArriveBehavior;
-    const bWander = vehicle.steering.behaviors[3] as YUKA.WanderBehavior;
 
-    if (isInteractingWithPlayer) {
-      // PAUSE MODE: Force agent to stop and stand still while interacting
+    if (pauseForOpenChat) {
       bFollowPath.active = false;
       bSeek.active = false;
       bArrive.active = false;
-      bWander.active = false;
       vehicle.velocity.set(0, 0, 0);
-    }
-
-    if (hasManualTask && bWander.active) {
-      bWander.active = false;
     }
 
     // --- ANTICIPATORY DECELERATION ---
@@ -401,13 +451,32 @@ export function useAgentBrain(
     // Smoothly interpolate maxSpeed to prevent jerky braking
     vehicle.maxSpeed += (targetSpeed - vehicle.maxSpeed) * 0.1;
 
+    // --- PHASE 1: REACTIVE INTERRUPTS (Sub-frame) ---
+    // Expert Review Feedback: Audio reaction should be immediate (<16ms)
+    const pendingInterrupt = sensorySystemRef.current.getPendingInterrupt();
+    if (pendingInterrupt && pendingInterrupt.type === "AUDIO_STARTLE") {
+      // If idle/wandering or low priority task, immediately snap head and enqueue body task
+      if ((taskQueue.getCurrentTask()?.priority ?? 0) <= 2) {
+        // 1. Enqueue proper behavioral task if not already reacting
+        if (taskQueue.getCurrentTask()?.scriptId !== "noise_reaction") {
+          taskQueue.enqueue({
+            type: "LOOK_AT",
+            priority: 3, // Higher than WANDER (0) and standard LOOK_AT (2)
+            lookTarget: pendingInterrupt.position.clone(),
+            duration: 3,
+            scriptId: "noise_reaction"
+          });
+        }
+        sensorySystemRef.current.clearInterrupt();
+      }
+    }
+
     // Apply steering command from task queue (if active)
     if (steeringCmd.type !== "NONE") {
       const resetBehaviors = () => {
         bFollowPath.active = false;
         bSeek.active = false;
         bArrive.active = false;
-        bWander.active = false;
       };
 
       if (steeringCmd.type === "FOLLOW_PATH" && steeringCmd.path) {
@@ -532,15 +601,8 @@ export function useAgentBrain(
           }
         }
 
-        // Corner Trap Escape mechanism: if we're moving very slowly but pushing hard, apply a perpendicular escape force
-        if (speed < 0.5 && (totalPushX !== 0 || totalPushZ !== 0)) {
-          // Add a sideways "wiggle" force to break out of U-shaped local minima
-          const escapeForce = 5.0;
-          totalPushX +=
-            escapeForce * Math.sign(Math.sin(frameRef.current * 0.1));
-          totalPushZ +=
-            escapeForce * Math.sign(Math.cos(frameRef.current * 0.1));
-        }
+        // Removed manual corner escape wiggle because it caused left/right jitter.
+        // YUKA's steering/pathfinder will solve stalemates via route recalculations.
 
         // Clamp total push magnitude to prevent teleports
         const pushMag = Math.sqrt(
@@ -556,6 +618,38 @@ export function useAgentBrain(
         vehicle.velocity.z += totalPushZ;
 
         raycaster.far = Infinity;
+      }
+
+      // --- STUCK DETECTION AND RECOVERY ---
+      // If the agent is trying to move (speed > 0.5) but the position displacement is 
+      // minimal (< 0.2m) over several seconds, they are likely stuck against 
+      // an obstacle or in a Navmesh hole.
+      const moveSpeed = vehicle.velocity.length();
+      if (moveSpeed > 0.5 && (bArrive.active || bFollowPath.active)) {
+        const distMoved = vehicle.position.distanceTo(lastStuckCheckPos.current as unknown as YUKA.Vector3);
+        if (distMoved < 0.1) {
+          stuckTimer.current += delta;
+        } else {
+          stuckTimer.current = 0;
+          lastStuckCheckPos.current.copy(vehicle.position as unknown as THREE.Vector3);
+        }
+
+        // Recovery: Abort the current task and fall back to WANDER (skip while returning to pod)
+        if (
+          stuckTimer.current > STUCK_TIMER_THRESHOLD_SEC &&
+          taskQueue.getCurrentTask()?.type !== "REST_IN_POD"
+        ) {
+          console.warn(`[useAgentBrain:${id}] Agent stuck for 4s - Aborting task queue and fallback to wander.`);
+          const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
+          queue.cancel();
+          stuckTimer.current = 0;
+          bArrive.active = false;
+          bFollowPath.active = false;
+          queue.enqueue({ type: "WANDER", priority: 0, scriptId: "stuck_recovery_wander" });
+        }
+      } else {
+        stuckTimer.current = 0;
+        lastStuckCheckPos.current.copy(vehicle.position as unknown as THREE.Vector3);
       }
     }
 
@@ -577,49 +671,43 @@ export function useAgentBrain(
           distToPlayer < PLAYER_GREET_DISTANCE &&
           !storeState.nearbyAgentId &&
           !storeState.isChatOpen &&
-          socialState.current === "NONE"
+          !taskQueue.isBusy()
         ) {
           playerProximityState.current = "GREETING";
-          vehicle.velocity.set(0, 0, 0);
-
-          // Face the player
-          if (groupRef.current && playerRef.current) {
-            const toPlayer = toPlayerRef.current.set(
-              playerRef.current.position.x - vehicle.position.x,
-              0,
-              playerRef.current.position.z - vehicle.position.z,
-            );
-            if (toPlayer.lengthSq() > 0.01) {
-              const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-                zAxisRef.current,
-                toPlayer.normalize(),
-              );
-              vehicle.rotation.copy(targetQuat as unknown as YUKA.Quaternion);
-            }
-          }
+          const greetScript = `player_greet_${Date.now()}`;
+          const pp = playerRef.current.position.clone();
+          taskQueue.enqueue({
+            type: "LOOK_AT",
+            priority: 6,
+            scriptId: greetScript,
+            lookTarget: pp,
+            duration: 2,
+          });
+          taskQueue.enqueue({
+            type: "EMOTE",
+            priority: 6,
+            scriptId: greetScript,
+            gesture: "wave",
+            duration: 2,
+          });
+          taskQueue.enqueue({
+            type: "SAY",
+            priority: 6,
+            scriptId: greetScript,
+            content: getRandomPhrase("GREETINGS"),
+          });
 
           storeState.setNearbyAgentId(id);
           storeState.setChatPromptVisible(true);
 
-          // Update brain thought to reflect greeting
           brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). Greeting and offering assistance.`;
           brain.state.lastThoughtTime = Date.now();
-
-          window.dispatchEvent(
-            new CustomEvent("subconscious-speak", {
-              detail: { agentId: id, text: getRandomPhrase("GREETINGS") },
-            }),
-          );
         }
       } else if (playerProximityState.current === "GREETING") {
-        // Keep the agent stopped and facing the player while greeting
-        vehicle.velocity.set(0, 0, 0);
-
         // Check if prompt was dismissed (N pressed)
         if (!storeState.chatPromptVisible && !storeState.isChatOpen) {
           playerProximityState.current = "COOLDOWN";
           playerProximityCooldown.current = 0;
-          greetingState.current = "NONE";
           storeState.setNearbyAgentId(null);
 
           brain.state.thought = "Player declined assistance. Resuming patrol.";
@@ -628,7 +716,6 @@ export function useAgentBrain(
         // Check if chat was opened (Y pressed)
         else if (storeState.isChatOpen && storeState.chatAgentId === id) {
           playerProximityState.current = "CHATTING";
-          greetingState.current = "NONE";
 
           brain.state.thought =
             "Engaged in conversation with the user. Standing by for instructions.";
@@ -638,7 +725,6 @@ export function useAgentBrain(
         else if (distToPlayer > PLAYER_LEAVE_DISTANCE) {
           playerProximityState.current = "COOLDOWN";
           playerProximityCooldown.current = 0;
-          greetingState.current = "NONE";
           storeState.setChatPromptVisible(false);
           storeState.setNearbyAgentId(null);
 
@@ -700,57 +786,8 @@ export function useAgentBrain(
       }
     }
 
-    // --- THROTTLED SOCIAL INTERACTION (Robot vs Robot) ---
-    // Hard collision is now handled by YUKA's SeparationBehavior to avoid O(N^2) every frame.
-    socialCheckTimer.current += delta;
-    if (socialCheckTimer.current > 0.25) {
-      socialCheckTimer.current = 0;
-
-      const vehicles = aiManager.vehicles;
-      const myPos = vehicle.position;
-
-      for (const other of vehicles) {
-        if (other !== vehicle) {
-          const distSq = myPos.squaredDistanceTo(other.position);
-
-          // Social Interaction — Fix #26: Skip if agent has an active task
-          if (
-            distSq < 25.0 &&
-            socialState.current === "NONE" &&
-            greetingState.current === "NONE" &&
-            !taskQueue.isBusy()
-          ) {
-            // Increased probability to 0.05 since we check 4x a second instead of 60x
-            if (Math.random() < 0.05) {
-              socialState.current = "CHATTING";
-              socialTarget.current = other;
-              socialTimer.current = 0;
-              greetingState.current = "WAVING";
-            }
-          }
-        }
-      }
-    }
-
-    // --- SOCIAL UPDATES ---
-    // Fix #30: Force-cancel social interactions if the agent has an active task.
-    // Otherwise a 5-second CHATTING freeze makes the stuck detector think the agent is stuck.
-    if (socialState.current === "CHATTING" && taskQueue.isBusy()) {
-      socialState.current = "NONE";
-      socialTimer.current = 0;
-      greetingState.current = "NONE";
-    } else if (socialState.current === "CHATTING") {
-      socialTimer.current += delta;
-      vehicle.velocity.set(0, 0, 0);
-      if (socialTimer.current > 5.0) {
-        socialState.current = "COOLDOWN";
-        socialTimer.current = 0;
-        greetingState.current = "NONE";
-      }
-    } else if (socialState.current === "COOLDOWN") {
-      socialTimer.current += delta;
-      if (socialTimer.current > 3.0) socialState.current = "NONE";
-    }
+    // Record familiarity (Phase 3: Individual Dispersion)
+    familiarityRef.current.visit(vehicle.position as unknown as THREE.Vector3, delta);
 
     // --- PHYSICS (Gravity / Ground Detection) ---
     // FIX: Runs every frame (was every-other-frame, causing missed ground + free-fall)
@@ -760,7 +797,6 @@ export function useAgentBrain(
       const rayOrigin = rayOriginRef.current;
 
       // Cast from just above max step height to prevent snapping to high ceilings/objects
-      const MAX_STEP_UP = 2.0;
       rayOrigin.set(
         vehicle.position.x,
         vehicle.position.y + MAX_STEP_UP + 0.1,
@@ -851,148 +887,98 @@ export function useAgentBrain(
         );
       }
 
-      const clampedX = Math.max(
-        WORLD_BOUNDS.minX,
-        Math.min(WORLD_BOUNDS.maxX, vehicle.position.x),
-      );
-      const clampedZ = Math.max(
-        WORLD_BOUNDS.minZ,
-        Math.min(WORLD_BOUNDS.maxZ, vehicle.position.z),
-      );
-
-      const hitMinX =
-        clampedX <= WORLD_BOUNDS.minX + 0.01 && vehicle.velocity.x < 0;
-      const hitMaxX =
-        clampedX >= WORLD_BOUNDS.maxX - 0.01 && vehicle.velocity.x > 0;
-      const hitMinZ =
-        clampedZ <= WORLD_BOUNDS.minZ + 0.01 && vehicle.velocity.z < 0;
-      const hitMaxZ =
-        clampedZ >= WORLD_BOUNDS.maxZ - 0.01 && vehicle.velocity.z > 0;
-
-      vehicle.position.x = clampedX;
-      vehicle.position.z = clampedZ;
-
-      // Prevent "ice skating" at boundaries by cancelling outward velocity
-      // and giving a tiny inward bias so wander naturally recovers.
-      if (hitMinX || hitMaxX) {
-        vehicle.velocity.x = hitMinX ? 0.15 : -0.15;
+      // Radial Donut Ring Soft Clamping
+      const dist = Math.sqrt(vehicle.position.x * vehicle.position.x + vehicle.position.z * vehicle.position.z);
+      
+      // Soft clamp: Hit Outer Wall
+      if (dist > MAX_SAFE_RADIUS && dist > 0.001) {
+        const penetration = dist - MAX_SAFE_RADIUS;
+        const pushMag = penetration * 5.0; // Acts like a spring restoring force
+        vehicle.velocity.x -= (vehicle.position.x / dist) * pushMag;
+        vehicle.velocity.z -= (vehicle.position.z / dist) * pushMag;
       }
-      if (hitMinZ || hitMaxZ) {
-        vehicle.velocity.z = hitMinZ ? 0.15 : -0.15;
+      
+      // Soft clamp: Hit Inner Void
+      if (dist < RING_INNER_RADIUS + 1 && dist > 0.001) {
+        const penetration = (RING_INNER_RADIUS + 1) - dist;
+        const pushMag = penetration * 5.0;
+        vehicle.velocity.x += (vehicle.position.x / dist) * pushMag;
+        vehicle.velocity.z += (vehicle.position.z / dist) * pushMag;
       }
     }
 
-    // --- BRAIN UPDATE ---
-    // SKIP BRAIN IF MANUAL TASK IS ACTIVE (Task Queue Override)
-    if (hasManualTask) {
-      // Skip LLM brain entirely — manual tasks control steering
-    } else if (
-      playerProximityState.current === "GREETING" ||
-      playerProximityState.current === "CHATTING"
-    ) {
-      // SKIP BRAIN: Agent is interacting with player — thoughts are set by proximity state machine
-    } else if (frameRef.current % brainIntervalRef.current === 0) {
-      // Throttle brain based on distance
-      let shouldSkipDueToDistance = false;
-      if (playerRef.current) {
-        const d = vehicle.position.distanceTo(
-          playerRef.current.position as unknown as YUKA.Vector3,
+    // --- PER-FRAME DRIVES + SENSORY (independent of LLM cooldown) ---
+    if (!hasManualTask) {
+      const registry = InteractableRegistry.getInstance();
+      const vPos = vehicle.position as unknown as THREE.Vector3;
+      const nearbyAnyItems = registry.getNearby(vPos, 15);
+      const nearbyFloorCount = nearbyAnyItems.filter(
+        (i) => i.pickable && !i.carriedBy && !i.placedInArea,
+      ).length;
+      const pDist = playerRef.current
+        ? vehicle.position.distanceTo(
+            playerRef.current.position as unknown as YUKA.Vector3,
+          )
+        : null;
+
+      const nearbyAgentCount = aiManager.vehicles.filter(
+        (v) =>
+          v !== vehicleRef.current &&
+          (v.position as unknown as THREE.Vector3).distanceTo(vPos) < 8,
+      ).length;
+
+      const agentWorldPos = vPos.clone();
+      const currentZoneInfluence =
+        ZoneInfluenceSystem.getCurrentZone(agentWorldPos);
+      if (currentZoneInfluence) {
+        driveManagerRef.current.applyZoneEffects(
+          currentZoneInfluence.effects,
+          delta,
+          personalityRef.current.driveWeights,
         );
-        if (d > 50 && Math.random() < 0.66) shouldSkipDueToDistance = true;
-        else if (d > 25 && Math.random() < 0.5) shouldSkipDueToDistance = true;
       }
 
-      if (shouldSkipDueToDistance) {
-        // Skipped
-      } else if (followingAgentId === id) {
-        // Follow mode - handled above via task queue or legacy
-      } else if (
-        taskQueue.isBusy() &&
-        (taskQueue.getCurrentTask()?.priority ?? 0) > 0
-      ) {
-        // SKIP BRAIN: A conscious script is actively running — don't poll LLM
-        /* console.log(
-          `[useAgentBrain:${id}] Brain gate: SKIPPING (busy, priority=${taskQueue.getCurrentTask()?.priority}, phase=${taskQueue.getCurrentPhase()})`,
-        ); */
-      } else {
-        // --- DRIVE & EVENT MANAGER ---
-        let currentBehavior = "IDLE";
-        if (vehicle.steering.behaviors[1].active) currentBehavior = "SEEKING";
-        else if (vehicle.steering.behaviors[0].active)
-          currentBehavior = "WANDERING";
-
-        const registry = InteractableRegistry.getInstance();
-        const vPos = vehicle.position as unknown as THREE.Vector3;
-
-        // Fast proximity check for Drive update (no raycast needed here, just volume sense)
-        const nearbyAnyItems = registry.getNearby(vPos, 15);
-        const nearbyFloorCount = nearbyAnyItems.filter(
-          (i) => i.pickable && !i.carriedBy && !i.placedInArea,
-        ).length;
-        const pDist = playerRef.current
-          ? vehicle.position.distanceTo(
-              playerRef.current.position as unknown as YUKA.Vector3,
-            )
-          : null;
-        const isIdle =
-          currentBehavior === "IDLE" || currentBehavior === "WANDERING";
-
-        // ── Zone influence: update drives via zone effects ──────────────────
-        const agentWorldPos = vPos.clone();
-        const currentZoneInfluence = ZoneInfluenceSystem.getCurrentZone(agentWorldPos);
+      zoneUpdateTimer.current += delta;
+      if (zoneUpdateTimer.current >= 2.0) {
+        zoneUpdateTimer.current = 0;
         if (currentZoneInfluence) {
-          driveManagerRef.current.applyZoneEffects(
-            currentZoneInfluence.effects,
-            delta,
-            personalityRef.current.driveWeights,
+          spatialMemoryRef.current.updateZone(
+            currentZoneInfluence.zoneId,
+            currentZoneInfluence.zoneName,
           );
         }
-
-        // ── Spatial memory: track zone visits ────────────────────────────
-        zoneUpdateTimer.current += delta;
-        if (zoneUpdateTimer.current >= 2.0) {
-          zoneUpdateTimer.current = 0;
-          if (currentZoneInfluence) {
-            spatialMemoryRef.current.updateZone(
-              currentZoneInfluence.zoneId,
-              currentZoneInfluence.zoneName,
-            );
-          }
-          // Update POI novelty recovery
-          poiUpdateTimer.current += 2.0;
-          if (poiUpdateTimer.current >= 30.0) {
-            poiUpdateTimer.current = 0;
-            POIRegistry.getInstance().update();
-          }
+        familiarityRef.current.decay(2.0);
+        poiUpdateTimer.current += 2.0;
+        if (poiUpdateTimer.current >= 30.0) {
+          poiUpdateTimer.current = 0;
+          POIRegistry.getInstance().update();
         }
+      }
 
-        // Check if agent is in a preferred zone for belonging drive
-        const currentZoneId = currentZoneInfluence?.zoneId ?? "";
-        const isInPreferredZone = personalityRef.current.preferredZones.includes(currentZoneId);
-        const isMoving = (vehicle.velocity as unknown as THREE.Vector3).length() > 0.2;
+      const currentZoneId = currentZoneInfluence?.zoneId ?? "";
+      const isInPreferredZone =
+        personalityRef.current.preferredZones.includes(currentZoneId);
+      const isMoving =
+        (vehicle.velocity as unknown as THREE.Vector3).length() > 0.2;
+      const isIdle = !taskQueue.isBusy();
 
-        driveManagerRef.current.update(delta, {
-          nearbyFloorItems: nearbyFloorCount,
-          playerDistance: pDist,
-          nearbyAgentCount: socialState.current !== "NONE" ? 1 : 0,
-          isIdle,
-          isMoving,
-          isInPreferredZone,
-          driveWeights: personalityRef.current.driveWeights,
-        });
+      driveManagerRef.current.update(delta, {
+        nearbyFloorItems: nearbyFloorCount,
+        playerDistance: pDist,
+        nearbyAgentCount,
+        isIdle,
+        isMoving,
+        isInPreferredZone,
+        driveWeights: personalityRef.current.driveWeights,
+      });
 
-        const urgentDrive = driveManagerRef.current.getUrgentDrive();
-
-        // FIRE CONSCIOUSNESS ONLY IF A DRIVE IS URGENT (EVENT-DRIVEN)
-        if (urgentDrive && !brain.state.isThinking) {
-          driveManagerRef.current.markTriggered(urgentDrive.drive);
-          const driveContextStr = driveManagerRef.current.toContextString();
-
-          const nearbyEntities: NearbyEntity[] = [];
-
-          // Perception Logic
-          if (playerRef.current && pDist !== null && pDist < 30) {
-            nearbyEntities.push({
+      const perceivedEntities = sensorySystemRef.current.update(
+        vPos,
+        groupRef.current!.quaternion as unknown as THREE.Quaternion,
+        (() => {
+          const raw: NearbyEntity[] = [];
+          if (playerRef.current && pDist !== null) {
+            raw.push({
               type: "PLAYER",
               id: "player-01",
               distance: pDist,
@@ -1004,58 +990,98 @@ export function useAgentBrain(
               },
             });
           }
-
-          // Perception: Nearby pickable items — with LINE OF SIGHT Raycasting
-          const floorItems: typeof nearbyAnyItems = [];
-          const agentEye = new THREE.Vector3(vPos.x, vPos.y + 1.5, vPos.z);
-          const dir = new THREE.Vector3();
-
-          for (const item of nearbyAnyItems) {
-            if (!item.pickable) continue;
-            // Only surface items that are on the floor (not carried, not placed on a surface)
-            const isOnFloor = !item.carriedBy && !item.placedInArea;
+          const items = registry.getNearby(vPos, 30);
+          for (const item of items) {
+            if (!item.pickable || item.carriedBy || item.placedInArea) continue;
             const isClaimed = registry.isItemClaimed(item.id);
-            if (!isOnFloor) continue;
-
-            const itemPos = item.position as unknown as THREE.Vector3;
-            dir.subVectors(itemPos, agentEye);
-            const dist = dir.length();
-            dir.normalize();
-
-            // Line-of-sight check
-            raycasterRef.current.set(agentEye, dir);
-            const hits = raycasterRef.current.intersectObjects(
-              collidableMeshes,
-              false,
-            );
-            let occluded = false;
-            for (const hit of hits) {
-              // If hit object is closer than item (minus a small margin to allow item lying on floor)
-              if (hit.distance < dist - 0.5) {
-                // Ignore standard flat floors/ceilings
-                if (
-                  !hit.object.name.includes("Floor") &&
-                  !hit.object.name.includes("Ceiling")
-                ) {
-                  occluded = true;
-                  break;
-                }
-              }
-            }
-
-            if (occluded) continue; // Item is behind a wall or desk!
-
-            nearbyEntities.push({
+            raw.push({
               type: "OBJECT",
               id: item.id,
-              distance: dist,
+              distance: vPos.distanceTo(item.position),
               objectType: item.type,
+              status: isClaimed ? "(C) Claimed" : "(A) Available",
               name: item.name,
-              status: isClaimed ? "on floor (claimed)" : "on floor",
-              position: { x: itemPos.x, y: itemPos.y, z: itemPos.z },
+              position: {
+                x: item.position.x,
+                y: item.position.y,
+                z: item.position.z,
+              },
             });
-            floorItems.push(item);
           }
+          for (const other of aiManager.vehicles) {
+            if (other === vehicleRef.current) continue;
+            const op = other.position as unknown as THREE.Vector3;
+            const oid =
+              (other as unknown as { id?: string }).id ?? "agent-unknown";
+            raw.push({
+              type: "AGENT",
+              id: oid,
+              distance: vPos.distanceTo(op),
+              status: "Active",
+              position: { x: op.x, y: op.y, z: op.z },
+            });
+          }
+          return raw;
+        })(),
+        collidableMeshes,
+      );
+      lastPerceivedEntitiesRef.current = perceivedEntities;
+
+      const urgentDrive = driveManagerRef.current.getUrgentDrive();
+
+      const isDocked = taskQueue.getCurrentPhase() === "DOCKED";
+
+      // --- LLM (social / reactive only) ---
+      if (
+        !isDocked &&
+        playerProximityState.current !== "GREETING" &&
+        playerProximityState.current !== "CHATTING"
+      ) {
+        const nowSec = Date.now() / 1000;
+        const mem = sensorySystemRef.current.getWorkingMemory();
+        const cooldownSec = getEffectiveCooldownSec(mem);
+        const canThinkLLM =
+          nowSec - lastBrainCallTimeRef.current > cooldownSec;
+
+        const hasNearbyPlayer = mem.some(
+          (e) => e.type === "PLAYER" && e.distance < 12 && e.isVisible,
+        );
+        const hasNearbyAgents =
+          mem.filter(
+            (e) => e.type === "AGENT" && e.distance < 6 && e.isVisible,
+          ).length > 0;
+        const socialDriveUrgent = urgentDrive?.drive === "social";
+        const shouldUseLLM =
+          canThinkLLM &&
+          !taskQueue.isBusy() &&
+          followingAgentId !== id &&
+          (hasNearbyPlayer ||
+            socialDriveUrgent ||
+            (hasNearbyAgents && Math.random() < 0.3));
+
+        if (shouldUseLLM && !brainRef.current.state.isThinking) {
+          lastBrainCallTimeRef.current = nowSec;
+          if (socialDriveUrgent) {
+            driveManagerRef.current.markTriggered("social");
+          }
+
+          const currentBehavior = resolveCurrentBehavior(taskQueue);
+          const driveContextStr =
+            driveManagerRef.current.toContextString();
+
+          // Convert perceived records back to NearbyEntity for the Brain
+          const nearbyEntities: NearbyEntity[] = perceivedEntities.map(p => ({
+            type: p.type,
+            id: p.id,
+            distance: p.distance,
+            status: p.isVisible ? p.status : `${p.status} (last seen ${Math.round((Date.now() - p.lastSeen)/1000)}s ago)`,
+            objectType: p.objectType,
+            name: p.name,
+            position: p.position
+          }));
+
+          // Areas are still handled via radius for now as they are static world anchors
+          const floorItems = perceivedEntities.filter(p => p.type === "OBJECT" && p.isVisible);
 
           // Semantic Zoning Context
           const currentZone = registry.getSemanticZone(vPos);
@@ -1063,22 +1089,26 @@ export function useAgentBrain(
           // Perception: Empty areas mapped to the visual floor items
           const seenAreaIds = new Set<string>();
           for (const floorItem of floorItems) {
+            const worldObj = floorItem.id ? registry.getById(floorItem.id) : null;
+            if (!worldObj || !floorItem.position) continue;
+
             const allAreas = registry.getAllPlacingAreas();
             let homeArea = null;
-            if (floorItem.homeAreaId) {
+            if (worldObj.homeAreaId) {
               const potentialHome = registry.getPlacingAreaById(
-                floorItem.homeAreaId,
+                worldObj.homeAreaId,
               );
               if (potentialHome && !potentialHome.currentItem) {
                 homeArea = potentialHome;
               }
             }
 
+            const itemPos = new THREE.Vector3(floorItem.position.x, floorItem.position.y, floorItem.position.z);
             const emptyAreas = allAreas
               .filter((a) => !a.currentItem && a.id !== homeArea?.id)
               .map((a) => ({
                 area: a,
-                distToItem: floorItem.position.distanceTo(
+                distToItem: itemPos.distanceTo(
                   a.position as unknown as THREE.Vector3,
                 ),
               }))
@@ -1088,7 +1118,7 @@ export function useAgentBrain(
             if (homeArea) {
               emptyAreas.unshift({
                 area: homeArea,
-                distToItem: floorItem.position.distanceTo(
+                distToItem: itemPos.distanceTo(
                   homeArea.position as unknown as THREE.Vector3,
                 ),
               });
@@ -1097,7 +1127,7 @@ export function useAgentBrain(
             for (const { area, distToItem } of emptyAreas) {
               if (seenAreaIds.has(area.id)) continue;
               seenAreaIds.add(area.id);
-              const isHome = area.id === floorItem.homeAreaId;
+              const isHome = area.id === worldObj.homeAreaId;
               nearbyEntities.push({
                 type: "AREA",
                 id: area.id,
@@ -1143,7 +1173,7 @@ export function useAgentBrain(
           // Update Brain with Semantic Zone and Drives
           const enhancedBehavior = `${currentBehavior} (Zone: ${currentZoneInfluence?.zoneName ?? currentZone})`;
 
-          brain
+          brainRef.current
             .update(
               vPos,
               nearbyEntities,
@@ -1157,6 +1187,7 @@ export function useAgentBrain(
                 drives: driveContextStr,
                 zoneContext: zoneCtxStr,
                 spatialMemory: spatialMemCtxStr,
+                assignedPodId: myPodId || undefined,
                 personality: {
                   name: personality.name,
                   trait: personality.trait,
@@ -1220,8 +1251,7 @@ export function useAgentBrain(
 
                   // Safe to cancel queued (not yet running) copies of this script
                   taskQueue.cancelScript(
-                    scriptId,
-                    "Replaced by new brain decision",
+                    scriptId
                   );
 
                   // Record injection time for cooldown tracking
@@ -1232,8 +1262,9 @@ export function useAgentBrain(
                   // Inject the tasks into the priority queue (Atomic insertion for AgentTaskQueue v2)
                   decision.tasks.forEach((task) => {
                     // Clamp LLM-generated coordinates to world bounds safely
+                    // (Ensure they land in walkable donut lab area)
                     if (task.type === "GO_TO" && task.targetPos) {
-                      const clamped = clampToWorldBounds(task.targetPos);
+                      const clamped = clampToDonutRing(task.targetPos);
                       task.targetPos = new THREE.Vector3(
                         clamped.x,
                         clamped.y,
@@ -1267,9 +1298,34 @@ export function useAgentBrain(
                 error,
               );
             });
-        } // closing if (urgentDrive && !brain.state.isThinking)
-      } // closing else (taskQueue.isBusy())
-    } // closing manual task & proximity state overrides
+        }
+      }
+
+      const utilityNow = Date.now();
+      if (
+        !isDocked &&
+        utilityNow - lastUtilityCheckTimeRef.current > UTILITY_CHECK_INTERVAL_MS &&
+        !taskQueue.isBusy() &&
+        !brainRef.current.state.isThinking
+      ) {
+        lastUtilityCheckTimeRef.current = utilityNow;
+        const localTasks = utilityBrainRef.current.evaluate(
+          driveManagerRef.current.drives,
+          vPos,
+          spatialMemoryRef.current,
+          familiarityRef.current,
+          lastPerceivedEntitiesRef.current,
+          personalityRef.current,
+        );
+
+        if (localTasks && localTasks.length > 0) {
+          console.log(
+            `[useAgentBrain:${id}] UtilityBrain triggered local routine: ${localTasks[0].scriptId}`,
+          );
+          localTasks.forEach((task) => taskQueue.enqueue(task));
+        }
+      }
+    }
 
     // --- ANIMATION UPDATE (Procedural) ---
     const frustum = frustumRef.current;
@@ -1327,20 +1383,15 @@ export function useAgentBrain(
 
       const animSpeed = smoothSpeed.current;
 
-      // Stop waving/chatting immediately if the agent starts moving (e.g. gets a new task)
-      if (animSpeed > 0.1) {
-        if (greetingState.current === "WAVING") greetingState.current = "NONE";
-        if (socialState.current === "CHATTING")
-          socialState.current = "COOLDOWN";
-      }
-
       // Determine animation state based on task queue phase
       const taskPhase = taskQueue.getCurrentPhase();
       const taskType = taskQueue.getCurrentTask()?.type;
 
       let newState: "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt" = "Idle";
-      if (greetingState.current === "WAVING") {
+      if (taskPhase === "EMOTING" && taskType === "EMOTE" && taskQueue.getCurrentTask()?.gesture === "wave") {
         newState = "Wave";
+      } else if (taskPhase === "DOCKED") {
+        newState = "Idle";
       } else if (taskPhase === "SEATED") {
         newState = taskType === "REST" ? "Rest" : "Sit";
       } else if (taskPhase === "LEANING") {
@@ -1350,7 +1401,7 @@ export function useAgentBrain(
       } else if (taskPhase === "PRESENTING") {
         newState = "Present";
       } else if (taskPhase === "EMOTING") {
-        newState = "Idle"; // Handled by gesture in gait
+        newState = "Idle";
       } else if (taskPhase === "ACTION_START" && (taskType === "INTERACT" || taskType === "PICK_NEARBY" || taskType === "PLACE_INVENTORY")) {
         newState = "Work";
       } else if (animSpeed > 0.1) {
@@ -1374,78 +1425,44 @@ export function useAgentBrain(
         // Head Tracking Logic remains unique to AI for now (or could be extracted too)
         const lerpFactor = 0.1;
 
-        // 1. Head Tracking (Player Aware)
-        if (playerRef.current) {
-          const toPlayer = new THREE.Vector3().subVectors(
-            playerRef.current.position,
-            vehicle.position,
-          );
-          const distToPlayer = toPlayer.length();
+        // Attention & Head Tracking
+        const attentionTarget = sensorySystemRef.current.getAttentionTarget();
+        
+        if (attentionTarget) {
+          const toTarget = new THREE.Vector3().subVectors(attentionTarget, vehicle.position);
+          const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(groupRef.current!.quaternion);
+          toTarget.normalize();
 
-          if (distToPlayer < 8.0) {
-            // Look at player within 8m
-            // Calculate local look dir
-            // We need world quaternion of the agent?
-            // Simplification: rotating the neck bone.
-            // Neck rotation is local.
-            // We need the angle difference between agent forward and vector to player.
+          const dot = forward.dot(toTarget);
+          const cross = new THREE.Vector3().crossVectors(forward, toTarget);
 
-            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(
-              groupRef.current!.quaternion,
-            );
-            toPlayer.normalize();
+          // Realistic head look constraints
+          if (dot > 0.1) {
+            const targetNeckY = cross.y * 1.5;
+            const clampedNeckY = THREE.MathUtils.clamp(targetNeckY, -1.0, 1.0);
+            j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, clampedNeckY, 0.1);
 
-            // Dot product for angle?
-            // Cross product for direction (left/right)?
-            const dot = forward.dot(toPlayer);
-            const cross = new THREE.Vector3().crossVectors(forward, toPlayer);
-
-            // Clamp look angle (don't break neck)
-            // If dot > 0 (in front), we can look.
-            if (dot > 0.2) {
-              const targetNeckY = cross.y * 1.5; // Scale for sensitivity
-              const clampedNeckY = THREE.MathUtils.clamp(
-                targetNeckY,
-                -0.8,
-                0.8,
-              );
-              // eslint-disable-next-line react-hooks/immutability
-              j.neck.rotation.y = THREE.MathUtils.lerp(
-                j.neck.rotation.y,
-                clampedNeckY,
-                0.1,
-              );
-
-              // Also slight head tilt
-              j.neck.rotation.x = THREE.MathUtils.lerp(
-                j.neck.rotation.x,
-                -0.1,
-                0.1,
-              );
-            } else {
-              // Reset if behind
-              j.neck.rotation.y = THREE.MathUtils.lerp(
-                j.neck.rotation.y,
-                0,
-                0.05,
-              );
-            }
+            // Vertical look
+            const targetNeckX = (attentionTarget.y - (vehicle.position.y + 1.5)) * 0.5;
+            const clampedNeckX = THREE.MathUtils.clamp(targetNeckX, -0.5, 0.5);
+            j.neck.rotation.x = THREE.MathUtils.lerp(j.neck.rotation.x, -clampedNeckX, 0.1);
           } else {
-            // Idle Looking
-            const t = state.clock.elapsedTime;
-            j.neck.rotation.y = THREE.MathUtils.lerp(
-              j.neck.rotation.y,
-              Math.sin(t * 0.5) * 0.3,
-              0.05,
-            );
+            j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, 0, 0.05);
+            j.neck.rotation.x = THREE.MathUtils.lerp(j.neck.rotation.x, 0, 0.05);
           }
+        } else {
+          // Idle ambient gazing
+          const t = state.clock.elapsedTime;
+          j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, Math.sin(t * 0.4) * 0.2, 0.03);
+          j.neck.rotation.x = THREE.MathUtils.lerp(j.neck.rotation.x, Math.sin(t * 0.27) * 0.05, 0.03);
         }
 
-        if (greetingState.current === "WAVING") {
+        if (
+          taskQueue.getCurrentPhase() === "EMOTING" &&
+          taskQueue.getCurrentTask()?.gesture === "wave"
+        ) {
           const waveSpeed = 8;
           const wave = Math.sin(state.clock.elapsedTime * waveSpeed) * 0.4;
-
-          // Override arm rotation for waving (raise height unchanged; slight forward pitch + forearm)
           j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
             j.rightArm.shoulder.rotation.x,
             -0.25 + wave * 0.08,
@@ -1482,6 +1499,9 @@ export function useAgentBrain(
     if (lastMinimapPos.current.distanceToSquared(currentPos) > 1.0) {
       lastMinimapPos.current.copy(currentPos);
       setAgentPosition(id, currentPos);
+      
+      // Emit movement heat
+      InterestMap.getInstance().addHeat(currentPos, 0.2);
     }
   });
 

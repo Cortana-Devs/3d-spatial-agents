@@ -1,9 +1,9 @@
 {
-  "name": "metallic-nova",
+  "name": "3d-spatial-agents",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/copy-tts-assets.mjs && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

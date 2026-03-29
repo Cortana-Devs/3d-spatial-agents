@@ -5,7 +5,7 @@ import {
   processAgentThought,
   type NearbyEntity,
   type AgentContext,
-} from "@/lib/agent-core";
+} from "@/lib/agent-brain";
 import { getGroqClient } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
 import { performWebSearch } from "@/lib/search";

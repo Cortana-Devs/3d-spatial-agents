@@ -1,6 +1,6 @@
 /**
- * Piper-compatible phonemization on the main thread using espeak-ng (WASM).
- * ONNX inference stays in piper.worker.js; espeak runs here to avoid per-utterance worker WASM churn.
+ * Piper-compatible phonemization: eSpeak-ng runs in espeak.worker.js (WASM off main thread).
+ * ONNX inference stays in piper.worker.js; ID mapping and timings stay on the main thread (light).
  */
 
 import type { PhonemeTiming } from "./voiceTypes";
@@ -23,31 +23,43 @@ export interface PiperVoiceJson {
 const BOS = "^";
 const EOS = "$";
 
-type ESpeakFactory = (opts?: {
-  locateFile?: (path: string, scriptDirectory?: string) => string;
-  arguments?: string[];
-}) => Promise<{
-  FS: {
-    writeFile: (path: string, data: string | Uint8Array) => void;
-    readFile: (path: string, opts: { encoding: "utf8" }) => string;
+// eSpeak runs in a dedicated worker so WASM startup + phonemize never blocks the main thread.
+let espeakWorker: Worker | null = null;
+const espeakCallbacks = new Map<
+  number,
+  { resolve: (v: string) => void; reject: (e: Error) => void }
+>();
+let espeakMsgId = 1;
+
+function attachEspeakHandler() {
+  if (!espeakWorker) return;
+  espeakWorker.onmessage = (ev: MessageEvent) => {
+    const { type, id, raw, error } = ev.data as {
+      type: string;
+      id: number;
+      raw?: string;
+      error?: string;
+    };
+    const cb = espeakCallbacks.get(id);
+    if (!cb) return;
+    espeakCallbacks.delete(id);
+    if (type === "phoneme_raw") cb.resolve(raw ?? "");
+    else cb.reject(new Error(error ?? "eSpeak worker error"));
   };
-}>;
+}
 
-let espeakFactory: ESpeakFactory | null = null;
-
-/**
- * Load eSpeak from /public/espeak-ng (postinstall copy). Avoids bundling the
- * Emscripten build through Next/Turbopack (it references Node-only APIs).
- */
-export async function ensureEspeakFactory(
-  assetBaseUrl: string,
-): Promise<ESpeakFactory> {
-  if (espeakFactory) return espeakFactory;
-  const base = assetBaseUrl.replace(/\/$/, "");
-  const url = `${base}/espeak-ng/espeak-ng.js`;
-  const mod = await import(/* webpackIgnore: true */ url);
-  espeakFactory = mod.default as ESpeakFactory;
-  return espeakFactory;
+function getEspeakWorker(): Worker {
+  if (typeof window === "undefined") {
+    throw new Error("eSpeak worker requires a browser context");
+  }
+  if (!espeakWorker) {
+    espeakWorker = new Worker(
+      new URL("./espeak.worker.js", import.meta.url),
+      { type: "module" },
+    );
+    attachEspeakHandler();
+  }
+  return espeakWorker;
 }
 
 function applyPhonemeMap(
@@ -95,29 +107,22 @@ export async function espeakRawPhonemeString(
   espeakVoice: string,
   assetBaseUrl: string,
 ): Promise<string> {
-  const ESpeakNg = await ensureEspeakFactory(assetBaseUrl);
-  const base = assetBaseUrl.replace(/\/$/, "");
-  const safe = text.replace(/\r/g, " ").replace(/\n/g, " ").trim();
-  if (!safe) return "";
-
-  const escaped = safe.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-
-  const instance = await ESpeakNg({
-    locateFile: (path: string) => `${base}/espeak-ng/${path}`,
-    arguments: [
-      "--phonout",
-      "generated",
-      '--sep=""',
-      "-q",
-      "-b=1",
-      "--ipa=3",
-      "-v",
-      espeakVoice,
-      `"${escaped}"`,
-    ],
+  const id = espeakMsgId++;
+  return new Promise((resolve, reject) => {
+    espeakCallbacks.set(id, { resolve, reject });
+    try {
+      getEspeakWorker().postMessage({
+        type: "phonemize",
+        id,
+        text,
+        espeakVoice,
+        assetBaseUrl,
+      });
+    } catch (e) {
+      espeakCallbacks.delete(id);
+      reject(e instanceof Error ? e : new Error(String(e)));
+    }
   });
-
-  return instance.FS.readFile("generated", { encoding: "utf8" }).trim();
 }
 
 export function phonemesToIds(

@@ -42,6 +42,7 @@ import {
   DEFAULT_RING_INNER_RADIUS,
   DEFAULT_RING_OUTER_RADIUS,
 } from "./labFloorConstants";
+import AgentPodsGroup from "./AgentPodsGroup";
 
 // --- Helpers ---
 const cx = DEFAULT_LAB_HUB.x;
@@ -116,6 +117,7 @@ export default function DonutLabFurniture() {
 
   return (
     <group name="DonutLabFurniture">
+      <AgentPodsGroup />
 
       {/* ════════════════════════════════════════════════════════════════════ */}
       {/* NORTH SECTOR — Core Lab (2 Workbenches + Lab Props)                */}
@@ -524,6 +526,7 @@ export default function DonutLabFurniture() {
         <CupboardUnit
           key={`cupboard-donut-${i}`}
           position={ringPos(angle, OUTER_WALK - 2)}
+          rotation={faceCenter(angle)}
           label={(i + 1).toString()}
           userData={{
             type: "Furniture",

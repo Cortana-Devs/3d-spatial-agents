@@ -1,7 +1,10 @@
 import React, { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { InteractableRegistry, PlacingArea } from "./InteractableRegistry";
+import {
+  InteractableRegistry,
+  type PlacingArea,
+} from "@/systems/InteractableRegistry";
 import { useGameStore } from "@/store/gameStore";
 
 const DETECTION_RADIUS = 8;

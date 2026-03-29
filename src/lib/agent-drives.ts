@@ -15,28 +15,9 @@
  *               Creates gentle territorial attachment without aggressive possession.
  */
 
-// ============================================================================
-// Drive Schema
-// ============================================================================
+import type { AgentDrives } from "@/types/agent";
 
-export interface AgentDrives {
-  /** Drops when floor items exist nearby. Satisfied by placing items on surfaces. */
-  tidiness: number;
-  /** Decays over time. Satisfied by exploring new zones. */
-  curiosity: number;
-  /** Spikes when player is nearby or gives a command. Satisfied by completing tasks. */
-  helpfulness: number;
-  /** Decays without social contact. Satisfied by greeting agents or the player. */
-  social: number;
-  /** Depletes with movement and tasks. Restored by resting (Garden bench / SIT). */
-  energy: number;
-  /** Improves in Workshop zone; drops with frequent interruptions. */
-  focus: number;
-  /** Decays over time. Satisfied by appreciating POIs, views, beauty. */
-  wonder: number;
-  /** Satisfied by being in preferred zone and completing belonging actions. */
-  belonging: number;
-}
+export type { AgentDrives } from "@/types/agent";
 
 /** Per-drive configuration */
 interface DriveConfig {
@@ -83,8 +64,8 @@ export const DRIVE_CONFIGS: Record<keyof AgentDrives, DriveConfig> = {
   },
   energy: {
     threshold: 30,
-    decayRate: 0.8,          // depletes ~1/s while moving (additional decay from zone)
-    satisfyAmount: 50,
+    decayRate: 1.2,          // depletes faster while moving; restored by resting
+    satisfyAmount: 60,       // Large boost on task completion
     cooldownSec: 45,          // don't spam "I'm tired" LLM calls
     label: "Energy",
   },
@@ -156,7 +137,7 @@ export class DriveManager {
       isIdle: boolean;
       isMoving: boolean;
       isInPreferredZone: boolean;
-      driveWeights?: Partial<Record<string, number>>;
+      driveWeights?: Partial<Record<keyof AgentDrives, number>>;
     },
   ): void {
     const {
@@ -169,7 +150,7 @@ export class DriveManager {
       driveWeights = {},
     } = context;
 
-    const w = (key: string) => driveWeights[key] ?? 1.0;
+    const w = (key: keyof AgentDrives) => driveWeights[key] ?? 1.0;
 
     // --- Tidiness ---
     if (nearbyFloorItems > 0) {
@@ -221,19 +202,15 @@ export class DriveManager {
     }
 
     // --- Energy ---
-    // Depletes while moving; recovers very slowly on its own (zone effects do the real work)
     if (isMoving) {
-      this.drives.energy = Math.max(
-        0,
-        this.drives.energy -
-          DRIVE_CONFIGS.energy.decayRate * deltaSec * w("energy"),
-      );
+      const effectiveDecay =
+        DRIVE_CONFIGS.energy.decayRate *
+        (isInPreferredZone ? 0.7 : 1.0) *
+        w("energy");
+      this.drives.energy = Math.max(0, this.drives.energy - effectiveDecay * deltaSec);
     } else {
-      // Passive very slow recovery while standing still
-      this.drives.energy = Math.min(
-        100,
-        this.drives.energy + 0.1 * deltaSec,
-      );
+      const effectiveRecovery = (isInPreferredZone ? 0.3 : 0.1) * deltaSec;
+      this.drives.energy = Math.min(100, this.drives.energy + effectiveRecovery);
     }
 
     // --- Focus ---
@@ -279,10 +256,10 @@ export class DriveManager {
    * Apply zone influence effects to all drives.
    * Separate from update() so zone effects are cleanly decoupled.
    */
-  applyZoneEffects(
+  public applyZoneEffects(
     effects: Partial<Record<keyof AgentDrives, number>>,
     deltaSec: number,
-    driveWeights: Partial<Record<string, number>> = {},
+    driveWeights: Partial<Record<keyof AgentDrives, number>> = {},
   ): void {
     for (const [key, rate] of Object.entries(effects) as [
       keyof AgentDrives,
@@ -305,7 +282,15 @@ export class DriveManager {
     const now = Date.now();
     let mostUrgent: { drive: keyof AgentDrives; value: number } | null = null;
 
-    for (const key of Object.keys(DRIVE_CONFIGS) as (keyof AgentDrives)[]) {
+    const ACTIONABLE_DRIVES: (keyof AgentDrives)[] = [
+      "energy",
+      "tidiness",
+      "curiosity",
+      "wonder",
+      "social",
+    ];
+
+    for (const key of ACTIONABLE_DRIVES) {
       const config = DRIVE_CONFIGS[key];
       const value = this.drives[key];
 

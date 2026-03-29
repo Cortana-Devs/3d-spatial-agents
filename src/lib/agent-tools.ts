@@ -62,7 +62,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "go_to",
       description:
-        "Walk to a specific position or named zone in the park. Use zone names when available (e.g. 'observatory', 'garden', 'workshop', 'arena', 'gallery').",
+        "Walk to a specific position or named sector in the Donut Lab. Use sector IDs exclusively: 'center-park', 'fishing-dock', 'core-lab', 'data-analysis', 'break-room', 'conference-area', 'interior-ring', 'exterior-plaza'. Avoid raw coordinates if possible.",
       parameters: {
         type: "object",
         properties: {
@@ -71,7 +71,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
           zoneId: {
             type: "string",
             description:
-              "Optional semantic zone name (e.g. 'observatory', 'garden', 'workshop', 'arena', 'gallery'). If provided, targetX/Z are ignored.",
+              "Semantic sector ID: 'center-park', 'fishing-dock', 'core-lab', 'data-analysis', 'break-room', 'conference-area', 'interior-ring', or 'exterior-plaza'. If provided, targetX/Z are ignored.",
           },
         },
         required: [],
@@ -171,17 +171,17 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "contemplate",
       description:
-        "Go to a scenic spot or point of interest and take in the view. Reflect quietly. Best used when Wonder is low or you want a moment of peace. Provides wonder and energy recovery.",
+        "Go to a scenic spot and take in the view. Best when Wonder is LOW. Restores wonder and energy.",
       parameters: {
         type: "object",
         properties: {
           zoneId: {
             type: "string",
-            description: "Zone to contemplate in: 'observatory', 'garden', or 'gallery'. Defaults to nearest scenic zone.",
+            description: "Zone to contemplate in: 'center-park', 'fishing-dock', or 'core-lab'. Defaults to center-park.",
           },
           poiId: {
             type: "string",
-            description: "Optional specific POI ID to appreciate (from perceived POIs).",
+            description: "Optional specific POI ID to appreciate (from Perception table).",
           },
         },
         required: [],
@@ -193,7 +193,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "rest",
       description:
-        "You feel tired. Walk to the Garden Atrium, find a bench, and rest until your energy recovers. This is the primary way to restore Energy drive.",
+        "You feel tired. Walk to the Break Room (south sector) or a nearby Agent Pod to rest until energy recovers. If you prefer the pod, use 'rest_in_pod' instead.",
       parameters: {
         type: "object",
         properties: {},
@@ -224,7 +224,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "collaborate",
       description:
-        "Walk toward another agent to work on something together. They may join you at the Workshop or Arena. Satisfies Social and Belonging drives.",
+        "Walk toward another agent to work on something together. They may join you in the Core Lab or Conference Area. Satisfies Social and Belonging drives.",
       parameters: {
         type: "object",
         properties: {
@@ -265,7 +265,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "present",
       description:
-        "Walk to the Collaboration Arena podium and deliver a short speech on a topic. Great when Social or Helpfulness drives are high and other agents are nearby.",
+        "Walk to the Conference Area and deliver a short speech on a topic. Great when Social or Helpfulness drives are high and other agents are nearby.",
       parameters: {
         type: "object",
         properties: {
@@ -279,6 +279,24 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
           },
         },
         required: ["topic"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "rest_in_pod",
+      description:
+        "Navigate to a nearby Agent Pod (resting chamber) and dock to enter low-power mode. This is the most efficient way to recover energy and system health.",
+      parameters: {
+        type: "object",
+        properties: {
+          podId: {
+            type: "string",
+            description: "The exact ID of the pod to dock in (from Perception table). If omitted, the system will find the nearest available pod.",
+          },
+        },
+        required: [],
       },
     },
   },
@@ -302,7 +320,8 @@ export type ToolCallAction =
   | { tool: "explore"; preferredZone?: string }
   | { tool: "collaborate"; agentId: string; topic?: string }
   | { tool: "emote"; gesture: "wave" | "nod" | "shrug" | "cheer" | "think" }
-  | { tool: "present"; topic: string; speech?: string };
+  | { tool: "present"; topic: string; speech?: string }
+  | { tool: "rest_in_pod"; podId?: string };
 
 export function parseToolCall(
   name: string,
@@ -356,6 +375,8 @@ export function parseToolCall(
       case "present":
         if (!args.topic) return null;
         return { tool: "present", topic: args.topic, speech: args.speech };
+      case "rest_in_pod":
+        return { tool: "rest_in_pod", podId: args.podId };
       default:
         console.warn(`[agent-tools] Unknown tool call: "${name}"`);
         return null;
