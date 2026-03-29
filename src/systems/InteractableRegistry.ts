@@ -8,6 +8,21 @@ export type { PlacingArea, WorldObject } from "@/types/world";
 const _tempWorldPos = new THREE.Vector3();
 const _tempQuat = new THREE.Quaternion();
 
+/** Works for THREE.Vector3, YUKA.Vector3, or any { x, y, z } — avoids prototype mismatches. */
+function distSq3(
+  ax: number,
+  ay: number,
+  az: number,
+  bx: number,
+  by: number,
+  bz: number,
+): number {
+  const dx = ax - bx;
+  const dy = ay - by;
+  const dz = az - bz;
+  return dx * dx + dy * dy + dz * dz;
+}
+
 export class InteractableRegistry {
   private static instance: InteractableRegistry;
   private objects: Map<string, WorldObject> = new Map();
@@ -64,13 +79,20 @@ export class InteractableRegistry {
   /**
    * Dynamically infer the semantic zone name based on the nearest placing area group.
    * This gives the LLM context of *where* it is (e.g. "Storage Table 6" instead of just coordinates).
+   *
+   * Accepts duck-typed positions (YUKA.Vector3 has x/y/z but not THREE.Vector3 methods).
    */
-  public getSemanticZone(position: THREE.Vector3): string {
+  public getSemanticZone(position: { x: number; y: number; z: number }): string {
     let nearestDistSq = Infinity;
     let nearestGrpName = "Hallway/Open Space";
 
+    const px = position.x;
+    const py = position.y;
+    const pz = position.z;
+
     for (const area of this.placingAreas.values()) {
-      const distSq = position.distanceToSquared(area.position);
+      const ap = area.position;
+      const distSq = distSq3(px, py, pz, ap.x, ap.y, ap.z);
       if (distSq < nearestDistSq) {
         nearestDistSq = distSq;
         nearestGrpName = area.groupName || area.groupId || "Unknown Area";
