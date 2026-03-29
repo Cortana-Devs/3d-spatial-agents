@@ -223,6 +223,12 @@ export function usePlayerController(
             } else if (nearest.type === "door") {
               setDebugText("Toggling Door...");
               useGameStore.getState().setInteractionTarget(nearest.id);
+            } else if (nearest.type === "pod") {
+              setDebugText("Agent pod — use Deploy / Recall");
+              useGameStore.getState().setFocusedPodId(nearest.id);
+              if (document.pointerLockElement) {
+                document.exitPointerLock();
+              }
             }
           } else {
             // Check for nearby AI Agents (Follow Logic)

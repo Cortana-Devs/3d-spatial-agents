@@ -11,6 +11,7 @@ import { AgentCommunicationPanel } from "../panels/AgentCommunicationPanel";
 import { StatusBar } from "./StatusBar";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { FileEditorModal } from "../panels/FileEditorModal";
+import PodInteractionPrompt from "../PodInteractionPrompt";
 
 function formatAgentLabel(agentId: string): string {
   const match = /^agent-0*(\d+)$/.exec(agentId);
@@ -283,6 +284,7 @@ export default function Overlay() {
 
   return (
     <>
+      <PodInteractionPrompt />
       {/* Memory Reset Toast */}
       {resetToast && (
         <div

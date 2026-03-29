@@ -63,6 +63,8 @@ export function resolveCurrentBehavior(taskQueue: AgentTaskQueue): string {
     case "SIT":
     case "REST":
       return phase === "SEATED" ? "RESTING" : "GOING_TO_REST";
+    case "REST_IN_POD":
+      return phase === "DOCKED" ? "DOCKED_IN_POD" : "RETURNING_TO_POD";
     case "CONTEMPLATE":
       return phase === "GAZING" ? "CONTEMPLATING" : "TRAVELING";
     case "PICK_NEARBY":

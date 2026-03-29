@@ -5,6 +5,7 @@ import type { GameState } from "./gameStoreTypes";
 import { createSettingsSlice } from "./settingsStore";
 import { createUISlice } from "./uiStore";
 import { createWorldSlice } from "./worldStore";
+import { createPodSlice } from "./podStore";
 
 export type { GameState } from "./gameStoreTypes";
 export type { GameInteractable } from "./gameStoreTypes";
@@ -17,4 +18,5 @@ export const useGameStore = create<GameState>()((...args) => ({
   ...createChatSlice(...args),
   ...createAgentSlice(...args),
   ...createUISlice(...args),
+  ...createPodSlice(...args),
 }));

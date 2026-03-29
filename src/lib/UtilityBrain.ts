@@ -106,10 +106,20 @@ export class UtilityBrain {
       }
 
       case "tidiness": {
-        const nearbyItems = registry.getNearby(position, 15);
-        const floorItem = nearbyItems.find(i => i.pickable && !i.carriedBy && !i.placedInArea && !registry.isItemClaimed(i.id));
-        if (floorItem) {
-          const area = registry.getEmptyAreaByGroup(floorItem.homeAreaId || "core-lab");
+        // Fix: Use only visible perceived entities (prevents "X-ray vision" through walls)
+        const visibleItems = perceivedEntities.filter(
+          (e) => e.type === "OBJECT" && e.isVisible && e.distance < 15
+        );
+        
+        const floorItem = visibleItems.find(e => {
+          const registryItem = registry.getById(e.id || "");
+          return registryItem && registryItem.pickable && !registryItem.carriedBy && 
+                 !registryItem.placedInArea && !registry.isItemClaimed(registryItem.id);
+        });
+
+        if (floorItem && floorItem.id) {
+          const registryItem = registry.getById(floorItem.id)!;
+          const area = registry.getEmptyAreaByGroup(registryItem.homeAreaId || "core-lab");
           if (area) {
             return [
               { type: "PICK_NEARBY", priority: 4, itemId: floorItem.id, scriptId: "local_tidy" },

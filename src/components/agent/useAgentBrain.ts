@@ -41,6 +41,7 @@ import {
   resolveCurrentBehavior,
 } from "@/lib/agent-brain-utils";
 import { MAX_SAFE_RADIUS, RING_INNER_RADIUS } from "@/constants/world";
+import { getPodDeployExitPosition } from "@/config/agentPods";
 import {
   MAX_STEP_UP,
   PLAYER_COOLDOWN_TIME,
@@ -105,6 +106,10 @@ export function useAgentBrain(
   const familiarityRef = useRef<SpatialFamiliarity>(new SpatialFamiliarity());
   const stuckTimer = useRef(0);
   const lastStuckCheckPos = useRef(new THREE.Vector3());
+  const prevTaskPhaseRef = useRef<string>("IDLE");
+  const autoRestIdleSecRef = useRef(0);
+  /** Seconds of sustained empty queue before auto REST_IN_POD */
+  const AUTO_REST_IDLE_SEC = 12;
 
   // Tier 1: Per-frame allocation elimination — all reusable Vector3/Quaternion objects
   // hoisted as refs so they are never re-allocated inside useFrame callbacks.
@@ -236,6 +241,59 @@ export function useAgentBrain(
       window.removeEventListener("agent-meeting-announcement", handler);
   }, [id]);
 
+  // Pod deploy / recall from player UI
+  useEffect(() => {
+    const onDeploy = (e: Event) => {
+      const { agentId, podId } = (e as CustomEvent<{ agentId: string; podId: string }>)
+        .detail;
+      if (agentId !== id) return;
+      const q = AgentTaskRegistry.getInstance().getOrCreate(id);
+      q.exitDock();
+      const exitPos = getPodDeployExitPosition(podId);
+      if (exitPos) {
+        q.enqueue({
+          type: "GO_TO",
+          priority: 30,
+          scriptId: "pod_deploy",
+          targetPos: exitPos,
+        });
+      }
+      q.enqueue({
+        type: "WANDER",
+        priority: 0,
+        scriptId: "subconscious_wander",
+      });
+    };
+    const onRecall = (e: Event) => {
+      const { agentId, podId } = (e as CustomEvent<{ agentId: string; podId: string }>)
+        .detail;
+      if (agentId !== id) return;
+      const q = AgentTaskRegistry.getInstance().getOrCreate(id);
+      q.cancelScript("subconscious_wander");
+      q.cancelScript("subconscious_explore");
+      q.cancelScript("auto_rest");
+      q.cancelScript("auto_rest_observe");
+      q.enqueue({
+        type: "REST_IN_POD",
+        priority: 25,
+        podId,
+        scriptId: "player_recall",
+      });
+    };
+    window.addEventListener("agent-deploy-from-pod", onDeploy as EventListener);
+    window.addEventListener("agent-recall-to-pod", onRecall as EventListener);
+    return () => {
+      window.removeEventListener(
+        "agent-deploy-from-pod",
+        onDeploy as EventListener,
+      );
+      window.removeEventListener(
+        "agent-recall-to-pod",
+        onRecall as EventListener,
+      );
+    };
+  }, [id]);
+
   // --- ANIMATION STATE ---
   const [animationState, setAnimationState] = useState<
     "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt"
@@ -291,11 +349,60 @@ export function useAgentBrain(
 
     const pauseForOpenChat = playerProximityState.current === "CHATTING";
 
+    const store = useGameStore.getState();
+    const myPodId = store.getPodIdForAgent(id);
+
     let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
     if (!pauseForOpenChat) {
       steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
     }
+
+    const phaseNow = taskQueue.getCurrentPhase();
+    if (phaseNow === "DOCKED" && prevTaskPhaseRef.current !== "DOCKED") {
+      const pid = taskQueue.getCurrentTask()?.podId;
+      if (pid) {
+        useGameStore.getState().setPodDeployed(pid, false);
+      }
+    }
+    prevTaskPhaseRef.current = phaseNow;
+
     const hasManualTask = taskQueue.isBusy();
+
+    // Auto return to pod after sustained idle (empty queue, deployed)
+    {
+      const podSnap = myPodId ? store.pods[myPodId] : null;
+      if (
+        myPodId &&
+        podSnap &&
+        podSnap.assignedAgentId === id &&
+        podSnap.isDeployed &&
+        followingAgentId !== id &&
+        playerProximityState.current !== "GREETING" &&
+        playerProximityState.current !== "CHATTING" &&
+        !pauseForOpenChat &&
+        phaseNow !== "DOCKED"
+      ) {
+        if (
+          taskQueue.getCurrentPhase() === "IDLE" &&
+          taskQueue.getQueueLength() === 0
+        ) {
+          autoRestIdleSecRef.current += delta;
+          if (autoRestIdleSecRef.current >= AUTO_REST_IDLE_SEC) {
+            autoRestIdleSecRef.current = 0;
+            taskQueue.enqueue({
+              type: "REST_IN_POD",
+              priority: 14,
+              podId: myPodId,
+              scriptId: "auto_rest",
+            });
+          }
+        } else {
+          autoRestIdleSecRef.current = 0;
+        }
+      } else {
+        autoRestIdleSecRef.current = 0;
+      }
+    }
 
     const bFollowPath = vehicle.steering
       .behaviors[0] as YUKA.FollowPathBehavior;
@@ -527,8 +634,11 @@ export function useAgentBrain(
           lastStuckCheckPos.current.copy(vehicle.position as unknown as THREE.Vector3);
         }
 
-        // Recovery: Abort the current task and fall back to WANDER
-        if (stuckTimer.current > STUCK_TIMER_THRESHOLD_SEC) {
+        // Recovery: Abort the current task and fall back to WANDER (skip while returning to pod)
+        if (
+          stuckTimer.current > STUCK_TIMER_THRESHOLD_SEC &&
+          taskQueue.getCurrentTask()?.type !== "REST_IN_POD"
+        ) {
           console.warn(`[useAgentBrain:${id}] Agent stuck for 4s - Aborting task queue and fallback to wander.`);
           const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
           queue.cancel();
@@ -883,11 +993,13 @@ export function useAgentBrain(
           const items = registry.getNearby(vPos, 30);
           for (const item of items) {
             if (!item.pickable || item.carriedBy || item.placedInArea) continue;
+            const isClaimed = registry.isItemClaimed(item.id);
             raw.push({
               type: "OBJECT",
               id: item.id,
               distance: vPos.distanceTo(item.position),
               objectType: item.type,
+              status: isClaimed ? "(C) Claimed" : "(A) Available",
               name: item.name,
               position: {
                 x: item.position.x,
@@ -917,8 +1029,11 @@ export function useAgentBrain(
 
       const urgentDrive = driveManagerRef.current.getUrgentDrive();
 
+      const isDocked = taskQueue.getCurrentPhase() === "DOCKED";
+
       // --- LLM (social / reactive only) ---
       if (
+        !isDocked &&
         playerProximityState.current !== "GREETING" &&
         playerProximityState.current !== "CHATTING"
       ) {
@@ -1072,6 +1187,7 @@ export function useAgentBrain(
                 drives: driveContextStr,
                 zoneContext: zoneCtxStr,
                 spatialMemory: spatialMemCtxStr,
+                assignedPodId: myPodId || undefined,
                 personality: {
                   name: personality.name,
                   trait: personality.trait,
@@ -1187,6 +1303,7 @@ export function useAgentBrain(
 
       const utilityNow = Date.now();
       if (
+        !isDocked &&
         utilityNow - lastUtilityCheckTimeRef.current > UTILITY_CHECK_INTERVAL_MS &&
         !taskQueue.isBusy() &&
         !brainRef.current.state.isThinking
@@ -1273,6 +1390,8 @@ export function useAgentBrain(
       let newState: "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt" = "Idle";
       if (taskPhase === "EMOTING" && taskType === "EMOTE" && taskQueue.getCurrentTask()?.gesture === "wave") {
         newState = "Wave";
+      } else if (taskPhase === "DOCKED") {
+        newState = "Idle";
       } else if (taskPhase === "SEATED") {
         newState = taskType === "REST" ? "Rest" : "Sit";
       } else if (taskPhase === "LEANING") {

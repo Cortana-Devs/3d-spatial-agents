@@ -90,8 +90,13 @@ export class SensorySystem {
     rawEntities: NearbyEntity[],
     collidableMeshes: THREE.Object3D[]
   ): PerceptionRecord[] {
-    const now = Date.now();
     this._agentForward.set(0, 0, 1).applyQuaternion(agentQuat);
+    const now = Date.now();
+
+    // 0. Reset visibility for all memories (we'll re-set it for those we actually see this frame)
+    for (const record of this.workingMemory.values()) {
+      record.isVisible = false;
+    }
 
     // 1. Process Vision
     for (const raw of rawEntities) {

@@ -4,6 +4,8 @@ import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
 import { getZoneCenterPosition, getNearestBench } from "@/config/donutLabRoutines";
 import { HearingBus } from "@/lib/SensorySystem";
+import { useGameStore } from "@/store/gameStore";
+import { getPodDockWorldPosition, getPodLookAtWorldPosition } from "@/config/agentPods";
 import {
   TASK_CLOSE_APPROACH_DIST,
   TASK_EMOTE_DEFAULT_DURATION,
@@ -100,6 +102,20 @@ export class AgentTaskQueue {
   public getCurrentPhase(): TaskPhase { return this.phase; }
   public getCurrentTask(): AgentTask | null { return this.currentTask; }
 
+  public getQueueLength(): number {
+    return this.queue.length;
+  }
+
+  /** Leave pod dock (player deploy). Clears DOCKED / REST_IN_POD without firing task-completed. */
+  public exitDock(): void {
+    if (this.phase !== "DOCKED") return;
+    const t = this.currentTask;
+    this.cleanupTask(t);
+    this.currentTask = null;
+    this.phase = "IDLE";
+    this.resetState();
+  }
+
   private setPhase(newPhase: TaskPhase): void {
     const oldPhase = this.phase;
     this.phase = newPhase;
@@ -117,7 +133,14 @@ export class AgentTaskQueue {
   }
 
   public isInPoseState(): boolean {
-    return ["SEATED", "LEANING", "GAZING", "EMOTING", "PRESENTING"].includes(this.phase);
+    return [
+      "SEATED",
+      "LEANING",
+      "GAZING",
+      "EMOTING",
+      "PRESENTING",
+      "DOCKED",
+    ].includes(this.phase);
   }
 
   public cancel(): void {
@@ -183,6 +206,23 @@ export class AgentTaskQueue {
       }
     }
 
+    if (this.currentTask.type === "REST_IN_POD") {
+      let pid = this.currentTask.podId;
+      if (!pid) {
+        pid = useGameStore.getState().getPodIdForAgent(this.agentId) || undefined;
+      }
+      
+      const dock = pid ? getPodDockWorldPosition(pid) : null;
+      const lookAt = pid ? getPodLookAtWorldPosition(pid) : null;
+      if (!dock) {
+        this.setPhase("COMPLETED");
+        return;
+      }
+      this.currentTask.targetPos = dock;
+      if (lookAt) this.currentTask.lookTarget = lookAt;
+      this.currentTask.podId = pid;
+    }
+
     if (this.currentTask.type === "EMOTE") {
       this.phase = "EMOTING";
       this.phaseTimer = 0;
@@ -192,7 +232,8 @@ export class AgentTaskQueue {
     this.phase = "NAVIGATING";
 
     if (!["SAY", "WANDER", "EMOTE"].includes(this.currentTask.type) && Math.random() < 0.25) {
-      const phrase = ["SIT", "REST", "CONTEMPLATE", "EXPLORE"].includes(this.currentTask.type)
+      const moveTaskTypes = ["SIT", "REST", "CONTEMPLATE", "EXPLORE", "GO_TO", "FOLLOW_PLAYER", "FOLLOW_PATH", "COLLABORATE", "REST_IN_POD"];
+      const phrase = moveTaskTypes.includes(this.currentTask.type)
         ? getRandomPhrase("MOVING") : getRandomPhrase("WORKING");
       window.dispatchEvent(new CustomEvent("subconscious-speak", { detail: { agentId: this.agentId, text: phrase } }));
     }
@@ -217,6 +258,7 @@ export class AgentTaskQueue {
   public update(delta: number, vehiclePos: THREE.Vector3, playerPos?: THREE.Vector3): SteeringCommand {
     this.lastKnownPos.copy(vehiclePos);
     if (this.phase === "IDLE") return { type: "NONE" };
+    if (this.phase === "DOCKED") return { type: "STOP" };
     this.elapsedTime += delta;
 
     if (this.phase === "COMPLETED") {
@@ -324,6 +366,9 @@ export class AgentTaskQueue {
         case "REST":
           targetPos = this.currentTask!.targetPos || (this.currentTask!.itemId ? reg.getWorldPosition(this.currentTask!.itemId) : null);
           break;
+        case "REST_IN_POD":
+          targetPos = this.currentTask!.targetPos || null;
+          break;
         default: targetPos = this.currentTask!.targetPos || null; break;
       }
 
@@ -351,10 +396,13 @@ export class AgentTaskQueue {
       const distToTarget = Math.hypot(vehiclePos.x - distCheckPos.x, vehiclePos.z - distCheckPos.z);
       this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
 
-      if (distToTarget < TASK_ARRIVAL_DIST) {
-        const type = this.currentTask!.type;
+      const type = this.currentTask!.type;
+      const arrivalDist = (type === "REST_IN_POD") ? 0.4 : TASK_ARRIVAL_DIST;
+
+      if (distToTarget < arrivalDist) {
         if (["GO_TO", "WANDER", "EXPLORE", "COLLABORATE"].includes(type)) { this.setPhase("COMPLETED"); return { type: "STOP" }; }
         if (type === "FOLLOW_PLAYER") { this.hasSetPath = false; return { type: "ARRIVE", target: targetPos }; }
+        if (type === "REST_IN_POD") { this.phase = "DOCKED"; this.phaseTimer = 0; return { type: "STOP", faceTarget: this.currentTask!.lookTarget }; }
         if (type === "SIT" || type === "REST") { this.phase = "SEATED"; this.phaseTimer = 0; return { type: "STOP" }; }
         if (type === "LEAN") { this.phase = "LEANING"; this.phaseTimer = 0; return { type: "STOP" }; }
         if (type === "LOOK_AT" || type === "CONTEMPLATE") { this.phase = "GAZING"; this.phaseTimer = 0; return { type: "STOP", faceTarget: this.currentTask!.lookTarget }; }

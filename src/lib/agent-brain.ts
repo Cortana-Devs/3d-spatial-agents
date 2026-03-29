@@ -55,10 +55,14 @@ The Donut Lab is a recursive circular ring subdivided into 8 semantic sectors. Y
 - 'interior-ring' (Main Circular Walkway)
 - 'exterior-plaza' (Outer Deck / Observation)
 
+## Agent Pods (Resting Chambers)
+There are specialized **Agent Pods** (appearing as 'pod' in your perception) located along the outer walls of the lab. These are high-tech resting chambers where you can dock to fully recharge your systems and enter a low-power state. They are your primary home base.
+
 ## Your State
 - **Position**: (${context.position.x.toFixed(1)}, ${context.position.y.toFixed(1)}, ${context.position.z.toFixed(1)})
 - **Current Sector**: ${context.zoneContext ?? "Unknown transitional corridor"}
 - **Behavior**: ${context.currentBehavior}
+- **Your Assigned Pod**: ${context.assignedPodId ?? "No pod currently assigned"}
 
 ## Your Current State
 ${context.drives || "All drives balanced."}

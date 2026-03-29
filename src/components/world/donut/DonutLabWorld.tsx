@@ -9,6 +9,7 @@ import DonutCenterPark, { getTerrainHeight } from "./DonutCenterPark";
 import { buildDonutObstacles } from "./DonutObstacles";
 import DonutLabFurniture from "./DonutLabFurniture";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, DEFAULT_RING_OUTER_RADIUS, ENV_PROP_SCALE_FACTOR } from "./labFloorConstants";
+import { buildPodInteractables } from "@/config/agentPods";
 
 // --- Curated Dream Park Layout ---
 const treeData = [
@@ -76,6 +77,8 @@ function getDonutInteractables() {
       isOpen: false,
     });
   }
+
+  items.push(...buildPodInteractables());
 
   return items;
 }

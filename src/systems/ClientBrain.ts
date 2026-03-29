@@ -47,7 +47,7 @@ export class ClientBrain {
     nearbyEntities: NearbyEntity[],
     currentBehavior: string,
     taskState?: AgentContext["taskState"],
-    richContext?: Pick<AgentContext, "zoneContext" | "spatialMemory" | "personality" | "drives">,
+    richContext?: Pick<AgentContext, "zoneContext" | "spatialMemory" | "personality" | "drives" | "assignedPodId">,
   ): Promise<AgentDecision | null> {
     // Rate Limiting Check
     if (this.state.isThinking || !this.rateLimiter.tryConsume()) {
@@ -280,6 +280,15 @@ export class ClientBrain {
                   } as any);
                 }
                 break;
+
+              case "rest_in_pod": {
+                tasks.push({
+                  type: "REST_IN_POD",
+                  podId: args.podId || undefined,
+                  priority: 15,
+                } as any);
+                break;
+              }
             }
           } catch (e) {
             console.error(`[ClientBrain:${this.id}] Failed parsing tool call:`, e);

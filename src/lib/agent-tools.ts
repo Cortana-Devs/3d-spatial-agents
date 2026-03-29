@@ -193,7 +193,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "rest",
       description:
-        "You feel tired. Walk to the Break Room (south sector), find a seat, and rest until energy recovers. Primary way to restore Energy drive.",
+        "You feel tired. Walk to the Break Room (south sector) or a nearby Agent Pod to rest until energy recovers. If you prefer the pod, use 'rest_in_pod' instead.",
       parameters: {
         type: "object",
         properties: {},
@@ -282,6 +282,24 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "rest_in_pod",
+      description:
+        "Navigate to a nearby Agent Pod (resting chamber) and dock to enter low-power mode. This is the most efficient way to recover energy and system health.",
+      parameters: {
+        type: "object",
+        properties: {
+          podId: {
+            type: "string",
+            description: "The exact ID of the pod to dock in (from Perception table). If omitted, the system will find the nearest available pod.",
+          },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -302,7 +320,8 @@ export type ToolCallAction =
   | { tool: "explore"; preferredZone?: string }
   | { tool: "collaborate"; agentId: string; topic?: string }
   | { tool: "emote"; gesture: "wave" | "nod" | "shrug" | "cheer" | "think" }
-  | { tool: "present"; topic: string; speech?: string };
+  | { tool: "present"; topic: string; speech?: string }
+  | { tool: "rest_in_pod"; podId?: string };
 
 export function parseToolCall(
   name: string,
@@ -356,6 +375,8 @@ export function parseToolCall(
       case "present":
         if (!args.topic) return null;
         return { tool: "present", topic: args.topic, speech: args.speech };
+      case "rest_in_pod":
+        return { tool: "rest_in_pod", podId: args.podId };
       default:
         console.warn(`[agent-tools] Unknown tool call: "${name}"`);
         return null;

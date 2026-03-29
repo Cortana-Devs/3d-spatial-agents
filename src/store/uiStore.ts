@@ -120,4 +120,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (
 
   isCommandBarOpen: false,
   setCommandBarOpen: (isOpen) => set({ isCommandBarOpen: isOpen }),
+
+  focusedPodId: null,
+  setFocusedPodId: (id) => set({ focusedPodId: id }),
 });

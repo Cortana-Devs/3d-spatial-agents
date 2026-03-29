@@ -21,7 +21,8 @@ export type GameInteractable = {
     | "projector_screen"
     | "tv"
     | "coffee_machine"
-    | "telephone";
+    | "telephone"
+    | "pod";
   position: THREE.Vector3;
   rotation: THREE.Quaternion;
   label?: string;
@@ -195,10 +196,29 @@ export interface UISlice {
   removePendingTask: (index: number) => void;
   isCommandBarOpen: boolean;
   setCommandBarOpen: (isOpen: boolean) => void;
+  focusedPodId: string | null;
+  setFocusedPodId: (id: string | null) => void;
+}
+
+/** Agent deployment pods along the outer ring. */
+export interface PodRuntimeState {
+  assignedAgentId: string | null;
+  isDeployed: boolean;
+  position: { x: number; y: number; z: number };
+}
+
+export interface PodSlice {
+  pods: Record<string, PodRuntimeState>;
+  initPods: () => void;
+  deployAgent: (podId: string) => void;
+  recallAgent: (podId: string) => void;
+  setPodDeployed: (podId: string, deployed: boolean) => void;
+  getPodIdForAgent: (agentId: string) => string | null;
 }
 
 export type GameState = WorldSlice &
   SettingsSlice &
   ChatSlice &
   AgentSlice &
-  UISlice;
+  UISlice &
+  PodSlice;

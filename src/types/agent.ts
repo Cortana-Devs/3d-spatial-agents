@@ -36,6 +36,7 @@ export interface AgentContext {
   drives?: string;
   zoneContext?: string;
   spatialMemory?: string;
+  assignedPodId?: string;
   personality?: {
     name: string;
     trait: string;
@@ -80,12 +81,14 @@ export type AgentTaskType =
   | "REST"
   | "COLLABORATE"
   | "PRESENT"
-  | "EMOTE";
+  | "EMOTE"
+  | "REST_IN_POD";
 
 export interface AgentTask {
   type: AgentTaskType;
   priority: number;
   scriptId?: string;
+  podId?: string;
   itemId?: string;
   destAreaId?: string;
   targetAreaId?: string;
@@ -106,6 +109,7 @@ export type TaskPhase =
   | "GAZING"
   | "EMOTING"
   | "PRESENTING"
+  | "DOCKED"
   | "COMPLETED";
 
 export interface SteeringCommand {
