@@ -2,46 +2,14 @@ import { getGroqClient, rotateGroqKey } from "@/lib/groq";
 import { logAgentInteraction } from "@/lib/logging/agent-logger";
 import { AGENT_TOOLS } from "./agent-tools";
 import { performWebSearch } from "./search";
-import type { ChatCompletionMessage, ChatCompletionMessageParam, ChatCompletionToolMessageParam } from "groq-sdk/resources/chat/completions";
+import type {
+  ChatCompletionMessage,
+  ChatCompletionMessageParam,
+  ChatCompletionToolMessageParam,
+} from "groq-sdk/resources/chat/completions";
+import type { AgentContext, NearbyEntity, TraceOptions } from "@/types/agent";
 
-export interface NearbyEntity {
-  type: string; // e.g., 'PLAYER', 'AGENT', 'OBSTACLE', 'OBJECT'
-  id?: string;
-  distance: number;
-  status?: string; // e.g., 'Moving', 'Idle', 'carried by ...'
-  objectType?: string; // For OBJECT entities: 'file', 'laptop', etc.
-  name?: string; // Human-readable name
-  position?: { x: number; y: number; z: number };
-}
-
-export interface AgentContext {
-  position: { x: number; y: number; z: number };
-  nearbyEntities: NearbyEntity[];
-  currentBehavior: string;
-  /** Current task queue state — undefined if no queue is available */
-  taskState?: {
-    currentScriptId: string | null;
-    currentTask: string | null;
-    currentPriority: number;
-    queuedTasksCount: number;
-    phase: string;
-  };
-  /** Internal drives/needs */
-  drives?: string;
-  /** Zone mood context injected from ZoneInfluenceSystem */
-  zoneContext?: string;
-  /** Spatial memory summary from SpatialMemory */
-  spatialMemory?: string;
-  /** Agent personality name and trait */
-  personality?: { name: string; trait: string; speechStyle: string; bio: string };
-}
-
-export interface TraceOptions {
-  sessionId: string;
-  requestId: string;
-  conversationId?: string;
-  userId?: string;
-}
+export type { AgentContext, NearbyEntity, TraceOptions } from "@/types/agent";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

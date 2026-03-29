@@ -1,47 +1,8 @@
 import * as THREE from "three";
 import { HearingBus } from "@/lib/SensorySystem";
+import type { PlacingArea, WorldObject } from "@/types/world";
 
-export interface WorldObject {
-  id: string;
-  name: string;
-  type:
-    | "file"
-    | "laptop"
-    | "pendrive"
-    | "coffeecup"
-    | "generic"
-    | "sofa"
-    | "chair"
-    | "whiteboard"
-    | "projector_screen"
-    | "tv"
-    | "coffee_machine"
-    | "telephone"
-    | "pc"
-    | "switch"
-    | "door";
-  position: THREE.Vector3;
-  description?: string;
-  pickable: boolean;
-  carriedBy: string | null; // null = on ground, 'player' or agent-id
-  placedInArea?: string | null; // ID of the PlacingArea this item sits on, or null if on floor
-  homeAreaId?: string | null; // ID of the default PlacingArea this item belongs to
-  meshRef?: THREE.Object3D;
-  isOpen?: boolean; // Used for doors
-}
-
-export interface PlacingArea {
-  id: string;
-  name: string;
-  groupId?: string;
-  groupName?: string;
-  slotIndex?: number;
-  position: THREE.Vector3;
-  rotation: THREE.Quaternion; // world rotation of surface
-  currentItem: string | null; // ID of placed WorldObject or null for empty slot
-  dimensions: [number, number, number]; // width, height, depth of surface slab
-  meshRef?: THREE.Object3D;
-}
+export type { PlacingArea, WorldObject } from "@/types/world";
 
 // Reusable temp objects to avoid per-frame allocations
 const _tempWorldPos = new THREE.Vector3();

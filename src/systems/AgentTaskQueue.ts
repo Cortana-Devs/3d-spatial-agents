@@ -1,66 +1,31 @@
 import * as THREE from "three";
 import { InteractableRegistry } from "./InteractableRegistry";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
-import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
 import { getZoneCenterPosition, getNearestBench } from "@/config/donutLabRoutines";
 import { HearingBus } from "@/lib/SensorySystem";
+import {
+  TASK_CLOSE_APPROACH_DIST,
+  TASK_EMOTE_DEFAULT_DURATION,
+  TASK_LEAN_DEFAULT_DURATION,
+  TASK_LOOKAT_DEFAULT_DURATION,
+  TASK_MAX_RETRIES,
+  TASK_PATH_REFRESH_INTERVAL_SEC,
+  TASK_PRESENT_DEFAULT_DURATION,
+  TASK_REPATH_INTERVAL_SEC,
+  TASK_ARRIVAL_DIST,
+  TASK_SIT_DEFAULT_DURATION,
+  TASK_STUCK_MIN_DISTANCE,
+  TASK_STUCK_WINDOW_SEC,
+} from "@/constants/taskQueue";
+import type { AgentTask, SteeringCommand, TaskPhase } from "@/types/agent";
 
-// ============================================================================
-// Task Types
-// ============================================================================
-
-export type AgentTaskType =
-  | "GO_TO"
-  | "PICK_NEARBY"
-  | "PLACE_INVENTORY"
-  | "INTERACT"
-  | "SAY"
-  | "FOLLOW_PLAYER"
-  | "WANDER"
-  | "WAIT"
-  | "SIT"
-  | "LEAN"
-  | "LOOK_AT"
-  | "CONTEMPLATE"
-  | "EXPLORE"
-  | "REST"
-  | "COLLABORATE"
-  | "PRESENT"
-  | "EMOTE";
-
-export interface AgentTask {
-  type: AgentTaskType;
-  priority: number;
-  scriptId?: string;
-  itemId?: string;
-  destAreaId?: string;
-  targetAreaId?: string;
-  targetPos?: THREE.Vector3;
-  duration?: number;
-  content?: string;
-  lookTarget?: THREE.Vector3;
-  gesture?: "wave" | "nod" | "shrug" | "cheer" | "think";
-  partnerId?: string;
-}
-
-export type TaskPhase =
-  | "IDLE"
-  | "NAVIGATING"
-  | "ACTION_START"
-  | "SEATED"
-  | "LEANING"
-  | "GAZING"
-  | "EMOTING"
-  | "PRESENTING"
-  | "COMPLETED";
-
-export interface SteeringCommand {
-  type: "FOLLOW_PATH" | "ARRIVE" | "STOP" | "NONE";
-  path?: THREE.Vector3[];
-  target?: THREE.Vector3;
-  faceTarget?: THREE.Vector3;
-}
+export type {
+  AgentTask,
+  AgentTaskType,
+  SteeringCommand,
+  TaskPhase,
+} from "@/types/agent";
 
 // ============================================================================
 // AgentTaskQueue
@@ -83,20 +48,6 @@ export class AgentTaskQueue {
   private pathRefreshTimer: number = 0;
   private actionStartTime: number | null = null;
   private lastKnownPos: THREE.Vector3 = new THREE.Vector3();
-
-  private static readonly STUCK_WINDOW = 2.5;
-  private static readonly PATH_REFRESH_INTERVAL = 1.5;
-  private static readonly STUCK_MIN_DISTANCE = 1.0;
-  private static readonly REPATH_INTERVAL = 8.0;
-  private static readonly MAX_RETRIES = 5;
-  private static readonly ARRIVAL_DIST = 2.5;
-  private static readonly CLOSE_APPROACH_DIST = 4.0;
-
-  private static readonly SIT_DEFAULT_DURATION = 12.0;
-  private static readonly LEAN_DEFAULT_DURATION = 6.0;
-  private static readonly LOOKAT_DEFAULT_DURATION = 4.0;
-  private static readonly EMOTE_DEFAULT_DURATION = 2.5;
-  private static readonly PRESENT_DEFAULT_DURATION = 8.0;
 
   public static readonly taskRegistries = new Map<string, AgentTaskQueue>();
 
@@ -249,7 +200,7 @@ export class AgentTaskQueue {
 
   private recordPosition(x: number, z: number, time: number): void {
     this.stuckWindowPositions.push({ x, z, t: time });
-    const cutoff = time - AgentTaskQueue.STUCK_WINDOW;
+    const cutoff = time - TASK_STUCK_WINDOW_SEC;
     while (this.stuckWindowPositions.length > 0 && this.stuckWindowPositions[0].t < cutoff) {
       this.stuckWindowPositions.shift();
     }
@@ -259,8 +210,8 @@ export class AgentTaskQueue {
     if (this.stuckWindowPositions.length < 2) return false;
     const first = this.stuckWindowPositions[0];
     const last = this.stuckWindowPositions[this.stuckWindowPositions.length - 1];
-    if (last.t - first.t < AgentTaskQueue.STUCK_WINDOW * 0.8) return false;
-    return Math.hypot(last.x - first.x, last.z - first.z) < AgentTaskQueue.STUCK_MIN_DISTANCE;
+    if (last.t - first.t < TASK_STUCK_WINDOW_SEC * 0.8) return false;
+    return Math.hypot(last.x - first.x, last.z - first.z) < TASK_STUCK_MIN_DISTANCE;
   }
 
   public update(delta: number, vehiclePos: THREE.Vector3, playerPos?: THREE.Vector3): SteeringCommand {
@@ -298,10 +249,10 @@ export class AgentTaskQueue {
     if (["EMOTING", "SEATED", "LEANING", "GAZING", "PRESENTING"].includes(this.phase)) {
         this.phaseTimer += delta;
         let dur = this.currentTask?.duration || 4.0;
-        if (this.phase === "EMOTING") dur = this.currentTask?.duration ?? AgentTaskQueue.EMOTE_DEFAULT_DURATION;
-        if (this.phase === "SEATED") dur = this.currentTask?.duration ?? AgentTaskQueue.SIT_DEFAULT_DURATION;
-        if (this.phase === "LEANING") dur = this.currentTask?.duration ?? AgentTaskQueue.LEAN_DEFAULT_DURATION;
-        if (this.phase === "GAZING") dur = this.currentTask?.duration ?? AgentTaskQueue.LOOKAT_DEFAULT_DURATION;
+        if (this.phase === "EMOTING") dur = this.currentTask?.duration ?? TASK_EMOTE_DEFAULT_DURATION;
+        if (this.phase === "SEATED") dur = this.currentTask?.duration ?? TASK_SIT_DEFAULT_DURATION;
+        if (this.phase === "LEANING") dur = this.currentTask?.duration ?? TASK_LEAN_DEFAULT_DURATION;
+        if (this.phase === "GAZING") dur = this.currentTask?.duration ?? TASK_LOOKAT_DEFAULT_DURATION;
         if (this.phase === "PRESENTING") {
             if (this.phaseTimer < delta * 2 && this.currentTask?.content) {
                 window.dispatchEvent(new CustomEvent("agent-speak", { detail: { agentId: this.agentId, text: this.currentTask.content } }));
@@ -312,7 +263,7 @@ export class AgentTaskQueue {
                   type: "speech",
                 });
             }
-            dur = this.currentTask?.duration ?? AgentTaskQueue.PRESENT_DEFAULT_DURATION;
+            dur = this.currentTask?.duration ?? TASK_PRESENT_DEFAULT_DURATION;
         }
         if (this.phaseTimer >= dur) this.setPhase("COMPLETED");
         return { type: "STOP", faceTarget: this.currentTask?.lookTarget };
@@ -379,7 +330,7 @@ export class AgentTaskQueue {
       if (!targetPos) { this.setPhase("COMPLETED"); return { type: "STOP" }; }
 
       this.pathRefreshTimer += delta;
-      if (!this.hasSetPath || this.pathRefreshTimer >= AgentTaskQueue.PATH_REFRESH_INTERVAL) {
+      if (!this.hasSetPath || this.pathRefreshTimer >= TASK_PATH_REFRESH_INTERVAL_SEC) {
         if (!(this as any)._isWaitingForPath) {
           (this as any)._isWaitingForPath = true;
           AgentBrainClient.getInstance().findPathDetailed(vehiclePos, targetPos)
@@ -389,7 +340,7 @@ export class AgentTaskQueue {
         if ((this as any)._pendingPathResult) {
           const result = (this as any)._pendingPathResult; (this as any)._pendingPathResult = null;
           this.approachPos = result.approachPos;
-          if (!result.pathFound || result.path.length === 0) { this.hasSetPath = true; this.repathTimer = AgentTaskQueue.REPATH_INTERVAL - 1; return { type: "STOP" }; }
+          if (!result.pathFound || result.path.length === 0) { this.hasSetPath = true; this.repathTimer = TASK_REPATH_INTERVAL_SEC - 1; return { type: "STOP" }; }
           this.hasSetPath = true; this.pathRefreshTimer = 0; if (this.approachPos) this.approachPos.y = vehiclePos.y;
           return { type: "FOLLOW_PATH", path: result.path };
         }
@@ -400,7 +351,7 @@ export class AgentTaskQueue {
       const distToTarget = Math.hypot(vehiclePos.x - distCheckPos.x, vehiclePos.z - distCheckPos.z);
       this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
 
-      if (distToTarget < AgentTaskQueue.ARRIVAL_DIST) {
+      if (distToTarget < TASK_ARRIVAL_DIST) {
         const type = this.currentTask!.type;
         if (["GO_TO", "WANDER", "EXPLORE", "COLLABORATE"].includes(type)) { this.setPhase("COMPLETED"); return { type: "STOP" }; }
         if (type === "FOLLOW_PLAYER") { this.hasSetPath = false; return { type: "ARRIVE", target: targetPos }; }
@@ -412,12 +363,12 @@ export class AgentTaskQueue {
         this.phase = "ACTION_START"; this.phaseTimer = 0; return { type: "STOP", faceTarget: targetPos };
       }
 
-      if (this.currentTask?.type !== "FOLLOW_PLAYER" && distToTarget < AgentTaskQueue.CLOSE_APPROACH_DIST) {
+      if (this.currentTask?.type !== "FOLLOW_PLAYER" && distToTarget < TASK_CLOSE_APPROACH_DIST) {
         if (!this.isCloseApproach) { this.isCloseApproach = true; this.stuckWindowPositions = []; const arriveTarget = distCheckPos.clone(); arriveTarget.y = vehiclePos.y; return { type: "ARRIVE", target: arriveTarget }; }
         this.repathTimer += delta;
         if (this.isStuckByWindow() || this.repathTimer > 3.0) {
           this.retryCount++;
-          if (this.retryCount >= AgentTaskQueue.MAX_RETRIES) { console.warn(`Task failed: ${this.currentTask?.type}`); this.cleanupTask(this.currentTask); this.setPhase("COMPLETED"); return { type: "STOP" }; }
+          if (this.retryCount >= TASK_MAX_RETRIES) { console.warn(`Task failed: ${this.currentTask?.type}`); this.cleanupTask(this.currentTask); this.setPhase("COMPLETED"); return { type: "STOP" }; }
           this.repathTimer = 0; this.hasSetPath = false; this.stuckWindowPositions = [];
         }
         return { type: "NONE" };

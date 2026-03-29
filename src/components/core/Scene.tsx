@@ -9,11 +9,11 @@ import * as THREE from "three";
 import SceneWorldRoot from "@/components/core/scene/SceneWorldRoot";
 import Robot from "@/components/player/Player";
 import Agent from "@/components/agent/Agent";
-import YukaSystem from "@/components/systems/YukaSystem";
+import YukaSystem from "@/components/core/YukaSystem";
 import DebugCrosshair from "@/components/core/DebugCrosshair";
-import ObstacleVisualizer from "@/components/systems/ObstacleVisualizer";
-import { PlacingAreaMarkers } from "@/components/systems/PlacingAreaMarkers";
-import ObjectHighlighter from "@/components/systems/ObjectHighlighter";
+import ObstacleVisualizer from "@/components/world/debug/ObstacleVisualizer";
+import { PlacingAreaMarkers } from "@/components/world/debug/PlacingAreaMarkers";
+import ObjectHighlighter from "@/components/world/debug/ObjectHighlighter";
 
 import { useGameStore } from "@/store/gameStore";
 

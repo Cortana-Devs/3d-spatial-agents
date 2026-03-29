@@ -6,7 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import { Text, Text3D, Center, Bvh } from "@react-three/drei";
 import { Geometry, Base, Addition } from "@react-three/csg";
-import { usePlacingArea } from "@/components/systems/usePlacingArea";
+import { usePlacingArea } from "@/components/world/usePlacingArea";
 import {
   appleWhiteMaterial,
   appleDarkMaterial,

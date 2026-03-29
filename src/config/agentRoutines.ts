@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { InteractableRegistry } from '@/components/systems/InteractableRegistry';
-import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
+import { InteractableRegistry } from '@/systems/InteractableRegistry';
+import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
 
 // ============================================================================
 // Agent → Assigned storage table (donut-lab storage cupboards 1–5)

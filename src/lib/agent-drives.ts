@@ -15,28 +15,9 @@
  *               Creates gentle territorial attachment without aggressive possession.
  */
 
-// ============================================================================
-// Drive Schema
-// ============================================================================
+import type { AgentDrives } from "@/types/agent";
 
-export interface AgentDrives {
-  /** Drops when floor items exist nearby. Satisfied by placing items on surfaces. */
-  tidiness: number;
-  /** Decays over time. Satisfied by exploring new zones. */
-  curiosity: number;
-  /** Spikes when player is nearby or gives a command. Satisfied by completing tasks. */
-  helpfulness: number;
-  /** Decays without social contact. Satisfied by greeting agents or the player. */
-  social: number;
-  /** Depletes with movement and tasks. Restored by resting (Garden bench / SIT). */
-  energy: number;
-  /** Improves in Workshop zone; drops with frequent interruptions. */
-  focus: number;
-  /** Decays over time. Satisfied by appreciating POIs, views, beauty. */
-  wonder: number;
-  /** Satisfied by being in preferred zone and completing belonging actions. */
-  belonging: number;
-}
+export type { AgentDrives } from "@/types/agent";
 
 /** Per-drive configuration */
 interface DriveConfig {

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
-import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
-import { POIRegistry } from "@/components/systems/POIRegistry";
+import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
+import { POIRegistry } from "@/systems/POIRegistry";
 import DonutFloor from "./DonutFloor";
 import DonutWalls from "./DonutWalls";
 import DonutCenterPark, { getTerrainHeight } from "./DonutCenterPark";

@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import { useGameStore } from "@/store/gameStore";
-import AIManager from './AIManager';
+import AIManager from "@/systems/AIManager";
 import { InterestMap } from '@/store/InterestMap';
 
 export default function YukaSystem() {

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { NearbyEntity } from "./agent-core";
+import type { NearbyEntity } from "@/types/agent";
 
 /**
  * PerceptionRecord extends the basic NearbyEntity with temporal data.

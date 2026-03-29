@@ -3,8 +3,8 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import { useProceduralGait } from "@/components/agent/useProceduralGait";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
-import AIManager from "@/components/systems/AIManager";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
+import AIManager from "@/systems/AIManager";
 
 export interface Joints {
   hips?: THREE.Group;

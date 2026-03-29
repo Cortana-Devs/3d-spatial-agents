@@ -4,7 +4,7 @@ import { RoundedBox, useTexture, Decal, Text } from "@react-three/drei";
 import * as THREE from "three";
 import LedMouth from "@/components/models/characters/LedMouth";
 import { useGameStore } from "@/store/gameStore";
-import type { ClientBrain } from "@/components/systems/ClientBrain";
+import type { ClientBrain } from "@/systems/ClientBrain";
 
 type RobotAnimationState = "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt";
 

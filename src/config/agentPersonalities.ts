@@ -9,28 +9,9 @@
  * Spark — The Explorer: energetic, social, drawn to the Gallery and Garden.
  */
 
-import type { AgentDrives } from "@/lib/agent-drives";
+import type { AgentPersonality } from "@/types/agent";
 
-export interface AgentPersonality {
-  id: string;
-  name: string;
-  trait: string;
-  /** Short bio injected into the LLM system prompt for character consistency. */
-  bio: string;
-  /** Zone IDs this agent prefers — used to bias EXPLORE and REST decisions. */
-  preferredZones: string[];
-  /**
-   * Multipliers on per-second drive decay / recovery rates.
-   * > 1 means this drive matters more to this agent (faster decay AND faster recovery).
-   */
-  driveWeights: Partial<Record<keyof AgentDrives, number>>;
-  /** Tone directive appended to the LLM system prompt. */
-  speechStyle: string;
-  /** What the agent does when all drives are satisfied and the task queue is empty. */
-  idleBias: "contemplate" | "explore" | "socialize" | "work";
-  /** Hex color for LED eyes/glow on this agent's model. */
-  accentColor: string;
-}
+export type { AgentPersonality } from "@/types/agent";
 
 const PERSONALITIES: Record<string, AgentPersonality> = {
   "agent-01": {

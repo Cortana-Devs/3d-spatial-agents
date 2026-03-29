@@ -12,8 +12,8 @@
  */
 
 import * as THREE from "three";
-import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
+import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
 
 // ============================================================================
 // Zone IDs — must match what DonutLabWorld.tsx registers in ZoneInfluenceSystem

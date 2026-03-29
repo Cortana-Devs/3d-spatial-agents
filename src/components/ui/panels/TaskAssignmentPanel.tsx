@@ -2,8 +2,8 @@
 
 import React, { useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { AgentTaskRegistry, type AgentTask } from "@/components/systems/AgentTaskQueue";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
+import { AgentTaskRegistry, type AgentTask } from "@/systems/AgentTaskQueue";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
 import * as THREE from "three";
 
 // ============================================================================

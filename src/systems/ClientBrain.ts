@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { generateAgentThought } from "@/app/actions";
-import type { AgentContext, NearbyEntity } from "@/lib/agent-core";
+import type { AgentContext, NearbyEntity } from "@/lib/agent-brain";
 import { ALL_ZONE_IDS, getNearestBench } from "@/config/donutLabRoutines";
 import { SpatialMemory } from "@/lib/memory/SpatialMemory";
 
@@ -11,7 +11,7 @@ export interface BrainState {
 }
 
 import { RateLimiter } from "@/lib/rateLimiter";
-import type { AgentTask } from '@/components/systems/AgentTaskQueue';
+import type { AgentTask } from "@/systems/AgentTaskQueue";
 
 export interface AgentDecision {
   operation: "OBSERVE" | "INTERFERE_SCRIPT";

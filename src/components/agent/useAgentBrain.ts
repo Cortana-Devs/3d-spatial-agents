@@ -3,22 +3,22 @@ import { useEffect, useRef, useState } from "react";
 import * as YUKA from "yuka";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import AIManager from "@/components/systems/AIManager";
+import AIManager from "@/systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
 import { useProceduralGait } from "@/components/agent/useProceduralGait";
+import { useAgentVehicle } from "@/components/agent/useAgentVehicle";
 
-import { ClientBrain } from "@/components/systems/ClientBrain";
-import type { NearbyEntity } from "@/lib/agent-core";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
-import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
-import { AgentTaskQueue, AgentTaskRegistry } from "@/components/systems/AgentTaskQueue";
-import type { SteeringCommand } from "@/components/systems/AgentTaskQueue";
+import { ClientBrain } from "@/systems/ClientBrain";
+import type { NearbyEntity } from "@/lib/agent-brain";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
+import { AgentTaskQueue, AgentTaskRegistry } from "@/systems/AgentTaskQueue";
+import type { SteeringCommand } from "@/systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
 import { DriveManager } from "@/lib/agent-drives";
-import { ZoneInfluenceSystem } from "@/components/systems/ZoneInfluenceSystem";
-import { POIRegistry } from "@/components/systems/POIRegistry";
+import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
+import { POIRegistry } from "@/systems/POIRegistry";
 import { SpatialMemory } from "@/lib/memory/SpatialMemory";
 import { getPersonality } from "@/config/agentPersonalities";
 import { 
@@ -35,76 +35,21 @@ import {
 import { UtilityBrain } from "@/lib/UtilityBrain";
 import { InterestMap } from "@/store/InterestMap";
 import { SpatialFamiliarity } from "@/lib/SpatialFamiliarity";
-
-// Radial bounds for the Donut Lab (Circular Ring)
-const RING_INNER_RADIUS = 39; // Align with 38 inner void
-const MAX_SAFE_RADIUS = 94; // Align with 95 outer wall
-
-function clampToDonutRing(pos: { x: number; y: number; z: number }) {
-  const distSq = pos.x * pos.x + pos.z * pos.z;
-  const dist = Math.sqrt(distSq);
-  
-  // If outside the outer wall, pull back slightly inside the bounds
-  if (dist > MAX_SAFE_RADIUS) {
-    const scale = (MAX_SAFE_RADIUS - 1.0) / dist;
-    return {
-      x: pos.x * scale,
-      y: pos.y,
-      z: pos.z * scale,
-    };
-  }
-  
-  // If inside the inner hole, push out gently
-  if (dist < RING_INNER_RADIUS + 1.5) {
-    const scale = (RING_INNER_RADIUS + 2.5) / dist;
-    return {
-      x: pos.x * scale,
-      y: pos.y,
-      z: pos.z * scale,
-    };
-  }
-
-  return pos;
-}
-
-function getEffectiveCooldown(mem: PerceptionRecord[]): number {
-  const playerRecord = mem.find((e) => e.type === "PLAYER" && e.isVisible);
-  const playerDist = playerRecord?.distance;
-  if (playerDist != null && playerDist < 5) return 8;
-  if (playerDist != null && playerDist < 15) return 20;
-  return 45;
-}
-
-function resolveCurrentBehavior(taskQueue: AgentTaskQueue): string {
-  const task = taskQueue.getCurrentTask();
-  if (!task) return "IDLE";
-  const phase = taskQueue.getCurrentPhase();
-  switch (task.type) {
-    case "WANDER":
-    case "EXPLORE":
-      return "EXPLORING";
-    case "GO_TO":
-      return phase === "NAVIGATING" ? "TRAVELING" : "ARRIVED";
-    case "SIT":
-    case "REST":
-      return phase === "SEATED" ? "RESTING" : "GOING_TO_REST";
-    case "CONTEMPLATE":
-      return phase === "GAZING" ? "CONTEMPLATING" : "TRAVELING";
-    case "PICK_NEARBY":
-    case "PLACE_INVENTORY":
-      return "WORKING";
-    case "PRESENT":
-      return phase === "PRESENTING" ? "PRESENTING" : "TRAVELING";
-    case "COLLABORATE":
-      return "COLLABORATING";
-    case "SAY":
-      return "SPEAKING";
-    case "LOOK_AT":
-      return "OBSERVING";
-    default:
-      return "IDLE";
-  }
-}
+import {
+  clampToDonutRing,
+  getEffectiveCooldownSec,
+  resolveCurrentBehavior,
+} from "@/lib/agent-brain-utils";
+import { MAX_SAFE_RADIUS, RING_INNER_RADIUS } from "@/constants/world";
+import {
+  MAX_STEP_UP,
+  PLAYER_COOLDOWN_TIME,
+  PLAYER_GREET_DISTANCE,
+  PLAYER_LEAVE_DISTANCE,
+  SCRIPT_COOLDOWN_MS,
+  STUCK_TIMER_THRESHOLD_SEC,
+} from "@/constants/agent";
+import { UTILITY_CHECK_INTERVAL_MS } from "@/constants/brain";
 
 export function useAgentBrain(
   id: string,
@@ -136,9 +81,6 @@ export function useAgentBrain(
     "NONE" | "GREETING" | "CHATTING" | "COOLDOWN"
   >("NONE");
   const playerProximityCooldown = useRef(0);
-  const PLAYER_GREET_DISTANCE = 6.0;
-  const PLAYER_LEAVE_DISTANCE = 10.0;
-  const PLAYER_COOLDOWN_TIME = 15.0;
 
   // Optimization Refs
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -177,6 +119,8 @@ export function useAgentBrain(
   const zAxisRef = useRef(new THREE.Vector3(0, 0, 1)); // World forward — constant, never mutated
   const lastGroundedPosRef = useRef(new THREE.Vector3());
 
+  useAgentVehicle(id, groupRef, obstacles, vehicleRef, lastGroundedPosRef);
+
   // Animation smoothing
   const {
     update: updateGait,
@@ -189,14 +133,13 @@ export function useAgentBrain(
 
   // AI Brain
   const brainRef = useRef(new ClientBrain(id));
-  /** Seconds since epoch; LLM cooldown from getEffectiveCooldown */
+  /** Seconds since epoch; LLM cooldown from getEffectiveCooldownSec */
   const lastBrainCallTimeRef = useRef(0);
 
   // Fix #Loop-5: Deduplicate repeated same-script decisions — prevent re-queuing
   // the exact same scriptId within a cooldown window (30s).
   const lastScriptIdRef = useRef<string>("");
   const lastScriptTimeRef = useRef<number>(0);
-  const SCRIPT_COOLDOWN_MS = 30_000;
 
   // --- TASK QUEUE (Manual Task Assignment) ---
   const taskQueueRef = useRef(AgentTaskRegistry.getInstance().getOrCreate(id));
@@ -297,89 +240,6 @@ export function useAgentBrain(
   const [animationState, setAnimationState] = useState<
     "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt"
   >("Idle");
-
-  useEffect(() => {
-    if (!groupRef.current) return;
-
-    // Create Yuka Vehicle
-    const vehicle = new YUKA.Vehicle();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (vehicle as any).id = id;
-    vehicle.maxSpeed = 5.5; // Adjusted higher as per user request
-    vehicle.maxForce = 4.0; // Heavy Inertia for smooth turns (was 10.0)
-    vehicle.mass = 2.0;
-    vehicle.boundingRadius = 1.0; // TUNED: 1.0 fits the robot footprint perfectly (was 2.0)
-
-    // Sync initial position — XZ from the group reference is correct.
-    // Y is *always* forced to FLOOR_Y regardless of where groupRef.current
-    // drifted to in previous frames. Floor-Main-Slab top surface = Y=4.0.
-    const FLOOR_Y = 4.0;
-    vehicle.position.set(
-      groupRef.current.position.x,
-      FLOOR_Y,
-      groupRef.current.position.z,
-    );
-    // Also correct the Three.js mesh so the render-sync callback doesn't
-    // immediately write a stale sunken Y back on the first Yuka update tick.
-    groupRef.current.position.y = FLOOR_Y;
-    vehicle.rotation.copy(
-      groupRef.current.quaternion as unknown as YUKA.Quaternion,
-    );
-    lastGroundedPosRef.current.set(
-      groupRef.current.position.x,
-      FLOOR_Y,
-      groupRef.current.position.z,
-    );
-
-    // Render Component (Sync Yuka -> Three)
-    vehicle.setRenderComponent(groupRef.current, (entity, renderComponent) => {
-      const mesh = renderComponent as THREE.Group;
-      mesh.position.copy(entity.position as unknown as THREE.Vector3);
-      mesh.quaternion.copy(entity.rotation as unknown as THREE.Quaternion);
-    });
-
-    // --- BEHAVIORS ---
-
-    // --- Rebuild navigation grid whenever obstacles change ---
-    AgentBrainClient.getInstance().initNav(obstacles);
-
-    // Fix #5/#8: Removed YUKA ObstacleAvoidanceBehavior — wall avoidance is
-    // handled exclusively by the raycaster-based system below. Having both
-    // caused double-counted avoidance forces that overpowered path-following.
-
-    // 0. Follow Path (Primary Movement)
-    const followPath = new YUKA.FollowPathBehavior();
-    followPath.active = false;
-    // Fix #13: Increased from 0.8 to 2.0 (matches cell size) so deflected
-    // agents don't loop back trying to reach a skipped waypoint.
-    followPath.nextWaypointDistance = 2.0;
-    vehicle.steering.add(followPath); // Index 0
-
-    // 1. Seek (Legacy / Short distance)
-    const seek = new YUKA.SeekBehavior(new YUKA.Vector3());
-    seek.active = false;
-    vehicle.steering.add(seek); // Index 1
-
-    // 2. Arrive (Final stopping)
-    const arrive = new YUKA.ArriveBehavior(new YUKA.Vector3());
-    arrive.active = false;
-    // Fix #6: Higher deceleration so agent gets closer before stopping
-    arrive.deceleration = 5.0;
-    arrive.tolerance = 0.3;
-    vehicle.steering.add(arrive); // Index 2
-
-    // 3. Separation (WANDER task type uses pathfinding + FollowPath, not YUKA WanderBehavior)
-    const separation = new YUKA.SeparationBehavior(aiManager.vehicles);
-    separation.weight = 5.0;
-    vehicle.steering.add(separation); // Index 3
-
-    vehicleRef.current = vehicle;
-    aiManager.addEntity(vehicle);
-
-    return () => {
-      aiManager.removeEntity(vehicle);
-    };
-  }, [obstacles]);
 
   // Set raycaster to only intersect with objects on Layer 1 (Collidables)
   useEffect(() => {
@@ -668,7 +528,7 @@ export function useAgentBrain(
         }
 
         // Recovery: Abort the current task and fall back to WANDER
-        if (stuckTimer.current > 4.0) {
+        if (stuckTimer.current > STUCK_TIMER_THRESHOLD_SEC) {
           console.warn(`[useAgentBrain:${id}] Agent stuck for 4s - Aborting task queue and fallback to wander.`);
           const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
           queue.cancel();
@@ -827,7 +687,6 @@ export function useAgentBrain(
       const rayOrigin = rayOriginRef.current;
 
       // Cast from just above max step height to prevent snapping to high ceilings/objects
-      const MAX_STEP_UP = 2.0;
       rayOrigin.set(
         vehicle.position.x,
         vehicle.position.y + MAX_STEP_UP + 0.1,
@@ -1065,7 +924,7 @@ export function useAgentBrain(
       ) {
         const nowSec = Date.now() / 1000;
         const mem = sensorySystemRef.current.getWorkingMemory();
-        const cooldownSec = getEffectiveCooldown(mem);
+        const cooldownSec = getEffectiveCooldownSec(mem);
         const canThinkLLM =
           nowSec - lastBrainCallTimeRef.current > cooldownSec;
 
@@ -1328,7 +1187,7 @@ export function useAgentBrain(
 
       const utilityNow = Date.now();
       if (
-        utilityNow - lastUtilityCheckTimeRef.current > 3000 &&
+        utilityNow - lastUtilityCheckTimeRef.current > UTILITY_CHECK_INTERVAL_MS &&
         !taskQueue.isBusy() &&
         !brainRef.current.state.isThinking
       ) {

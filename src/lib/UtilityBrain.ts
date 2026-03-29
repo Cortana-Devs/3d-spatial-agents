@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { AgentDrives } from "./agent-drives";
-import { AgentTask } from "@/components/systems/AgentTaskQueue";
-import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
-import { POIRegistry } from "@/components/systems/POIRegistry";
+import { AgentTask } from "@/systems/AgentTaskQueue";
+import { InteractableRegistry } from "@/systems/InteractableRegistry";
+import { POIRegistry } from "@/systems/POIRegistry";
 import { SpatialMemory } from "./memory/SpatialMemory";
 import { SpatialFamiliarity } from "./SpatialFamiliarity";
 import { ALL_ZONE_IDS, getNearestBench, getZoneCenterPosition } from "@/config/donutLabRoutines";

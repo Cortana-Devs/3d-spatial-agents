@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import NavigationNetwork from "@/components/systems/NavigationNetwork";
+import NavigationNetwork from "@/systems/NavigationNetwork";
 
 // src/lib/workers/agentBrain.worker.ts
 // Web Worker for offloading Agent Brain computations:
