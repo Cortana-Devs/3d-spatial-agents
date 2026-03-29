@@ -49,7 +49,7 @@ export function FireExtinguisher({
   return (
     <group
       ref={meshRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -169,7 +169,7 @@ export function Whiteboard({
   return (
     <group
       ref={meshRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -233,7 +233,7 @@ export function ProjectorScreen({
   return (
     <group
       ref={meshRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -272,7 +272,7 @@ export function Laptop({
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
   return (
-    <group ref={meshRef} position={position} rotation={[0, rotation, 0]}>
+    <group ref={meshRef} position={new THREE.Vector3(position[0], position[1], position[2])} rotation={[0, rotation, 0]}>
       {/* Base */}
       <mesh
         position={[0, 0.1, 0]}
@@ -319,7 +319,7 @@ export function PenDrive({
   return (
     <group
       ref={meshRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -390,7 +390,7 @@ export function SmallRack({
   const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
   const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
   const posVec = useMemo(
-    () => new THREE.Vector3(...position),
+    () => new THREE.Vector3(position[0], position[1], position[2]),
     [position[0], position[1], position[2]],
   );
   useEffect(() => {
@@ -421,7 +421,7 @@ export function SmallRack({
   return (
     <group
       ref={meshRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -482,7 +482,7 @@ export function FlowerPot({
   const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
   const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
   const posVec = useMemo(
-    () => new THREE.Vector3(...position),
+    () => new THREE.Vector3(position[0], position[1], position[2]),
     [position[0], position[1], position[2]],
   );
   useEffect(() => {
@@ -553,7 +553,7 @@ export function Sofa({
   const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
   const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
   const posVec = useMemo(
-    () => new THREE.Vector3(...position),
+    () => new THREE.Vector3(position[0], position[1], position[2]),
     [position[0], position[1], position[2]],
   );
   useEffect(() => {
@@ -725,7 +725,7 @@ export function TV({
   const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
   const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
   const posVec = useMemo(
-    () => new THREE.Vector3(...position),
+    () => new THREE.Vector3(position[0], position[1], position[2]),
     [position[0], position[1], position[2]],
   );
   useEffect(() => {
@@ -799,7 +799,7 @@ export function CoffeeMachine({
   return (
     <group
       ref={meshRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -832,7 +832,11 @@ export function CoffeeCup({
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
   return (
-    <group ref={meshRef} position={position} rotation={[0, rotation, 0]}>
+    <group
+      ref={meshRef}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
+      rotation={[0, rotation, 0]}
+    >
       <mesh
         position={[0, 0.25, 0]}
         castShadow
@@ -949,7 +953,7 @@ export function CoffeeStation({
   return (
     <group
       ref={groupRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >

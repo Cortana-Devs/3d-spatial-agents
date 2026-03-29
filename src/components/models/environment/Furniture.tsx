@@ -67,7 +67,7 @@ export function CeilingLight({
   userData,
 }: CeilingLightProps & { castShadow?: boolean; userData?: any }) {
   return (
-    <group position={new THREE.Vector3(...position)} userData={userData}>
+    <group position={new THREE.Vector3(position[0], position[1], position[2])} userData={userData}>
       {/* Fixture Base */}
       <mesh position={[0, 0.5, 0]} castShadow material={primaryMetalMaterial}>
         <cylinderGeometry args={[2, 2, 1, 16]} />
@@ -314,7 +314,7 @@ export function ConferencePad({
 
   return (
     <group
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
     >
       {/* Left slot */}
@@ -370,7 +370,7 @@ export function ConferenceTable({
 
   const groupRef = useRef<THREE.Group>(null);
 
-  const posVec = useMemo(() => new THREE.Vector3(...position), [position]);
+  const posVec = useMemo(() => new THREE.Vector3(position[0], position[1], position[2]), [position[0], position[1], position[2]]);
   useEffect(() => {
     // Conference Table: Split into Top and 4 Legs
     // Top: [40, 0.8, 20] at Y=4
@@ -427,7 +427,7 @@ export function ConferenceTable({
   return (
     <group
       ref={groupRef}
-      position={position}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -566,7 +566,7 @@ export function OfficeDesk({
 
   const groupRef = useRef<THREE.Group>(null);
 
-  const posVec = useMemo(() => new THREE.Vector3(...position), [position]);
+  const posVec = useMemo(() => new THREE.Vector3(position[0], position[1], position[2]), [position[0], position[1], position[2]]);
   useEffect(() => {
     // Desk: Split into Top and 2 Side Cabinets
     // Top: [12, 0.4, 6] at Y=3.8
@@ -621,7 +621,7 @@ export function OfficeDesk({
   return (
     <group
       ref={groupRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
@@ -741,7 +741,7 @@ export function LabWorkbench({
   const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
 
   const groupRef = useRef<THREE.Group>(null);
-  const posVec = useMemo(() => new THREE.Vector3(...position), [position]);
+  const posVec = useMemo(() => new THREE.Vector3(position[0], position[1], position[2]), [position[0], position[1], position[2]]);
 
   // Workbench dimensions
   const benchWidth = 50;
@@ -791,7 +791,7 @@ export function LabWorkbench({
   return (
     <group
       ref={groupRef}
-      position={new THREE.Vector3(...position)}
+      position={new THREE.Vector3(position[0], position[1], position[2])}
       rotation={[0, rotation, 0]}
       userData={userData}
     >
