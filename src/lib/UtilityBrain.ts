@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { AgentDrives, DRIVE_CONFIGS } from "./agent-drives";
+import { AgentDrives } from "./agent-drives";
 import { AgentTask } from "@/components/systems/AgentTaskQueue";
 import { InteractableRegistry } from "@/components/systems/InteractableRegistry";
 import { POIRegistry } from "@/components/systems/POIRegistry";
@@ -7,6 +7,8 @@ import { SpatialMemory } from "./memory/SpatialMemory";
 import { SpatialFamiliarity } from "./SpatialFamiliarity";
 import { ALL_ZONE_IDS, getNearestBench, getZoneCenterPosition } from "@/config/donutLabRoutines";
 import { InterestMap } from "@/store/InterestMap";
+import type { AgentPersonality } from "@/config/agentPersonalities";
+import type { PerceptionRecord } from "@/lib/SensorySystem";
 
 export class UtilityBrain {
   private agentId: string;
@@ -14,8 +16,12 @@ export class UtilityBrain {
 
   constructor(agentId: string) {
     this.agentId = agentId;
-    // Each agent has a unique "vibe" that slightly shifts their thresholds
-    this.personalityNoise = (Math.random() - 0.5) * 0.1; // ±5%
+    let hash = 0;
+    for (let i = 0; i < agentId.length; i++) {
+      hash = (hash << 5) - hash + agentId.charCodeAt(i);
+      hash |= 0;
+    }
+    this.personalityNoise = (hash % 100) / 2000;
   }
 
   private evaluateUrgency(value: number, type: "exponential" | "logistic" | "logarithmic", k: number = 3): number {
@@ -49,22 +55,35 @@ export class UtilityBrain {
     drives: AgentDrives,
     position: THREE.Vector3,
     spatialMemory: SpatialMemory,
-    familiarity: SpatialFamiliarity
+    familiarity: SpatialFamiliarity,
+    perceivedEntities: PerceptionRecord[] = [],
+    personality?: AgentPersonality,
   ): AgentTask[] | null {
     const registry = InteractableRegistry.getInstance();
-    
+    const w = personality?.driveWeights ?? {};
+
+    const thresholds = {
+      energy: 0.4 - (w.energy ?? 1) * 0.05,
+      tidiness: 0.35 - (w.tidiness ?? 1) * 0.05,
+      wonder: 0.3 - (w.wonder ?? 1) * 0.05,
+      curiosity: 0.3 - (w.curiosity ?? 1) * 0.05,
+      social: 0.35 - (w.social ?? 1) * 0.05,
+    };
+
     // 1. Calculate Urgencies using Non-Linear Curves
-    const energyUrgency = this.evaluateUrgency(drives.energy, "exponential", 4); // Fatigue spikes late
-    const tidinessUrgency = this.evaluateUrgency(drives.tidiness, "logistic", 10); // Mess "snaps" at threshold
-    const wonderUrgency = this.evaluateUrgency(drives.wonder, "logarithmic", 2); // Boredom plateaus
+    const energyUrgency = this.evaluateUrgency(drives.energy, "exponential", 4);
+    const tidinessUrgency = this.evaluateUrgency(drives.tidiness, "logistic", 10);
+    const wonderUrgency = this.evaluateUrgency(drives.wonder, "logarithmic", 2);
     const curiosityUrgency = this.evaluateUrgency(drives.curiosity, "logistic", 6);
+    const socialUrgency = this.evaluateUrgency(drives.social, "logistic", 6);
 
     // 2. Select most urgent below internal thresholds
     const options = [
-      { id: "energy", score: energyUrgency, threshold: 0.4 },
-      { id: "tidiness", score: tidinessUrgency, threshold: 0.35 },
-      { id: "wonder", score: wonderUrgency, threshold: 0.3 },
-      { id: "curiosity", score: curiosityUrgency, threshold: 0.3 }
+      { id: "energy" as const, score: energyUrgency, threshold: thresholds.energy },
+      { id: "tidiness" as const, score: tidinessUrgency, threshold: thresholds.tidiness },
+      { id: "wonder" as const, score: wonderUrgency, threshold: thresholds.wonder },
+      { id: "curiosity" as const, score: curiosityUrgency, threshold: thresholds.curiosity },
+      { id: "social" as const, score: socialUrgency, threshold: thresholds.social },
     ];
 
     const urgent = options
@@ -133,6 +152,43 @@ export class UtilityBrain {
             { type: "GO_TO", priority: 2, targetPos: zonePos, targetAreaId: targetZone, scriptId: "local_explore" },
             { type: "WANDER", priority: 2, scriptId: "local_explore" }
           ] as AgentTask[];
+        }
+        break;
+      }
+
+      case "social": {
+        const nearestAgent = perceivedEntities
+          .filter(
+            (e) =>
+              e.type === "AGENT" &&
+              e.isVisible &&
+              e.distance < 8 &&
+              e.position,
+          )
+          .sort((a, b) => a.distance - b.distance)[0];
+        if (nearestAgent?.position) {
+          const p = nearestAgent.position;
+          return [
+            {
+              type: "GO_TO",
+              priority: 3,
+              targetPos: new THREE.Vector3(p.x, p.y, p.z),
+              scriptId: "local_social",
+            } as AgentTask,
+            {
+              type: "EMOTE",
+              priority: 3,
+              gesture: "wave",
+              duration: 2.5,
+              scriptId: "local_social",
+            } as AgentTask,
+            {
+              type: "WAIT",
+              priority: 3,
+              duration: 3 + Math.random() * 4,
+              scriptId: "local_social",
+            } as AgentTask,
+          ];
         }
         break;
       }

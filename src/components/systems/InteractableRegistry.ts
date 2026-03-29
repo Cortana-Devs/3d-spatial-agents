@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { HearingBus } from "@/lib/SensorySystem";
 
 export interface WorldObject {
   id: string;
@@ -408,6 +409,8 @@ export class InteractableRegistry {
     const obj = this.objects.get(objectId);
     if (!obj || !obj.pickable || obj.carriedBy) return false;
 
+    const soundPos = this.getWorldPosition(objectId)?.clone() ?? obj.position.clone();
+
     obj.carriedBy = actorId;
 
     // Remove claim now that we actually have the item
@@ -426,6 +429,13 @@ export class InteractableRegistry {
     if (obj.meshRef) {
       obj.meshRef.visible = false;
     }
+
+    HearingBus.emit({
+      emitterId: actorId,
+      position: soundPos,
+      loudness: 6,
+      type: "interact",
+    });
 
     return true;
   }
@@ -557,6 +567,17 @@ export class InteractableRegistry {
     }
 
     area.currentItem = objectId;
+
+    const placeSound = this.getAreaWorldPosition(areaId)?.clone();
+    if (placeSound) {
+      HearingBus.emit({
+        emitterId: objectId,
+        position: placeSound,
+        loudness: 8,
+        type: "interact",
+      });
+    }
+
     return true;
   }
 

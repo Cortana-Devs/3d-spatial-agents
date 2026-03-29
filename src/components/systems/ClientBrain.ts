@@ -23,17 +23,12 @@ export interface AgentDecision {
 
 import { memoryStream } from "@/lib/memory/MemoryStream";
 
-// ... (BrainState and RateLimiter imports remain)
-
-// Module-level flag: ensures memoryStream.reset() is called exactly once
-// across all ClientBrain instances (multiple agents share the singleton).
-let _memoryResetDone = false;
-
 export class ClientBrain {
   public state: BrainState;
   private rateLimiter: RateLimiter;
   public id: string;
   private sessionId: string;
+  private _sessionInitialized = false;
 
   constructor(id: string = "agent-01") {
     this.id = id;
@@ -61,9 +56,17 @@ export class ClientBrain {
 
     this.state.isThinking = true;
 
-    if (!_memoryResetDone) {
-      await memoryStream.reset();
-      _memoryResetDone = true;
+    if (!this._sessionInitialized) {
+      this._sessionInitialized = true;
+      memoryStream
+        .add(
+          this.id,
+          "OBSERVATION",
+          "New session started.",
+          ["session", "reset"],
+          this.sessionId,
+        )
+        .catch(() => {});
     }
 
     // Construct Context
@@ -156,13 +159,33 @@ export class ClientBrain {
                   tasks.push({ type: "PLACE_INVENTORY", destAreaId: args.areaId } as AgentTask);
                 }
                 break;
-              case "go_to":
+              case "go_to": {
+                const hasCoords =
+                  args.targetX != null || args.targetZ != null;
                 if (args.zoneId) {
-                   tasks.push({ type: "GO_TO", targetPos: new THREE.Vector3(args.targetX || 0, 0, args.targetZ || 0), targetAreaId: args.zoneId } as any);
-                } else if (args.targetX !== undefined && args.targetZ !== undefined) {
-                   tasks.push({ type: "GO_TO", targetPos: new THREE.Vector3(args.targetX, 0, args.targetZ) } as AgentTask);
+                  const task: AgentTask = {
+                    type: "GO_TO",
+                    targetAreaId: args.zoneId,
+                  } as AgentTask;
+                  if (hasCoords) {
+                    (task as any).targetPos = new THREE.Vector3(
+                      args.targetX ?? 0,
+                      0,
+                      args.targetZ ?? 0,
+                    );
+                  }
+                  tasks.push(task);
+                } else if (
+                  args.targetX !== undefined &&
+                  args.targetZ !== undefined
+                ) {
+                  tasks.push({
+                    type: "GO_TO",
+                    targetPos: new THREE.Vector3(args.targetX, 0, args.targetZ),
+                  } as AgentTask);
                 }
                 break;
+              }
               case "say":
                 tasks.push({ type: "SAY" as any, content: args.message } as any);
                 thought = args.message; // Override internal thought with spoken word

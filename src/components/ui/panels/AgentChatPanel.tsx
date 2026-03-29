@@ -352,11 +352,17 @@ export const AgentChatPanel: React.FC = () => {
                   }
 
                   // Directly enqueue without re-negotiation
+                  const resumedScriptId = `chat_resumed_${Date.now()}`;
                   freshQueue.enqueue({
-                    type: "FETCH_AND_PLACE" as any,
+                    type: "PICK_NEARBY",
                     priority: 20,
-                    scriptId: `chat_resumed_${Date.now()}`,
+                    scriptId: resumedScriptId,
                     itemId: cleanedItemId,
+                  });
+                  freshQueue.enqueue({
+                    type: "PLACE_INVENTORY",
+                    priority: 20,
+                    scriptId: resumedScriptId,
                     destAreaId: finalAreaId,
                   });
 
@@ -455,11 +461,17 @@ export const AgentChatPanel: React.FC = () => {
 
           // AgentTaskQueue will claim the item when the task actually starts
 
+          const scriptId = `chat_${Date.now()}`;
           queue.enqueue({
-            type: "FETCH_AND_PLACE" as any,
+            type: "PICK_NEARBY",
             priority: 20,
-            scriptId: `chat_${Date.now()}`,
+            scriptId,
             itemId: cleanedItemId,
+          });
+          queue.enqueue({
+            type: "PLACE_INVENTORY",
+            priority: 20,
+            scriptId,
             destAreaId: resolvedAreaId,
           });
 

@@ -221,19 +221,15 @@ export class DriveManager {
     }
 
     // --- Energy ---
-    // Depletes while moving; recovers very slowly on its own (zone effects do the real work)
     if (isMoving) {
-      this.drives.energy = Math.max(
-        0,
-        this.drives.energy -
-          DRIVE_CONFIGS.energy.decayRate * deltaSec * w("energy"),
-      );
+      const effectiveDecay =
+        DRIVE_CONFIGS.energy.decayRate *
+        (isInPreferredZone ? 0.7 : 1.0) *
+        w("energy");
+      this.drives.energy = Math.max(0, this.drives.energy - effectiveDecay * deltaSec);
     } else {
-      // Passive very slow recovery while standing still
-      this.drives.energy = Math.min(
-        100,
-        this.drives.energy + 0.1 * deltaSec,
-      );
+      const effectiveRecovery = (isInPreferredZone ? 0.3 : 0.1) * deltaSec;
+      this.drives.energy = Math.min(100, this.drives.energy + effectiveRecovery);
     }
 
     // --- Focus ---
@@ -305,7 +301,15 @@ export class DriveManager {
     const now = Date.now();
     let mostUrgent: { drive: keyof AgentDrives; value: number } | null = null;
 
-    for (const key of Object.keys(DRIVE_CONFIGS) as (keyof AgentDrives)[]) {
+    const ACTIONABLE_DRIVES: (keyof AgentDrives)[] = [
+      "energy",
+      "tidiness",
+      "curiosity",
+      "wonder",
+      "social",
+    ];
+
+    for (const key of ACTIONABLE_DRIVES) {
       const config = DRIVE_CONFIGS[key];
       const value = this.drives[key];
 

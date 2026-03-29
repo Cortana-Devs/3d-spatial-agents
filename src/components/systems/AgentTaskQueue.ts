@@ -4,6 +4,7 @@ import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
 import { getZoneCenterPosition, getNearestBench } from "@/config/donutLabRoutines";
+import { HearingBus } from "@/lib/SensorySystem";
 
 // ============================================================================
 // Task Types
@@ -80,6 +81,8 @@ export class AgentTaskQueue {
   private stuckWindowPositions: { x: number; z: number; t: number }[] = [];
   private retryCount: number = 0;
   private pathRefreshTimer: number = 0;
+  private actionStartTime: number | null = null;
+  private lastKnownPos: THREE.Vector3 = new THREE.Vector3();
 
   private static readonly STUCK_WINDOW = 2.5;
   private static readonly PATH_REFRESH_INTERVAL = 1.5;
@@ -182,6 +185,7 @@ export class AgentTaskQueue {
     this.retryCount = 0;
     this.pathRefreshTimer = 0;
     this.stuckWindowPositions = [];
+    this.actionStartTime = null;
   }
 
   private startNextTask(): void {
@@ -228,6 +232,12 @@ export class AgentTaskQueue {
       }
     }
 
+    if (this.currentTask.type === "EMOTE") {
+      this.phase = "EMOTING";
+      this.phaseTimer = 0;
+      return;
+    }
+
     this.phase = "NAVIGATING";
 
     if (!["SAY", "WANDER", "EMOTE"].includes(this.currentTask.type) && Math.random() < 0.25) {
@@ -254,6 +264,7 @@ export class AgentTaskQueue {
   }
 
   public update(delta: number, vehiclePos: THREE.Vector3, playerPos?: THREE.Vector3): SteeringCommand {
+    this.lastKnownPos.copy(vehiclePos);
     if (this.phase === "IDLE") return { type: "NONE" };
     this.elapsedTime += delta;
 
@@ -267,6 +278,12 @@ export class AgentTaskQueue {
             window.dispatchEvent(new CustomEvent("agent-speak", {
                 detail: { agentId: this.agentId, text: (this.currentTask as any).message || this.currentTask.content || "Hello." }
             }));
+            HearingBus.emit({
+              emitterId: this.agentId,
+              position: this.lastKnownPos.clone(),
+              loudness: 10,
+              type: "speech",
+            });
         }
         this.phaseTimer += delta;
         let dur = this.currentTask.duration || 2.0;
@@ -288,11 +305,51 @@ export class AgentTaskQueue {
         if (this.phase === "PRESENTING") {
             if (this.phaseTimer < delta * 2 && this.currentTask?.content) {
                 window.dispatchEvent(new CustomEvent("agent-speak", { detail: { agentId: this.agentId, text: this.currentTask.content } }));
+                HearingBus.emit({
+                  emitterId: this.agentId,
+                  position: this.lastKnownPos.clone(),
+                  loudness: 14,
+                  type: "speech",
+                });
             }
             dur = this.currentTask?.duration ?? AgentTaskQueue.PRESENT_DEFAULT_DURATION;
         }
         if (this.phaseTimer >= dur) this.setPhase("COMPLETED");
         return { type: "STOP", faceTarget: this.currentTask?.lookTarget };
+    }
+
+    if (this.phase === "ACTION_START") {
+      const task = this.currentTask;
+      if (!task) {
+        this.setPhase("COMPLETED");
+        return { type: "NONE" };
+      }
+      if (this.actionStartTime === null) {
+        this.actionStartTime = performance.now();
+        const reg = InteractableRegistry.getInstance();
+        if (task.type === "PICK_NEARBY" && task.itemId) {
+          const success = reg.pickUp(task.itemId, this.agentId);
+          if (!success) {
+            this.cleanupTask(task);
+            this.actionStartTime = null;
+            this.setPhase("COMPLETED");
+            return { type: "NONE" };
+          }
+        } else if (task.type === "PLACE_INVENTORY" && task.destAreaId) {
+          const carried = reg.getAllCarriedBy(this.agentId);
+          if (carried.length > 0) {
+            reg.placeItemAt(carried[0].id, task.destAreaId);
+          }
+        }
+      }
+      if (performance.now() - (this.actionStartTime ?? 0) > 1500) {
+        this.actionStartTime = null;
+        this.setPhase("COMPLETED");
+      }
+      return {
+        type: "STOP",
+        faceTarget: task.targetPos ?? undefined,
+      };
     }
 
     const reg = InteractableRegistry.getInstance();
@@ -351,6 +408,7 @@ export class AgentTaskQueue {
         if (type === "LEAN") { this.phase = "LEANING"; this.phaseTimer = 0; return { type: "STOP" }; }
         if (type === "LOOK_AT" || type === "CONTEMPLATE") { this.phase = "GAZING"; this.phaseTimer = 0; return { type: "STOP", faceTarget: this.currentTask!.lookTarget }; }
         if (type === "PRESENT") { this.phase = "PRESENTING"; this.phaseTimer = 0; return { type: "STOP" }; }
+        this.actionStartTime = null;
         this.phase = "ACTION_START"; this.phaseTimer = 0; return { type: "STOP", faceTarget: targetPos };
       }
 

@@ -151,6 +151,11 @@ export class SensorySystem {
     return Array.from(this.workingMemory.values());
   }
 
+  /** Latest perception snapshot without running a full update cycle. */
+  public getWorkingMemory(): PerceptionRecord[] {
+    return Array.from(this.workingMemory.values());
+  }
+
   public recordNoise(event: HearingEvent, agentPos: THREE.Vector3) {
     if (event.emitterId === this.agentId) return;
     this.recentNoises.push(event);

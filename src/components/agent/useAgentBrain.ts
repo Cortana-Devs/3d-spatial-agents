@@ -26,7 +26,12 @@ import {
   getNearestBench, 
   ALL_ZONE_IDS 
 } from "@/config/donutLabRoutines";
-import { SensorySystem, HearingBus, type HearingEvent } from "@/lib/SensorySystem";
+import {
+  SensorySystem,
+  HearingBus,
+  type HearingEvent,
+  type PerceptionRecord,
+} from "@/lib/SensorySystem";
 import { UtilityBrain } from "@/lib/UtilityBrain";
 import { InterestMap } from "@/store/InterestMap";
 import { SpatialFamiliarity } from "@/lib/SpatialFamiliarity";
@@ -62,6 +67,45 @@ function clampToDonutRing(pos: { x: number; y: number; z: number }) {
   return pos;
 }
 
+function getEffectiveCooldown(mem: PerceptionRecord[]): number {
+  const playerRecord = mem.find((e) => e.type === "PLAYER" && e.isVisible);
+  const playerDist = playerRecord?.distance;
+  if (playerDist != null && playerDist < 5) return 8;
+  if (playerDist != null && playerDist < 15) return 20;
+  return 45;
+}
+
+function resolveCurrentBehavior(taskQueue: AgentTaskQueue): string {
+  const task = taskQueue.getCurrentTask();
+  if (!task) return "IDLE";
+  const phase = taskQueue.getCurrentPhase();
+  switch (task.type) {
+    case "WANDER":
+    case "EXPLORE":
+      return "EXPLORING";
+    case "GO_TO":
+      return phase === "NAVIGATING" ? "TRAVELING" : "ARRIVED";
+    case "SIT":
+    case "REST":
+      return phase === "SEATED" ? "RESTING" : "GOING_TO_REST";
+    case "CONTEMPLATE":
+      return phase === "GAZING" ? "CONTEMPLATING" : "TRAVELING";
+    case "PICK_NEARBY":
+    case "PLACE_INVENTORY":
+      return "WORKING";
+    case "PRESENT":
+      return phase === "PRESENTING" ? "PRESENTING" : "TRAVELING";
+    case "COLLABORATE":
+      return "COLLABORATING";
+    case "SAY":
+      return "SPEAKING";
+    case "LOOK_AT":
+      return "OBSERVING";
+    default:
+      return "IDLE";
+  }
+}
+
 export function useAgentBrain(
   id: string,
   groupRef: React.RefObject<THREE.Group | null>,
@@ -84,14 +128,8 @@ export function useAgentBrain(
   const followingAgentId = useGameStore((state) => state.followingAgentId);
   const setAgentPosition = useGameStore((state) => state.setAgentPosition);
 
-  // Social State (Robot-Robot Interaction)
-
-  const socialState = useRef<"NONE" | "CHATTING" | "COOLDOWN">("NONE");
-  const socialTimer = useRef(0);
-  const socialTarget = useRef<YUKA.Vehicle | null>(null);
-  const greetingState = useRef<"NONE" | "WAVING" | "COOLDOWN">("NONE");
-  const socialCheckTimer = useRef(0);
   const lastMinimapPos = useRef(new THREE.Vector3(0, -999, 0));
+  const lastPerceivedEntitiesRef = useRef<PerceptionRecord[]>([]);
 
   // Player Proximity Chat State
   const playerProximityState = useRef<
@@ -151,9 +189,8 @@ export function useAgentBrain(
 
   // AI Brain
   const brainRef = useRef(new ClientBrain(id));
-  // Brain cooldown: 45s wall-clock to match drive cooldowns and conserve API tokens
+  /** Seconds since epoch; LLM cooldown from getEffectiveCooldown */
   const lastBrainCallTimeRef = useRef(0);
-  const BRAIN_COOLDOWN_SEC = 45;
 
   // Fix #Loop-5: Deduplicate repeated same-script decisions — prevent re-queuing
   // the exact same scriptId within a cooldown window (30s).
@@ -331,15 +368,10 @@ export function useAgentBrain(
     arrive.tolerance = 0.3;
     vehicle.steering.add(arrive); // Index 2
 
-    // 3. Wander (Idle)
-    const wander = new YUKA.WanderBehavior();
-    wander.active = false; // Turned off completely to prevent fighting with LLM tasks
-    vehicle.steering.add(wander); // Index 3
-
-    // 4. Separation
+    // 3. Separation (WANDER task type uses pathfinding + FollowPath, not YUKA WanderBehavior)
     const separation = new YUKA.SeparationBehavior(aiManager.vehicles);
     separation.weight = 5.0;
-    vehicle.steering.add(separation); // Index 4
+    vehicle.steering.add(separation); // Index 3
 
     vehicleRef.current = vehicle;
     aiManager.addEntity(vehicle);
@@ -397,35 +429,24 @@ export function useAgentBrain(
       playerPos = playerRef.current.position;
     }
 
-    const isInteractingWithPlayer =
-      playerProximityState.current === "GREETING" ||
-      playerProximityState.current === "CHATTING";
+    const pauseForOpenChat = playerProximityState.current === "CHATTING";
 
     let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
-    if (!isInteractingWithPlayer) {
+    if (!pauseForOpenChat) {
       steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
     }
     const hasManualTask = taskQueue.isBusy();
 
-    // Fix #27: Always disable wander when a manual task is active
-    // Fix #5/#8: Updated indices after removing ObstacleAvoidanceBehavior
     const bFollowPath = vehicle.steering
       .behaviors[0] as YUKA.FollowPathBehavior;
     const bSeek = vehicle.steering.behaviors[1] as YUKA.SeekBehavior;
     const bArrive = vehicle.steering.behaviors[2] as YUKA.ArriveBehavior;
-    const bWander = vehicle.steering.behaviors[3] as YUKA.WanderBehavior;
 
-    if (isInteractingWithPlayer) {
-      // PAUSE MODE: Force agent to stop and stand still while interacting
+    if (pauseForOpenChat) {
       bFollowPath.active = false;
       bSeek.active = false;
       bArrive.active = false;
-      bWander.active = false;
       vehicle.velocity.set(0, 0, 0);
-    }
-
-    if (hasManualTask && bWander.active) {
-      bWander.active = false;
     }
 
     // --- ANTICIPATORY DECELERATION ---
@@ -489,7 +510,6 @@ export function useAgentBrain(
         bFollowPath.active = false;
         bSeek.active = false;
         bArrive.active = false;
-        bWander.active = false;
       };
 
       if (steeringCmd.type === "FOLLOW_PATH" && steeringCmd.path) {
@@ -681,49 +701,43 @@ export function useAgentBrain(
           distToPlayer < PLAYER_GREET_DISTANCE &&
           !storeState.nearbyAgentId &&
           !storeState.isChatOpen &&
-          socialState.current === "NONE"
+          !taskQueue.isBusy()
         ) {
           playerProximityState.current = "GREETING";
-          vehicle.velocity.set(0, 0, 0);
-
-          // Face the player
-          if (groupRef.current && playerRef.current) {
-            const toPlayer = toPlayerRef.current.set(
-              playerRef.current.position.x - vehicle.position.x,
-              0,
-              playerRef.current.position.z - vehicle.position.z,
-            );
-            if (toPlayer.lengthSq() > 0.01) {
-              const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-                zAxisRef.current,
-                toPlayer.normalize(),
-              );
-              vehicle.rotation.copy(targetQuat as unknown as YUKA.Quaternion);
-            }
-          }
+          const greetScript = `player_greet_${Date.now()}`;
+          const pp = playerRef.current.position.clone();
+          taskQueue.enqueue({
+            type: "LOOK_AT",
+            priority: 6,
+            scriptId: greetScript,
+            lookTarget: pp,
+            duration: 2,
+          });
+          taskQueue.enqueue({
+            type: "EMOTE",
+            priority: 6,
+            scriptId: greetScript,
+            gesture: "wave",
+            duration: 2,
+          });
+          taskQueue.enqueue({
+            type: "SAY",
+            priority: 6,
+            scriptId: greetScript,
+            content: getRandomPhrase("GREETINGS"),
+          });
 
           storeState.setNearbyAgentId(id);
           storeState.setChatPromptVisible(true);
 
-          // Update brain thought to reflect greeting
           brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). Greeting and offering assistance.`;
           brain.state.lastThoughtTime = Date.now();
-
-          window.dispatchEvent(
-            new CustomEvent("subconscious-speak", {
-              detail: { agentId: id, text: getRandomPhrase("GREETINGS") },
-            }),
-          );
         }
       } else if (playerProximityState.current === "GREETING") {
-        // Keep the agent stopped and facing the player while greeting
-        vehicle.velocity.set(0, 0, 0);
-
         // Check if prompt was dismissed (N pressed)
         if (!storeState.chatPromptVisible && !storeState.isChatOpen) {
           playerProximityState.current = "COOLDOWN";
           playerProximityCooldown.current = 0;
-          greetingState.current = "NONE";
           storeState.setNearbyAgentId(null);
 
           brain.state.thought = "Player declined assistance. Resuming patrol.";
@@ -732,7 +746,6 @@ export function useAgentBrain(
         // Check if chat was opened (Y pressed)
         else if (storeState.isChatOpen && storeState.chatAgentId === id) {
           playerProximityState.current = "CHATTING";
-          greetingState.current = "NONE";
 
           brain.state.thought =
             "Engaged in conversation with the user. Standing by for instructions.";
@@ -742,7 +755,6 @@ export function useAgentBrain(
         else if (distToPlayer > PLAYER_LEAVE_DISTANCE) {
           playerProximityState.current = "COOLDOWN";
           playerProximityCooldown.current = 0;
-          greetingState.current = "NONE";
           storeState.setChatPromptVisible(false);
           storeState.setNearbyAgentId(null);
 
@@ -802,61 +814,6 @@ export function useAgentBrain(
           playerProximityCooldown.current = 0;
         }
       }
-    }
-
-    // --- THROTTLED SOCIAL INTERACTION (Robot vs Robot) ---
-    // Hard collision is now handled by YUKA's SeparationBehavior to avoid O(N^2) every frame.
-    socialCheckTimer.current += delta;
-    if (socialCheckTimer.current > 0.25) {
-      socialCheckTimer.current = 0;
-
-      const vehicles = aiManager.vehicles;
-      const myPos = vehicle.position;
-
-      for (const other of vehicles) {
-        if (other !== vehicle) {
-          const distSq = myPos.squaredDistanceTo(other.position);
-
-          // Social Interaction — Fix #26: Skip if agent has an active task
-          if (
-            distSq < 25.0 &&
-            socialState.current === "NONE" &&
-            greetingState.current === "NONE" &&
-            !taskQueue.isBusy()
-          ) {
-            // Increased probability to 0.05 since we check 4x a second instead of 60x
-            if (Math.random() < 0.05) {
-              socialState.current = "CHATTING";
-              socialTarget.current = other;
-              socialTimer.current = 0;
-              greetingState.current = "WAVING";
-              
-              // Emit social heat
-              InterestMap.getInstance().addHeat(myPos as unknown as THREE.Vector3, 2.0);
-            }
-          }
-        }
-      }
-    }
-
-    // --- SOCIAL UPDATES ---
-    // Fix #30: Force-cancel social interactions if the agent has an active task.
-    // Otherwise a 5-second CHATTING freeze makes the stuck detector think the agent is stuck.
-    if (socialState.current === "CHATTING" && taskQueue.isBusy()) {
-      socialState.current = "NONE";
-      socialTimer.current = 0;
-      greetingState.current = "NONE";
-    } else if (socialState.current === "CHATTING") {
-      socialTimer.current += delta;
-      vehicle.velocity.set(0, 0, 0);
-      if (socialTimer.current > 5.0) {
-        socialState.current = "COOLDOWN";
-        socialTimer.current = 0;
-        greetingState.current = "NONE";
-      }
-    } else if (socialState.current === "COOLDOWN") {
-      socialTimer.current += delta;
-      if (socialTimer.current > 3.0) socialState.current = "NONE";
     }
 
     // Record familiarity (Phase 3: Individual Dispersion)
@@ -981,159 +938,162 @@ export function useAgentBrain(
       }
     }
 
-    // --- BRAIN PULSE ---
-    const now = Date.now() / 1000;
-    const canThink = now - lastBrainCallTimeRef.current > BRAIN_COOLDOWN_SEC;
+    // --- PER-FRAME DRIVES + SENSORY (independent of LLM cooldown) ---
+    if (!hasManualTask) {
+      const registry = InteractableRegistry.getInstance();
+      const vPos = vehicle.position as unknown as THREE.Vector3;
+      const nearbyAnyItems = registry.getNearby(vPos, 15);
+      const nearbyFloorCount = nearbyAnyItems.filter(
+        (i) => i.pickable && !i.carriedBy && !i.placedInArea,
+      ).length;
+      const pDist = playerRef.current
+        ? vehicle.position.distanceTo(
+            playerRef.current.position as unknown as YUKA.Vector3,
+          )
+        : null;
 
-    // --- BRAIN UPDATE ---
-    // SKIP BRAIN IF MANUAL TASK IS ACTIVE (Task Queue Override)
-    if (hasManualTask) {
-      // Skip LLM brain entirely — manual tasks control steering
-    } else if (
-      playerProximityState.current === "GREETING" ||
-      playerProximityState.current === "CHATTING"
-    ) {
-      // SKIP BRAIN: Agent is interacting with player — thoughts are set by proximity state machine
-    } else if (canThink) {
-      // Triggered: update time
-      lastBrainCallTimeRef.current = now;
+      const nearbyAgentCount = aiManager.vehicles.filter(
+        (v) =>
+          v !== vehicleRef.current &&
+          (v.position as unknown as THREE.Vector3).distanceTo(vPos) < 8,
+      ).length;
 
-      // Throttle brain based on distance
-      let shouldSkipDueToDistance = false;
-      if (playerRef.current) {
-        const d = vehicle.position.distanceTo(
-          playerRef.current.position as unknown as YUKA.Vector3,
+      const agentWorldPos = vPos.clone();
+      const currentZoneInfluence =
+        ZoneInfluenceSystem.getCurrentZone(agentWorldPos);
+      if (currentZoneInfluence) {
+        driveManagerRef.current.applyZoneEffects(
+          currentZoneInfluence.effects,
+          delta,
+          personalityRef.current.driveWeights,
         );
-        if (d > 50 && Math.random() < 0.66) shouldSkipDueToDistance = true;
-        else if (d > 25 && Math.random() < 0.5) shouldSkipDueToDistance = true;
       }
 
-      if (shouldSkipDueToDistance) {
-        // Skipped
-      } else if (followingAgentId === id) {
-        // Follow mode - handled above via task queue or legacy
-      } else if (
-        taskQueue.isBusy() &&
-        (taskQueue.getCurrentTask()?.priority ?? 0) > 0
-      ) {
-        // SKIP BRAIN: A conscious script is actively running — don't poll LLM
-        /* console.log(
-          `[useAgentBrain:${id}] Brain gate: SKIPPING (busy, priority=${taskQueue.getCurrentTask()?.priority}, phase=${taskQueue.getCurrentPhase()})`,
-        ); */
-      } else {
-        // --- DRIVE & EVENT MANAGER ---
-        let currentBehavior = "IDLE";
-        if (vehicle.steering.behaviors[1].active) currentBehavior = "SEEKING";
-        else if (vehicle.steering.behaviors[0].active)
-          currentBehavior = "WANDERING";
-
-        const registry = InteractableRegistry.getInstance();
-        const vPos = vehicle.position as unknown as THREE.Vector3;
-
-        // Fast proximity check for Drive update (no raycast needed here, just volume sense)
-        const nearbyAnyItems = registry.getNearby(vPos, 15);
-        const nearbyFloorCount = nearbyAnyItems.filter(
-          (i) => i.pickable && !i.carriedBy && !i.placedInArea,
-        ).length;
-        const pDist = playerRef.current
-          ? vehicle.position.distanceTo(
-              playerRef.current.position as unknown as YUKA.Vector3,
-            )
-          : null;
-        const isIdle =
-          currentBehavior === "IDLE" || currentBehavior === "WANDERING";
-
-        // ── Zone influence: update drives via zone effects ──────────────────
-        const agentWorldPos = vPos.clone();
-        const currentZoneInfluence = ZoneInfluenceSystem.getCurrentZone(agentWorldPos);
+      zoneUpdateTimer.current += delta;
+      if (zoneUpdateTimer.current >= 2.0) {
+        zoneUpdateTimer.current = 0;
         if (currentZoneInfluence) {
-          driveManagerRef.current.applyZoneEffects(
-            currentZoneInfluence.effects,
-            delta,
-            personalityRef.current.driveWeights,
+          spatialMemoryRef.current.updateZone(
+            currentZoneInfluence.zoneId,
+            currentZoneInfluence.zoneName,
           );
         }
-
-        // ── Spatial memory: track zone visits ────────────────────────────
-        zoneUpdateTimer.current += delta;
-        if (zoneUpdateTimer.current >= 2.0) {
-          zoneUpdateTimer.current = 0;
-          if (currentZoneInfluence) {
-            spatialMemoryRef.current.updateZone(
-              currentZoneInfluence.zoneId,
-              currentZoneInfluence.zoneName,
-            );
-          }
-          // Decay individual familiarity (Expert Review)
-          familiarityRef.current.decay(2.0);
-          
-          // Update POI novelty recovery
-          poiUpdateTimer.current += 2.0;
-          if (poiUpdateTimer.current >= 30.0) {
-            poiUpdateTimer.current = 0;
-            POIRegistry.getInstance().update();
-          }
+        familiarityRef.current.decay(2.0);
+        poiUpdateTimer.current += 2.0;
+        if (poiUpdateTimer.current >= 30.0) {
+          poiUpdateTimer.current = 0;
+          POIRegistry.getInstance().update();
         }
+      }
 
-        // Check if agent is in a preferred zone for belonging drive
-        const currentZoneId = currentZoneInfluence?.zoneId ?? "";
-        const isInPreferredZone = personalityRef.current.preferredZones.includes(currentZoneId);
-        const isMoving = (vehicle.velocity as unknown as THREE.Vector3).length() > 0.2;
+      const currentZoneId = currentZoneInfluence?.zoneId ?? "";
+      const isInPreferredZone =
+        personalityRef.current.preferredZones.includes(currentZoneId);
+      const isMoving =
+        (vehicle.velocity as unknown as THREE.Vector3).length() > 0.2;
+      const isIdle = !taskQueue.isBusy();
 
-        driveManagerRef.current.update(delta, {
-          nearbyFloorItems: nearbyFloorCount,
-          playerDistance: pDist,
-          nearbyAgentCount: socialState.current !== "NONE" ? 1 : 0,
-          isIdle,
-          isMoving,
-          isInPreferredZone,
-          driveWeights: personalityRef.current.driveWeights,
-        });
+      driveManagerRef.current.update(delta, {
+        nearbyFloorItems: nearbyFloorCount,
+        playerDistance: pDist,
+        nearbyAgentCount,
+        isIdle,
+        isMoving,
+        isInPreferredZone,
+        driveWeights: personalityRef.current.driveWeights,
+      });
 
-          const urgentDrive = driveManagerRef.current.getUrgentDrive();
+      const perceivedEntities = sensorySystemRef.current.update(
+        vPos,
+        groupRef.current!.quaternion as unknown as THREE.Quaternion,
+        (() => {
+          const raw: NearbyEntity[] = [];
+          if (playerRef.current && pDist !== null) {
+            raw.push({
+              type: "PLAYER",
+              id: "player-01",
+              distance: pDist,
+              status: "Active",
+              position: {
+                x: playerRef.current.position.x,
+                y: playerRef.current.position.y,
+                z: playerRef.current.position.z,
+              },
+            });
+          }
+          const items = registry.getNearby(vPos, 30);
+          for (const item of items) {
+            if (!item.pickable || item.carriedBy || item.placedInArea) continue;
+            raw.push({
+              type: "OBJECT",
+              id: item.id,
+              distance: vPos.distanceTo(item.position),
+              objectType: item.type,
+              name: item.name,
+              position: {
+                x: item.position.x,
+                y: item.position.y,
+                z: item.position.z,
+              },
+            });
+          }
+          for (const other of aiManager.vehicles) {
+            if (other === vehicleRef.current) continue;
+            const op = other.position as unknown as THREE.Vector3;
+            const oid =
+              (other as unknown as { id?: string }).id ?? "agent-unknown";
+            raw.push({
+              type: "AGENT",
+              id: oid,
+              distance: vPos.distanceTo(op),
+              status: "Active",
+              position: { x: op.x, y: op.y, z: op.z },
+            });
+          }
+          return raw;
+        })(),
+        collidableMeshes,
+      );
+      lastPerceivedEntitiesRef.current = perceivedEntities;
 
-        // --- SENSORY UPDATE (Local Subconscious) ---
-        const perceivedEntities = sensorySystemRef.current.update(
-          vPos,
-          groupRef.current!.quaternion as unknown as THREE.Quaternion,
-          // We still need a source of raw entities for the sensor to filter
-          // For now, we'll synthesize them from the registry and playerRef
-          (() => {
-            const raw: NearbyEntity[] = [];
-            if (playerRef.current && pDist !== null) {
-              raw.push({
-                type: "PLAYER",
-                id: "player-01",
-                distance: pDist,
-                status: "Active",
-                position: {
-                  x: playerRef.current.position.x,
-                  y: playerRef.current.position.y,
-                  z: playerRef.current.position.z,
-                },
-              });
-            }
-            const items = registry.getNearby(vPos, 30);
-            for (const item of items) {
-               if (!item.pickable || item.carriedBy || item.placedInArea) continue;
-               raw.push({
-                 type: "OBJECT",
-                 id: item.id,
-                 distance: vPos.distanceTo(item.position),
-                 objectType: item.type,
-                 name:item.name,
-                 position: { x: item.position.x, y: item.position.y, z: item.position.z }
-               });
-            }
-            return raw;
-          })(),
-          collidableMeshes
+      const urgentDrive = driveManagerRef.current.getUrgentDrive();
+
+      // --- LLM (social / reactive only) ---
+      if (
+        playerProximityState.current !== "GREETING" &&
+        playerProximityState.current !== "CHATTING"
+      ) {
+        const nowSec = Date.now() / 1000;
+        const mem = sensorySystemRef.current.getWorkingMemory();
+        const cooldownSec = getEffectiveCooldown(mem);
+        const canThinkLLM =
+          nowSec - lastBrainCallTimeRef.current > cooldownSec;
+
+        const hasNearbyPlayer = mem.some(
+          (e) => e.type === "PLAYER" && e.distance < 12 && e.isVisible,
         );
+        const hasNearbyAgents =
+          mem.filter(
+            (e) => e.type === "AGENT" && e.distance < 6 && e.isVisible,
+          ).length > 0;
+        const socialDriveUrgent = urgentDrive?.drive === "social";
+        const shouldUseLLM =
+          canThinkLLM &&
+          !taskQueue.isBusy() &&
+          followingAgentId !== id &&
+          (hasNearbyPlayer ||
+            socialDriveUrgent ||
+            (hasNearbyAgents && Math.random() < 0.3));
 
-        // FIRE CONSCIOUSNESS ONLY IF A DRIVE IS URGENT (EVENT-DRIVEN)
-        if (urgentDrive && !brain.state.isThinking) {
-          driveManagerRef.current.markTriggered(urgentDrive.drive);
-          const driveContextStr = driveManagerRef.current.toContextString();
+        if (shouldUseLLM && !brainRef.current.state.isThinking) {
+          lastBrainCallTimeRef.current = nowSec;
+          if (socialDriveUrgent) {
+            driveManagerRef.current.markTriggered("social");
+          }
+
+          const currentBehavior = resolveCurrentBehavior(taskQueue);
+          const driveContextStr =
+            driveManagerRef.current.toContextString();
 
           // Convert perceived records back to NearbyEntity for the Brain
           const nearbyEntities: NearbyEntity[] = perceivedEntities.map(p => ({
@@ -1239,7 +1199,7 @@ export function useAgentBrain(
           // Update Brain with Semantic Zone and Drives
           const enhancedBehavior = `${currentBehavior} (Zone: ${currentZoneInfluence?.zoneName ?? currentZone})`;
 
-          brain
+          brainRef.current
             .update(
               vPos,
               nearbyEntities,
@@ -1363,27 +1323,33 @@ export function useAgentBrain(
                 error,
               );
             });
-        } // closing if (urgentDrive && !brain.state.isThinking)
-
-        // --- LOCAL UTILITY AI (Subconscious Goal Setting) ---
-        // Runs every 3 seconds if no high-priority task is active
-        const utilityNow = Date.now();
-        if (utilityNow - lastUtilityCheckTimeRef.current > 3000 && !taskQueue.isBusy() && !brain.state.isThinking) {
-           lastUtilityCheckTimeRef.current = utilityNow;
-           const localTasks = utilityBrainRef.current.evaluate(
-             driveManagerRef.current.drives,
-             vPos,
-             spatialMemoryRef.current,
-             familiarityRef.current
-           );
-           
-           if (localTasks && localTasks.length > 0) {
-              console.log(`[useAgentBrain:${id}] UtilityBrain triggered local routine: ${localTasks[0].scriptId}`);
-              localTasks.forEach(task => taskQueue.enqueue(task));
-           }
         }
-      } // closing else (taskQueue.isBusy())
-    } // closing manual task & proximity state overrides
+      }
+
+      const utilityNow = Date.now();
+      if (
+        utilityNow - lastUtilityCheckTimeRef.current > 3000 &&
+        !taskQueue.isBusy() &&
+        !brainRef.current.state.isThinking
+      ) {
+        lastUtilityCheckTimeRef.current = utilityNow;
+        const localTasks = utilityBrainRef.current.evaluate(
+          driveManagerRef.current.drives,
+          vPos,
+          spatialMemoryRef.current,
+          familiarityRef.current,
+          lastPerceivedEntitiesRef.current,
+          personalityRef.current,
+        );
+
+        if (localTasks && localTasks.length > 0) {
+          console.log(
+            `[useAgentBrain:${id}] UtilityBrain triggered local routine: ${localTasks[0].scriptId}`,
+          );
+          localTasks.forEach((task) => taskQueue.enqueue(task));
+        }
+      }
+    }
 
     // --- ANIMATION UPDATE (Procedural) ---
     const frustum = frustumRef.current;
@@ -1441,19 +1407,12 @@ export function useAgentBrain(
 
       const animSpeed = smoothSpeed.current;
 
-      // Stop waving/chatting immediately if the agent starts moving (e.g. gets a new task)
-      if (animSpeed > 0.1) {
-        if (greetingState.current === "WAVING") greetingState.current = "NONE";
-        if (socialState.current === "CHATTING")
-          socialState.current = "COOLDOWN";
-      }
-
       // Determine animation state based on task queue phase
       const taskPhase = taskQueue.getCurrentPhase();
       const taskType = taskQueue.getCurrentTask()?.type;
 
       let newState: "Idle" | "Walk" | "Run" | "Wave" | "Sit" | "Lean" | "Think" | "Work" | "Present" | "Rest" | "LookAt" = "Idle";
-      if (greetingState.current === "WAVING") {
+      if (taskPhase === "EMOTING" && taskType === "EMOTE" && taskQueue.getCurrentTask()?.gesture === "wave") {
         newState = "Wave";
       } else if (taskPhase === "SEATED") {
         newState = taskType === "REST" ? "Rest" : "Sit";
@@ -1464,7 +1423,7 @@ export function useAgentBrain(
       } else if (taskPhase === "PRESENTING") {
         newState = "Present";
       } else if (taskPhase === "EMOTING") {
-        newState = "Idle"; // Handled by gesture in gait
+        newState = "Idle";
       } else if (taskPhase === "ACTION_START" && (taskType === "INTERACT" || taskType === "PICK_NEARBY" || taskType === "PLACE_INVENTORY")) {
         newState = "Work";
       } else if (animSpeed > 0.1) {
@@ -1520,11 +1479,12 @@ export function useAgentBrain(
           j.neck.rotation.x = THREE.MathUtils.lerp(j.neck.rotation.x, Math.sin(t * 0.27) * 0.05, 0.03);
         }
 
-        if (greetingState.current === "WAVING") {
+        if (
+          taskQueue.getCurrentPhase() === "EMOTING" &&
+          taskQueue.getCurrentTask()?.gesture === "wave"
+        ) {
           const waveSpeed = 8;
           const wave = Math.sin(state.clock.elapsedTime * waveSpeed) * 0.4;
-
-          // Override arm rotation for waving
           j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
             j.rightArm.shoulder.rotation.x,
             -0.25 + wave * 0.08,

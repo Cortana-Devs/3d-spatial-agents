@@ -92,8 +92,11 @@ The Donut Lab is a recursive circular ring subdivided into 8 semantic sectors. Y
 - **Current Sector**: ${context.zoneContext ?? "Unknown transitional corridor"}
 - **Behavior**: ${context.currentBehavior}
 
-## Drives (act on LOW ones first)
-${context.drives || "All balanced."}
+## Your Current State
+${context.drives || "All drives balanced."}
+
+Your physical needs (rest, tidying, exploring) are managed automatically.
+Focus on social interaction, responding to what you observe, and personality-driven expression.
 
 ## Spatial Memory (Recent Visits)
 ${context.spatialMemory ?? "No recorded logs."}
@@ -106,15 +109,6 @@ ${entityTable}
 
 ## Core Context & Memory
 ${memoryContext || "Clear environment."}
-
-## Drive → Action Rules
-| Drive LOW | Use tool |
-|---|---|
-| Energy | rest (go to Break Room) |
-| Wonder | contemplate (go to Center Garden or Fishing Dock) |
-| Curiosity | explore (least recently visited zone) |
-| Social | say or collaborate |
-| Tidiness | pick_up then place_at |
 
 ## Navigation Zones (use as zoneId in go_to)
 | Zone ID | Location |
