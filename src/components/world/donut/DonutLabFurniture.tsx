@@ -110,10 +110,15 @@ export default function DonutLabFurniture() {
   ];
 
   // --- WEST SECTOR: NOW Strategy / Conference (angles π/2 ± spread) ---
-  const westBase = Math.PI / 2;
+  const westBase = Math.PI / 2 - 0.50;
   const confAngle = westBase + 0.30; // offset from door
   const mgrAngle = westBase - 0.30;
   const wbAngle = westBase + 0.55;
+  const extraTableAngles = [
+    labAngle1 - 0.65,
+    labAngle1 - 0.83,
+    labAngle1 - 1.01,
+  ];
 
   return (
     <group name="DonutLabFurniture">
@@ -245,6 +250,129 @@ export default function DonutLabFurniture() {
           }}
         />
       </LabWorkbench>
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* EXTRA RESEARCH TABLES — From Previous Lab (4 Tables + Items)        */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {extraTableAngles.map((angle, i) => {
+        const labels = ["A", "B", "C", "D"];
+        const xz = ringPos(angle, MID_RING + 8);
+        return (
+          <group key={`extra-table-${i}`}>
+            <OfficeDesk
+              position={xz}
+              rotation={faceCenter(angle)}
+              withDesktopPC={false}
+              userData={{
+                type: "Furniture",
+                id: `extra-table-${labels[i]}`,
+                name: `Research Table ${labels[i]}`,
+                interactable: true,
+              }}
+            >
+              {/* Items per specific table from previous layout */}
+              {i === 0 && ( // Table 6 / A
+                <>
+                  <Laptop
+                    position={[0, 4.2, 0]}
+                    rotation={Math.PI}
+                    userData={{
+                      type: "Prop",
+                      id: `extra-table-${labels[i]}-laptop`,
+                      name: "Data Analysis Laptop",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "laptop",
+                    }}
+                  />
+                  <FileFolder
+                    position={[-3, 4.1, 1]}
+                    rotation={0.2}
+                    color="blue"
+                    userData={{
+                      type: "Prop",
+                      id: `extra-table-${labels[i]}-protocols`,
+                      name: "Experiment Protocols",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                </>
+              )}
+              {i === 1 && ( // Table 7 / B
+                <>
+                  <FileFolder
+                    position={[2.5, 4.1, 0.5]}
+                    rotation={-0.1}
+                    color="red"
+                    userData={{
+                      type: "Prop",
+                      id: `extra-table-${labels[i]}-logs`,
+                      name: "Sample Log Files",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                  <PenDrive
+                    position={[-2, 4.1, 0.3]}
+                    rotation={0.4}
+                    userData={{
+                      type: "Prop",
+                      id: `extra-table-${labels[i]}-usb`,
+                      name: "Backup USB Drive",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "pendrive",
+                    }}
+                  />
+                </>
+              )}
+              {i === 2 && ( // Table 8 / C
+                <>
+                  <FileFolder
+                    position={[0, 4.1, 0.5]}
+                    rotation={0.05}
+                    userData={{
+                      type: "Prop",
+                      id: `extra-table-${labels[i]}-sops`,
+                      name: "Lab SOP Binder",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                  <FileFolder
+                    position={[-2.5, 4.1, -0.5]}
+                    rotation={-0.15}
+                    color="blue"
+                    userData={{
+                      type: "Prop",
+                      id: `extra-table-${labels[i]}-manuals`,
+                      name: "Equipment Manuals",
+                      interactable: true,
+                      pickable: true,
+                      objectType: "file",
+                    }}
+                  />
+                </>
+              )}
+            </OfficeDesk>
+            {/* Visual Label */}
+            <Text
+              position={[xz[0], cy + 4.15, xz[2]]}
+              rotation={[-Math.PI / 2, 0, faceCenter(angle)]}
+              fontSize={1.2}
+              color="#202531"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {labels[i]}
+            </Text>
+          </group>
+        );
+      })}
 
 
 
