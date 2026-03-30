@@ -8,8 +8,8 @@
  * Sectors:
  *   North (angle ~π):        Core Lab — 2 LabWorkbenches + sample racks
  *   East  (angle ~3π/2):     Data Analysis — 4 OfficeDesks + chairs
- *   South (angle ~0):        Strategy — ConferenceTable, ManagersDesk, Whiteboard
- *   West  (angle ~π/2):      Break & Storage — Sofas, TV, CoffeeStation, Cupboards
+ *   South (angle ~0):        Break & Storage — Sofas, TV, CoffeeStation, Cupboards
+ *   West  (angle ~π/2):      Strategy — ManagersDesk, Research Tables
  */
 import React from "react";
 import { Text } from "@react-three/drei";
@@ -109,11 +109,9 @@ export default function DonutLabFurniture() {
     southBase + 0.80,
   ];
 
-  // --- WEST SECTOR: NOW Strategy / Conference (angles π/2 ± spread) ---
+  // --- WEST SECTOR: Strategy (angles π/2 ± spread) ---
   const westBase = Math.PI / 2 - 0.50;
-  const confAngle = westBase + 0.30; // offset from door
-  const mgrAngle = westBase - 0.30;
-  const wbAngle = westBase + 0.55;
+  const mgrAngle = westBase + 0.15; // Move to free space North of storage (gap before West door)
   const extraTableAngles = [
     labAngle1 - 0.65,
     labAngle1 - 0.83,
@@ -252,7 +250,7 @@ export default function DonutLabFurniture() {
       </LabWorkbench>
 
       {/* ════════════════════════════════════════════════════════════════════ */}
-      {/* EXTRA RESEARCH TABLES — From Previous Lab (4 Tables + Items)        */}
+      {/* EXTRA RESEARCH TABLES        */}
       {/* ════════════════════════════════════════════════════════════════════ */}
       {extraTableAngles.map((angle, i) => {
         const labels = ["A", "B", "C", "D"];
