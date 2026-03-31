@@ -187,6 +187,7 @@ function CameraRig({
 
 export default function Scene() {
   const robotRef = useRef<THREE.Group>(null);
+  const activeResearchAgents = useGameStore((state) => state.activeResearchAgents);
 
   useEffect(() => {
     useGameStore.getState().initPods();
@@ -230,16 +231,16 @@ export default function Scene() {
           Agents start nearby so they're visible on first load.
         */}
         <Robot groupRef={robotRef} initialPosition={[0, 5.0, 72]} />
-        <Agent
-          playerRef={robotRef}
-          initialPosition={agent01Pos}
-          id="agent-01"
-        />
-        <Agent
-          playerRef={robotRef}
-          initialPosition={agent02Pos}
-          id="agent-02"
-        />
+        {/* Dynamic Research Agents */}
+        {activeResearchAgents.map((agent) => (
+          <Agent
+            key={agent.id}
+            playerRef={robotRef}
+            initialPosition={agent.spawnPosition}
+            id={agent.id}
+            color={agent.color}
+          />
+        ))}
 
         <YukaSystem />
         <DebugCrosshair />

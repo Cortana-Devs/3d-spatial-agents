@@ -134,10 +134,28 @@ export interface AgentSlice {
   setAgentMetrics: (id: string, metrics: { latency: number; spatialRatio: number }) => void;
   agentScenarioContext: Record<string, string>;
   setAgentScenarioContext: (id: string, context: string) => void;
+
+  // --- Research Management ---
+  activeResearchAgents: ResearchAgent[];
+  spawnAgent: (config?: Partial<ResearchAgent>) => void;
+  removeAgent: (id: string) => void;
+  updateAgentCognition: (id: string, thought: string) => void;
+  updateAgentStatus: (id: string, status: ResearchAgent['status']) => void;
+
   playerPosition: THREE.Vector3;
   setPlayerPosition: (pos: THREE.Vector3) => void;
   debugTarget: DebugTargetInfo | null;
   setDebugTarget: (target: DebugTargetInfo | null) => void;
+}
+
+export interface ResearchAgent {
+  id: string;
+  name: string;
+  color: string;
+  status: 'IDLE' | 'THINKING' | 'MOVING' | 'ACTING' | 'ERROR';
+  thoughtHistory: string[];
+  currentTask: string;
+  spawnPosition: [number, number, number];
 }
 
 export interface UISlice {

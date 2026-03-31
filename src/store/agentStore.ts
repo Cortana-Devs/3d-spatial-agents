@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { StateCreator } from "zustand";
-import type { AgentSlice, GameState } from "./gameStoreTypes";
+import type { AgentSlice, GameState, ResearchAgent } from "./gameStoreTypes";
 
 export const createAgentSlice: StateCreator<
   GameState,
@@ -44,6 +44,71 @@ export const createAgentSlice: StateCreator<
     set((state) => ({
       agentScenarioContext: { ...state.agentScenarioContext, [id]: ctx },
     })),
+
+  activeResearchAgents: [
+    {
+      id: "agent-01",
+      name: "Researcher Delta",
+      color: "#00f2ff", // Electric Cyan
+      status: "IDLE",
+      thoughtHistory: [],
+      currentTask: "None",
+      spawnPosition: [18, 5.0, 52],
+    },
+    {
+      id: "agent-02",
+      name: "Researcher Sigma",
+      color: "#ff00ff", // Neon Magenta
+      status: "IDLE",
+      thoughtHistory: [],
+      currentTask: "None",
+      spawnPosition: [-22, 5.0, 48],
+    }
+  ],
+
+  spawnAgent: (config) => set((state) => {
+    const palette = [
+      "#00f2ff", "#ff00ff", "#00ff00", "#ffd700", 
+      "#ff8c00", "#bf00ff", "#ff4d4d", "#4d4dff", 
+      "#50c878", "#ff69b4"
+    ];
+    const index = state.activeResearchAgents.length;
+    const id = `agent-0${index + 1}`;
+    const color = palette[index % palette.length];
+    
+    const newAgent: ResearchAgent = {
+      id,
+      name: `Researcher ${String.fromCharCode(65 + index)}`,
+      color,
+      status: "IDLE",
+      thoughtHistory: [],
+      currentTask: "Initializing...",
+      spawnPosition: [0, 5, 72],
+      ...config
+    };
+
+    return {
+      activeResearchAgents: [...state.activeResearchAgents, newAgent]
+    };
+  }),
+
+  removeAgent: (id) => set((state) => ({
+    activeResearchAgents: state.activeResearchAgents.filter(a => a.id !== id)
+  })),
+
+  updateAgentCognition: (id, thought) => set((state) => ({
+    activeResearchAgents: state.activeResearchAgents.map(a => 
+      a.id === id 
+        ? { ...a, thoughtHistory: [...a.thoughtHistory, thought].slice(-5) } 
+        : a
+    )
+  })),
+
+  updateAgentStatus: (id, status) => set((state) => ({
+    activeResearchAgents: state.activeResearchAgents.map(a => 
+      a.id === id ? { ...a, status } : a
+    )
+  })),
 
   playerPosition: new THREE.Vector3(),
   setPlayerPosition: (pos) => set({ playerPosition: pos }),

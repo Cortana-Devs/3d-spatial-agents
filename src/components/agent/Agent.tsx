@@ -14,10 +14,12 @@ export default function Agent({
   playerRef,
   initialPosition = [0, 4.0, 10],
   id = "agent-01",
+  color,
 }: {
   playerRef: React.RefObject<THREE.Group | null>;
   initialPosition?: [number, number, number];
   id?: string;
+  color?: string;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const joints = useRef<any>({});
@@ -179,6 +181,7 @@ export default function Agent({
       <RobotModel
         joints={joints}
         id={id}
+        color={color}
         analyser={analyserRef.current}
         animationState={animationState}
         brain={brain}

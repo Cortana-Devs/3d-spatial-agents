@@ -14,40 +14,11 @@ const JOINT_COLOR = "#0f172a"; // Deep carbon/metallic
 const VISOR_COLOR = "#000000"; // Pitch black glass
 const EMISSIVE_COLOR = "#0ea5e9"; // Cyan glow
 
-// Reusable materials
-const armorMat = new THREE.MeshStandardMaterial({
-  color: ARMOR_COLOR,
-  roughness: 0.15,
-  metalness: 0.2,
-});
+// static material definitions removed in favor of useMemo per-instance
 
-const accentMat = new THREE.MeshStandardMaterial({
-  color: ACCENT_COLOR,
-  roughness: 0.3,
-  metalness: 0.6,
-});
 
-const jointMat = new THREE.MeshStandardMaterial({
-  color: JOINT_COLOR,
-  roughness: 0.5,
-  metalness: 0.8,
-});
-
-const visorMat = new THREE.MeshStandardMaterial({
-  color: VISOR_COLOR,
-  roughness: 0.05,
-  metalness: 0.9,
-  envMapIntensity: 2,
-});
-
-const emissiveMat = new THREE.MeshStandardMaterial({
-  color: "#e0f2fe",
-  emissive: EMISSIVE_COLOR,
-  emissiveIntensity: 2,
-  toneMapped: false,
-});
-
-function ProstheticHand({ isLeft }: { isLeft: boolean }) {
+function ProstheticHand({ isLeft, mats }: { isLeft: boolean; mats: any }) {
+  const { armorMat, accentMat, jointMat } = mats;
   const sign = isLeft ? -1 : 1;
   const fingerRefs = useRef<(THREE.Group | null)[]>([]);
   const midRefs = useRef<(THREE.Group | null)[]>([]);
@@ -236,10 +207,13 @@ function ProstheticHand({ isLeft }: { isLeft: boolean }) {
 function LedEyes({
   agentId,
   animationState,
+  mats,
 }: {
   agentId: string;
   animationState: RobotAnimationState;
+  mats: any;
 }) {
+  const { emissiveMat } = mats;
   const chatAgentId = useGameStore((s) => s.chatAgentId);
   const nearbyAgentId = useGameStore((s) => s.nearbyAgentId);
   const isFocused =
@@ -394,6 +368,7 @@ export default React.memo(function RobotModel({
   joints,
   analyser,
   id,
+  color: tintColor = EMISSIVE_COLOR, // Renamed to avoid confusion with THREE.Color
   animationState = "Idle",
   brain,
   ...props
@@ -401,10 +376,56 @@ export default React.memo(function RobotModel({
   joints: React.MutableRefObject<any>;
   analyser?: AnalyserNode | null;
   id?: string;
+  color?: string;
   animationState?: RobotAnimationState;
   brain?: ClientBrain | null;
 } & Omit<React.JSX.IntrinsicElements["group"], "id">) {
   const logoTexture = useTexture("/usjp-logo.svg");
+
+  // Create unique materials for this instance
+  const mats = useMemo(() => {
+    const armor = new THREE.MeshStandardMaterial({
+      color: ARMOR_COLOR,
+      roughness: 0.15,
+      metalness: 0.2,
+    });
+
+    const accent = new THREE.MeshStandardMaterial({
+      color: ACCENT_COLOR,
+      roughness: 0.3,
+      metalness: 0.6,
+    });
+
+    const joint = new THREE.MeshStandardMaterial({
+      color: JOINT_COLOR,
+      roughness: 0.5,
+      metalness: 0.8,
+    });
+
+    const visor = new THREE.MeshStandardMaterial({
+      color: VISOR_COLOR,
+      roughness: 0.05,
+      metalness: 0.9,
+      envMapIntensity: 2,
+    });
+
+    const emissive = new THREE.MeshStandardMaterial({
+      color: "#e0f2fe",
+      emissive: tintColor,
+      emissiveIntensity: 2,
+      toneMapped: false,
+    });
+
+    return { 
+      armorMat: armor, 
+      accentMat: accent, 
+      jointMat: joint, 
+      visorMat: visor, 
+      emissiveMat: emissive 
+    };
+  }, [tintColor]);
+
+  const { armorMat, accentMat, jointMat, visorMat, emissiveMat } = mats;
 
   useLayoutEffect(() => {
     if (logoTexture) {
@@ -700,6 +721,7 @@ export default React.memo(function RobotModel({
                 <LedEyes
                   agentId={id ?? ""}
                   animationState={animationState}
+                  mats={mats}
                 />
                 <LedMouth position={[0, -0.035, 0.076]} analyser={analyser} />
               </group>
@@ -745,7 +767,7 @@ export default React.memo(function RobotModel({
                     <sphereGeometry args={[0.025, 32, 32]} />
                   </mesh>
                   <group rotation={[0, Math.PI / 3, 0]}>
-                    <ProstheticHand isLeft={true} />
+                    <ProstheticHand isLeft={true} mats={mats} />
                   </group>
                 </group>
               </group>
@@ -790,7 +812,7 @@ export default React.memo(function RobotModel({
                     <sphereGeometry args={[0.025, 32, 32]} />
                   </mesh>
                   <group rotation={[0, -Math.PI / 3, 0]}>
-                    <ProstheticHand isLeft={false} />
+                    <ProstheticHand isLeft={false} mats={mats} />
                   </group>
                 </group>
               </group>

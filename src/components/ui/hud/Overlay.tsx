@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/store/gameStore";
-import GameMenu from "./GameMenu";
+import ResearchDashboard from "./ResearchDashboard";
 import { InspectorPanel } from "./InspectorPanel";
 import { TaskAssignmentPanel } from "../panels/TaskAssignmentPanel";
 import { CommandBar } from "./CommandBar";
@@ -502,8 +502,8 @@ export default function Overlay() {
         </div>
       )}
 
-      {/* Game Menu Panel — only when menu icon is clicked (Stage 2) */}
-      {isMenuPanelOpen && <GameMenu />}
+      {/* Research Dashboard Panel — only when menu icon is clicked (Stage 2) */}
+      {isMenuPanelOpen && <ResearchDashboard />}
 
       {/* Interaction Notification Toast */}
       {interactionNotification && (

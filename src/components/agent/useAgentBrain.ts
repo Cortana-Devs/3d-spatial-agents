@@ -141,6 +141,40 @@ export function useAgentBrain(
   /** Seconds since epoch; LLM cooldown from getEffectiveCooldownSec */
   const lastBrainCallTimeRef = useRef(0);
 
+  const updateAgentCognition = useGameStore((s) => s.updateAgentCognition);
+  const updateAgentStatus = useGameStore((s) => s.updateAgentStatus);
+
+  // Sync thought updates to store for Research Dashboard oversight
+  useEffect(() => {
+    const brain = brainRef.current;
+    let lastThought = "";
+    
+    const interval = setInterval(() => {
+      if (brain.state.thought !== lastThought) {
+        lastThought = brain.state.thought;
+        updateAgentCognition(id, lastThought);
+      }
+    }, 500); // Check every 500ms for cognitive updates
+    
+    return () => clearInterval(interval);
+  }, [id, updateAgentCognition]);
+
+  // Sync status updates
+  useEffect(() => {
+    const brain = brainRef.current;
+    let lastThinking = false;
+    
+    const interval = setInterval(() => {
+      const isThinking = brain.state.isThinking;
+      if (isThinking !== lastThinking) {
+        lastThinking = isThinking;
+        updateAgentStatus(id, isThinking ? "THINKING" : "IDLE");
+      }
+    }, 200);
+    
+    return () => clearInterval(interval);
+  }, [id, updateAgentStatus]);
+
   // Fix #Loop-5: Deduplicate repeated same-script decisions — prevent re-queuing
   // the exact same scriptId within a cooldown window (30s).
   const lastScriptIdRef = useRef<string>("");
