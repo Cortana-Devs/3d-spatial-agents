@@ -429,3 +429,36 @@ export function validateAndResolve(raw: string): ParsedNLPResult | NLPError {
     explanation: parsed.explanation || "Command parsed successfully.",
   };
 }
+
+// ============================================================================
+// Research Evaluation (SO4) — Spatial Language Parsing
+// ============================================================================
+
+const SPATIAL_PREPOSITIONS = new Set([
+  "above", "across", "against", "along", "among", "around", "behind",
+  "below", "beneath", "beside", "between", "beyond", "by", "down", 
+  "from", "in", "inside", "into", "near", "off", "on", "onto", 
+  "out", "outside", "over", "past", "through", "to", "toward", 
+  "under", "underneath", "up", "upon", "with", "facing", "next", "corner"
+]);
+
+/**
+ * Calculates the frequency of spatial prepositions in a given text block.
+ * @returns A ratio (0.0 to 1.0) of spatial words to total words.
+ */
+export function calculateSpatialLanguageFrequency(text: string): number {
+  if (!text) return 0;
+  
+  // Normalize and tokenize (split by non-alphanumeric, keeping words)
+  const words = text.toLowerCase().match(/\b[a-z]+\b/g) || [];
+  if (words.length === 0) return 0;
+  
+  let spatialCount = 0;
+  for (const word of words) {
+    if (SPATIAL_PREPOSITIONS.has(word)) {
+      spatialCount++;
+    }
+  }
+  
+  return spatialCount / words.length;
+}

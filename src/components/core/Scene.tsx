@@ -15,6 +15,7 @@ import DebugCrosshair from "@/components/core/DebugCrosshair";
 import ObstacleVisualizer from "@/components/world/debug/ObstacleVisualizer";
 import { PlacingAreaMarkers } from "@/components/world/debug/PlacingAreaMarkers";
 import ObjectHighlighter from "@/components/world/debug/ObjectHighlighter";
+import FPSMonitor from "@/components/core/FPSMonitor";
 
 import { useGameStore } from "@/store/gameStore";
 
@@ -243,6 +244,7 @@ export default function Scene() {
         <ObstacleVisualizer />
         <PlacingAreaMarkers playerRef={robotRef} />
         <ObjectHighlighter />
+        <FPSMonitor />
 
         <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
 

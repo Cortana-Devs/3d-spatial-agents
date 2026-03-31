@@ -9,6 +9,10 @@ export const createSettingsSlice: StateCreator<
 > = (set) => ({
   invertedMouse: false,
   setInvertedMouse: (inverted) => set({ invertedMouse: inverted }),
+  runId: `run-${Date.now()}`,
+  setRunId: (id) => set({ runId: id }),
+  currentFps: 60,
+  setCurrentFps: (fps) => set({ currentFps: fps }),
   sensitivity: 1.0,
   setSensitivity: (sensitivity) => set({ sensitivity }),
   volume: 0.5,

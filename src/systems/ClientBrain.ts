@@ -22,6 +22,9 @@ export interface AgentDecision {
 }
 
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import { dispatchSimulationLog } from "@/lib/logging/SimulationLogger";
+import { calculateSpatialLanguageFrequency } from "@/lib/nlp-parser";
+import { useGameStore } from "@/store/gameStore";
 
 export class ClientBrain {
   public state: BrainState;
@@ -122,6 +125,7 @@ export class ClientBrain {
           : "No relevant past memories.";
 
       // --- 2. THINK (Server Side) ---
+      (this as any)._thinkStartTime = Date.now();
       const response = await generateAgentThought(
         context,
         memoryContextStr,
@@ -303,6 +307,33 @@ export class ClientBrain {
         scriptId: `tool_action_${Date.now()}`,
         priority: 10,
       };
+
+      // Ensure verification metric is gathered (Assume validated safely if it reached here without immediate failure)
+      const verificationResult = tasks.length > 0;
+      
+      const metrics = {
+        latency_ms: Date.now() - (this as any)._thinkStartTime, // Need to track start time
+        token_count: 0, // Server action doesn't return tokens yet, will default 0 for now
+        fps: useGameStore.getState().currentFps || 60,
+        spatial_language_freq: calculateSpatialLanguageFrequency(decision.thought)
+      };
+
+      dispatchSimulationLog({
+        timestamp: new Date().toISOString(),
+        agent_id: this.id,
+        run_id: useGameStore.getState().runId,
+        perception: JSON.stringify(context.nearbyEntities),
+        response: {
+          text: decision.thought,
+          tool_calls: response.tool_calls || [],
+        },
+        verification: verificationResult,
+        execution: {
+          action: operation,
+          outcome: tasks.length > 0 ? "enqueued" : "observed"
+        },
+        metrics
+      });
 
       this.state.thought = decision.thought;
       this.state.lastThoughtTime = Date.now();

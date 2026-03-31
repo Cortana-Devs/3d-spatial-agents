@@ -48,6 +48,10 @@ export interface WorldSlice {
 export interface SettingsSlice {
   invertedMouse: boolean;
   setInvertedMouse: (inverted: boolean) => void;
+  runId: string;
+  setRunId: (id: string) => void;
+  currentFps: number;
+  setCurrentFps: (fps: number) => void;
   sensitivity: number;
   setSensitivity: (sensitivity: number) => void;
   volume: number;
