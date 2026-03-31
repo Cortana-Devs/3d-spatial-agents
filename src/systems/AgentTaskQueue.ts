@@ -124,8 +124,12 @@ export class AgentTaskQueue {
       useGameStore.getState().setAgentTrajectory(this.agentId, []);
       window.dispatchEvent(
         new CustomEvent("agent-task-completed", {
-          detail: { agentId: this.agentId, taskType: this.currentTask?.type || "UNKNOWN" },
-        })
+          detail: {
+            agentId: this.agentId,
+            taskType: this.currentTask?.type || "UNKNOWN",
+            task: this.currentTask,
+          },
+        }),
       );
     }
   }

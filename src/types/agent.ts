@@ -43,6 +43,10 @@ export interface AgentContext {
     speechStyle: string;
     bio: string;
   };
+  /** Structured recall of past talks with a nearby entity (client-filled before server action). */
+  conversationHistory?: string;
+  /** Idle explorer monologue + recent chats for prompt grounding. */
+  autonomousActivityContext?: string;
 }
 
 export interface TraceOptions {
@@ -87,6 +91,9 @@ export type AgentTaskType =
 export interface AgentTask {
   type: AgentTaskType;
   priority: number;
+  /** Origin of the task (e.g. idle explorer GO_TO vs LLM script). */
+  source?: "idle_explorer" | "llm" | "script" | "system";
+  sourceLabel?: string;
   scriptId?: string;
   podId?: string;
   itemId?: string;

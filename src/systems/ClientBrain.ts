@@ -22,6 +22,8 @@ export interface AgentDecision {
 }
 
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import { conversationMemory } from "@/lib/memory/ConversationMemory";
+import { getIdleExplorer } from "@/systems/autonomy/IdleExplorer";
 import { dispatchSimulationLog } from "@/lib/logging/SimulationLogger";
 import { calculateSpatialLanguageFrequency } from "@/lib/nlp-parser";
 import { useGameStore } from "@/store/gameStore";
@@ -80,6 +82,25 @@ export class ClientBrain {
       taskState,
       ...richContext,
     };
+
+    await conversationMemory.ensureLoaded();
+    const playerNearby = nearbyEntities.find(
+      (e) => e.type === "PLAYER" && e.id,
+    );
+    if (playerNearby?.id) {
+      context.conversationHistory = conversationMemory.formatForPrompt(
+        this.id,
+        playerNearby.id,
+      );
+    }
+    const explorer = getIdleExplorer(this.id);
+    const autonomyParts = [
+      explorer.describeCurrentActivity(),
+      conversationMemory.formatRecentForPrompt(this.id, 3),
+    ].filter(Boolean);
+    if (autonomyParts.length > 0) {
+      context.autonomousActivityContext = autonomyParts.join("\n\n");
+    }
 
     try {
       /*

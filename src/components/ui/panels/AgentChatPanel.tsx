@@ -10,6 +10,11 @@ import { findAlternativeArea } from "@/lib/nlp-parser";
 import { getMeetingRoomPosition } from "@/config/agentRoutines";
 import * as THREE from "three";
 import { memoryStream } from "@/lib/memory/MemoryStream";
+import {
+  conversationMemory,
+  PLAYER_CONVERSATION_ENTITY_ID,
+} from "@/lib/memory/ConversationMemory";
+import { getIdleExplorer } from "@/systems/autonomy/IdleExplorer";
 import styles from "./AgentChatPanel.module.css";
 import { useAudioController } from "@/lib/audio/useAudioController";
 
@@ -61,6 +66,13 @@ export const AgentChatPanel: React.FC = () => {
     }
   }, [isChatOpen]);
 
+  // Pause idle exploration for the agent being chatted with
+  useEffect(() => {
+    if (isChatOpen && chatAgentId) {
+      getIdleExplorer(chatAgentId).pause();
+    }
+  }, [isChatOpen, chatAgentId]);
+
   // Listen for task success/failure events from AgentTaskQueue
   useEffect(() => {
     const handleSuccess = (e: any) => {
@@ -84,10 +96,42 @@ export const AgentChatPanel: React.FC = () => {
   }, [chatAgentId, addChatMessage]);
 
   const handleClose = () => {
+    const closingAgentId = chatAgentId;
+    if (closingAgentId) {
+      void (async () => {
+        const msgs = useGameStore.getState().chatMessages[closingAgentId] || [];
+        const theirLines = msgs
+          .filter((m) => m.role === "user")
+          .map((m) => m.text);
+        const agentLines = msgs
+          .filter((m) => m.role === "agent")
+          .map((m) => m.text);
+        if (theirLines.length > 0 || agentLines.length > 0) {
+          await conversationMemory.ensureLoaded();
+          const pos = useGameStore.getState().agentPositions[closingAgentId];
+          let locationLabel = "the lab";
+          if (pos) {
+            locationLabel =
+              InteractableRegistry.getInstance().getSemanticZone({
+                x: pos.x,
+                y: pos.y,
+                z: pos.z,
+              }) || locationLabel;
+          }
+          await conversationMemory.record({
+            listenerAgentId: closingAgentId,
+            entityId: PLAYER_CONVERSATION_ENTITY_ID,
+            entityName: "Player",
+            locationLabel,
+            theirLines,
+            agentLines,
+          });
+          getIdleExplorer(closingAgentId).markCurrentLocationInteresting();
+        }
+      })();
+    }
     setChatOpen(false);
     setChatAgentId(null);
-    // DO NOT CLEAR MESSAGES ON CLOSE to retain history.
-    // clearChatMessages(chatAgentId);
     setNearbyAgentId(null);
     setChatPromptVisible(false);
   };
@@ -703,6 +747,12 @@ export const AgentChatPanel: React.FC = () => {
 
       const worldContextStr = `ITEMS:\n${ctx.items}\n\nPLACING AREAS:\n${ctx.areas}\n\nAGENTS:\n${ctx.agents}\n\nLocations: Meeting room = conference area.${memoryContextStr}`;
 
+      await conversationMemory.ensureLoaded();
+      const entityConversationMemory = conversationMemory.formatForPrompt(
+        chatAgentId,
+        PLAYER_CONVERSATION_ENTITY_ID,
+      );
+
       const currentMessages =
         useGameStore.getState().chatMessages[chatAgentId] || [];
       const response = await chatWithAgent(
@@ -710,6 +760,8 @@ export const AgentChatPanel: React.FC = () => {
         trimmed,
         currentMessages,
         worldContextStr,
+        undefined,
+        entityConversationMemory,
       );
 
       // Add agent's reply to chat and to common agent communication

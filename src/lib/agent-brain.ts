@@ -73,6 +73,13 @@ Focus on social interaction, responding to what you observe, and personality-dri
 ## Spatial Memory (Recent Visits)
 ${context.spatialMemory ?? "No recorded logs."}
 
+${context.autonomousActivityContext
+  ? `## Current Autonomous Activity\n${context.autonomousActivityContext}\n`
+  : ""}
+${context.conversationHistory
+  ? `## Conversation History\n${context.conversationHistory}\n`
+  : ""}
+
 ## Task Queue
 ${context.taskState ? `Phase: ${context.taskState.phase} | Script: ${context.taskState.currentScriptId ?? "none"} | Task: ${context.taskState.currentTask ?? "none"} | Queued: ${context.taskState.queuedTasksCount}` : "No active tasks."}
 

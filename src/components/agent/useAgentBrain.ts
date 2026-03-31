@@ -51,6 +51,10 @@ import {
   STUCK_TIMER_THRESHOLD_SEC,
 } from "@/constants/agent";
 import { UTILITY_CHECK_INTERVAL_MS } from "@/constants/brain";
+import {
+  buildDefaultDonutLabIdleLocations,
+  getIdleExplorer,
+} from "@/systems/autonomy/IdleExplorer";
 
 export function useAgentBrain(
   id: string,
@@ -195,8 +199,15 @@ export function useAgentBrain(
     const handleTaskCompletion = (e: any) => {
       if (e.detail.agentId !== id) return;
       const taskType = e.detail.taskType;
+      const completedTask = e.detail.task;
+      if (
+        completedTask?.source === "idle_explorer" &&
+        completedTask.type === "GO_TO"
+      ) {
+        getIdleExplorer(id).onArrival(completedTask.targetAreaId);
+      }
       console.log(`[useAgentBrain:${id}] Task completed: ${taskType} - Satisfying drives.`);
-      
+
       switch (taskType) {
         case "REST":
         case "SIT":
@@ -256,6 +267,23 @@ export function useAgentBrain(
       clearTimeout(timer);
       unsubHearing();
       window.removeEventListener("agent-task-completed", handleTaskCompletion);
+    };
+  }, [id]);
+
+  // Idle explorer: restore visits, seed zone list after world zones register, periodic save
+  useEffect(() => {
+    const explorer = getIdleExplorer(id);
+    void explorer.loadFromIdb();
+    const seedTimer = setTimeout(() => {
+      explorer.setLocations(buildDefaultDonutLabIdleLocations());
+    }, 2500);
+    const saveIv = setInterval(() => {
+      void explorer.saveToIdb();
+    }, 30000);
+    return () => {
+      clearTimeout(seedTimer);
+      clearInterval(saveIv);
+      void explorer.saveToIdb();
     };
   }, [id]);
 
@@ -750,6 +778,7 @@ export function useAgentBrain(
         // Check if chat was opened (Y pressed)
         else if (storeState.isChatOpen && storeState.chatAgentId === id) {
           playerProximityState.current = "CHATTING";
+          getIdleExplorer(id).pause();
 
           brain.state.thought =
             "Engaged in conversation with the user. Standing by for instructions.";
@@ -1358,6 +1387,51 @@ export function useAgentBrain(
           );
           localTasks.forEach((task) => taskQueue.enqueue(task));
         }
+      }
+    }
+
+    // --- Idle exploration (autonomous GO_TO between zones) ---
+    {
+      const interruptingBusy = (() => {
+        const phase = taskQueue.getCurrentPhase();
+        if (phase === "DOCKED") return true;
+        if (!taskQueue.isBusy()) return false;
+        const cur = taskQueue.getCurrentTask();
+        const qlen = taskQueue.getQueueLength();
+        if (
+          cur?.source === "idle_explorer" &&
+          cur.type === "GO_TO" &&
+          qlen === 0 &&
+          phase === "NAVIGATING"
+        ) {
+          return false;
+        }
+        return true;
+      })();
+
+      const isInConversation =
+        playerProximityState.current === "CHATTING" ||
+        playerProximityState.current === "GREETING";
+
+      const explorer = getIdleExplorer(id);
+      const explorerAction = explorer.tick(delta, {
+        interruptingBusy,
+        isInConversation,
+        agentPosition: {
+          x: vehicle.position.x,
+          y: vehicle.position.y,
+          z: vehicle.position.z,
+        },
+      });
+
+      if (explorerAction.type === "GO_TO" && explorerAction.targetAreaId) {
+        taskQueue.enqueue({
+          type: "GO_TO",
+          priority: 2,
+          targetAreaId: explorerAction.targetAreaId,
+          source: "idle_explorer",
+          sourceLabel: explorerAction.targetLabel,
+        });
       }
     }
 

@@ -250,6 +250,8 @@ export async function chatWithAgent(
   conversationHistory: { role: "user" | "agent"; text: string }[],
   worldContext?: string,
   sessionId?: string,
+  /** Long-term structured recall (filled on client from ConversationMemory). */
+  entityConversationMemory?: string,
 ): Promise<ChatResponse> {
   const requestId = crypto.randomUUID();
   const effectiveSessionId =
@@ -341,7 +343,8 @@ User: "Bring me the datapad."
 Tool Call (execute_agent_tasks): {"thought_process": "The user wants the datapad. It is on the floor.", "tasks": [{"type": "FETCH_AND_PLACE", "itemId": "datapad_1", "destAreaId": "user_desk"}]}
 
 CONTEXT:
-${worldContext || "No items or areas nearby."}`,
+${worldContext || "No items or areas nearby."}
+${entityConversationMemory ? `\n\n## Your memory of past talks with this person\n${entityConversationMemory}` : ""}`,
     },
   ];
 
