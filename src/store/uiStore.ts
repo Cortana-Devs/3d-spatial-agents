@@ -123,4 +123,9 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (
 
   focusedPodId: null,
   setFocusedPodId: (id) => set({ focusedPodId: id }),
+
+  activeScenarioId: "scenario-a-routine",
+  setActiveScenarioId: (id) => set({ activeScenarioId: id }),
+  statsParent: null,
+  setStatsParent: (el) => set({ statsParent: el }),
 });

@@ -20,15 +20,17 @@ export async function generateAgentThought(
   const effectiveSessionId =
     sessionId || "unknown-session-" + crypto.randomUUID().slice(0, 8);
   try {
-    const responseMessage = await processAgentThought(context, memoryContext, {
+    const response = await processAgentThought(context, memoryContext, {
       requestId,
       sessionId: effectiveSessionId,
     });
 
-    // Return a plain object for the Server Action
+    // Return a plain object for the Server Action including telemetry
     return {
-      content: responseMessage.content,
-      tool_calls: responseMessage.tool_calls,
+      content: response.message.content,
+      tool_calls: response.message.tool_calls,
+      usage: response.usage,
+      model: response.model,
     };
   } catch (error) {
     console.error("Groq API Error:", error);

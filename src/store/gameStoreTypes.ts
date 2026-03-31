@@ -128,6 +128,12 @@ export interface AgentSlice {
   setFollowingAgentId: (id: string | null) => void;
   agentPositions: Record<string, THREE.Vector3>;
   setAgentPosition: (id: string, pos: THREE.Vector3) => void;
+  agentTrajectories: Record<string, THREE.Vector3[]>;
+  setAgentTrajectory: (id: string, path: THREE.Vector3[]) => void;
+  agentMetrics: Record<string, { latency: number; spatialRatio: number }>;
+  setAgentMetrics: (id: string, metrics: { latency: number; spatialRatio: number }) => void;
+  agentScenarioContext: Record<string, string>;
+  setAgentScenarioContext: (id: string, context: string) => void;
   playerPosition: THREE.Vector3;
   setPlayerPosition: (pos: THREE.Vector3) => void;
   debugTarget: DebugTargetInfo | null;
@@ -202,6 +208,10 @@ export interface UISlice {
   setCommandBarOpen: (isOpen: boolean) => void;
   focusedPodId: string | null;
   setFocusedPodId: (id: string | null) => void;
+  activeScenarioId: string;
+  setActiveScenarioId: (id: string) => void;
+  statsParent: HTMLElement | null;
+  setStatsParent: (el: HTMLElement | null) => void;
 }
 
 /** Agent deployment pods along the outer ring. */

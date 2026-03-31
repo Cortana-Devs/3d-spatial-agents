@@ -26,6 +26,24 @@ export const createAgentSlice: StateCreator<
     set((state) => ({
       agentPositions: { ...state.agentPositions, [id]: pos },
     })),
+  
+  agentTrajectories: {},
+  setAgentTrajectory: (id, path) =>
+    set((state) => ({
+      agentTrajectories: { ...state.agentTrajectories, [id]: path },
+    })),
+
+  agentMetrics: {},
+  setAgentMetrics: (id, metrics) =>
+    set((state) => ({
+      agentMetrics: { ...state.agentMetrics, [id]: metrics },
+    })),
+
+  agentScenarioContext: {},
+  setAgentScenarioContext: (id, ctx) =>
+    set((state) => ({
+      agentScenarioContext: { ...state.agentScenarioContext, [id]: ctx },
+    })),
 
   playerPosition: new THREE.Vector3(),
   setPlayerPosition: (pos) => set({ playerPosition: pos }),

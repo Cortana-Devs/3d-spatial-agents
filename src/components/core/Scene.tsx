@@ -5,7 +5,6 @@ import { getPodDeployExitPosition } from "@/config/agentPods";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "@/lib/bvh-setup";
 import { AdaptiveEvents, Environment, BakeShadows } from "@react-three/drei";
-import DynamicStatsIsland from "@/components/ui/DynamicStatsIsland";
 import * as THREE from "three";
 import SceneWorldRoot from "@/components/core/scene/SceneWorldRoot";
 import Robot from "@/components/player/Player";
@@ -16,6 +15,9 @@ import ObstacleVisualizer from "@/components/world/debug/ObstacleVisualizer";
 import { PlacingAreaMarkers } from "@/components/world/debug/PlacingAreaMarkers";
 import ObjectHighlighter from "@/components/world/debug/ObjectHighlighter";
 import FPSMonitor from "@/components/core/FPSMonitor";
+import IntentVisualizer from "@/components/world/debug/IntentVisualizer";
+import ScenarioManager from "@/components/core/ScenarioManager";
+import { DynamicStatsIslandUI, DynamicStatsIslandStats } from "@/components/ui/DynamicStatsIsland";
 
 import { useGameStore } from "@/store/gameStore";
 
@@ -245,11 +247,13 @@ export default function Scene() {
         <PlacingAreaMarkers playerRef={robotRef} />
         <ObjectHighlighter />
         <FPSMonitor />
+        <IntentVisualizer />
+        <ScenarioManager />
+        <DynamicStatsIslandStats />
 
         <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
-
-        <DynamicStatsIsland />
       </Canvas>
+      <DynamicStatsIslandUI />
     </div>
   );
 }

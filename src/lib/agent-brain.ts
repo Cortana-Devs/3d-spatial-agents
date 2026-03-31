@@ -17,7 +17,7 @@ export async function processAgentThought(
   context: AgentContext,
   memoryContext: string = "",
   trace?: TraceOptions,
-): Promise<ChatCompletionMessage> {
+): Promise<{ message: ChatCompletionMessage; usage?: any; model?: string }> {
   const MAX_RETRIES = 3;
   let attempt = 0;
 
@@ -206,7 +206,11 @@ ${memoryContext || "Clear environment."}
         });
       }
 
-      return message;
+      return {
+        message,
+        usage: completion.usage,
+        model: completion.model || model,
+      };
     } catch (error: any) {
       const endTime = Date.now();
       console.error(

@@ -114,12 +114,14 @@ export class AgentTaskQueue {
     this.currentTask = null;
     this.phase = "IDLE";
     this.resetState();
+    useGameStore.getState().setAgentTrajectory(this.agentId, []);
   }
 
   private setPhase(newPhase: TaskPhase): void {
     const oldPhase = this.phase;
     this.phase = newPhase;
     if (newPhase === "COMPLETED" && oldPhase !== "COMPLETED") {
+      useGameStore.getState().setAgentTrajectory(this.agentId, []);
       window.dispatchEvent(
         new CustomEvent("agent-task-completed", {
           detail: { agentId: this.agentId, taskType: this.currentTask?.type || "UNKNOWN" },
@@ -385,8 +387,13 @@ export class AgentTaskQueue {
         if ((this as any)._pendingPathResult) {
           const result = (this as any)._pendingPathResult; (this as any)._pendingPathResult = null;
           this.approachPos = result.approachPos;
-          if (!result.pathFound || result.path.length === 0) { this.hasSetPath = true; this.repathTimer = TASK_REPATH_INTERVAL_SEC - 1; return { type: "STOP" }; }
+          if (!result.pathFound || result.path.length === 0) { 
+            this.hasSetPath = true; this.repathTimer = TASK_REPATH_INTERVAL_SEC - 1; 
+            useGameStore.getState().setAgentTrajectory(this.agentId, []);
+            return { type: "STOP" }; 
+          }
           this.hasSetPath = true; this.pathRefreshTimer = 0; if (this.approachPos) this.approachPos.y = vehiclePos.y;
+          useGameStore.getState().setAgentTrajectory(this.agentId, result.path);
           return { type: "FOLLOW_PATH", path: result.path };
         }
         return { type: "STOP" };

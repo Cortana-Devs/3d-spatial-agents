@@ -109,7 +109,7 @@ export class ClientBrain {
       }
 
       const relevantMemories = await memoryStream.retrieve({
-        agentId: this.id, // Added agent filter
+        agentId: this.id,
         tags: contextTags,
         limit: 5,
       });
@@ -124,13 +124,52 @@ export class ClientBrain {
               .join("\n")
           : "No relevant past memories.";
 
-      // --- 2. THINK (Server Side) ---
+      const scenarioContext = useGameStore.getState().agentScenarioContext[this.id] || "";
+      const memoryContextWithScenario = scenarioContext 
+        ? `[SCENARIO CONTEXT]: ${scenarioContext}\n\n${memoryContextStr}` 
+        : memoryContextStr;
+
+      // --- 2. THINK (Server Side) with Critic Loop ---
       (this as any)._thinkStartTime = Date.now();
-      const response = await generateAgentThought(
-        context,
-        memoryContextStr,
-        this.sessionId,
-      );
+      let retryCount = 0;
+      let criticFeedback = "";
+      let response;
+
+      while (retryCount < 2) {
+        response = await generateAgentThought(
+          context,
+          criticFeedback 
+            ? `[PHYSICAL CRITIC FEEDBACK]: ${criticFeedback}\n\n${memoryContextWithScenario}` 
+            : memoryContextWithScenario,
+          this.sessionId,
+        );
+
+        const hallucinatedIds: string[] = [];
+        if (response.tool_calls) {
+          for (const tc of response.tool_calls) {
+            const args = JSON.parse(tc.function.arguments);
+            const targetId = args.itemId || args.targetId || args.areaId;
+            if (targetId && !["go_to", "say", "emote", "explore", "contemplate", "rest"].includes(tc.function.name)) {
+              const exists = context.nearbyEntities.some(e => e.id === targetId) || 
+                             ALL_ZONE_IDS.includes(targetId) || 
+                             targetId.startsWith("pod-");
+              if (!exists) hallucinatedIds.push(targetId);
+            }
+          }
+        }
+
+        if (hallucinatedIds.length > 0) {
+          criticFeedback = `The following IDs are NOT in your current perception: ${hallucinatedIds.join(", ")}. Please only interact with existing entities or move to valid zones.`;
+          retryCount++;
+          // console.warn(`[ClientBrain] Critic Loop Triggered: ${criticFeedback}`);
+        } else {
+          break;
+        }
+      }
+
+      if (!response) {
+        throw new Error("No response after Critic Loop");
+      }
 
       const tasks: AgentTask[] = [];
       let thought = response.content || "Processing...";
@@ -308,12 +347,11 @@ export class ClientBrain {
         priority: 10,
       };
 
-      // Ensure verification metric is gathered (Assume validated safely if it reached here without immediate failure)
-      const verificationResult = tasks.length > 0;
+      const verificationResult = (retryCount === 0) && (tasks.length > 0);
       
       const metrics = {
-        latency_ms: Date.now() - (this as any)._thinkStartTime, // Need to track start time
-        token_count: 0, // Server action doesn't return tokens yet, will default 0 for now
+        latency_ms: Date.now() - (this as any)._thinkStartTime,
+        token_count: response.usage?.total_tokens || 0,
         fps: useGameStore.getState().currentFps || 60,
         spatial_language_freq: calculateSpatialLanguageFrequency(decision.thought)
       };
@@ -325,7 +363,7 @@ export class ClientBrain {
         perception: JSON.stringify(context.nearbyEntities),
         response: {
           text: decision.thought,
-          tool_calls: response.tool_calls || [],
+          tool_calls: response?.tool_calls || [],
         },
         verification: verificationResult,
         execution: {
@@ -333,6 +371,12 @@ export class ClientBrain {
           outcome: tasks.length > 0 ? "enqueued" : "observed"
         },
         metrics
+      });
+
+      // Update transient metrics for HUD
+      useGameStore.getState().setAgentMetrics(this.id, {
+        latency: metrics.latency_ms,
+        spatialRatio: metrics.spatial_language_freq
       });
 
       this.state.thought = decision.thought;

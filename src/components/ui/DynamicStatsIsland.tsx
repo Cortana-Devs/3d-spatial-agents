@@ -1,127 +1,178 @@
-"use client";
-
 import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { StatsGl } from "@react-three/drei";
+import { useGameStore } from "@/store/gameStore";
+import { SCENARIO_A_ROUTINE, SCENARIO_B_PROPAGATION, SCENARIO_C_COLLABORATION } from "@/config/ResearchEvaluationScenarios";
 
-export default function DynamicStatsIsland() {
-  // Use a lazy initial state to cleanly generate the pure DOM overlay
-  // completely outside of React Three Fiber's virtual 3D rendering tree.
+function ResearchHUD() {
+  const activeScenarioId = useGameStore((state) => state.activeScenarioId);
+  const setActiveScenarioId = useGameStore((state) => state.setActiveScenarioId);
+  const agentMetrics = useGameStore((state) => state.agentMetrics);
+  const currentFps = useGameStore((state) => state.currentFps);
+  
+  // Extract metrics for the primary agent
+  const primaryMetrics = agentMetrics["agent-01"] || { latency: 0, spatialRatio: 0 };
+
+  return (
+    <div style={{
+      color: "#00f2ff",
+      fontFamily: "monospace",
+      fontSize: "10px",
+      marginTop: "8px",
+      padding: "8px",
+      borderTop: "1px solid rgba(0, 242, 255, 0.2)",
+      pointerEvents: "auto",
+      display: "flex",
+      flexDirection: "column",
+      gap: "4px",
+      textShadow: "0 0 5px rgba(0, 242, 255, 0.5)"
+    }}>
+      <div style={{ fontWeight: "bold", borderBottom: "1px solid rgba(0, 242, 255, 0.1)", paddingBottom: "2px", marginBottom: "2px" }}>
+        RESEARCH CONTROL [SO3/SO5]
+      </div>
+      
+      <div style={{ opacity: 0.8 }}>
+        SCENARIO: <span style={{ color: "#fff" }}>{activeScenarioId.split("-").slice(1, 2).join(" ").toUpperCase()}</span>
+      </div>
+      <div style={{ opacity: 0.8 }}>
+        COGNITION: <span style={{ color: "#fff" }}>LLAMA-3.1-8B-INSTANT</span>
+      </div>
+      <div style={{ opacity: 0.8 }}>
+        LATENCY: <span style={{ color: "#fff" }}>{primaryMetrics.latency}ms</span>
+      </div>
+      <div style={{ opacity: 0.8 }}>
+        SPATIAL RATIO: <span style={{ color: "#fff" }}>{(primaryMetrics.spatialRatio * 100).toFixed(1)}%</span>
+      </div>
+      <div style={{ opacity: 0.8 }}>
+        WORLD FPS: <span style={{ color: "#fff" }}>{currentFps}</span>
+      </div>
+
+      <div style={{
+        display: "flex",
+        gap: "4px",
+        marginTop: "6px"
+      }}>
+        {[SCENARIO_A_ROUTINE, SCENARIO_B_PROPAGATION, SCENARIO_C_COLLABORATION].map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setActiveScenarioId(s.id)}
+            style={{
+              background: activeScenarioId === s.id ? "rgba(0, 242, 255, 0.3)" : "rgba(255, 255, 255, 0.05)",
+              border: `1px solid ${activeScenarioId === s.id ? "#00f2ff" : "rgba(255, 255, 255, 0.2)"}`,
+              color: activeScenarioId === s.id ? "#fff" : "#00f2ff",
+              fontSize: "8px",
+              padding: "2px 4px",
+              cursor: "pointer",
+              borderRadius: "3px",
+              textTransform: "uppercase"
+            }}
+          >
+            {s.name.split(" ")[1] || s.name.split(" ")[0]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function DynamicStatsIslandUI() {
+  const setStatsParent = useGameStore((state) => state.setStatsParent);
+  const [mounted, setMounted] = React.useState(false);
+
   const [elements] = useState(() => {
     if (typeof window === "undefined") return null;
 
     const sticker = document.createElement("div");
-    // Layout & Absolute Position entirely fixed to the 2D window viewport
     sticker.style.position = "fixed";
     sticker.style.top = "20px";
     sticker.style.left = "20px";
     sticker.style.zIndex = "999999";
-
-    // Interaction & UX
     sticker.style.cursor = "grab";
     sticker.style.userSelect = "none";
     sticker.style.touchAction = "none";
 
-    // Transparent sticker aesthetic
-    // 'screen' blending automatically removes the StatsGL black backgrounds
-    sticker.style.mixBlendMode = "screen";
-    sticker.style.filter =
-      "drop-shadow(0px 8px 16px rgba(0,0,0,0.6)) contrast(1.1)";
-    sticker.style.transform = "translate3d(0, 0, 0) scale(1)";
-    sticker.style.transition =
-      "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+    sticker.style.filter = "drop-shadow(0px 8px 16px rgba(0,0,0,0.6)) contrast(1.1)";
+    sticker.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
     sticker.style.willChange = "transform, left, top";
 
-    // Subtle glass backing frame
     sticker.style.padding = "6px";
-    sticker.style.background = "rgba(255, 255, 255, 0.03)";
+    sticker.style.background = "rgba(10, 12, 20, 0.85)";
+    sticker.style.backdropFilter = "blur(10px)";
     sticker.style.borderRadius = "12px";
-    sticker.style.border = "1px solid rgba(255, 255, 255, 0.15)";
-    sticker.style.boxShadow = "inset 0 1px 0 rgba(255, 255, 255, 0.3)";
+    sticker.style.border = "1px solid rgba(0, 242, 255, 0.2)";
+    sticker.style.boxShadow = "0 0 15px rgba(0, 242, 255, 0.1)";
+    sticker.style.display = "flex";
+    sticker.style.flexDirection = "column";
 
     const inner = document.createElement("div");
-    // Maintain click-through to allow swapping between FPS / MS / MB panels
     inner.style.pointerEvents = "auto";
-
+    // StatsGL will append itself here
     sticker.appendChild(inner);
 
-    return { sticker, inner };
+    const hudContainer = document.createElement("div");
+    hudContainer.id = "research-hud-container";
+    sticker.appendChild(hudContainer);
+
+    return { sticker, inner, hudContainer };
   });
 
-  // Provide a ref object to feed the detached DOM node directly into StatsGl
-  const parentRef = useRef<HTMLElement | null>(
-    elements ? elements.inner : null,
-  );
-
   useEffect(() => {
+    setMounted(true);
     if (!elements) return;
-    const { sticker } = elements;
-
-    // Safely inject the detached sticker element into the main document body
+    const { sticker, inner } = elements;
     document.body.appendChild(sticker);
+    setStatsParent(inner);
 
     let isDragging = false;
     let dragStart = { x: 0, y: 0 };
 
     const handlePointerDown = (e: PointerEvent) => {
-      // Ignore right-clicks
-      if (e.button !== 0) return;
-
+      if (e.button !== 0 || (e.target as HTMLElement).tagName === "BUTTON") return;
       isDragging = true;
-      dragStart = {
-        x: e.clientX - sticker.offsetLeft,
-        y: e.clientY - sticker.offsetTop,
-      };
-
+      dragStart = { x: e.clientX - sticker.offsetLeft, y: e.clientY - sticker.offsetTop };
       sticker.setPointerCapture(e.pointerId);
       sticker.style.transition = "none";
       sticker.style.cursor = "grabbing";
-      sticker.style.transform = "translate3d(0, 0, 0) scale(1.05)";
     };
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!isDragging) return;
-      const x = e.clientX - dragStart.x;
-      const y = e.clientY - dragStart.y;
-
-      // Update fixed position via top/left for absolute window targeting
-      sticker.style.left = `${x}px`;
-      sticker.style.top = `${y}px`;
+      sticker.style.left = `${e.clientX - dragStart.x}px`;
+      sticker.style.top = `${e.clientY - dragStart.y}px`;
     };
 
     const handlePointerUp = (e: PointerEvent) => {
-      if (!isDragging) return;
       isDragging = false;
-      sticker.releasePointerCapture(e.pointerId);
-      sticker.style.transition =
-        "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+      sticker.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
       sticker.style.cursor = "grab";
-      sticker.style.transform = "translate3d(0, 0, 0) scale(1)";
     };
 
     sticker.addEventListener("pointerdown", handlePointerDown);
     sticker.addEventListener("pointermove", handlePointerMove);
     sticker.addEventListener("pointerup", handlePointerUp);
-    sticker.addEventListener("pointercancel", handlePointerUp);
 
     return () => {
       sticker.removeEventListener("pointerdown", handlePointerDown);
       sticker.removeEventListener("pointermove", handlePointerMove);
       sticker.removeEventListener("pointerup", handlePointerUp);
-      sticker.removeEventListener("pointercancel", handlePointerUp);
-
-      // Clean up the portaled DOM node perfectly
-      if (document.body.contains(sticker)) {
-        document.body.removeChild(sticker);
-      }
+      if (document.body.contains(sticker)) document.body.removeChild(sticker);
+      setStatsParent(null);
     };
-  }, [elements]);
+  }, [elements, setStatsParent]);
 
-  if (!elements) return null;
+  if (!mounted || !elements) return null;
+
+  return createPortal(<ResearchHUD />, elements.hudContainer);
+}
+
+export function DynamicStatsIslandStats() {
+  const statsParent = useGameStore((state) => state.statsParent);
+  if (!statsParent) return null;
 
   return (
     <StatsGl
-      parent={parentRef as React.RefObject<HTMLElement>}
-      clearStatsGlStyle
+      parent={statsParent as any}
+      clearStatsGlStyle={false} // Keeping default styles for visibility, but parent handles glassmorphism
     />
   );
 }
