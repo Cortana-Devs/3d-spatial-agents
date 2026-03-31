@@ -5,15 +5,10 @@ import { InterestMap } from '@/store/InterestMap';
 
 export default function YukaSystem() {
     const aiManager = AIManager.getInstance();
-    const isMenuOpen = useGameStore((state) => state.isMenuOpen);
-    const isMenuPanelOpen = useGameStore((state) => state.isMenuPanelOpen);
 
     useFrame((state, delta) => {
-        if (isMenuOpen || isMenuPanelOpen) return;
-        // Update the global AI manager
+        // World simulation runs continuously — menus are overlays, not pause screens.
         aiManager.update(delta);
-        
-        // Update the environmental interest heatmap
         InterestMap.getInstance().update(delta);
     });
 

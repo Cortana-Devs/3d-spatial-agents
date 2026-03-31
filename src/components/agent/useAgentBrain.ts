@@ -50,7 +50,7 @@ import {
   SCRIPT_COOLDOWN_MS,
   STUCK_TIMER_THRESHOLD_SEC,
 } from "@/constants/agent";
-import { UTILITY_CHECK_INTERVAL_MS } from "@/constants/brain";
+import { UTILITY_CHECK_INTERVAL_MS, LLM_COOLDOWN_FAR_SEC } from "@/constants/brain";
 import {
   buildDefaultDonutLabIdleLocations,
   getIdleExplorer,
@@ -67,8 +67,6 @@ export function useAgentBrain(
   const aiManager = AIManager.getInstance();
   const obstacles = useGameStore((state) => state.obstacles);
   const collidableMeshes = useGameStore((state) => state.collidableMeshes);
-  const isMenuOpen = useGameStore((state) => state.isMenuOpen);
-  const isMenuPanelOpen = useGameStore((state) => state.isMenuPanelOpen);
 
   // Remote Logic: Inspection
   const inspectedAgentId = useGameStore((state) => state.inspectedAgentId);
@@ -388,7 +386,6 @@ export function useAgentBrain(
       }
     }
 
-    if (isMenuOpen || isMenuPanelOpen) return;
     const vehicle = vehicleRef.current;
     if (!vehicle) return;
 
@@ -1094,7 +1091,7 @@ export function useAgentBrain(
 
       const isDocked = taskQueue.getCurrentPhase() === "DOCKED";
 
-      // --- LLM (social / reactive only) ---
+      // --- LLM (social / reactive + periodic introspection) ---
       if (
         !isDocked &&
         playerProximityState.current !== "GREETING" &&
@@ -1114,13 +1111,20 @@ export function useAgentBrain(
             (e) => e.type === "AGENT" && e.distance < 6 && e.isVisible,
           ).length > 0;
         const socialDriveUrgent = urgentDrive?.drive === "social";
+        // Periodic introspection: even with no social triggers the agent should
+        // form its own thoughts. Fire after 2× the far-distance cooldown with no call.
+        const neverThought = lastBrainCallTimeRef.current === 0;
+        const longSilence =
+          nowSec - lastBrainCallTimeRef.current > LLM_COOLDOWN_FAR_SEC * 2;
         const shouldUseLLM =
           canThinkLLM &&
           !taskQueue.isBusy() &&
           followingAgentId !== id &&
           (hasNearbyPlayer ||
             socialDriveUrgent ||
-            (hasNearbyAgents && Math.random() < 0.3));
+            (hasNearbyAgents && Math.random() < 0.3) ||
+            neverThought ||
+            longSilence);
 
         if (shouldUseLLM && !brainRef.current.state.isThinking) {
           lastBrainCallTimeRef.current = nowSec;
