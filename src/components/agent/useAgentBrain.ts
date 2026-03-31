@@ -55,6 +55,14 @@ import {
   buildDefaultDonutLabIdleLocations,
   getIdleExplorer,
 } from "@/systems/autonomy/IdleExplorer";
+import {
+  applyConversationOpenStance,
+  computeVehicleNeighborEffects,
+} from "@/systems/autonomy/ProxemicsSystem";
+import {
+  perfBeginAgentFrame,
+  perfEndAgentFrame,
+} from "@/debug/agentPerformanceProbe";
 
 export function useAgentBrain(
   id: string,
@@ -93,6 +101,8 @@ export function useAgentBrain(
   const lastInspectedThought = useRef("");
   const frameRef = useRef(0);
   const lookAheadRef = useRef(new THREE.Vector3());
+  const lastCornerAnglesRef = useRef<number[] | null>(null);
+  const chatOpenStanceElapsedRef = useRef(0);
   const sensorPosRef = useRef(new THREE.Vector3());
   const safetyTargetRef = useRef(new THREE.Vector3(0, 0, -330));
   const toSafetyRef = useRef(new THREE.Vector3());
@@ -125,6 +135,11 @@ export function useAgentBrain(
   const yAxisRef = useRef(new THREE.Vector3(0, 1, 0)); // World up — constant, never mutated
   const zAxisRef = useRef(new THREE.Vector3(0, 0, 1)); // World forward — constant, never mutated
   const lastGroundedPosRef = useRef(new THREE.Vector3());
+  /** Prior-frame peer count within 5m for maxSpeed (paired with post-wall neighbor pass). */
+  const crowdNearLagRef = useRef(0);
+  const zoneSamplePosRef = useRef(new THREE.Vector3());
+  const lastGroundRayXZRef = useRef({ x: 0, z: 0 });
+  const lastGroundHitRef = useRef({ y: 0, ok: false });
 
   useAgentVehicle(id, groupRef, obstacles, vehicleRef, lastGroundedPosRef);
 
@@ -389,6 +404,9 @@ export function useAgentBrain(
     const vehicle = vehicleRef.current;
     if (!vehicle) return;
 
+    const perfT = perfBeginAgentFrame();
+    const rayStats = { wall: 0, ground: 0, los: 0 };
+
     const dt = delta * 15; // Speed multiplier for simulation steps
     frameRef.current++;
 
@@ -414,6 +432,10 @@ export function useAgentBrain(
     let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
     if (!pauseForOpenChat) {
       steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
+    }
+
+    if (steeringCmd.type === "FOLLOW_PATH" && steeringCmd.cornerAngles?.length) {
+      lastCornerAnglesRef.current = steeringCmd.cornerAngles;
     }
 
     const phaseNow = taskQueue.getCurrentPhase();
@@ -475,11 +497,50 @@ export function useAgentBrain(
       vehicle.velocity.set(0, 0, 0);
     }
 
+    applyConversationOpenStance(
+      vehicle,
+      playerRef.current
+        ? (playerRef.current.position as unknown as THREE.Vector3)
+        : undefined,
+      pauseForOpenChat,
+      delta,
+      chatOpenStanceElapsedRef,
+    );
+
     // --- ANTICIPATORY DECELERATION ---
     // Dynamically adjust maxSpeed based on angular turning. If the agent needs to
     // make a sharp turn to reach its target or waypoint, it slows down rather than drifting.
     const currentSpeed = vehicle.velocity.length();
     let targetSpeed = 5.5; // Default max speed
+
+    const wp = taskQueue.getCurrentTask()?.walkPace;
+    let paceCap = 5.5;
+    if (wp === "stroll") paceCap = 2.2;
+    else if (wp === "normal") paceCap = 3.5;
+    else if (wp === "purposeful") paceCap = 4.8;
+
+    const crowdMult = 1 - 0.13 * Math.min(crowdNearLagRef.current, 3);
+
+    let cornerMult = 1;
+    if (bFollowPath.active && lastCornerAnglesRef.current?.length) {
+      const pathAny = bFollowPath.path as unknown as {
+        _index?: number;
+      };
+      const wi = pathAny._index ?? 0;
+      const angles = lastCornerAnglesRef.current;
+      const ai = Math.min(wi + 1, Math.max(0, angles.length - 1));
+      const turnRad = angles[ai] ?? 0;
+      const deg = (turnRad * 180) / Math.PI;
+      if (deg < 20) cornerMult = 1;
+      else if (deg < 60)
+        cornerMult = THREE.MathUtils.lerp(1, 0.7, (deg - 20) / 40);
+      else
+        cornerMult = THREE.MathUtils.lerp(
+          0.7,
+          0.45,
+          THREE.MathUtils.clamp((deg - 60) / 40, 0, 1),
+        );
+    }
 
     if (
       currentSpeed > 0.5 &&
@@ -507,8 +568,16 @@ export function useAgentBrain(
       }
     }
 
+    targetSpeed = Math.min(targetSpeed, paceCap) * cornerMult * crowdMult;
+
     // Smoothly interpolate maxSpeed to prevent jerky braking
     vehicle.maxSpeed += (targetSpeed - vehicle.maxSpeed) * 0.1;
+
+    // Pre-turn body alignment is intentionally omitted: YUKA overwrites
+    // vehicle.rotation from the velocity direction each frame in its own update,
+    // so any rotation nudge applied here would be discarded next frame and
+    // create a one-frame stutter.  Corner slowing already encourages natural
+    // body-leading via the velocity-speed modulation above.
 
     // --- PHASE 1: REACTIVE INTERRUPTS (Sub-frame) ---
     // Expert Review Feedback: Audio reaction should be immediate (<16ms)
@@ -546,6 +615,9 @@ export function useAgentBrain(
         );
         bFollowPath.path = yukaPath;
         bFollowPath.active = true;
+        if (steeringCmd.cornerAngles?.length) {
+          lastCornerAnglesRef.current = steeringCmd.cornerAngles;
+        }
       } else if (steeringCmd.type === "ARRIVE" && steeringCmd.target) {
         resetBehaviors();
         bArrive.target = new YUKA.Vector3(
@@ -556,7 +628,15 @@ export function useAgentBrain(
         bArrive.active = true;
       } else if (steeringCmd.type === "STOP") {
         resetBehaviors();
-        vehicle.velocity.set(0, 0, 0);
+        const spdXZ = Math.hypot(vehicle.velocity.x, vehicle.velocity.z);
+        if (spdXZ > 0.025) {
+          const k = Math.exp(-delta * 9);
+          vehicle.velocity.x *= k;
+          vehicle.velocity.z *= k;
+        } else {
+          vehicle.velocity.x = 0;
+          vehicle.velocity.z = 0;
+        }
 
         // Fix #11/#23: Face the interaction target if provided
         if (steeringCmd.faceTarget && groupRef.current) {
@@ -607,6 +687,7 @@ export function useAgentBrain(
         let totalPushX = 0;
         let totalPushZ = 0;
 
+        rayStats.wall += 3;
         for (const dir of directions) {
           raycaster.set(rayOrigin, dir);
           raycaster.far = 3.0;
@@ -711,6 +792,15 @@ export function useAgentBrain(
         lastStuckCheckPos.current.copy(vehicle.position as unknown as THREE.Vector3);
       }
     }
+
+    const spdPostWall = Math.hypot(vehicle.velocity.x, vehicle.velocity.z);
+    const neighborFx = computeVehicleNeighborEffects(vehicle, id, aiManager, {
+      proxemicsEveryOtherFrame: spdPostWall < 1,
+      frameIndex: frameRef.current,
+    });
+    crowdNearLagRef.current = neighborFx.crowdNear;
+    vehicle.velocity.x += neighborFx.proxAccX * delta * 2.4;
+    vehicle.velocity.z += neighborFx.proxAccZ * delta * 2.4;
 
     // --- PHYSICS CONSTRAINT ---
     vehicle.velocity.y = 0; // Lock Y velocity to prevent pitching
@@ -856,15 +946,6 @@ export function useAgentBrain(
       const raycaster = raycasterRef.current;
       const rayOrigin = rayOriginRef.current;
 
-      // Cast from just above max step height to prevent snapping to high ceilings/objects
-      rayOrigin.set(
-        vehicle.position.x,
-        vehicle.position.y + MAX_STEP_UP + 0.1,
-        vehicle.position.z,
-      );
-      raycaster.set(rayOrigin, rayDirRef.current);
-
-      const hits = raycaster.intersectObjects(collidableMeshes, true);
       let groundHeight = -100;
       let foundGround = false;
 
@@ -873,7 +954,36 @@ export function useAgentBrain(
       // Higher than this is still ignored as furniture (workbenches, tables).
       const currentY = vehicle.position.y;
 
-      if (hits.length > 0) {
+      const gx = vehicle.position.x;
+      const gz = vehicle.position.z;
+      const lgx = lastGroundRayXZRef.current.x;
+      const lgz = lastGroundRayXZRef.current.z;
+      const ddx = gx - lgx;
+      const ddz = gz - lgz;
+      const reuseGround =
+        lastGroundHitRef.current.ok &&
+        ddx * ddx + ddz * ddz < 0.15 * 0.15 &&
+        (frameRef.current & 1) === 0;
+
+      let hits: THREE.Intersection[] = [];
+      if (reuseGround) {
+        groundHeight = lastGroundHitRef.current.y;
+        foundGround = true;
+      } else {
+        rayStats.ground += 1;
+        lastGroundRayXZRef.current.x = gx;
+        lastGroundRayXZRef.current.z = gz;
+        // Cast from just above max step height to prevent snapping to high ceilings/objects
+        rayOrigin.set(
+          vehicle.position.x,
+          vehicle.position.y + MAX_STEP_UP + 0.1,
+          vehicle.position.z,
+        );
+        raycaster.set(rayOrigin, rayDirRef.current);
+        hits = raycaster.intersectObjects(collidableMeshes, true);
+      }
+
+      if (!reuseGround && hits.length > 0) {
         // Filter out ceilings
         const validHits = hits.filter(
           (h) => !h.object.name.includes("Ceiling"),
@@ -910,6 +1020,10 @@ export function useAgentBrain(
           groundHeight = bestFloorHit;
           foundGround = true;
         }
+        lastGroundHitRef.current.ok = foundGround;
+        if (foundGround) lastGroundHitRef.current.y = groundHeight;
+      } else if (!reuseGround) {
+        lastGroundHitRef.current.ok = false;
       }
 
       if (foundGround) {
@@ -924,6 +1038,7 @@ export function useAgentBrain(
           vehicle.position.y -= 5.0 * delta * 2;
         }
       } else {
+        lastGroundHitRef.current.ok = false;
         // Void fall — FIX: use raw delta, NOT dt (was 15x too fast)
         vehicle.position.y -= 10.0 * delta;
       }
@@ -935,6 +1050,7 @@ export function useAgentBrain(
         vehicle.position.y = lastGroundedPosRef.current.y;
         vehicle.position.z = lastGroundedPosRef.current.z;
         vehicle.velocity.set(0, 0, 0);
+        lastGroundHitRef.current.ok = false;
         if (groupRef.current) {
           groupRef.current.position.copy(lastGroundedPosRef.current);
         }
@@ -971,10 +1087,13 @@ export function useAgentBrain(
     if (!hasManualTask) {
       const registry = InteractableRegistry.getInstance();
       const vPos = vehicle.position as unknown as THREE.Vector3;
-      const nearbyAnyItems = registry.getNearby(vPos, 15);
-      const nearbyFloorCount = nearbyAnyItems.filter(
-        (i) => i.pickable && !i.carriedBy && !i.placedInArea,
-      ).length;
+      const items30 = registry.getNearby(vPos, 30);
+      let nearbyFloorCount = 0;
+      for (const i of items30) {
+        if (!i.pickable || i.carriedBy || i.placedInArea) continue;
+        if (vPos.distanceTo(i.position) > 15) continue;
+        nearbyFloorCount++;
+      }
       const pDist = playerRef.current
         ? vehicle.position.distanceTo(
             playerRef.current.position as unknown as YUKA.Vector3,
@@ -987,9 +1106,10 @@ export function useAgentBrain(
           (v.position as unknown as THREE.Vector3).distanceTo(vPos) < 8,
       ).length;
 
-      const agentWorldPos = vPos.clone();
-      const currentZoneInfluence =
-        ZoneInfluenceSystem.getCurrentZone(agentWorldPos);
+      zoneSamplePosRef.current.copy(vPos);
+      const currentZoneInfluence = ZoneInfluenceSystem.getCurrentZone(
+        zoneSamplePosRef.current,
+      );
       if (currentZoneInfluence) {
         driveManagerRef.current.applyZoneEffects(
           currentZoneInfluence.effects,
@@ -1050,8 +1170,7 @@ export function useAgentBrain(
               },
             });
           }
-          const items = registry.getNearby(vPos, 30);
-          for (const item of items) {
+          for (const item of items30) {
             if (!item.pickable || item.carriedBy || item.placedInArea) continue;
             const isClaimed = registry.isItemClaimed(item.id);
             raw.push({
@@ -1086,6 +1205,7 @@ export function useAgentBrain(
         collidableMeshes,
       );
       lastPerceivedEntitiesRef.current = perceivedEntities;
+      rayStats.los += sensorySystemRef.current.lastLosRaycastCount;
 
       const urgentDrive = driveManagerRef.current.getUrgentDrive();
 
@@ -1233,7 +1353,9 @@ export function useAgentBrain(
           const scriptState = taskQueue.getScriptState();
 
           // Zone context string for LLM
-          const zoneCtxStr = ZoneInfluenceSystem.getContextString(agentWorldPos);
+          const zoneCtxStr = ZoneInfluenceSystem.getContextString(
+            zoneSamplePosRef.current,
+          );
           const spatialMemCtxStr = spatialMemoryRef.current.toContextString();
           const personality = personalityRef.current;
 
@@ -1392,6 +1514,22 @@ export function useAgentBrain(
           localTasks.forEach((task) => taskQueue.enqueue(task));
         }
       }
+
+      if (
+        isIdle &&
+        taskQueue.getCurrentPhase() === "IDLE" &&
+        taskQueue.getQueueLength() === 0 &&
+        !isDocked &&
+        playerProximityState.current !== "CHATTING" &&
+        playerProximityState.current !== "GREETING"
+      ) {
+        const pacingTask = utilityBrainRef.current.checkPacing(
+          driveManagerRef.current.drives,
+          true,
+          performance.now() / 1000,
+        );
+        if (pacingTask) taskQueue.enqueue(pacingTask);
+      }
     }
 
     // --- Idle exploration (autonomous GO_TO between zones) ---
@@ -1407,6 +1545,14 @@ export function useAgentBrain(
           cur.type === "GO_TO" &&
           qlen === 0 &&
           phase === "NAVIGATING"
+        ) {
+          return false;
+        }
+        if (
+          cur?.source === "idle_explorer" &&
+          cur.type === "LOOK_AT" &&
+          qlen === 0 &&
+          phase === "GAZING"
         ) {
           return false;
         }
@@ -1426,6 +1572,7 @@ export function useAgentBrain(
           y: vehicle.position.y,
           z: vehicle.position.z,
         },
+        curiosityDrive: driveManagerRef.current.drives.curiosity,
       });
 
       if (explorerAction.type === "GO_TO" && explorerAction.targetAreaId) {
@@ -1435,6 +1582,28 @@ export function useAgentBrain(
           targetAreaId: explorerAction.targetAreaId,
           source: "idle_explorer",
           sourceLabel: explorerAction.targetLabel,
+          walkPace: explorerAction.walkPace,
+        });
+      }
+      if (
+        explorerAction.type === "LOOK_AT_GLANCE" &&
+        explorerAction.lookTarget
+      ) {
+        taskQueue.enqueue({
+          type: "LOOK_AT",
+          priority: 2,
+          source: "idle_explorer",
+          targetPos: new THREE.Vector3(
+            vehicle.position.x,
+            vehicle.position.y,
+            vehicle.position.z,
+          ),
+          lookTarget: new THREE.Vector3(
+            explorerAction.lookTarget.x,
+            explorerAction.lookTarget.y,
+            explorerAction.lookTarget.z,
+          ),
+          duration: 1.6,
         });
       }
     }
@@ -1562,8 +1731,8 @@ export function useAgentBrain(
             j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, 0, 0.05);
             j.neck.rotation.x = THREE.MathUtils.lerp(j.neck.rotation.x, 0, 0.05);
           }
-        } else {
-          // Idle ambient gazing
+        } else if (animSpeed <= 0.15) {
+          // Idle ambient gazing (skip while walking — procedural gait handles locomotion neck)
           const t = state.clock.elapsedTime;
           j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, Math.sin(t * 0.4) * 0.2, 0.03);
           j.neck.rotation.x = THREE.MathUtils.lerp(j.neck.rotation.x, Math.sin(t * 0.27) * 0.05, 0.03);
@@ -1615,6 +1784,8 @@ export function useAgentBrain(
       // Emit movement heat
       InterestMap.getInstance().addHeat(currentPos, 0.2);
     }
+
+    perfEndAgentFrame(perfT, rayStats);
   });
 
   return {

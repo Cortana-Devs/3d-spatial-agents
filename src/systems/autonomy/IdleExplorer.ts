@@ -1,8 +1,11 @@
+import * as THREE from "three";
 import { memoryStorage } from "@/lib/memory/idb-adapter";
 import {
   getZoneCenterPosition,
   ZONE_NAMES,
 } from "@/config/donutLabRoutines";
+import { InterestMap } from "@/store/InterestMap";
+import type { WalkPace } from "@/types/agent";
 
 export interface LabLocation {
   id: string;
@@ -27,10 +30,12 @@ export type ExplorerState =
   | "PAUSED";
 
 export interface ExplorerAction {
-  type: "GO_TO" | "WAIT" | "NONE";
+  type: "GO_TO" | "WAIT" | "NONE" | "LOOK_AT_GLANCE";
   targetAreaId?: string;
   targetLabel?: string;
   reason?: string;
+  walkPace?: WalkPace;
+  lookTarget?: { x: number; y: number; z: number };
 }
 
 const SEED: { zoneId: string; interest: number }[] = [
@@ -69,6 +74,8 @@ export class IdleExplorer {
   private idleTimer = 0;
   private pauseTimer = 0;
   private currentDwellTarget = 0;
+  /** Seconds until next ambient glance while dwelling */
+  private glanceCooldown = 4 + Math.random() * 4;
 
   private readonly IDLE_THRESHOLD = 6;
   private readonly DWELL_TIME_MIN = 3;
@@ -98,6 +105,8 @@ export class IdleExplorer {
       interruptingBusy: boolean;
       isInConversation: boolean;
       agentPosition: { x: number; y: number; z: number };
+      /** 0–100 curiosity drive; shapes walking pace when choosing a destination. */
+      curiosityDrive?: number;
     },
   ): ExplorerAction {
     if (context.interruptingBusy || context.isInConversation) {
@@ -134,11 +143,15 @@ export class IdleExplorer {
       }
       this.currentDestination = destination;
       this.state = "TRAVELING";
+      const c = context.curiosityDrive ?? 50;
+      const walkPace: WalkPace =
+        c > 68 ? "purposeful" : c < 36 ? "stroll" : "normal";
       return {
         type: "GO_TO",
         targetAreaId: destination.zoneId,
         targetLabel: destination.label,
         reason: this.explainChoice(destination),
+        walkPace,
       };
     }
 
@@ -148,6 +161,22 @@ export class IdleExplorer {
 
     if (this.state === "DWELLING") {
       this.dwellTimer += delta;
+      this.glanceCooldown -= delta;
+      if (this.glanceCooldown <= 0) {
+        this.glanceCooldown = 6 + Math.random() * 6;
+        const pos = new THREE.Vector3(
+          context.agentPosition.x,
+          context.agentPosition.y,
+          context.agentPosition.z,
+        );
+        const hot = InterestMap.getInstance().getNearestHotSpot(pos, 8, 0.12);
+        if (hot) {
+          return {
+            type: "LOOK_AT_GLANCE",
+            lookTarget: { x: hot.x, y: hot.y, z: hot.z },
+          };
+        }
+      }
       if (this.dwellTimer >= this.currentDwellTarget) {
         this.state = "CHOOSING";
         this.currentDestination = null;

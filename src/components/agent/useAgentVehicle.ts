@@ -1,9 +1,10 @@
-import { useEffect, type MutableRefObject, type RefObject } from "react";
+import { useEffect, useMemo, type MutableRefObject, type RefObject } from "react";
 import * as YUKA from "yuka";
 import * as THREE from "three";
 import AIManager from "@/systems/AIManager";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { AGENT_VEHICLE_SPAWN_Y } from "@/constants/agent";
+import { getNavigationObstacleStateSignature } from "@/systems/NavigationNetwork";
 import type { Obstacle } from "@/types/world";
 
 /**
@@ -18,6 +19,10 @@ export function useAgentVehicle(
   lastGroundedPosRef: MutableRefObject<THREE.Vector3>,
 ): void {
   const aiManager = AIManager.getInstance();
+  const obstacleNavSignature = useMemo(
+    () => getNavigationObstacleStateSignature(obstacles),
+    [obstacles],
+  );
 
   useEffect(() => {
     if (!groupRef.current) return;
@@ -51,8 +56,6 @@ export function useAgentVehicle(
       mesh.quaternion.copy(entity.rotation as unknown as THREE.Quaternion);
     });
 
-    AgentBrainClient.getInstance().initNav(obstacles);
-
     const followPath = new YUKA.FollowPathBehavior();
     followPath.active = false;
     followPath.nextWaypointDistance = 2.0;
@@ -78,6 +81,12 @@ export function useAgentVehicle(
     return () => {
       aiManager.removeEntity(vehicle);
     };
+    // Vehicle lifecycle is per-agent only; do not tie to obstacles — that array reference
+    // changes on every incremental addObstacles() and would recreate all agents + re-init nav.
     // refs (groupRef, vehicleRef, lastGroundedPosRef) intentionally omitted — stable identity
-  }, [id, obstacles]);
+  }, [id]);
+
+  useEffect(() => {
+    AgentBrainClient.getInstance().initNav(obstacles);
+  }, [obstacleNavSignature, obstacles]);
 }

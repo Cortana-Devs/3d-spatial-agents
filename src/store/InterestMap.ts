@@ -14,6 +14,8 @@ export class InterestMap {
   
   private grid: Float32Array;
   private lastDecayTime: number = Date.now();
+  /** Indices with heat > 0 — sparse decay avoids scanning 10k cells every frame */
+  private activeIndices = new Set<number>();
 
   private constructor() {
     this.grid = new Float32Array(this.gridSize * this.gridSize);
@@ -38,6 +40,7 @@ export class InterestMap {
     const idx = this.getIndex(position.x, position.z);
     if (idx !== -1) {
       this.grid[idx] = Math.min(10, this.grid[idx] + amount);
+      if (this.grid[idx] > 0) this.activeIndices.add(idx);
     }
   }
 
@@ -50,11 +53,14 @@ export class InterestMap {
   public update(deltaSec: number) {
     const decayRate = 0.2; // Heat units per second
     const amount = decayRate * deltaSec;
-    for (let i = 0; i < this.grid.length; i++) {
-        if (this.grid[i] > 0) {
-            this.grid[i] = Math.max(0, this.grid[i] - amount);
-        }
+    if (this.activeIndices.size === 0) return;
+    const toRemove: number[] = [];
+    for (const i of this.activeIndices) {
+      const next = Math.max(0, this.grid[i] - amount);
+      this.grid[i] = next;
+      if (next <= 0) toRemove.push(i);
     }
+    for (const i of toRemove) this.activeIndices.delete(i);
   }
 
   /**
@@ -91,6 +97,59 @@ export class InterestMap {
       );
     }
 
+    return null;
+  }
+
+  /**
+   * Cell center of the strongest heat within `maxRadius` (world units), if above `minHeat`.
+   */
+  public getNearestHotSpot(
+    position: THREE.Vector3,
+    maxRadius: number,
+    minHeat = 0.12,
+  ): THREE.Vector3 | null {
+    let bestIdx = -1;
+    let maxHeat = minHeat;
+
+    const gxCenter = (position.x + this.offset) / this.resolution;
+    const gzCenter = (position.z + this.offset) / this.resolution;
+    const gRadius = maxRadius / this.resolution;
+
+    for (
+      let gz = Math.floor(gzCenter - gRadius);
+      gz <= Math.ceil(gzCenter + gRadius);
+      gz++
+    ) {
+      for (
+        let gx = Math.floor(gxCenter - gRadius);
+        gx <= Math.ceil(gxCenter + gRadius);
+        gx++
+      ) {
+        if (gx < 0 || gx >= this.gridSize || gz < 0 || gz >= this.gridSize)
+          continue;
+
+        const wx = gx * this.resolution - this.offset + this.resolution / 2;
+        const wz = gz * this.resolution - this.offset + this.resolution / 2;
+        const dist = Math.hypot(wx - position.x, wz - position.z);
+        if (dist > maxRadius) continue;
+
+        const idx = gz * this.gridSize + gx;
+        if (this.grid[idx] > maxHeat) {
+          maxHeat = this.grid[idx];
+          bestIdx = idx;
+        }
+      }
+    }
+
+    if (bestIdx !== -1) {
+      const gz = Math.floor(bestIdx / this.gridSize);
+      const gx = bestIdx % this.gridSize;
+      return new THREE.Vector3(
+        gx * this.resolution - this.offset + this.resolution / 2,
+        position.y,
+        gz * this.resolution - this.offset + this.resolution / 2,
+      );
+    }
     return null;
   }
 }

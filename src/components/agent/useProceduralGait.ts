@@ -30,7 +30,19 @@ export function useProceduralGait(
 
   const walkTime = useRef(0);
   const smoothSpeed = useRef(0);
+  const prevSmoothSpeed = useRef(0);
   const idleOffset = useRef(-1);
+  /** Ramps leg/arm swing over ~first two strides after starting to walk */
+  const walkStrideBlend = useRef(0);
+  /** Layered yaw (rad): head leads, torso, then hips — human-like turn sequencing */
+  const layeredHeadYaw = useRef(0);
+  const layeredNeckYaw = useRef(0);
+  const layeredTorsoYaw = useRef(0);
+  const layeredHipYaw = useRef(0);
+  /** Idle head roll: next wave schedule / active wave */
+  const idleHeadTiltNextAt = useRef(0);
+  const idleHeadTiltWaveStart = useRef(0);
+  const idleHeadTiltTarget = useRef(0);
   // Extra state transition smoothing
   const seatBlend = useRef(0);   // 0 = standing, 1 = fully seated
   const leanBlend = useRef(0);
@@ -66,19 +78,64 @@ export function useProceduralGait(
       const distTraveled = animSpeed * delta;
       walkTime.current += (distTraveled / stride) * Math.PI * 2;
 
-      // ── Head tracking (anticipatory) ─────────────────────────────────────
-      if (customOptions.targetDirection && customOptions.targetDirection.lengthSq() > 0.01) {
-        const targetAngle = Math.atan2(customOptions.targetDirection.x, customOptions.targetDirection.z);
-        if (j.neck && j.head) {
-          j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, targetAngle * 0.3, 0.05);
-          j.head.rotation.y = THREE.MathUtils.lerp(j.head.rotation.y, targetAngle * 0.5, 0.08);
-        }
+      const expSmooth = (current: number, target: number, lambda: number, dt: number) => {
+        const a = 1 - Math.exp(-lambda * dt);
+        return current + (target - current) * a;
+      };
+
+      // ── Locomotion lookahead: layered head → neck → torso → hips ─────────
+      const extraEarly = customOptions.extraState ?? null;
+      const allowLocomotionLayeredYaw =
+        !extraEarly ||
+        (extraEarly !== "Think" &&
+          extraEarly !== "LookAt" &&
+          extraEarly !== "Wave");
+
+      if (
+        allowLocomotionLayeredYaw &&
+        customOptions.targetDirection &&
+        customOptions.targetDirection.lengthSq() > 0.01 &&
+        animSpeed > 0.12
+      ) {
+        const desired = Math.atan2(
+          customOptions.targetDirection.x,
+          customOptions.targetDirection.z,
+        );
+        layeredHeadYaw.current = expSmooth(
+          layeredHeadYaw.current,
+          desired * 0.55,
+          12,
+          delta,
+        );
+        layeredNeckYaw.current = expSmooth(
+          layeredNeckYaw.current,
+          desired * 0.38,
+          6,
+          delta,
+        );
+        layeredTorsoYaw.current = expSmooth(
+          layeredTorsoYaw.current,
+          desired * 0.22,
+          5,
+          delta,
+        );
+        layeredHipYaw.current = expSmooth(
+          layeredHipYaw.current,
+          desired * 0.12,
+          3,
+          delta,
+        );
       } else {
-        if (j.neck && j.head) {
-          j.neck.rotation.y = THREE.MathUtils.lerp(j.neck.rotation.y, 0, 0.05);
-          j.head.rotation.y = THREE.MathUtils.lerp(j.head.rotation.y, 0, 0.08);
-        }
+        layeredHeadYaw.current = expSmooth(layeredHeadYaw.current, 0, 8, delta);
+        layeredNeckYaw.current = expSmooth(layeredNeckYaw.current, 0, 6, delta);
+        layeredTorsoYaw.current = expSmooth(layeredTorsoYaw.current, 0, 5, delta);
+        layeredHipYaw.current = expSmooth(layeredHipYaw.current, 0, 4, delta);
       }
+
+      // Forward / backward lean from speed change (start & stop)
+      const speedDelta = (smoothSpeed.current - prevSmoothSpeed.current) / Math.max(delta, 1e-4);
+      prevSmoothSpeed.current = smoothSpeed.current;
+      const accelLean = THREE.MathUtils.clamp(speedDelta * 0.045, -0.07, 0.07);
 
       // ── Extra state override ─────────────────────────────────────────────
       const extra = customOptions.extraState ?? null;
@@ -300,21 +357,34 @@ export function useProceduralGait(
 
       // ── Standard Idle / Walk ─────────────────────────────────────────────
       if (animSpeed < 0.1) {
-        // IDLE
+        walkStrideBlend.current = THREE.MathUtils.lerp(walkStrideBlend.current, 0, delta * 4);
+
+        // IDLE — breathing, weight shift, micro-gaze, occasional head tilt
         const tIdle = performance.now() / 1000 + idleOffset.current;
-        const breathe = Math.sin(tIdle * 1.5) * 0.015 + Math.sin(tIdle * 0.5) * 0.005;
+        const breathSlow = Math.sin(tIdle * Math.PI * 2 * 0.25) * 0.003;
+        const breathe =
+          Math.sin(tIdle * 1.5) * 0.012 + Math.sin(tIdle * 0.5) * 0.004 + breathSlow;
 
         j.torso.position.y = THREE.MathUtils.lerp(j.torso.position.y, breathe + 0.1, 0.1);
 
-        const weightShift = Math.sin(tIdle * 0.4) * Math.sin(tIdle * 0.27) * 0.06;
-        j.hips.position.x = THREE.MathUtils.lerp(j.hips.position.x, weightShift, 0.05);
-        j.torso.rotation.z = THREE.MathUtils.lerp(j.torso.rotation.z, -weightShift * 0.2, 0.05);
+        const weightShift =
+          Math.sin(tIdle * Math.PI * 2 * 0.07 + idleOffset.current) * 0.008;
+        j.hips.position.x = THREE.MathUtils.lerp(j.hips.position.x, weightShift, 0.06);
+        j.torso.rotation.z = THREE.MathUtils.lerp(
+          j.torso.rotation.z,
+          -weightShift * 0.25,
+          0.06,
+        );
 
         j.leftKnee.rotation.x = THREE.MathUtils.lerp(
-          j.leftKnee.rotation.x, weightShift > 0 ? 0.05 : 0, 0.05,
+          j.leftKnee.rotation.x,
+          weightShift > 0 ? 0.04 : 0,
+          0.05,
         );
         j.rightKnee.rotation.x = THREE.MathUtils.lerp(
-          j.rightKnee.rotation.x, weightShift < 0 ? 0.05 : 0, 0.05,
+          j.rightKnee.rotation.x,
+          weightShift < 0 ? 0.04 : 0,
+          0.05,
         );
 
         const f = 0.05;
@@ -323,18 +393,72 @@ export function useProceduralGait(
 
         const shoulderBreath = breathe * 0.25;
         j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.leftArm.shoulder.rotation.x, 0.05 + shoulderBreath, f,
+          j.leftArm.shoulder.rotation.x,
+          0.05 + shoulderBreath,
+          f,
         );
         j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
-          j.rightArm.shoulder.rotation.x, 0.05 + shoulderBreath, f,
+          j.rightArm.shoulder.rotation.x,
+          0.05 + shoulderBreath,
+          f,
         );
         j.leftArm.elbow.rotation.x = THREE.MathUtils.lerp(j.leftArm.elbow.rotation.x, -0.05, f);
         j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(j.rightArm.elbow.rotation.x, -0.05, f);
 
         j.torso.rotation.y = THREE.MathUtils.lerp(j.torso.rotation.y, 0, f);
-        j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, 0, f);
+        j.torso.rotation.x = THREE.MathUtils.lerp(
+          j.torso.rotation.x,
+          breathSlow * 0.4,
+          f,
+        );
         j.hips.rotation.y = THREE.MathUtils.lerp(j.hips.rotation.y, 0, f);
+
+        const nowMs = performance.now();
+        if (idleHeadTiltNextAt.current === 0) {
+          idleHeadTiltNextAt.current = nowMs + 2000 + Math.random() * 3000;
+        }
+        if (
+          idleHeadTiltWaveStart.current <= 0 &&
+          nowMs >= idleHeadTiltNextAt.current
+        ) {
+          idleHeadTiltWaveStart.current = nowMs;
+          idleHeadTiltTarget.current = (Math.random() - 0.5) * 0.06;
+          idleHeadTiltNextAt.current = nowMs + 6000 + Math.random() * 6000;
+        }
+        let headRoll = 0;
+        if (idleHeadTiltWaveStart.current > 0) {
+          const te = nowMs - idleHeadTiltWaveStart.current;
+          if (te < 900) {
+            headRoll =
+              idleHeadTiltTarget.current *
+              Math.sin((te / 900) * Math.PI);
+          } else {
+            idleHeadTiltWaveStart.current = 0;
+          }
+        }
+
+        const microGazeY = Math.sin(tIdle * 1.3) * Math.sin(tIdle * 0.7) * 0.04;
+        const microGazeX = Math.sin(tIdle * 0.9) * Math.sin(tIdle * 0.55) * 0.02;
+
+        if (j.head) {
+          j.head.rotation.y = THREE.MathUtils.lerp(
+            j.head.rotation.y,
+            microGazeY + layeredHeadYaw.current,
+            0.08,
+          );
+          j.head.rotation.x = THREE.MathUtils.lerp(j.head.rotation.x, microGazeX, 0.06);
+          j.head.rotation.z = THREE.MathUtils.lerp(j.head.rotation.z, headRoll, 0.06);
+        }
+        if (j.neck) {
+          j.neck.rotation.y = THREE.MathUtils.lerp(
+            j.neck.rotation.y,
+            microGazeY * 0.5 + layeredNeckYaw.current,
+            0.07,
+          );
+        }
       } else {
+        walkStrideBlend.current = Math.min(1, walkStrideBlend.current + delta * 0.85);
+
         // WALK / RUN
         // speedFactor: 0 at rest → 1.0 at walk (4.5) → ~1.7 at run (9.5)
         // Clamped for legs/knees so run doesn't over-extend, but armAmp allowed higher
@@ -343,11 +467,17 @@ export function useProceduralGait(
         const legFactor  = Math.min(rawFactor, 1.0);   // leg swing saturates at run threshold
         const kneeFactor = Math.min(rawFactor, 1.15);  // slight extra knee lift when running
 
+        const strideEnv = walkStrideBlend.current;
+
         // Minimum amplitude only kicks in above a tiny movement speed — avoids phantom swing
         const minAmp = 0.08;
-        const legAmp  = minAmp + legFactor  * 0.52;  // max ~0.60 rad at full walk
-        const kneeAmp = minAmp + kneeFactor * 0.60;  // max ~0.77 rad — pronounced bend
-        const armAmp  = minAmp + speedFactor * 0.48; // continues scaling into run
+        let legAmp  = (minAmp + legFactor  * 0.52) * strideEnv;
+        let kneeAmp = (minAmp + kneeFactor * 0.60) * strideEnv;
+        let armAmp  = (minAmp + speedFactor * 0.48) * strideEnv;
+        if (strideEnv < 1) {
+          legAmp = Math.max(legAmp, minAmp * 0.35 * strideEnv);
+          kneeAmp = Math.max(kneeAmp, minAmp * 0.35 * strideEnv);
+        }
 
         // ── Hips — lateral weight-shift (left/right) ────────────────────────
         // Half-cycle shift: hip shifts toward the planted foot
@@ -392,14 +522,41 @@ export function useProceduralGait(
 
         // ── Shoulder counter-rotation (trunk rotation) ────────────────────────
         const shoulderTwist = Math.sin(walkTime.current) * (0.10 + speedFactor * 0.06);
-        j.torso.rotation.y = THREE.MathUtils.lerp(j.torso.rotation.y, -shoulderTwist, 0.12);
+        j.torso.rotation.y = THREE.MathUtils.lerp(
+          j.torso.rotation.y,
+          -shoulderTwist + layeredTorsoYaw.current,
+          0.12,
+        );
 
         // ── Hip counter-rotation (opposite to shoulders) ─────────────────────
-        j.hips.rotation.y = THREE.MathUtils.lerp(j.hips.rotation.y, shoulderTwist * 1.2, 0.12);
+        j.hips.rotation.y = THREE.MathUtils.lerp(
+          j.hips.rotation.y,
+          shoulderTwist * 1.2 + layeredHipYaw.current,
+          0.12,
+        );
 
-        // ── Forward lean — increases with speed ───────────────────────────────
+        if (j.neck) {
+          j.neck.rotation.y = THREE.MathUtils.lerp(
+            j.neck.rotation.y,
+            layeredNeckYaw.current,
+            0.18,
+          );
+        }
+        if (j.head) {
+          j.head.rotation.y = THREE.MathUtils.lerp(
+            j.head.rotation.y,
+            layeredHeadYaw.current,
+            0.15,
+          );
+        }
+
+        // ── Forward lean — speed + acceleration (start/stop) ────────────────
         const forwardLean = Math.min(animSpeed * lean, 0.30);
-        j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, forwardLean, 0.10);
+        j.torso.rotation.x = THREE.MathUtils.lerp(
+          j.torso.rotation.x,
+          forwardLean + accelLean,
+          0.12,
+        );
 
         // ── Lateral sway ─────────────────────────────────────────────────────
         const walkSway = Math.sin(walkTime.current) * bank * legFactor;

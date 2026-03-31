@@ -26,6 +26,7 @@ export type AgentWorkerResponse =
       pathFound: boolean;
       path: { x: number; y: number; z: number }[];
       approachPos: { x: number; y: number; z: number };
+      cornerAngles?: number[];
     }
   | { type: "ERROR"; error: string };
 
@@ -75,6 +76,7 @@ self.onmessage = async (event: MessageEvent<AgentWorkerRequest>) => {
             y: result.approachPos.y,
             z: result.approachPos.z,
           },
+          cornerAngles: result.cornerAngles,
         });
         break;
 

@@ -362,9 +362,20 @@ export class AgentTaskQueue {
         case "FOLLOW_PLAYER": targetPos = playerPos?.clone() || null; break;
         case "WANDER":
           if (!this.currentTask!.targetPos) {
-            const innerR = 41, outerR = 92;
-            const dist = innerR + Math.random() * (outerR - innerR), theta = Math.random() * Math.PI * 2;
-            this.currentTask!.targetPos = new THREE.Vector3(dist * Math.cos(theta), vehiclePos.y, dist * Math.sin(theta));
+            const hasCustomRadius = this.currentTask!.wanderInnerRadius !== undefined;
+            const innerR = this.currentTask!.wanderInnerRadius ?? 41;
+            const outerR = this.currentTask!.wanderOuterRadius ?? 92;
+            const dist = innerR + Math.random() * (outerR - innerR);
+            const theta = Math.random() * Math.PI * 2;
+            // Custom-radius wandering (e.g. pacing) is relative to agent position;
+            // default donut-ring wandering is relative to world origin.
+            const cx = hasCustomRadius ? vehiclePos.x : 0;
+            const cz = hasCustomRadius ? vehiclePos.z : 0;
+            this.currentTask!.targetPos = new THREE.Vector3(
+              cx + dist * Math.cos(theta),
+              vehiclePos.y,
+              cz + dist * Math.sin(theta),
+            );
           }
           targetPos = this.currentTask!.targetPos;
           break;
@@ -374,6 +385,14 @@ export class AgentTaskQueue {
           break;
         case "REST_IN_POD":
           targetPos = this.currentTask!.targetPos || null;
+          break;
+        case "LOOK_AT":
+        case "CONTEMPLATE":
+          targetPos =
+            this.currentTask!.targetPos ||
+            (this.currentTask!.lookTarget
+              ? vehiclePos.clone()
+              : null);
           break;
         default: targetPos = this.currentTask!.targetPos || null; break;
       }
@@ -398,7 +417,11 @@ export class AgentTaskQueue {
           }
           this.hasSetPath = true; this.pathRefreshTimer = 0; if (this.approachPos) this.approachPos.y = vehiclePos.y;
           useGameStore.getState().setAgentTrajectory(this.agentId, result.path);
-          return { type: "FOLLOW_PATH", path: result.path };
+          return {
+            type: "FOLLOW_PATH",
+            path: result.path,
+            cornerAngles: result.cornerAngles,
+          };
         }
         return { type: "STOP" };
       }

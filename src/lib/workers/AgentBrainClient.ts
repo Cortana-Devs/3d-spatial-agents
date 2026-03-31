@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { getNavigationObstacleStateSignature } from "@/systems/NavigationNetwork";
 import type { AgentWorkerRequest, AgentWorkerResponse } from "./agentBrain.worker";
 
 type PromiseCallbacks = {
@@ -11,6 +12,8 @@ export class AgentBrainClient {
   private worker: Worker | null = null;
   private callbacks = new Map<string, PromiseCallbacks>();
   private messageIdCounter = 0;
+  /** Avoid postMessage(structuredClone(obstacles)) when the worker grid is already current. */
+  private lastInitObstacleSignature = "";
 
   private constructor() {
     if (typeof window !== "undefined") {
@@ -64,6 +67,9 @@ export class AgentBrainClient {
    */
   public initNav(obstacles: any[]): void {
     if (!this.worker) return;
+    const sig = getNavigationObstacleStateSignature(obstacles);
+    if (sig === this.lastInitObstacleSignature) return;
+    this.lastInitObstacleSignature = sig;
     const req: AgentWorkerRequest = {
       type: "INIT_NAV",
       payload: { obstacles },
@@ -77,13 +83,19 @@ export class AgentBrainClient {
   public async findPathDetailed(
     start: THREE.Vector3,
     end: THREE.Vector3
-  ): Promise<{ pathFound: boolean; path: THREE.Vector3[]; approachPos: THREE.Vector3 }> {
+  ): Promise<{
+    pathFound: boolean;
+    path: THREE.Vector3[];
+    approachPos: THREE.Vector3;
+    cornerAngles?: number[];
+  }> {
     if (!this.worker) {
       // Fallback if worker is unavailable
       return {
         pathFound: false,
         path: [],
         approachPos: end.clone(),
+        cornerAngles: [],
       };
     }
 
@@ -115,6 +127,7 @@ export class AgentBrainClient {
           result.approachPos.y,
           result.approachPos.z
         ),
+        cornerAngles: result.cornerAngles,
       };
     }
 

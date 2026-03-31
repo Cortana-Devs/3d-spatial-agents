@@ -88,11 +88,15 @@ export type AgentTaskType =
   | "EMOTE"
   | "REST_IN_POD";
 
+export type WalkPace = "stroll" | "normal" | "purposeful";
+
 export interface AgentTask {
   type: AgentTaskType;
   priority: number;
   /** Origin of the task (e.g. idle explorer GO_TO vs LLM script). */
   source?: "idle_explorer" | "llm" | "script" | "system";
+  /** Optional locomotion speed tier (e.g. idle explorer). */
+  walkPace?: WalkPace;
   sourceLabel?: string;
   scriptId?: string;
   podId?: string;
@@ -100,6 +104,9 @@ export interface AgentTask {
   destAreaId?: string;
   targetAreaId?: string;
   targetPos?: Vector3;
+  /** Optional annulus for WANDER (world units); defaults to lab donut ring. */
+  wanderInnerRadius?: number;
+  wanderOuterRadius?: number;
   duration?: number;
   content?: string;
   lookTarget?: Vector3;
@@ -122,6 +129,8 @@ export type TaskPhase =
 export interface SteeringCommand {
   type: "FOLLOW_PATH" | "ARRIVE" | "STOP" | "NONE";
   path?: Vector3[];
+  /** Turn angle (rad) per waypoint; aligns with `path` indices. */
+  cornerAngles?: number[];
   target?: Vector3;
   faceTarget?: Vector3;
 }

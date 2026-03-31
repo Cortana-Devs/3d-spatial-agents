@@ -13,6 +13,8 @@ import type { PerceptionRecord } from "@/lib/SensorySystem";
 export class UtilityBrain {
   private agentId: string;
   private personalityNoise: number;
+  /** Next wall-clock time (sec) a short local pacing wander may fire. */
+  private nextPacingAtSec: number;
 
   constructor(agentId: string) {
     this.agentId = agentId;
@@ -22,6 +24,34 @@ export class UtilityBrain {
       hash |= 0;
     }
     this.personalityNoise = (hash % 100) / 2000;
+    const t = performance.now() / 1000;
+    this.nextPacingAtSec = t + 25 + (Math.abs(hash) % 7000) / 100;
+  }
+
+  /**
+   * Occasional tight-radius wander while idle and energy is mid-range (“thinking while walking”).
+   */
+  public checkPacing(
+    drives: AgentDrives,
+    allowPacing: boolean,
+    nowSec: number,
+  ): AgentTask | null {
+    if (!allowPacing) {
+      this.nextPacingAtSec = Math.max(this.nextPacingAtSec, nowSec + 10);
+      return null;
+    }
+    const e = drives.energy;
+    if (e < 28 || e > 72) return null;
+    if (nowSec < this.nextPacingAtSec) return null;
+    this.nextPacingAtSec = nowSec + 30 + Math.random() * 60;
+    return {
+      type: "WANDER",
+      priority: 1,
+      duration: 4 + Math.random() * 4,
+      scriptId: "local_pacing",
+      wanderInnerRadius: 8,
+      wanderOuterRadius: 15,
+    } as AgentTask;
   }
 
   private evaluateUrgency(value: number, type: "exponential" | "logistic" | "logarithmic", k: number = 3): number {

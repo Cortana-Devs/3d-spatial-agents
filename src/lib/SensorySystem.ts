@@ -75,6 +75,19 @@ export class SensorySystem {
   private _toEntity = new THREE.Vector3();
   private _agentForward = new THREE.Vector3();
 
+  /** LoS raycasts issued in the last `update` (for dev probe). */
+  public lastLosRaycastCount = 0;
+
+  private static readonly MAX_LOS_RAYCASTS = 10;
+
+  private _losCandidates: {
+    raw: NearbyEntity;
+    dist: number;
+    ex: number;
+    ey: number;
+    ez: number;
+  }[] = [];
+
   constructor(agentId: string) {
     this.agentId = agentId;
     this._raycaster.layers.set(1); // Only collide with world geometry
@@ -92,51 +105,79 @@ export class SensorySystem {
   ): PerceptionRecord[] {
     this._agentForward.set(0, 0, 1).applyQuaternion(agentQuat);
     const now = Date.now();
+    this.lastLosRaycastCount = 0;
 
     // 0. Reset visibility for all memories (we'll re-set it for those we actually see this frame)
     for (const record of this.workingMemory.values()) {
       record.isVisible = false;
     }
 
-    // 1. Process Vision
+    const cands = this._losCandidates;
+    cands.length = 0;
+
+    const typeRank = (t: string) =>
+      t === "PLAYER" ? 0 : t === "AGENT" ? 1 : 2;
+
+    // 1a. Distance + FOV — collect candidates for LoS (raycasts capped below)
     for (const raw of rawEntities) {
       if (!raw.id || !raw.position) continue;
 
-      const entityPos = new THREE.Vector3(raw.position.x, raw.position.y, raw.position.z);
-      this._toEntity.copy(entityPos).sub(agentPos);
+      const ex = raw.position.x;
+      const ey = raw.position.y;
+      const ez = raw.position.z;
+      this._toEntity.set(ex, ey, ez).sub(agentPos);
       const distance = this._toEntity.length();
 
+      if (distance > this.visionRange) {
+        const existing = this.workingMemory.get(raw.id);
+        if (existing) existing.isVisible = false;
+        continue;
+      }
+
+      const angle = this._agentForward.angleTo(this._toEntity);
+      if (angle > this.visionFov / 2) {
+        const existing = this.workingMemory.get(raw.id);
+        if (existing) existing.isVisible = false;
+        continue;
+      }
+
+      cands.push({ raw, dist: distance, ex, ey, ez });
+    }
+
+    cands.sort((a, b) => {
+      const dr = typeRank(a.raw.type ?? "") - typeRank(b.raw.type ?? "");
+      if (dr !== 0) return dr;
+      return a.dist - b.dist;
+    });
+
+    // 1b. LoS with per-frame budget
+    let losBudget = SensorySystem.MAX_LOS_RAYCASTS;
+    for (const c of cands) {
+      const { raw, dist, ex, ey, ez } = c;
       let isVisible = false;
 
-      // Distance check
-      if (distance <= this.visionRange) {
-        // FOV check
-        const angle = this._agentForward.angleTo(this._toEntity);
-        if (angle <= this.visionFov / 2) {
-          // Line of Sight (LoS) check
-          this._direction.copy(this._toEntity).normalize();
-          this._raycaster.set(agentPos, this._direction);
-          this._raycaster.far = distance;
-
-          const hits = this._raycaster.intersectObjects(collidableMeshes, true);
-          // If no hits, or the first hit is the object itself (or very close to it)
-          if (hits.length === 0) {
-            isVisible = true;
-          }
+      if (losBudget > 0) {
+        losBudget--;
+        this._toEntity.set(ex, ey, ez).sub(agentPos);
+        this._direction.copy(this._toEntity).normalize();
+        this._raycaster.set(agentPos, this._direction);
+        this._raycaster.far = dist;
+        const hits = this._raycaster.intersectObjects(collidableMeshes, true);
+        this.lastLosRaycastCount++;
+        if (hits.length === 0) {
+          isVisible = true;
         }
       }
 
-      // Update or create memory record
       if (isVisible) {
-        this.workingMemory.set(raw.id, {
+        this.workingMemory.set(raw.id!, {
           ...raw,
           lastSeen: now,
-          lastKnownPosition: entityPos.clone(),
+          lastKnownPosition: new THREE.Vector3(ex, ey, ez),
           isVisible: true,
         });
       } else {
-        // If it was previously in memory, mark it as not visible but keep it
-        const existing = this.workingMemory.get(raw.id);
+        const existing = this.workingMemory.get(raw.id!);
         if (existing) {
           existing.isVisible = false;
         }

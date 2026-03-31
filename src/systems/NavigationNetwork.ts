@@ -18,6 +18,31 @@ export interface ObstacleData {
   radius?: number;
 }
 
+/** Content hash for nav grid — shared by main thread (skip redundant worker inits) and worker rebuild. */
+export function hashNavigationObstacleContent(obstacles: ObstacleData[]): string {
+  let hash = `n=${obstacles.length};`;
+  for (const ob of obstacles) {
+    const px = (ob.position.x * 10) | 0;
+    const pz = (ob.position.z * 10) | 0;
+    if (ob.halfExtents) {
+      const hx = (ob.halfExtents.x * 10) | 0;
+      const hz = (ob.halfExtents.z * 10) | 0;
+      const rot = ob.rotation != null ? (ob.rotation * 100) | 0 : 0;
+      hash += `B${px},${pz},${hx},${hz},${rot};`;
+    } else if (ob.radius) {
+      const r = (ob.radius * 10) | 0;
+      hash += `S${px},${pz},${r};`;
+    }
+  }
+  return hash;
+}
+
+export function getNavigationObstacleStateSignature(
+  obstacles: ObstacleData[],
+): string {
+  return `${hashNavigationObstacleContent(obstacles)}|${SCENE_WORLD_MODE}`;
+}
+
 /**
  * Result from findPath — includes the path AND the walkable approach
  * position for the goal (which may differ from the raw target when
@@ -30,6 +55,8 @@ export interface PathResult {
   approachPos: THREE.Vector3;
   /** True if A* found a real path; false if fallback/direct was used. */
   pathFound: boolean;
+  /** Turn angle (rad) at each waypoint; same length as `path`. Used for corner speed. */
+  cornerAngles?: number[];
 }
 
 // ============================================================================
@@ -116,35 +143,12 @@ class NavigationNetwork {
   // =========================================================================
 
   /**
-   * Fix #1: Build a content hash from obstacle positions + dimensions
-   * so the grid rebuilds when obstacles move, not just when count changes.
-   */
-  private computeObstacleHash(obstacles: ObstacleData[]): string {
-    // Fast hash: concatenate quantized positions, extents, and rotation
-    let hash = `n=${obstacles.length};`;
-    for (const ob of obstacles) {
-      const px = (ob.position.x * 10) | 0;
-      const pz = (ob.position.z * 10) | 0;
-      if (ob.halfExtents) {
-        const hx = (ob.halfExtents.x * 10) | 0;
-        const hz = (ob.halfExtents.z * 10) | 0;
-        const rot = ob.rotation != null ? (ob.rotation * 100) | 0 : 0;
-        hash += `B${px},${pz},${hx},${hz},${rot};`;
-      } else if (ob.radius) {
-        const r = (ob.radius * 10) | 0;
-        hash += `S${px},${pz},${r};`;
-      }
-    }
-    return hash;
-  }
-
-  /**
    * Rebuild the navigation grid from obstacle data.
    * Call whenever obstacles change. Uses content-based deduplication
    * so redundant rebuilds are skipped.
    */
   public rebuildGrid(obstacles: ObstacleData[]): void {
-    const hash = `${this.computeObstacleHash(obstacles)}|${SCENE_WORLD_MODE}`;
+    const hash = getNavigationObstacleStateSignature(obstacles);
     if (this.isBuilt && hash === this.lastObstacleHash) return;
     this.lastObstacleHash = hash;
 
@@ -329,6 +333,7 @@ class NavigationNetwork {
         path: [to.clone()],
         approachPos: to.clone(),
         pathFound: false,
+        cornerAngles: [0],
       };
     }
 
@@ -352,6 +357,7 @@ class NavigationNetwork {
           path: [],
           approachPos: to.clone(),
           pathFound: false,
+          cornerAngles: [],
         };
       }
       console.debug(`[NavNetwork] Start cell blocked - using nearest walkable at (${alt.col},${alt.row})`);
@@ -375,6 +381,7 @@ class NavigationNetwork {
           path: [],
           approachPos: to.clone(),
           pathFound: false,
+          cornerAngles: [],
         };
       }
       console.debug(`[NavNetwork] End cell blocked - using nearest walkable at (${alt.col},${alt.row})`);
@@ -390,6 +397,7 @@ class NavigationNetwork {
         path: [approachPos.clone()],
         approachPos: approachPos.clone(),
         pathFound: true,
+        cornerAngles: [0],
       };
     }
 
@@ -401,6 +409,7 @@ class NavigationNetwork {
         path: [],
         approachPos: approachPos.clone(),
         pathFound: false,
+        cornerAngles: [],
       };
     }
 
@@ -425,11 +434,142 @@ class NavigationNetwork {
       smoothed.push(approachPos.clone());
     }
 
+    // Use the LOS-smoothed path directly for YUKA navigation to prevent
+    // waypoint overconsumption / backward-curl artifacts from dense spline sampling.
+    // Compute cornerAngles from the same sparse path for speed scheduling.
+    const cornerAngles = this.computeCornerAngles(smoothed);
+
     return {
       path: smoothed,
       approachPos: approachPos.clone(),
       pathFound: true,
+      cornerAngles,
     };
+  }
+
+  /** Uniform Catmull–Rom sample on [p1,p2] with neighbors p0,p3 (Y from pathY). */
+  private catmullRomPoint(
+    p0: THREE.Vector3,
+    p1: THREE.Vector3,
+    p2: THREE.Vector3,
+    p3: THREE.Vector3,
+    t: number,
+    pathY: number,
+  ): THREE.Vector3 {
+    const t2 = t * t;
+    const t3 = t2 * t;
+    const a = new THREE.Vector3().copy(p1).multiplyScalar(2);
+    const b = new THREE.Vector3().copy(p2).sub(p0).multiplyScalar(t);
+    const c = new THREE.Vector3()
+      .copy(p0)
+      .multiplyScalar(2)
+      .addScaledVector(p1, -5)
+      .addScaledVector(p2, 4)
+      .sub(p3)
+      .multiplyScalar(t2);
+    const d = new THREE.Vector3()
+      .copy(p0)
+      .multiplyScalar(-1)
+      .addScaledVector(p1, 3)
+      .addScaledVector(p2, -3)
+      .add(p3)
+      .multiplyScalar(t3);
+    const out = new THREE.Vector3()
+      .copy(a)
+      .add(b)
+      .add(c)
+      .add(d)
+      .multiplyScalar(0.5);
+    out.y = pathY;
+    return out;
+  }
+
+  /** Dense samples along a Catmull–Rom curve through LOS-reduced waypoints. */
+  private buildDenseCatmullPolyline(
+    waypoints: THREE.Vector3[],
+    pathY: number,
+  ): THREE.Vector3[] {
+    const dense: THREE.Vector3[] = [];
+    const n = waypoints.length;
+    if (n === 0) return dense;
+    if (n === 1) {
+      const p = waypoints[0].clone();
+      p.y = pathY;
+      return [p];
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = waypoints[Math.max(0, i - 1)];
+      const p1 = waypoints[i];
+      const p2 = waypoints[i + 1];
+      const p3 = waypoints[Math.min(n - 1, i + 2)];
+      const segLen = p1.distanceTo(p2);
+      const subdiv = Math.max(6, Math.ceil(segLen / 0.28));
+      for (let s = 0; s < subdiv; s++) {
+        const t = s / subdiv;
+        const pt = this.catmullRomPoint(p0, p1, p2, p3, t, pathY);
+        if (
+          dense.length === 0 ||
+          dense[dense.length - 1].distanceToSquared(pt) > 1e-4
+        ) {
+          dense.push(pt);
+        }
+      }
+    }
+    const last = waypoints[n - 1].clone();
+    last.y = pathY;
+    if (
+      dense.length === 0 ||
+      dense[dense.length - 1].distanceToSquared(last) > 1e-4
+    ) {
+      dense.push(last);
+    }
+    return dense;
+  }
+
+  /** Keep points roughly `targetStep` apart along the polyline (cumulative arc length). */
+  private simplifyDensePolyline(
+    dense: THREE.Vector3[],
+    targetStep: number,
+  ): THREE.Vector3[] {
+    if (dense.length < 2) return dense.map((p) => p.clone());
+    const out: THREE.Vector3[] = [dense[0].clone()];
+    let acc = 0;
+    for (let i = 1; i < dense.length; i++) {
+      acc += dense[i].distanceTo(dense[i - 1]);
+      if (acc >= targetStep) {
+        out.push(dense[i].clone());
+        acc = 0;
+      }
+    }
+    const last = dense[dense.length - 1];
+    if (out[out.length - 1].distanceToSquared(last) > 0.02 * 0.02) {
+      out.push(last.clone());
+    }
+    return out;
+  }
+
+  /** Interior turn angle at each waypoint (XZ plane), radians. */
+  private computeCornerAngles(path: THREE.Vector3[]): number[] {
+    const n = path.length;
+    const angles: number[] = new Array(n).fill(0);
+    if (n < 3) return angles;
+    const v1 = new THREE.Vector3();
+    const v2 = new THREE.Vector3();
+    for (let i = 1; i < n - 1; i++) {
+      v1.subVectors(path[i], path[i - 1]);
+      v2.subVectors(path[i + 1], path[i]);
+      v1.y = 0;
+      v2.y = 0;
+      const l1 = v1.lengthSq();
+      const l2 = v2.lengthSq();
+      if (l1 < 1e-8 || l2 < 1e-8) continue;
+      v1.normalize();
+      v2.normalize();
+      angles[i] = Math.acos(
+        THREE.MathUtils.clamp(v1.dot(v2), -1, 1),
+      );
+    }
+    return angles;
   }
 
   // =========================================================================
