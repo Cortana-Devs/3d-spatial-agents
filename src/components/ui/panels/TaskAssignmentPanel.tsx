@@ -4,7 +4,11 @@ import React, { useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { AgentTaskRegistry, type AgentTask } from "@/systems/AgentTaskQueue";
 import { InteractableRegistry } from "@/systems/InteractableRegistry";
-import * as THREE from "three";
+import { inferWorldPayloadFromPending } from "@/lib/worldTaskEnqueue";
+import {
+  enqueueWorldTaskForAgent,
+  pickAnyAvailableAgent,
+} from "@/lib/worldTaskDispatch";
 
 // ============================================================================
 // Action definitions
@@ -148,6 +152,12 @@ export function TaskAssignmentPanel() {
   const removeTask = useGameStore((s) => s.removePendingTask);
   const clearTasks = useGameStore((s) => s.clearPendingTasks);
   const close = useGameStore((s) => s.setTaskPanelOpen);
+  const assignMode = useGameStore((s) => s.taskPanelAssignMode);
+  const setAssignMode = useGameStore((s) => s.setTaskPanelAssignMode);
+  const worldTasksById = useGameStore((s) => s.worldTasksById);
+  const removeWorldTask = useGameStore((s) => s.removeWorldTask);
+
+  const reviewStep = assignMode === "specific" ? 4 : 3;
 
   // Get available agents
   const agentIds = useMemo(() => {
@@ -182,9 +192,85 @@ export function TaskAssignmentPanel() {
   };
 
   const handleDispatch = () => {
-    if (!selectedAgent || pendingTasks.length === 0) return;
-    const queue = AgentTaskRegistry.getInstance().getOrCreate(selectedAgent);
-    pendingTasks.forEach((task) => queue.enqueue(task));
+    if (pendingTasks.length === 0) return;
+    if (assignMode === "specific" && !selectedAgent) return;
+
+    const payload: ReturnType<typeof inferWorldPayloadFromPending> =
+      inferWorldPayloadFromPending(pendingTasks);
+    const store = useGameStore.getState();
+
+    const titleFromPayload = (p: NonNullable<typeof payload>) => {
+      if (p.kind === "deliver") {
+        const item = InteractableRegistry.getInstance().getById(p.itemId);
+        return `Deliver: ${item?.name ?? p.itemId}`;
+      }
+      if (p.kind === "follow_player") return "Follow player";
+      return "Lab task";
+    };
+
+    const descFromPayload = (p: NonNullable<typeof payload>) => {
+      if (p.kind === "deliver") {
+        const area = InteractableRegistry.getInstance().getPlacingAreaById(
+          p.destAreaId,
+        );
+        return `Pick item **${p.itemId}**, place at **${area?.name ?? p.destAreaId}**.`;
+      }
+      if (p.kind === "follow_player") return "Follow the player.";
+      return "";
+    };
+
+    if (assignMode === "any") {
+      if (payload) {
+        const id = store.addWorldTask({
+          title: titleFromPayload(payload),
+          description: descFromPayload(payload),
+          status: "open",
+          priority: 22,
+          assigneeId: null,
+          createdBy: "player",
+          payload,
+        });
+        const assigned = store.dispatchOpenWorldTask(id);
+        if (!assigned) {
+          store.removeWorldTask(id);
+          console.warn(
+            "[TaskAssignmentPanel] No agent available for open world task.",
+          );
+        }
+      } else {
+        const agentId = pickAnyAvailableAgent();
+        if (!agentId) {
+          console.warn("[TaskAssignmentPanel] No agent to receive tasks.");
+          return;
+        }
+        const queue = AgentTaskRegistry.getInstance().getOrCreate(agentId);
+        pendingTasks.forEach((task) => queue.enqueue(task));
+      }
+    } else if (selectedAgent) {
+      if (payload) {
+        const id = store.addWorldTask({
+          title: titleFromPayload(payload),
+          description: descFromPayload(payload),
+          status: "in_progress",
+          priority: 22,
+          assigneeId: selectedAgent,
+          createdBy: "player",
+          payload,
+        });
+        const wtAfter = useGameStore.getState().worldTasksById[id];
+        if (wtAfter) {
+          enqueueWorldTaskForAgent(wtAfter, selectedAgent, (wid, patch) =>
+            useGameStore.getState().updateWorldTask(wid, patch),
+          );
+        }
+      } else {
+        const queue = AgentTaskRegistry.getInstance().getOrCreate(
+          selectedAgent,
+        );
+        pendingTasks.forEach((task) => queue.enqueue(task));
+      }
+    }
+
     clearTasks();
     close(false);
   };
@@ -213,7 +299,117 @@ export function TaskAssignmentPanel() {
   };
 
   // ==========================================================================
-  // STEP 0: Select Agent
+  // STEP 0: Assignment mode + shared task list
+  // ==========================================================================
+  const renderModeStep = () => {
+    const list = Object.values(worldTasksById).filter(
+      (t) => t.status !== "done" && t.status !== "failed",
+    );
+    return (
+      <div>
+        <p
+          style={{
+            color: "rgba(255,255,255,0.5)",
+            margin: "0 0 12px 0",
+            fontSize: "13px",
+          }}
+        >
+          Who should receive the next task chain?
+        </p>
+        <div
+          style={itemStyle(false)}
+          onClick={() => {
+            setAssignMode("specific");
+            setStep(1);
+          }}
+        >
+          <span style={{ fontSize: "20px" }}>🎯</span>
+          <div>
+            <div style={{ fontWeight: 600 }}>Specific agent</div>
+            <div style={{ fontSize: "11px", color: "#6080aa" }}>
+              Pick an agent, then build pick / place / follow steps.
+            </div>
+          </div>
+        </div>
+        <div
+          style={itemStyle(false)}
+          onClick={() => {
+            setAssignMode("any");
+            setAgent(null);
+            setStep(1);
+          }}
+        >
+          <span style={{ fontSize: "20px" }}>🎲</span>
+          <div>
+            <div style={{ fontWeight: 600 }}>Any available agent</div>
+            <div style={{ fontSize: "11px", color: "#6080aa" }}>
+              System picks the lightest queue; deliver/follow chains become
+              shared lab tasks.
+            </div>
+          </div>
+        </div>
+        {list.length > 0 && (
+          <div style={{ marginTop: "20px" }}>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.45)",
+                fontSize: "12px",
+                margin: "0 0 8px 0",
+              }}
+            >
+              Open shared lab tasks (agents see these in their prompt)
+            </p>
+            {list.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  ...taskItemStyle,
+                  flexDirection: "column",
+                  alignItems: "stretch",
+                  gap: "6px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>
+                    <span style={{ color: "#6080aa" }}>{t.id}</span> —{" "}
+                    {t.title}{" "}
+                    <span style={{ fontSize: "11px", color: "#888" }}>
+                      ({t.status}
+                      {t.assigneeId ? ` · ${t.assigneeId}` : ""})
+                    </span>
+                  </span>
+                  {t.createdBy === "player" && (
+                    <button
+                      type="button"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#e06060",
+                        cursor: "pointer",
+                        fontSize: "12px",
+                      }}
+                      onClick={() => removeWorldTask(t.id)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // STEP 1 (specific): Select Agent
   // ==========================================================================
   const renderAgentStep = () => (
     <div>
@@ -234,7 +430,7 @@ export function TaskAssignmentPanel() {
               style={itemStyle(selectedAgent === id)}
               onClick={() => {
                 setAgent(id);
-                setStep(1);
+                setStep(2);
               }}
               onMouseEnter={(e) => {
                 if (selectedAgent !== id)
@@ -270,7 +466,11 @@ export function TaskAssignmentPanel() {
       <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 12px 0", fontSize: "13px" }}>
         Select action for{" "}
         <strong style={{ color: "var(--color-success)" }}>
-          {selectedAgent ? formatAgentLabel(selectedAgent) : ""}
+          {assignMode === "any"
+            ? "next available agent"
+            : selectedAgent
+              ? formatAgentLabel(selectedAgent)
+              : ""}
         </strong>
         :
       </p>
@@ -279,7 +479,7 @@ export function TaskAssignmentPanel() {
         let disabled = false;
         let reason = "";
 
-        if (action.id === "PICK_NEARBY" && selectedAgent) {
+        if (action.id === "PICK_NEARBY" && selectedAgent && assignMode === "specific") {
           const carriedItems =
             InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
           const hasPendingFetch = pendingTasks.some(
@@ -299,7 +499,7 @@ export function TaskAssignmentPanel() {
           }
         }
 
-        if (action.id === "PLACE_INVENTORY" && selectedAgent) {
+        if (action.id === "PLACE_INVENTORY" && selectedAgent && assignMode === "specific") {
           const carriedItems =
             InteractableRegistry.getInstance().getAllCarriedBy(selectedAgent);
           const hasPendingFetch = pendingTasks.some(
@@ -323,7 +523,7 @@ export function TaskAssignmentPanel() {
             onClick={() => {
               if (disabled) return;
               setAction(action.id);
-              setStep(2);
+              setStep(step + 1);
             }}
             onMouseEnter={(e) => {
               if (selectedAction !== action.id && !disabled)
@@ -369,7 +569,6 @@ export function TaskAssignmentPanel() {
                 key={item.id}
                 style={itemStyle(false)}
                 onClick={() => {
-                  // Claim the item immediately to prevent other agents from targeting it (Fix #2)
                   if (selectedAgent) {
                     InteractableRegistry.getInstance().claimItem(
                       item.id,
@@ -381,7 +580,7 @@ export function TaskAssignmentPanel() {
                     priority: 20,
                     itemId: item.id,
                   });
-                  setStep(3);
+                  setStep(step + 1);
                   setAction(null);
                 }}
                 onMouseEnter={(e) =>
@@ -421,7 +620,7 @@ export function TaskAssignmentPanel() {
                 type: "FOLLOW_PLAYER",
                 priority: 20,
               });
-              setStep(3);
+              setStep(step + 1);
               setAction(null);
             }}
             onMouseEnter={(e) =>
@@ -465,7 +664,7 @@ export function TaskAssignmentPanel() {
                       priority: 20,
                       destAreaId: area.id,
                     });
-                    setStep(3);
+                    setStep(step + 1);
                     setAction(null);
                   }}
                   onMouseEnter={(e) =>
@@ -503,7 +702,11 @@ export function TaskAssignmentPanel() {
       <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 8px 0", fontSize: "13px" }}>
         Task queue for{" "}
         <strong style={{ color: "var(--color-success)" }}>
-          {selectedAgent ? formatAgentLabel(selectedAgent) : ""}
+          {assignMode === "any"
+            ? "any available agent (or shared task)"
+            : selectedAgent
+              ? formatAgentLabel(selectedAgent)
+              : ""}
         </strong>
         :
       </p>
@@ -542,14 +745,25 @@ export function TaskAssignmentPanel() {
       )}
 
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        <button style={btnStyle(false)} onClick={() => setStep(1)}>
+        <button
+          style={btnStyle(false)}
+          onClick={() => setStep(assignMode === "specific" ? 2 : 1)}
+        >
           + Add Another Step
         </button>
         <button
           style={{
             ...btnStyle(true),
-            opacity: pendingTasks.length === 0 ? 0.4 : 1,
-            pointerEvents: pendingTasks.length === 0 ? "none" : "auto",
+            opacity:
+              pendingTasks.length === 0 ||
+              (assignMode === "specific" && !selectedAgent)
+                ? 0.4
+                : 1,
+            pointerEvents:
+              pendingTasks.length === 0 ||
+              (assignMode === "specific" && !selectedAgent)
+                ? "none"
+                : "auto",
           }}
           onClick={handleDispatch}
         >
@@ -562,7 +776,10 @@ export function TaskAssignmentPanel() {
   // ==========================================================================
   // Render
   // ==========================================================================
-  const stepLabels = ["Agent", "Action", "Target", "Review"];
+  const stepLabels =
+    assignMode === "specific"
+      ? ["Mode", "Agent", "Action", "Target", "Review"]
+      : ["Mode", "Action", "Target", "Review"];
 
   return (
     <div style={panelStyle}>
@@ -578,7 +795,7 @@ export function TaskAssignmentPanel() {
         <div>
           <h2 style={headerStyle}>⚡ Task Assignment</h2>
           <p style={{ color: "rgba(255,255,255,0.4)", margin: 0, fontSize: "12px" }}>
-            {stepLabels[step]} — Step {step + 1} of {stepLabels.length}
+            {stepLabels[step] ?? "—"} — Step {step + 1} of {stepLabels.length}
           </p>
         </div>
         <button
@@ -628,13 +845,17 @@ export function TaskAssignmentPanel() {
       </div>
 
       {/* Content */}
-      {step === 0 && renderAgentStep()}
-      {step === 1 && renderActionStep()}
-      {step === 2 && renderTargetStep()}
-      {step === 3 && renderReviewStep()}
+      {step === 0 && renderModeStep()}
+      {step === 1 && assignMode === "specific" && renderAgentStep()}
+      {step === 1 && assignMode === "any" && renderActionStep()}
+      {step === 2 && assignMode === "specific" && renderActionStep()}
+      {step === 2 && assignMode === "any" && renderTargetStep()}
+      {step === 3 && assignMode === "specific" && renderTargetStep()}
+      {step === 3 && assignMode === "any" && renderReviewStep()}
+      {step === 4 && assignMode === "specific" && renderReviewStep()}
 
-      {/* Back Button (steps 1-2) */}
-      {step > 0 && step < 3 && (
+      {/* Back Button */}
+      {step > 0 && step < reviewStep && (
         <div style={{ marginTop: "16px" }}>
           <button style={btnStyle(false)} onClick={handleBack}>
             ← Back

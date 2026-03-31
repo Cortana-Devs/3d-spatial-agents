@@ -12,6 +12,7 @@ import { ClientBrain } from "@/systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-brain";
 import { InteractableRegistry } from "@/systems/InteractableRegistry";
 import { AgentTaskQueue, AgentTaskRegistry } from "@/systems/AgentTaskQueue";
+import { InterAgentComms } from "@/systems/InterAgentComms";
 import type { SteeringCommand } from "@/systems/AgentTaskQueue";
 import { findAlternativeArea } from "@/lib/nlp-parser";
 import { memoryStream } from "@/lib/memory/MemoryStream";
@@ -33,6 +34,8 @@ import {
   type PerceptionRecord,
 } from "@/lib/SensorySystem";
 import { UtilityBrain } from "@/lib/UtilityBrain";
+import { formatWorldTasksForPrompt } from "@/lib/worldTaskPrompt";
+import { applyWorldTaskStepCompletion } from "@/lib/worldTaskCompletion";
 import { InterestMap } from "@/store/InterestMap";
 import { SpatialFamiliarity } from "@/lib/SpatialFamiliarity";
 import {
@@ -50,7 +53,11 @@ import {
   SCRIPT_COOLDOWN_MS,
   STUCK_TIMER_THRESHOLD_SEC,
 } from "@/constants/agent";
-import { UTILITY_CHECK_INTERVAL_MS, LLM_COOLDOWN_FAR_SEC } from "@/constants/brain";
+import {
+  BRAIN_FAILURE_RETRY_SEC,
+  LLM_COOLDOWN_FAR_SEC,
+  UTILITY_CHECK_INTERVAL_MS,
+} from "@/constants/brain";
 import {
   buildDefaultDonutLabIdleLocations,
   getIdleExplorer,
@@ -211,6 +218,12 @@ export function useAgentBrain(
     /** Hook up task completion events to satisfy drives */
     const handleTaskCompletion = (e: any) => {
       if (e.detail.agentId !== id) return;
+      applyWorldTaskStepCompletion(
+        id,
+        e.detail.task,
+        !!e.detail.completionAborted,
+      );
+      if (e.detail.completionAborted) return;
       const taskType = e.detail.taskType;
       const completedTask = e.detail.task;
       if (
@@ -1247,10 +1260,8 @@ export function useAgentBrain(
             longSilence);
 
         if (shouldUseLLM && !brainRef.current.state.isThinking) {
-          lastBrainCallTimeRef.current = nowSec;
-          if (socialDriveUrgent) {
-            driveManagerRef.current.markTriggered("social");
-          }
+          const cooldownSecAtFire = cooldownSec;
+          const peerSnap = InterAgentComms.formatForPrompt(id);
 
           const currentBehavior = resolveCurrentBehavior(taskQueue);
           const driveContextStr =
@@ -1377,6 +1388,12 @@ export function useAgentBrain(
                 zoneContext: zoneCtxStr,
                 spatialMemory: spatialMemCtxStr,
                 assignedPodId: myPodId || undefined,
+                peerAgentMessages:
+                  InterAgentComms.formatForPrompt(id) || undefined,
+                worldTasksContext: formatWorldTasksForPrompt(
+                  id,
+                  useGameStore.getState().worldTasksById,
+                ),
                 personality: {
                   name: personality.name,
                   trait: personality.trait,
@@ -1386,7 +1403,13 @@ export function useAgentBrain(
               },
             )
             .then((decision) => {
+              const doneSec = Date.now() / 1000;
               if (decision) {
+                lastBrainCallTimeRef.current = doneSec;
+                if (peerSnap) InterAgentComms.clearForAgent(id);
+                if (socialDriveUrgent) {
+                  driveManagerRef.current.markTriggered("social");
+                }
                 // Fix #1: Guard — if a higher-priority task arrived while we were thinking, skip
                 const currentPri = taskQueue.getCurrentTask()?.priority ?? -1;
                 const decisionPri = decision.priority || 10;
@@ -1479,9 +1502,16 @@ export function useAgentBrain(
                     });
                   }
                 }
+              } else {
+                lastBrainCallTimeRef.current =
+                  doneSec - cooldownSecAtFire + BRAIN_FAILURE_RETRY_SEC;
               }
             })
             .catch((error) => {
+              lastBrainCallTimeRef.current =
+                Date.now() / 1000 -
+                cooldownSecAtFire +
+                BRAIN_FAILURE_RETRY_SEC;
               console.error(
                 `[useAgentBrain:${id}] Brain update failed:`,
                 error,

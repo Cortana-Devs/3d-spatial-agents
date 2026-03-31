@@ -43,6 +43,7 @@ import {
   DEFAULT_RING_OUTER_RADIUS,
 } from "./labFloorConstants";
 import AgentPodsGroup from "./AgentPodsGroup";
+import { useGameStore } from "@/store/gameStore";
 
 // --- Helpers ---
 const cx = DEFAULT_LAB_HUB.x;
@@ -75,6 +76,46 @@ function faceOutward(angle: number): number {
 /** Rotation tangent to the ring (clockwise). */
 function tangent(angle: number): number {
   return angle + Math.PI / 2;
+}
+
+/** Floating label: which agent claimed this desk (updates from store). */
+function DeskClaimLabel({
+  deskId,
+  x,
+  y,
+  z,
+  rotationY,
+  prefix,
+}: {
+  deskId: string;
+  x: number;
+  y: number;
+  z: number;
+  rotationY: number;
+  prefix?: string;
+}) {
+  const ownerId = useGameStore((s) => {
+    for (const [aid, d] of Object.entries(s.personalDeskByAgent)) {
+      if (d === deskId) return aid;
+    }
+    return null;
+  });
+  const line =
+    prefix != null
+      ? `${prefix} · ${ownerId ?? "unclaimed"}`
+      : ownerId ?? "unclaimed";
+  return (
+    <Text
+      position={[x, y + 4.55, z]}
+      rotation={[-Math.PI / 2, 0, rotationY]}
+      fontSize={0.72}
+      color={ownerId ? "#156b15" : "#555555"}
+      anchorX="center"
+      anchorY="middle"
+    >
+      {line}
+    </Text>
+  );
 }
 
 export default function DonutLabFurniture() {
@@ -116,6 +157,7 @@ export default function DonutLabFurniture() {
     labAngle1 - 0.65,
     labAngle1 - 0.83,
     labAngle1 - 1.01,
+    labAngle1 - 1.19,
   ];
 
   return (
@@ -274,6 +316,7 @@ export default function DonutLabFurniture() {
                   <Laptop
                     position={[0, 4.2, 0]}
                     rotation={Math.PI}
+                    screenVariant="email"
                     userData={{
                       type: "Prop",
                       id: `extra-table-${labels[i]}-laptop`,
@@ -356,18 +399,30 @@ export default function DonutLabFurniture() {
                   />
                 </>
               )}
+              {i === 3 && (
+                <Laptop
+                  position={[1.2, 4.15, -0.4]}
+                  rotation={Math.PI * 0.92}
+                  screenVariant="fault"
+                  userData={{
+                    type: "Prop",
+                    id: `extra-table-${labels[i]}-laptop`,
+                    name: "Faulty Lab Laptop",
+                    interactable: true,
+                    pickable: true,
+                    objectType: "laptop",
+                  }}
+                />
+              )}
             </OfficeDesk>
-            {/* Visual Label */}
-            <Text
-              position={[xz[0], cy + 4.15, xz[2]]}
-              rotation={[-Math.PI / 2, 0, faceCenter(angle)]}
-              fontSize={1.2}
-              color="#202531"
-              anchorX="center"
-              anchorY="middle"
-            >
-              {labels[i]}
-            </Text>
+            <DeskClaimLabel
+              deskId={`extra-table-${labels[i]}`}
+              x={xz[0]}
+              y={cy}
+              z={xz[2]}
+              rotationY={faceCenter(angle)}
+              prefix={`Table ${labels[i]}`}
+            />
           </group>
         );
       })}
@@ -379,44 +434,71 @@ export default function DonutLabFurniture() {
       {/* EAST SECTOR — Data Analysis Workstations (4 Desks + Chairs)        */}
       {/* ════════════════════════════════════════════════════════════════════ */}
 
-      {deskAngles.map((angle, i) => (
-        <group key={`desk-east-${i}`}>
-          <OfficeDesk
-            position={ringPos(angle, MID_RING + 6)}
-            rotation={faceCenter(angle)}
-            userData={{
-              type: "Furniture",
-              id: `desk-east-${i}`,
-              name: `Research Desk ${String.fromCharCode(65 + i)}`,
-              interactable: true,
-            }}
-          >
-            <FileFolder
-              position={[-3.0, 4.1, 0.8]}
-              rotation={0.15}
-              color="blue"
+      {deskAngles.map((angle, i) => {
+        const deskPos = ringPos(angle, MID_RING + 6);
+        const emailDesk = i === 0 || i === 2;
+        return (
+          <group key={`desk-east-${i}`}>
+            <OfficeDesk
+              position={deskPos}
+              rotation={faceCenter(angle)}
               userData={{
-                type: "Prop",
-                id: `desk-east-${i}-sop`,
-                name: "Research Notes",
+                type: "Furniture",
+                id: `desk-east-${i}`,
+                name: `Research Desk ${String.fromCharCode(65 + i)}`,
                 interactable: true,
-                pickable: true,
-                objectType: "file",
+              }}
+            >
+              <Laptop
+                position={[2.2, 4.12, 0.5]}
+                rotation={Math.PI}
+                screenVariant={emailDesk ? "email" : "fault"}
+                userData={{
+                  type: "Prop",
+                  id: `desk-east-${i}-laptop`,
+                  name: emailDesk
+                    ? "Workstation — Email & tasks"
+                    : "Workstation — System fault",
+                  interactable: true,
+                  pickable: true,
+                  objectType: "laptop",
+                }}
+              />
+              <FileFolder
+                position={[-3.0, 4.1, 0.8]}
+                rotation={0.15}
+                color="blue"
+                userData={{
+                  type: "Prop",
+                  id: `desk-east-${i}-sop`,
+                  name: "Research Notes",
+                  interactable: true,
+                  pickable: true,
+                  objectType: "file",
+                }}
+              />
+            </OfficeDesk>
+            <DeskClaimLabel
+              deskId={`desk-east-${i}`}
+              x={deskPos[0]}
+              y={cy}
+              z={deskPos[2]}
+              rotationY={faceCenter(angle)}
+              prefix={`Desk ${String.fromCharCode(65 + i)}`}
+            />
+            <OfficeChair
+              id={`chair-east-${i}`}
+              position={ringPos(angle, MID_RING - 1)}
+              rotation={faceOutward(angle)}
+              userData={{
+                type: "Furniture",
+                id: `chair-east-${i}`,
+                name: `Research Chair ${String.fromCharCode(65 + i)}`,
               }}
             />
-          </OfficeDesk>
-          <OfficeChair
-            id={`chair-east-${i}`}
-            position={ringPos(angle, MID_RING - 1)}
-            rotation={faceOutward(angle)}
-            userData={{
-              type: "Furniture",
-              id: `chair-east-${i}`,
-              name: `Research Chair ${String.fromCharCode(65 + i)}`,
-            }}
-          />
-        </group>
-      ))}
+          </group>
+        );
+      })}
 
 
 
@@ -659,7 +741,26 @@ export default function DonutLabFurniture() {
             id: `cupboard-donut-${i + 1}`,
             name: `Storage Cupboard ${i + 1}`,
           }}
-        />
+          levelInitialItems={
+            i === 2 ? { 2: ["file-rack3-to-supervisor"] } : undefined
+          }
+        >
+          {i === 2 && (
+            <FileFolder
+              position={[0, 5, 2.2]}
+              rotation={0.08}
+              color="blue"
+              userData={{
+                type: "Prop",
+                id: "file-rack3-to-supervisor",
+                name: "Supervisor routing packet (Rack 3)",
+                interactable: true,
+                pickable: true,
+                objectType: "file",
+              }}
+            />
+          )}
+        </CupboardUnit>
       ))}
 
       {/* Floor flower pots removed as requested */}

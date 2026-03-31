@@ -1585,6 +1585,7 @@ export function ManagersDesk({
   initialItemsLeft,
   initialItemsMid,
   initialItemsRight,
+  initialItemsInbox,
 }: {
   position: [number, number, number];
   rotation?: number;
@@ -1593,6 +1594,7 @@ export function ManagersDesk({
   initialItemsLeft?: string[];
   initialItemsMid?: string[];
   initialItemsRight?: string[];
+  initialItemsInbox?: string[];
 }) {
   const deskId = userData?.id || "supervisors-desk";
   const deskName = userData?.name || "Supervisor's Desk";
@@ -1601,6 +1603,7 @@ export function ManagersDesk({
   const padLeftRef = useRef<THREE.Mesh>(null);
   const padMidRef = useRef<THREE.Mesh>(null);
   const padRightRef = useRef<THREE.Mesh>(null);
+  const padInboxRef = useRef<THREE.Mesh>(null);
 
   // Pad is 15.6 wide x 3.5 deep. Placed at z=2.0
   usePlacingArea(padLeftRef, {
@@ -1623,6 +1626,13 @@ export function ManagersDesk({
     capacity: 1,
     dimensions: [4.0, 0.4, 2.5],
     initialItems: initialItemsRight,
+  });
+  usePlacingArea(padInboxRef, {
+    id: `${deskId}-inbox`,
+    name: `${deskName} Inbox`,
+    capacity: 1,
+    dimensions: [4.0, 0.4, 2.5],
+    initialItems: initialItemsInbox,
   });
   const addObstacles = useGameStore((s) => s.addObstacles);
   const removeObstacles = useGameStore((s) => s.removeObstacles);
@@ -1682,6 +1692,9 @@ export function ManagersDesk({
         <mesh ref={padRightRef} position={[-5, 0, -2]} visible={false}>
           <boxGeometry args={[4.0, 0.4, 2.5]} />
         </mesh>
+        <mesh ref={padInboxRef} position={[0, 0, 1.6]} visible={false}>
+          <boxGeometry args={[4.0, 0.4, 2.5]} />
+        </mesh>
       </group>
       {/* Massive Legs/Cabinets */}
       <mesh
@@ -1723,11 +1736,16 @@ export function CupboardUnit({
   rotation = 0,
   label = "1",
   userData,
+  children,
+  levelInitialItems,
 }: {
   position: [number, number, number];
   rotation?: number;
   label?: string;
   userData?: any;
+  children?: React.ReactNode;
+  /** 1-based level index → item IDs for that shelf's placing slots (slot 0 first). */
+  levelInitialItems?: Record<number, string[]>;
 }) {
   const w = 8; // Width
   const h = 7.5; // Height (3 levels * 2.5) -- Reduced from 10 to be reachable
@@ -1831,9 +1849,12 @@ export function CupboardUnit({
             dimensions={[w, levelHeight - 0.5, d]}
             id={levelId}
             name={levelName}
+            initialItems={levelInitialItems?.[levelNum]}
           />
         );
       })}
+
+      {children}
 
       {/* Top Fascia & Number (Sitting on Top - FRONT ONLY) */}
       <group position={[0, h + legHeight + 0.75, 0]}>
@@ -1903,11 +1924,13 @@ function CupboardLevel({
   dimensions,
   id,
   name,
+  initialItems,
 }: {
   position: [number, number, number];
   dimensions: [number, number, number];
   id: string;
   name: string;
+  initialItems?: string[];
 }) {
   const surfaceRef = useRef<THREE.Mesh>(null);
   // Placing area is a thin slab on the bottom surface of the level
@@ -1921,6 +1944,7 @@ function CupboardLevel({
     name,
     capacity: 4,
     dimensions: slabDimensions,
+    initialItems,
   });
 
   // Calculate generic 2x2 grid for slot visualization (matches 8x8 size approx)

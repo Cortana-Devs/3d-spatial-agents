@@ -6,6 +6,8 @@ import { POIRegistry } from "@/systems/POIRegistry";
 import { SpatialMemory } from "./memory/SpatialMemory";
 import { SpatialFamiliarity } from "./SpatialFamiliarity";
 import { ALL_ZONE_IDS, getNearestBench, getZoneCenterPosition } from "@/config/donutLabRoutines";
+import { getChairIdForPersonalDesk } from "@/config/donutLabDeskAssignments";
+import { useGameStore } from "@/store/gameStore";
 import { InterestMap } from "@/store/InterestMap";
 import type { AgentPersonality } from "@/config/agentPersonalities";
 import type { PerceptionRecord } from "@/lib/SensorySystem";
@@ -125,6 +127,28 @@ export class UtilityBrain {
     // 3. Generate Tasks based on winning drive
     switch (urgent.id) {
       case "energy": {
+        const desks = useGameStore.getState().personalDeskByAgent;
+        const chairId = getChairIdForPersonalDesk(this.agentId, desks);
+        if (chairId) {
+          const chairPos = registry.getWorldPosition(chairId);
+          if (chairPos) {
+            return [
+              {
+                type: "GO_TO",
+                priority: 5,
+                targetPos: chairPos.clone(),
+                scriptId: "local_rest",
+              },
+              {
+                type: "SIT",
+                priority: 5,
+                duration: 20,
+                itemId: chairId,
+                scriptId: "local_rest",
+              },
+            ] as AgentTask[];
+          }
+        }
         const nearestBench = getNearestBench(position);
         if (nearestBench) {
           return [

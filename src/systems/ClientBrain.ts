@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { generateAgentThought } from "@/app/actions";
 import type { AgentContext, NearbyEntity } from "@/lib/agent-brain";
 import { ALL_ZONE_IDS, getNearestBench } from "@/config/donutLabRoutines";
+import { CLAIMABLE_DESK_IDS } from "@/config/donutLabDeskAssignments";
 import { SpatialMemory } from "@/lib/memory/SpatialMemory";
 
 export interface BrainState {
@@ -11,7 +12,7 @@ export interface BrainState {
 }
 
 import { RateLimiter } from "@/lib/rateLimiter";
-import type { AgentTask } from "@/systems/AgentTaskQueue";
+import { AgentTaskRegistry, type AgentTask } from "@/systems/AgentTaskQueue";
 
 export interface AgentDecision {
   operation: "OBSERVE" | "INTERFERE_SCRIPT";
@@ -27,6 +28,8 @@ import { getIdleExplorer } from "@/systems/autonomy/IdleExplorer";
 import { dispatchSimulationLog } from "@/lib/logging/SimulationLogger";
 import { calculateSpatialLanguageFrequency } from "@/lib/nlp-parser";
 import { useGameStore } from "@/store/gameStore";
+import AIManager from "@/systems/AIManager";
+import { InterAgentComms } from "@/systems/InterAgentComms";
 
 export class ClientBrain {
   public state: BrainState;
@@ -43,8 +46,20 @@ export class ClientBrain {
       isThinking: false,
       lastThoughtTime: 0,
     };
-    // 5 requests per 60 seconds (Conservative limit for Free Tier with 2 agents)
-    this.rateLimiter = new RateLimiter(5, 60);
+    // Default 8/60s aligns with min LLM cooldown (~8s); set NEXT_PUBLIC_AGENT_BRAIN_RL_MAX to override.
+    this.rateLimiter = new RateLimiter(ClientBrain.readBrainRateLimitMax(), 60);
+  }
+
+  private static readBrainRateLimitMax(): number {
+    const raw =
+      typeof process !== "undefined"
+        ? process.env.NEXT_PUBLIC_AGENT_BRAIN_RL_MAX
+        : undefined;
+    if (raw != null && raw !== "") {
+      const n = Number.parseInt(raw, 10);
+      if (Number.isFinite(n) && n > 0) return Math.min(60, n);
+    }
+    return 8;
   }
 
   public async update(
@@ -52,7 +67,16 @@ export class ClientBrain {
     nearbyEntities: NearbyEntity[],
     currentBehavior: string,
     taskState?: AgentContext["taskState"],
-    richContext?: Pick<AgentContext, "zoneContext" | "spatialMemory" | "personality" | "drives" | "assignedPodId">,
+    richContext?: Pick<
+      AgentContext,
+      | "zoneContext"
+      | "spatialMemory"
+      | "personality"
+      | "drives"
+      | "assignedPodId"
+      | "peerAgentMessages"
+      | "worldTasksContext"
+    >,
   ): Promise<AgentDecision | null> {
     // Rate Limiting Check
     if (this.state.isThinking || !this.rateLimiter.tryConsume()) {
@@ -166,14 +190,74 @@ export class ClientBrain {
         );
 
         const hallucinatedIds: string[] = [];
+        const roster = AgentTaskRegistry.getInstance().getAllAgentIds();
         if (response.tool_calls) {
           for (const tc of response.tool_calls) {
-            const args = JSON.parse(tc.function.arguments);
-            const targetId = args.itemId || args.targetId || args.areaId;
-            if (targetId && !["go_to", "say", "emote", "explore", "contemplate", "rest"].includes(tc.function.name)) {
-              const exists = context.nearbyEntities.some(e => e.id === targetId) || 
-                             ALL_ZONE_IDS.includes(targetId) || 
-                             targetId.startsWith("pod-");
+            if (tc.type !== "function") continue;
+            let args: Record<string, unknown>;
+            try {
+              args = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+            } catch {
+              continue;
+            }
+            const fn = tc.function.name;
+
+            if (fn === "message_agent" && args.targetAgentId) {
+              if (!roster.includes(String(args.targetAgentId))) {
+                hallucinatedIds.push(String(args.targetAgentId));
+              }
+              continue;
+            }
+            if (fn === "collaborate" && args.agentId) {
+              if (!roster.includes(String(args.agentId))) {
+                hallucinatedIds.push(String(args.agentId));
+              }
+              continue;
+            }
+
+            if (fn === "claim_desk" && args.deskId) {
+              const d = String(args.deskId);
+              if (!CLAIMABLE_DESK_IDS.includes(d)) {
+                hallucinatedIds.push(d);
+              }
+              continue;
+            }
+
+            if (
+              (fn === "claim_task" || fn === "release_task") &&
+              args.taskId
+            ) {
+              const tid = String(args.taskId);
+              if (!useGameStore.getState().worldTasksById[tid]) {
+                hallucinatedIds.push(tid);
+              }
+              continue;
+            }
+
+            const targetId =
+              (args.itemId as string) ||
+              (args.targetId as string) ||
+              (args.areaId as string);
+            if (
+              targetId &&
+              ![
+                "go_to",
+                "say",
+                "emote",
+                "explore",
+                "contemplate",
+                "rest",
+                "announce",
+                "message_agent",
+                "claim_desk",
+                "claim_task",
+                "release_task",
+              ].includes(fn)
+            ) {
+              const exists =
+                context.nearbyEntities.some((e) => e.id === targetId) ||
+                ALL_ZONE_IDS.includes(targetId) ||
+                targetId.startsWith("pod-");
               if (!exists) hallucinatedIds.push(targetId);
             }
           }
@@ -254,6 +338,36 @@ export class ClientBrain {
                 tasks.push({ type: "SAY" as any, content: args.message } as any);
                 thought = args.message; // Override internal thought with spoken word
                 break;
+
+              case "message_agent":
+                if (args.targetAgentId && args.message) {
+                  InterAgentComms.emitDirect(
+                    this.id,
+                    args.targetAgentId,
+                    args.message,
+                  );
+                  tasks.push({
+                    type: "SAY" as any,
+                    content: args.message,
+                  } as any);
+                  thought = args.message;
+                }
+                break;
+
+              case "announce":
+                if (args.message) {
+                  InterAgentComms.emitBroadcast(this.id, args.message);
+                  tasks.push({
+                    type: "SAY" as any,
+                    content: args.message,
+                  } as any);
+                  thought = args.message;
+                  useGameStore.getState().addCommonAgentMessage(this.id, {
+                    role: "agent",
+                    text: args.message,
+                  });
+                }
+                break;
               case "interact":
                 if (args.itemId) {
                   tasks.push({ type: "INTERACT", itemId: args.itemId } as AgentTask);
@@ -314,18 +428,27 @@ export class ClientBrain {
                 break;
               }
 
-              case "collaborate":
-                if (args.agentId) {
-                  if (args.topic) {
-                    tasks.push({ type: "SAY", content: `Hey, want to collaborate on ${args.topic}?` } as any);
-                  }
+              case "collaborate": {
+                if (!args.agentId) break;
+                const ids = AgentTaskRegistry.getInstance().getAllAgentIds();
+                if (!ids.includes(args.agentId)) break;
+                if (args.topic) {
                   tasks.push({
-                    type: "COLLABORATE",
-                    partnerId: args.agentId,
-                    targetAreaId: "core-lab",
+                    type: "SAY",
+                    content: `Hey, want to collaborate on ${args.topic}?`,
                   } as any);
                 }
+                const targetPos = AIManager.getInstance().getPartnerApproachPosition(
+                  args.agentId,
+                  position.y,
+                ) ?? undefined;
+                tasks.push({
+                  type: "COLLABORATE",
+                  partnerId: args.agentId,
+                  targetPos,
+                } as any);
                 break;
+              }
 
               case "emote":
                 if (args.gesture) {
@@ -351,6 +474,35 @@ export class ClientBrain {
                   podId: args.podId || undefined,
                   priority: 15,
                 } as any);
+                break;
+              }
+
+              case "claim_desk": {
+                const deskId = args.deskId as string;
+                if (deskId && CLAIMABLE_DESK_IDS.includes(deskId)) {
+                  useGameStore.getState().setPersonalDesk(this.id, deskId);
+                  thought = `I'm claiming ${deskId} as my desk.`;
+                }
+                break;
+              }
+
+              case "claim_task": {
+                const taskId = args.taskId as string;
+                if (
+                  taskId &&
+                  useGameStore.getState().claimWorldTaskForAgent(taskId, this.id)
+                ) {
+                  thought = `I'm taking shared lab task ${taskId}.`;
+                }
+                break;
+              }
+
+              case "release_task": {
+                const taskId = args.taskId as string;
+                if (taskId) {
+                  useGameStore.getState().releaseWorldTask(taskId, this.id);
+                  thought = `Releasing shared lab task ${taskId}.`;
+                }
                 break;
               }
             }

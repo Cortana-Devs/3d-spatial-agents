@@ -47,6 +47,10 @@ export interface AgentContext {
   conversationHistory?: string;
   /** Idle explorer monologue + recent chats for prompt grounding. */
   autonomousActivityContext?: string;
+  /** Recent 1:1 / broadcast lines from other agents (client-filled). */
+  peerAgentMessages?: string;
+  /** Markdown table of shared lab tasks (client-filled from world task store). */
+  worldTasksContext?: string;
 }
 
 export interface TraceOptions {
@@ -94,7 +98,9 @@ export interface AgentTask {
   type: AgentTaskType;
   priority: number;
   /** Origin of the task (e.g. idle explorer GO_TO vs LLM script). */
-  source?: "idle_explorer" | "llm" | "script" | "system";
+  source?: "idle_explorer" | "llm" | "script" | "system" | "world_task";
+  /** When source is world_task, links completion to this shared task id. */
+  worldTaskId?: string;
   /** Optional locomotion speed tier (e.g. idle explorer). */
   walkPace?: WalkPace;
   sourceLabel?: string;

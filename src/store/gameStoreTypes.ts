@@ -1,5 +1,6 @@
 import type * as THREE from "three";
 import type { AgentTask } from "@/systems/AgentTaskQueue";
+import type { WorldTask } from "@/types/worldTask";
 import type { Obstacle, WorldObject } from "@/types/world";
 import type { DebugTargetInfo, GridRow } from "@/types/ui";
 
@@ -134,6 +135,10 @@ export interface AgentSlice {
   setAgentMetrics: (id: string, metrics: { latency: number; spatialRatio: number }) => void;
   agentScenarioContext: Record<string, string>;
   setAgentScenarioContext: (id: string, context: string) => void;
+  /** Agent id → desk id (e.g. desk-east-0). */
+  personalDeskByAgent: Record<string, string>;
+  setPersonalDesk: (agentId: string, deskId: string) => void;
+  seedDefaultPersonalDesks: (agentIds: string[]) => void;
 
   // --- Research Management ---
   activeResearchAgents: ResearchAgent[];
@@ -212,6 +217,9 @@ export interface UISlice {
   setDebugMode: (mode: boolean) => void;
   isTaskPanelOpen: boolean;
   setTaskPanelOpen: (isOpen: boolean) => void;
+  /** Player task panel: direct agent vs auto-dispatch. */
+  taskPanelAssignMode: "specific" | "any";
+  setTaskPanelAssignMode: (mode: "specific" | "any") => void;
   taskPanelStep: number;
   setTaskPanelStep: (step: number) => void;
   taskPanelSelectedAgent: string | null;
@@ -239,6 +247,22 @@ export interface PodRuntimeState {
   position: { x: number; y: number; z: number };
 }
 
+export interface WorldTaskSlice {
+  worldTasksById: Record<string, WorldTask>;
+  addWorldTask: (
+    task: Omit<WorldTask, "id" | "createdAt"> & { id?: string },
+  ) => string;
+  updateWorldTask: (id: string, patch: Partial<WorldTask>) => void;
+  removeWorldTask: (id: string) => void;
+  clearWorldTasks: () => void;
+  /** Auto-pick agent and enqueue; returns chosen agent id or null. */
+  dispatchOpenWorldTask: (taskId: string) => string | null;
+  /** LLM or system: take an open / unassigned task. */
+  claimWorldTaskForAgent: (taskId: string, agentId: string) => boolean;
+  /** Drop assignment and cancel queued world-task steps for this agent. */
+  releaseWorldTask: (taskId: string, agentId: string) => void;
+}
+
 export interface PodSlice {
   pods: Record<string, PodRuntimeState>;
   initPods: () => void;
@@ -253,4 +277,5 @@ export type GameState = WorldSlice &
   ChatSlice &
   AgentSlice &
   UISlice &
-  PodSlice;
+  PodSlice &
+  WorldTaskSlice;

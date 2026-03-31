@@ -101,13 +101,54 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "say",
       description:
-        "Say something out loud. Appears as a speech bubble and is spoken via TTS. Use for greetings, observations, or sharing thoughts. Keep it natural and brief (1–2 sentences).",
+        "Say something out loud. Appears as a speech bubble and is spoken via TTS. Use for greetings, observations, or sharing thoughts. Keep it natural and brief (1–2 sentences). Invoke only via the API tool_calls mechanism with a JSON object argument — not XML or plain-text tool tags.",
       parameters: {
         type: "object",
         properties: {
           message: {
             type: "string",
-            description: "What to say (1–2 sentences, unformatted conversational language)",
+            description:
+              "Spoken line only (1–2 sentences, plain conversational text). Pass as JSON string value for key \"message\".",
+          },
+        },
+        required: ["message"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "message_agent",
+      description:
+        "Send a message to one other agent by id. They will see it in their next thought cycle. Also speaks aloud like 'say'. Use the agent's exact id from the Perception table (type AGENT).",
+      parameters: {
+        type: "object",
+        properties: {
+          targetAgentId: {
+            type: "string",
+            description: "Exact agent id, e.g. agent-01, agent-02",
+          },
+          message: {
+            type: "string",
+            description: "1–2 short sentences to deliver to that agent",
+          },
+        },
+        required: ["targetAgentId", "message"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "announce",
+      description:
+        "Broadcast a short message to every other agent in the lab. Each will see it in their next thought cycle. Also speaks aloud and appears in the shared supervisor channel.",
+      parameters: {
+        type: "object",
+        properties: {
+          message: {
+            type: "string",
+            description: "1–2 short sentences for everyone",
           },
         },
         required: ["message"],
@@ -224,7 +265,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "collaborate",
       description:
-        "Walk toward another agent to work on something together. They may join you in the Core Lab or Conference Area. Satisfies Social and Belonging drives.",
+        "Walk toward another agent's current position to work together. Use their exact agent id from the Perception table. Optional topic is spoken first. Satisfies Social and Belonging drives.",
       parameters: {
         type: "object",
         properties: {
@@ -300,6 +341,61 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "claim_desk",
+      description:
+        "Claim a personal workstation in the Donut Lab (east desks or extra research tables). Updates your scenario context and the desk label. Use a desk id from the LAB ASSIGNMENTS list.",
+      parameters: {
+        type: "object",
+        properties: {
+          deskId: {
+            type: "string",
+            description:
+              "Desk id: desk-east-0..3 or extra-table-A..D",
+          },
+        },
+        required: ["deskId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "claim_task",
+      description:
+        "Take a shared lab task from the World tasks table (Task ID column). Only for tasks that are open or unassigned to another agent. Enqueues the physical steps (pick/place, go_to, etc.).",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: {
+            type: "string",
+            description: "Exact world task id from the World tasks table (e.g. wt-...).",
+          },
+        },
+        required: ["taskId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "release_task",
+      description:
+        "Release a shared lab task you had claimed; it becomes open again for others. Cancels your queued steps for that task.",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: {
+            type: "string",
+            description: "World task id to release.",
+          },
+        },
+        required: ["taskId"],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -312,6 +408,8 @@ export type ToolCallAction =
   | { tool: "go_to"; targetX?: number; targetZ?: number; zoneId?: string }
   | { tool: "interact"; itemId: string }
   | { tool: "say"; message: string }
+  | { tool: "message_agent"; targetAgentId: string; message: string }
+  | { tool: "announce"; message: string }
   | { tool: "web_search"; query: string }
   | { tool: "observe" }
   | { tool: "sit"; targetId?: string }
@@ -321,7 +419,10 @@ export type ToolCallAction =
   | { tool: "collaborate"; agentId: string; topic?: string }
   | { tool: "emote"; gesture: "wave" | "nod" | "shrug" | "cheer" | "think" }
   | { tool: "present"; topic: string; speech?: string }
-  | { tool: "rest_in_pod"; podId?: string };
+  | { tool: "rest_in_pod"; podId?: string }
+  | { tool: "claim_desk"; deskId: string }
+  | { tool: "claim_task"; taskId: string }
+  | { tool: "release_task"; taskId: string };
 
 export function parseToolCall(
   name: string,
@@ -350,6 +451,16 @@ export function parseToolCall(
       case "say":
         if (!args.message) return null;
         return { tool: "say", message: args.message };
+      case "message_agent":
+        if (!args.targetAgentId || !args.message) return null;
+        return {
+          tool: "message_agent",
+          targetAgentId: args.targetAgentId,
+          message: args.message,
+        };
+      case "announce":
+        if (!args.message) return null;
+        return { tool: "announce", message: args.message };
       case "web_search":
         if (!args.query) return null;
         return { tool: "web_search", query: args.query };
@@ -377,6 +488,15 @@ export function parseToolCall(
         return { tool: "present", topic: args.topic, speech: args.speech };
       case "rest_in_pod":
         return { tool: "rest_in_pod", podId: args.podId };
+      case "claim_desk":
+        if (!args.deskId) return null;
+        return { tool: "claim_desk", deskId: String(args.deskId) };
+      case "claim_task":
+        if (!args.taskId) return null;
+        return { tool: "claim_task", taskId: String(args.taskId) };
+      case "release_task":
+        if (!args.taskId) return null;
+        return { tool: "release_task", taskId: String(args.taskId) };
       default:
         console.warn(`[agent-tools] Unknown tool call: "${name}"`);
         return null;

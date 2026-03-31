@@ -1,5 +1,9 @@
 import * as THREE from "three";
 import type { StateCreator } from "zustand";
+import {
+  DEFAULT_AGENT_DESK,
+  buildDonutLabScenarioContext,
+} from "@/config/donutLabDeskAssignments";
 import type { AgentSlice, GameState, ResearchAgent } from "./gameStoreTypes";
 
 export const createAgentSlice: StateCreator<
@@ -45,6 +49,39 @@ export const createAgentSlice: StateCreator<
       agentScenarioContext: { ...state.agentScenarioContext, [id]: ctx },
     })),
 
+  personalDeskByAgent: {},
+  setPersonalDesk: (agentId, deskId) =>
+    set((state) => {
+      const personalDeskByAgent = {
+        ...state.personalDeskByAgent,
+        [agentId]: deskId,
+      };
+      return {
+        personalDeskByAgent,
+        agentScenarioContext: {
+          ...state.agentScenarioContext,
+          [agentId]: buildDonutLabScenarioContext(agentId, personalDeskByAgent),
+        },
+      };
+    }),
+  seedDefaultPersonalDesks: (agentIds) =>
+    set((state) => {
+      const next = { ...state.personalDeskByAgent };
+      for (const id of agentIds) {
+        if (!next[id]) {
+          next[id] = DEFAULT_AGENT_DESK[id] ?? "desk-east-0";
+        }
+      }
+      const scenario = { ...state.agentScenarioContext };
+      for (const id of agentIds) {
+        scenario[id] = buildDonutLabScenarioContext(id, next);
+      }
+      return {
+        personalDeskByAgent: next,
+        agentScenarioContext: scenario,
+      };
+    }),
+
   activeResearchAgents: [
     {
       id: "agent-01",
@@ -87,8 +124,22 @@ export const createAgentSlice: StateCreator<
       ...config
     };
 
+    const personalDeskByAgent = { ...state.personalDeskByAgent };
+    if (!personalDeskByAgent[newAgent.id]) {
+      personalDeskByAgent[newAgent.id] =
+        DEFAULT_AGENT_DESK[newAgent.id] ?? "desk-east-0";
+    }
+    const agentScenarioContext = {
+      ...state.agentScenarioContext,
+      [newAgent.id]: buildDonutLabScenarioContext(
+        newAgent.id,
+        personalDeskByAgent,
+      ),
+    };
     return {
-      activeResearchAgents: [...state.activeResearchAgents, newAgent]
+      activeResearchAgents: [...state.activeResearchAgents, newAgent],
+      personalDeskByAgent,
+      agentScenarioContext,
     };
   }),
 

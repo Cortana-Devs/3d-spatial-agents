@@ -7,6 +7,9 @@ export const TASK_MAX_RETRIES = 5;
 export const TASK_ARRIVAL_DIST = 2.5;
 export const TASK_CLOSE_APPROACH_DIST = 4.0;
 
+/** Wait for partner vehicle/store position before cancelling COLLABORATE (seconds). */
+export const TASK_COLLABORATE_PARTNER_WAIT_MAX_SEC = 3;
+
 /** Pose default durations */
 export const TASK_SIT_DEFAULT_DURATION = 12.0;
 export const TASK_LEAN_DEFAULT_DURATION = 6.0;

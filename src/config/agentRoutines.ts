@@ -22,7 +22,11 @@ export function getAssignedStorageTable(agentId: string): string | null {
 const STORAGE_TABLE_CHECKLISTS: Record<string, string[]> = {
   "cupboard-donut-1": ["cupboard-donut-1-laptop", "cupboard-donut-1-protocols"],
   "cupboard-donut-2": ["cupboard-donut-2-sample-logs", "cupboard-donut-2-backup-drive"],
-  "cupboard-donut-3": ["cupboard-donut-3-sops", "cupboard-donut-3-manuals"],
+  "cupboard-donut-3": [
+    "file-rack3-to-supervisor",
+    "cupboard-donut-3-sops",
+    "cupboard-donut-3-manuals",
+  ],
   "cupboard-donut-4": ["cupboard-donut-4-laptop", "cupboard-donut-4-usb"],
   "cupboard-donut-5": ["cupboard-donut-5-archive", "cupboard-donut-5-archive-usb"],
 };

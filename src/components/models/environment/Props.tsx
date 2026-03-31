@@ -246,17 +246,39 @@ export function ProjectorScreen({
 }
 
 // --- LAPTOP ---
+const laptopScreenEmailMaterial = new THREE.MeshStandardMaterial({
+  color: "#1a3d2e",
+  emissive: "#2a6b4a",
+  emissiveIntensity: 0.35,
+  roughness: 0.45,
+});
+const laptopScreenFaultMaterial = new THREE.MeshStandardMaterial({
+  color: "#3d1a1a",
+  emissive: "#8b2020",
+  emissiveIntensity: 0.45,
+  roughness: 0.4,
+});
+
 export function Laptop({
   position,
   rotation = 0,
   userData,
+  screenVariant = "default",
 }: {
   position: [number, number, number];
   rotation?: number;
   userData?: any;
+  /** `email` = outbox/work; `fault` = broken / needs IT. */
+  screenVariant?: "default" | "email" | "fault";
 }) {
   const meshRef = useRef<THREE.Group>(null);
   useInteractable(meshRef, userData);
+  const screenMat =
+    screenVariant === "email"
+      ? laptopScreenEmailMaterial
+      : screenVariant === "fault"
+        ? laptopScreenFaultMaterial
+        : appleScreenMaterial;
   return (
     <group ref={meshRef} position={new THREE.Vector3(position[0], position[1], position[2])} rotation={[0, rotation, 0]}>
       {/* Base */}
@@ -276,9 +298,7 @@ export function Laptop({
         </mesh>
         <mesh
           position={[0, 0.8, 0.06]}
-          material={
-            appleScreenMaterial
-          }
+          material={screenMat}
         >
           <planeGeometry args={[2.3, 1.4]} />
         </mesh>

@@ -10,6 +10,7 @@ import { buildDonutObstacles } from "./DonutObstacles";
 import DonutLabFurniture from "./DonutLabFurniture";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, DEFAULT_RING_OUTER_RADIUS, ENV_PROP_SCALE_FACTOR } from "./labFloorConstants";
 import { buildPodInteractables } from "@/config/agentPods";
+import { buildDonutLabWorldTaskSeeds } from "@/config/donutWorldTasksSeed";
 
 // --- Curated Dream Park Layout ---
 const treeData = [
@@ -99,6 +100,23 @@ export default function DonutLabWorld() {
     if (groupRef.current) addCollidableMesh(groupRef.current);
     addObstacles(obstacles);
     addInteractables(interactables);
+
+    const agentIds = useGameStore
+      .getState()
+      .activeResearchAgents.map((a) => a.id);
+    useGameStore.getState().seedDefaultPersonalDesks(agentIds);
+
+    const gs = useGameStore.getState();
+    const hasRackTask = Object.values(gs.worldTasksById).some(
+      (t) =>
+        t.payload.kind === "deliver" &&
+        t.payload.itemId === "file-rack3-to-supervisor",
+    );
+    if (!hasRackTask) {
+      for (const seed of buildDonutLabWorldTaskSeeds()) {
+        gs.addWorldTask(seed);
+      }
+    }
 
     // --- Semantic Registration ---
     const zoneSystem = ZoneInfluenceSystem;

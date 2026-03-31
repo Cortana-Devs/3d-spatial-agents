@@ -1,5 +1,6 @@
 import * as YUKA from 'yuka';
 import * as THREE from 'three';
+import { useGameStore } from '@/store/gameStore';
 
 class AIManager {
     private static instance: AIManager;
@@ -36,6 +37,23 @@ class AIManager {
         if (entity instanceof YUKA.Vehicle) {
             this.vehicles = this.vehicles.filter(v => v !== entity);
         }
+    }
+
+    /**
+     * Partner position for COLLABORATE: store first (minimap-throttled), then live vehicle positions.
+     */
+    public getPartnerApproachPosition(partnerId: string, selfY: number): THREE.Vector3 | null {
+        const stored = useGameStore.getState().agentPositions[partnerId];
+        if (stored) {
+            return new THREE.Vector3(stored.x, selfY, stored.z);
+        }
+        for (const v of this.vehicles) {
+            if ((v as unknown as { id?: string }).id === partnerId) {
+                const p = v.position as unknown as THREE.Vector3;
+                return new THREE.Vector3(p.x, selfY, p.z);
+            }
+        }
+        return null;
     }
 
     // Sync obstacles from GameStore if needed, or add manually

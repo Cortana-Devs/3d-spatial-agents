@@ -4,6 +4,8 @@ import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
 import { getZoneCenterPosition, getNearestBench } from "@/config/donutLabRoutines";
 import { HearingBus } from "@/lib/SensorySystem";
+import { markAgentLlmSpeech, allowSubconsciousUtterance } from "@/lib/agentSpeechGate";
+import AIManager from "@/systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
 import { getPodDockWorldPosition, getPodLookAtWorldPosition } from "@/config/agentPods";
 import {
@@ -16,6 +18,7 @@ import {
   TASK_PRESENT_DEFAULT_DURATION,
   TASK_REPATH_INTERVAL_SEC,
   TASK_ARRIVAL_DIST,
+  TASK_COLLABORATE_PARTNER_WAIT_MAX_SEC,
   TASK_SIT_DEFAULT_DURATION,
   TASK_STUCK_MIN_DISTANCE,
   TASK_STUCK_WINDOW_SEC,
@@ -50,6 +53,8 @@ export class AgentTaskQueue {
   private pathRefreshTimer: number = 0;
   private actionStartTime: number | null = null;
   private lastKnownPos: THREE.Vector3 = new THREE.Vector3();
+  /** Seconds spent waiting for partner position during COLLABORATE. */
+  private collabPartnerWaitSec = 0;
 
   public static readonly taskRegistries = new Map<string, AgentTaskQueue>();
 
@@ -117,7 +122,10 @@ export class AgentTaskQueue {
     useGameStore.getState().setAgentTrajectory(this.agentId, []);
   }
 
-  private setPhase(newPhase: TaskPhase): void {
+  private setPhase(
+    newPhase: TaskPhase,
+    opts?: { completionAborted?: boolean },
+  ): void {
     const oldPhase = this.phase;
     this.phase = newPhase;
     if (newPhase === "COMPLETED" && oldPhase !== "COMPLETED") {
@@ -128,6 +136,7 @@ export class AgentTaskQueue {
             agentId: this.agentId,
             taskType: this.currentTask?.type || "UNKNOWN",
             task: this.currentTask,
+            completionAborted: opts?.completionAborted ?? false,
           },
         }),
       );
@@ -156,6 +165,15 @@ export class AgentTaskQueue {
     this.resetState();
   }
 
+  /** Remove queued and current tasks tied to a shared world task (e.g. release_task tool). */
+  public cancelWorldTaskChain(worldTaskId: string): void {
+    this.queue = this.queue.filter((t) => t.worldTaskId !== worldTaskId);
+    if (this.currentTask?.worldTaskId === worldTaskId) {
+      this.cleanupTask(this.currentTask);
+      this.setPhase("COMPLETED", { completionAborted: true });
+    }
+  }
+
   private resetState(): void {
     this.phaseTimer = 0;
     this.hasSetPath = false;
@@ -166,6 +184,7 @@ export class AgentTaskQueue {
     this.pathRefreshTimer = 0;
     this.stuckWindowPositions = [];
     this.actionStartTime = null;
+    this.collabPartnerWaitSec = 0;
   }
 
   private startNextTask(): void {
@@ -237,7 +256,11 @@ export class AgentTaskQueue {
 
     this.phase = "NAVIGATING";
 
-    if (!["SAY", "WANDER", "EMOTE"].includes(this.currentTask.type) && Math.random() < 0.05) {
+    if (
+      !["SAY", "WANDER", "EMOTE"].includes(this.currentTask.type) &&
+      Math.random() < 0.05 &&
+      allowSubconsciousUtterance(this.agentId)
+    ) {
       const moveTaskTypes = ["SIT", "REST", "CONTEMPLATE", "EXPLORE", "GO_TO", "FOLLOW_PLAYER", "FOLLOW_PATH", "COLLABORATE", "REST_IN_POD"];
       const phrase = moveTaskTypes.includes(this.currentTask.type)
         ? getRandomPhrase("MOVING") : getRandomPhrase("WORKING");
@@ -274,6 +297,7 @@ export class AgentTaskQueue {
 
     if (this.currentTask?.type === "SAY" || this.currentTask?.type === "WAIT") {
         if (this.phaseTimer === 0 && this.currentTask.type === "SAY") {
+            markAgentLlmSpeech(this.agentId);
             window.dispatchEvent(new CustomEvent("agent-speak", {
                 detail: { agentId: this.agentId, text: (this.currentTask as any).message || this.currentTask.content || "Hello." }
             }));
@@ -303,6 +327,7 @@ export class AgentTaskQueue {
         if (this.phase === "GAZING") dur = this.currentTask?.duration ?? TASK_LOOKAT_DEFAULT_DURATION;
         if (this.phase === "PRESENTING") {
             if (this.phaseTimer < delta * 2 && this.currentTask?.content) {
+                markAgentLlmSpeech(this.agentId);
                 window.dispatchEvent(new CustomEvent("agent-speak", { detail: { agentId: this.agentId, text: this.currentTask.content } }));
                 HearingBus.emit({
                   emitterId: this.agentId,
@@ -394,6 +419,37 @@ export class AgentTaskQueue {
               ? vehiclePos.clone()
               : null);
           break;
+        case "COLLABORATE": {
+          const ct = this.currentTask!;
+          if (ct.partnerId) {
+            targetPos =
+              AIManager.getInstance().getPartnerApproachPosition(
+                ct.partnerId,
+                vehiclePos.y,
+              ) ||
+              ct.targetPos ||
+              null;
+          } else {
+            targetPos = ct.targetPos || null;
+          }
+          if (!targetPos) {
+            this.collabPartnerWaitSec += delta;
+            if (
+              this.collabPartnerWaitSec >= TASK_COLLABORATE_PARTNER_WAIT_MAX_SEC
+            ) {
+              console.warn(
+                `[AgentTaskQueue:${this.agentId}] COLLABORATE: no position for partner ${ct.partnerId ?? "?"} — cancelling`,
+              );
+              this.cleanupTask(ct);
+              this.setPhase("COMPLETED", { completionAborted: true });
+              this.startNextTask();
+              return { type: "STOP" };
+            }
+            return { type: "STOP" };
+          }
+          this.collabPartnerWaitSec = 0;
+          break;
+        }
         default: targetPos = this.currentTask!.targetPos || null; break;
       }
 

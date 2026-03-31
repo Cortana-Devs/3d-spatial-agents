@@ -13,6 +13,21 @@ export type { AgentContext, NearbyEntity, TraceOptions } from "@/types/agent";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Groq returns 400 + nested error.code tool_use_failed when the model emits invalid tool syntax (e.g. XML tags). */
+function isGroqToolUseFailed(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  if (msg.includes("tool_use_failed")) return true;
+  const raw = (error as { error?: { code?: string; error?: { code?: string } } })?.error;
+  if (!raw || typeof raw !== "object") return false;
+  if (raw.code === "tool_use_failed") return true;
+  return raw.error?.code === "tool_use_failed";
+}
+
+const TOOL_FORMAT_SYSTEM =
+  "Tool use: respond ONLY with the chat API's native function/tool_calls (JSON arguments per schema). " +
+  "Never write XML, markdown code fences, or text like <function=name>...</function> for tools. " +
+  "Each tool argument object must be valid JSON (e.g. say uses {\"message\":\"...\"}).";
+
 export async function processAgentThought(
   context: AgentContext,
   memoryContext: string = "",
@@ -20,6 +35,7 @@ export async function processAgentThought(
 ): Promise<{ message: ChatCompletionMessage; usage?: any; model?: string }> {
   const MAX_RETRIES = 3;
   let attempt = 0;
+  let userPromptSuffix = "";
 
   // Context Compression: Convert entities to Markdown Table (Truncated to top 5 closest for 8B token budget)
   const entityTable =
@@ -79,6 +95,12 @@ ${context.autonomousActivityContext
 ${context.conversationHistory
   ? `## Conversation History\n${context.conversationHistory}\n`
   : ""}
+${context.peerAgentMessages
+  ? `## Messages from other agents\n${context.peerAgentMessages}\n`
+  : ""}
+${context.worldTasksContext
+  ? `## World tasks (shared lab backlog)\n${context.worldTasksContext}\n`
+  : ""}
 
 ## Task Queue
 ${context.taskState ? `Phase: ${context.taskState.phase} | Script: ${context.taskState.currentScriptId ?? "none"} | Task: ${context.taskState.currentTask ?? "none"} | Queued: ${context.taskState.queuedTasksCount}` : "No active tasks."}
@@ -102,11 +124,12 @@ ${memoryContext || "Clear environment."}
 | exterior-plaza | Outdoor plaza outside the building |
 
 ## Rules
-- Use tools to act. 1–3 tool calls max per turn.
-- 'say' goes to TTS — 1–2 short conversational sentences, no formatting.
+- Use tools to act. 1–3 tool calls max per turn. Use only the API's structured tool_calls — never fake tool syntax in plain text.
+- 'say' — general speech (TTS + bubble), 1–2 short sentences, no formatting. To reach other agents' minds use 'message_agent' (one id from perception) or 'announce' (everyone); those update their next-turn context. 'say' alone does not.
 - 'present' → navigates to conference-area podium.
 - 'sit' → use an ID from the Perception table.
 - 'emote' gestures: wave, nod, shrug, cheer, think.
+- Shared lab tasks: use **claim_task** with the exact Task ID from the World tasks table to take an unassigned (**open**) task; use **release_task** to give it back. If a task says to coordinate, use **message_agent** or **collaborate**.
 - If tasks are running, use 'observe' unless a drive is critically LOW.
 - CRITICAL: Copy entity IDs exactly from the Perception table above.
   `;
@@ -118,26 +141,29 @@ ${memoryContext || "Clear environment."}
     try {
       const client = getGroqClient();
 
+      const systemBase = context.personality
+        ? `You are ${context.personality.name}, ${context.personality.trait} in the Donut Research Lab. You have drives, spatial memory, and personality. Use your tools to act naturally. Speak in a ${context.personality.speechStyle} style. 1–3 tool calls max per turn.`
+        : "You are an intelligent agent in the Donut Research Lab. Use your tools to act based on your drives and environment. 1–3 tool calls max.";
+
       const messages: ChatCompletionMessageParam[] = [
         {
           role: "system",
-          content: context.personality
-            ? `You are ${context.personality.name}, ${context.personality.trait} in the Donut Research Lab. You have drives, spatial memory, and personality. Use your tools to act naturally. Speak in a ${context.personality.speechStyle} style. 1–3 tool calls max per turn.`
-            : "You are an intelligent agent in the Donut Research Lab. Use your tools to act based on your drives and environment. 1–3 tool calls max.",
+          content: `${systemBase} ${TOOL_FORMAT_SYSTEM}`,
         },
         {
           role: "user",
-          content: prompt,
+          content: prompt + userPromptSuffix,
         },
       ];
 
       let completion = await client.chat.completions.create({
         messages,
         model: model,
-        temperature: 0.3,
+        temperature: 0.25,
         max_completion_tokens: 400,
         tools: AGENT_TOOLS,
         tool_choice: "auto",
+        parallel_tool_calls: false,
         top_p: 1,
         stream: false,
       });
@@ -173,10 +199,11 @@ ${memoryContext || "Clear environment."}
             completion = await client.chat.completions.create({
                 messages,
                 model: model,
-                temperature: 0.3,
+                temperature: 0.25,
                 max_completion_tokens: 400,
                 tools: AGENT_TOOLS,
                 tool_choice: "auto",
+                parallel_tool_calls: false,
                 top_p: 1,
                 stream: false,
             });
@@ -264,6 +291,12 @@ ${memoryContext || "Clear environment."}
         rotateGroqKey();
         await sleep(1000);
       } else {
+        if (isGroqToolUseFailed(error)) {
+          userPromptSuffix =
+            "\n\n[Required] The API rejected the last reply: invalid tool format. " +
+            "Use ONLY native tool_calls with JSON arguments. " +
+            "Do NOT output <function=...>, XML tags, or tool syntax inside message text.";
+        }
         if (attempt === MAX_RETRIES - 1) throw error;
       }
 

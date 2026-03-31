@@ -6,6 +6,7 @@ import { createSettingsSlice } from "./settingsStore";
 import { createUISlice } from "./uiStore";
 import { createWorldSlice } from "./worldStore";
 import { createPodSlice } from "./podStore";
+import { createWorldTaskSlice } from "./worldTaskStore";
 
 export type { GameState } from "./gameStoreTypes";
 export type { GameInteractable } from "./gameStoreTypes";
@@ -19,4 +20,5 @@ export const useGameStore = create<GameState>()((...args) => ({
   ...createAgentSlice(...args),
   ...createUISlice(...args),
   ...createPodSlice(...args),
+  ...createWorldTaskSlice(...args),
 }));
