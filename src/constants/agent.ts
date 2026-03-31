@@ -7,7 +7,7 @@ export const PLAYER_COOLDOWN_TIME = 15.0;
 export const SCRIPT_COOLDOWN_MS = 30_000;
 
 /** Ground ray / step-up for agent physics */
-export const MAX_STEP_UP = 2.0;
+export const MAX_STEP_UP = 0.5;
 
 /** Abort stuck navigation and recover */
 export const STUCK_TIMER_THRESHOLD_SEC = 4.0;
