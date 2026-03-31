@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
+import AIManager from "@/systems/AIManager";
 import { glassMaterial, structuralMetalMaterial, soffitMaterial, doorHandleMaterial } from "./DonutMaterials";
 import { 
   outerWallSegmentGeo, innerWallSegmentGeo,
@@ -28,7 +29,7 @@ function Door({ radius, angle, id }: { radius: number, angle: number, id: string
 
   useEffect(() => {
     if (isOpen) {
-      const timer = setTimeout(() => setIsOpen(false), 5000);
+      const timer = setTimeout(() => setIsOpen(false), 3000);
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
@@ -52,6 +53,37 @@ function Door({ radius, angle, id }: { radius: number, angle: number, id: string
 
   useFrame(() => {
     if (!leftDoorRef.current || !rightDoorRef.current) return;
+    
+    // Proximity check for automatic door (player and agents)
+    const doorWorldPos = new THREE.Vector3(DEFAULT_LAB_HUB.x + x, doorY, DEFAULT_LAB_HUB.z + z);
+    let closeEntity = false;
+
+    // Check Player
+    const playerPos = useGameStore.getState().playerPosition;
+    if (playerPos) {
+      const dx = playerPos.x - doorWorldPos.x;
+      const dz = playerPos.z - doorWorldPos.z;
+      // Note: Player Y is slightly offset, but XZ is enough for doors
+      if (dx * dx + dz * dz < 35) closeEntity = true; // Approx < 6m
+    }
+
+    // Check Agents
+    if (!closeEntity) {
+      const vehicles = AIManager.getInstance().vehicles;
+      for (const v of vehicles) {
+        const dx = v.position.x - doorWorldPos.x;
+        const dz = v.position.z - doorWorldPos.z;
+        if (dx * dx + dz * dz < 35) {
+          closeEntity = true;
+          break;
+        }
+      }
+    }
+
+    if (closeEntity && !isOpen) {
+      setIsOpen(true);
+    }
+
     const target = isOpen ? DOOR_WIDTH / 2.2 : 0;
     leftDoorRef.current.position.x += (-target - leftDoorRef.current.position.x) * 0.1;
     rightDoorRef.current.position.x += (target - rightDoorRef.current.position.x) * 0.1;

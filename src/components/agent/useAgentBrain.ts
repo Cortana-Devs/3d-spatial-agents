@@ -552,7 +552,7 @@ export function useAgentBrain(
           raycaster.set(rayOrigin, dir);
           raycaster.far = 3.0;
 
-          const hits = raycaster.intersectObjects(collidableMeshes, false);
+          const hits = raycaster.intersectObjects(collidableMeshes, true);
           if (hits.length > 0) {
             const hit = hits[0];
             const dist = hit.distance;
@@ -804,7 +804,7 @@ export function useAgentBrain(
       );
       raycaster.set(rayOrigin, rayDirRef.current);
 
-      const hits = raycaster.intersectObjects(collidableMeshes, false);
+      const hits = raycaster.intersectObjects(collidableMeshes, true);
       let groundHeight = -100;
       let foundGround = false;
 

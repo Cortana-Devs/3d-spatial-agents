@@ -9,7 +9,7 @@ import type { GameInteractable } from "@/store/gameStoreTypes";
 export const AGENT_POD_RING_RADIUS = DEFAULT_RING_OUTER_RADIUS - 6;
 
 /** Five pods evenly spaced (degrees). 0° = +Z in ring space (same as furniture). */
-export const AGENT_POD_ANGLES_DEG = [0, 72, 144, 216, 288] as const;
+export const AGENT_POD_ANGLES_DEG = [345, 72, 144, 216, 288] as const;
 
 export type AgentPodLayoutSpec = {
   id: string;

@@ -809,7 +809,7 @@ export function usePlayerController(
         const rayOrigin = rayOriginRef.current.copy(mesh.position);
         rayOrigin.y += 50;
         raycaster.set(rayOrigin, raycastDirRef.current);
-        const hits = raycaster.intersectObjects(collidableMeshes, false);
+        const hits = raycaster.intersectObjects(collidableMeshes, true);
         if (hits.length > 0) {
           const validHits = hits.filter(
             (h) => !h.object.name.includes("Ceiling"),

@@ -72,7 +72,7 @@ const cupboardShelfMaterial = new THREE.MeshPhysicalMaterial({
   transparent: true,
   opacity: 0.8,
 });
-const cupboardDrawerMaterial = appleWhiteMaterial;
+const cupboardDrawerMaterial = appleSpaceGreyMaterial;
 const darkWoodMaterial = applePremiumWood;
 const cupboardFasciaMaterial = appleSpaceGreyMaterial;
 const cupboardNeonMaterial = neonGlowBlue;
@@ -1847,6 +1847,7 @@ export function CupboardUnit({
           color="#ffffff"
           anchorX="center"
           anchorY="middle"
+          fontWeight="bold"
         >
           {label}
         </Text>
@@ -1880,12 +1881,13 @@ export function CupboardUnit({
 
               <Text
                 position={[0, 0.2, d / 2 + 0.06]}
-                fontSize={0.8}
-                color="white"
+                fontSize={1.0}
+                color="#ffffff"
                 anchorX="center"
                 anchorY="middle"
+                fontWeight="bold"
               >
-                {`Level 0${levelNum}`}
+                {`LEVEL 0${levelNum}`}
               </Text>
             </group>
           </group>
