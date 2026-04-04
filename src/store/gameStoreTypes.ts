@@ -132,8 +132,8 @@ export interface AgentSlice {
   setAgentPosition: (id: string, pos: THREE.Vector3) => void;
   agentTrajectories: Record<string, THREE.Vector3[]>;
   setAgentTrajectory: (id: string, path: THREE.Vector3[]) => void;
-  agentMetrics: Record<string, { latency: number; spatialRatio: number }>;
-  setAgentMetrics: (id: string, metrics: { latency: number; spatialRatio: number }) => void;
+  agentMetrics: Record<string, { latency: number; spatialRatio: number; status?: 'INITIALIZING' | 'ACTIVE' }>;
+  setAgentMetrics: (id: string, metrics: { latency: number; spatialRatio: number; status?: 'INITIALIZING' | 'ACTIVE' }) => void;
   agentScenarioContext: Record<string, string>;
   setAgentScenarioContext: (id: string, context: string) => void;
   /** Agent id → desk id (e.g. desk-east-0). */

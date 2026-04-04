@@ -611,7 +611,8 @@ export class ClientBrain {
       // Update transient metrics for HUD
       useGameStore.getState().setAgentMetrics(this.id, {
         latency: metrics.latency_ms,
-        spatialRatio: metrics.spatial_language_freq
+        spatialRatio: metrics.spatial_language_freq,
+        status: 'ACTIVE'
       });
 
       // --- Tick Snapshot for Cognitive Dashboard (Phase 3) ---

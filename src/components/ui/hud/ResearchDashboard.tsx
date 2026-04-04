@@ -188,6 +188,8 @@ function WorldTaskRow({
 export default function ResearchDashboard() {
   const [, tick] = useReducer((n) => n + 1, 0);
   const [tab, setTab] = useState<DashboardTab>('agents');
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
   const {
     activeResearchAgents,
@@ -198,6 +200,7 @@ export default function ResearchDashboard() {
     setFollowingAgentId,
     worldTasksById,
     dispatchOpenWorldTask,
+    addWorldTask,
     removeWorldTask,
     updateWorldTask,
     releaseWorldTask,
@@ -214,6 +217,7 @@ export default function ResearchDashboard() {
     setFollowingAgentId: s.setFollowingAgentId,
     worldTasksById: s.worldTasksById,
     dispatchOpenWorldTask: s.dispatchOpenWorldTask,
+    addWorldTask: s.addWorldTask,
     removeWorldTask: s.removeWorldTask,
     updateWorldTask: s.updateWorldTask,
     releaseWorldTask: s.releaseWorldTask,
@@ -468,6 +472,25 @@ export default function ResearchDashboard() {
               >
                 OPEN TASK BUILDER (M)
               </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAddingTask(!isAddingTask)}
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: '1px solid #ff00ff',
+                  background: isAddingTask ? 'rgba(255,0,255,0.2)' : 'rgba(255,0,255,0.05)',
+                  color: '#ff00ff',
+                  cursor: 'pointer',
+                  boxShadow: isAddingTask ? '0 0 15px rgba(255,0,255,0.2)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {isAddingTask ? '✕ CLOSE BUILDER' : '+ ADD RESEARCH TASK'}
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -494,6 +517,16 @@ export default function ResearchDashboard() {
                 Backlog is synchronized across all active agent cognitive contexts.
               </span>
             </div>
+
+            {isAddingTask && (
+              <QuickTaskBuilder
+                onClose={() => setIsAddingTask(false)}
+                onAdd={(task) => {
+                  addWorldTask(task);
+                  setIsAddingTask(false);
+                }}
+              />
+            )}
 
             {worldTasks.length === 0 ? (
               <div style={{ opacity: 0.3, padding: '40px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>
@@ -586,6 +619,195 @@ export default function ResearchDashboard() {
   );
 }
 
+// ── Quick Task Builder ───────────────────────────────────────────────────────
+
+function QuickTaskBuilder({ 
+  onClose, 
+  onAdd 
+}: { 
+  onClose: () => void; 
+  onAdd: (t: Omit<WorldTask, "id" | "createdAt"> & { id?: string }) => void;
+}) {
+  const [kind, setKind] = useState<'deliver' | 'go_zone' | 'follow_player'>('deliver');
+  const [itemId, setItemId] = useState('rack-3');
+  const [areaId, setAreaId] = useState('desk-supervisor-donut-inbox');
+  const [zoneId, setZoneId] = useState('center-park');
+
+  const handleAdd = () => {
+    let title = "";
+    let desc = "";
+    let payload: any = { kind };
+
+    if (kind === 'deliver') {
+      title = `Procure ${itemId}`;
+      desc = `Transfer ${itemId} to ${areaId} to support bench-top experiments.`;
+      payload = { kind, itemId, destAreaId: areaId };
+    } else if (kind === 'go_zone') {
+      title = `Observe ${zoneId}`;
+      desc = `Perform spatial reconnaissance and data entry for the ${zoneId} environment.`;
+      payload = { kind, zoneId };
+    } else {
+      title = "Experimental Escort";
+      desc = "Maintain proximity to the primary researcher and assist with mobile sensor data collection.";
+      payload = { kind };
+    }
+
+    onAdd({
+      title,
+      description: desc,
+      status: 'open',
+      priority: 15,
+      assigneeId: null,
+      createdBy: 'player',
+      payload,
+    });
+  };
+
+  const inputStyle: React.CSSProperties = {
+    background: 'rgba(0,0,0,0.3)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: '#fff',
+    padding: '8px',
+    borderRadius: '4px',
+    fontSize: '11px',
+    fontFamily: 'monospace'
+  };
+
+  return (
+    <div style={{
+      background: 'rgba(255,0,255,0.03)',
+      border: '1px solid rgba(255,0,255,0.2)',
+      borderRadius: '12px',
+      padding: '24px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      marginBottom: '20px',
+      boxShadow: 'inset 0 0 20px rgba(255,0,255,0.05)'
+    }}>
+      <div style={{ fontWeight: 700, fontSize: '14px', color: '#ff00ff', letterSpacing: '1px' }}>RESEARCH TASK TEMPLATES</div>
+      
+      <div style={{ display: 'flex', gap: '10px' }}>
+        {[
+          { id: 'deliver', label: 'Material Fetch', icon: '📦' },
+          { id: 'go_zone', label: 'Spatial Recon', icon: '📡' },
+          { id: 'follow_player', label: 'Researcher Escort', icon: '🛡️' }
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setKind(t.id as any)}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: kind === t.id ? 'rgba(255,0,255,0.15)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${kind === t.id ? '#ff00ff' : 'rgba(255,255,255,0.1)'}`,
+              borderRadius: '8px',
+              color: kind === t.id ? '#fff' : 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              fontSize: '11px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: '1px solid rgba(255,0,255,0.1)', paddingTop: '20px' }}>
+        {kind === 'deliver' && (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10px', opacity: 0.5 }}>TARGET_ITEM_ID</label>
+              <select 
+                value={itemId} 
+                onChange={(e) => setItemId(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="rack-3">Rack 3 (Standard)</option>
+                <option value="file-rack-core-lab">Core Lab Files</option>
+                <option value="laptop-research-01">Research Laptop</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10px', opacity: 0.5 }}>DESTINATION_BUREAU</label>
+              <select 
+                value={areaId} 
+                onChange={(e) => setAreaId(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="desk-supervisor-donut-inbox">Supervisor Inbox</option>
+                <option value="lab-bench-south-0">South Lab Bench</option>
+                <option value="data-node-alpha-inbox">Data Node Alpha</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {kind === 'go_zone' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '10px', opacity: 0.5 }}>COGNITIVE_ZONE_ID</label>
+            <select 
+              value={zoneId} 
+              onChange={(e) => setZoneId(e.target.value)}
+              style={inputStyle}
+            >
+              <option value="center-park">Center Garden</option>
+              <option value="fishing-dock">Fishing Dock</option>
+              <option value="core-lab">Core Lab</option>
+              <option value="data-analysis">Data Analysis Wing</option>
+              <option value="break-room">Break Room</option>
+            </select>
+          </div>
+        )}
+
+        {kind === 'follow_player' && (
+          <div style={{ fontSize: '11px', opacity: 0.6, background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            Status: Agent will track researcher coordinates in real-time. Assist mode enabled.
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+           <button
+            onClick={handleAdd}
+            style={{
+              flex: 1,
+              padding: '10px',
+              background: '#ff00ff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            CONFIRM & PUSH TO BACKLOG
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '10px 15px',
+              background: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Agent Card ───────────────────────────────────────────────────────────────
 
 function AgentCard({
@@ -601,8 +823,13 @@ function AgentCard({
     color: string;
     status: string;
     thoughtHistory: string[];
+    currentTask: string;
   };
-  metrics?: { latency: number; spatialRatio: number };
+  metrics?: { 
+    latency: number; 
+    spatialRatio: number; 
+    status?: 'INITIALIZING' | 'ACTIVE' 
+  };
   onFocus: () => void;
   onRemove: () => void;
   onPurge: () => void;
@@ -671,10 +898,10 @@ function AgentCard({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)' }}>
          <div style={{ padding: '8px 12px', fontSize: '10px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-            <span style={{ opacity: 0.4 }}>LATENCY:</span> <span style={{ color: '#00f2ff', fontFamily: 'monospace' }}>{metrics ? `${metrics.latency}ms` : '--'}</span>
+            <span style={{ opacity: 0.4 }}>LATENCY:</span> <span style={{ color: '#00f2ff', fontFamily: 'monospace' }}>{metrics?.status === 'ACTIVE' ? `${metrics.latency}ms` : '---'}</span>
          </div>
          <div style={{ padding: '8px 12px', fontSize: '10px' }}>
-            <span style={{ opacity: 0.4 }}>SPATIAL:</span> <span style={{ color: '#ffaa44', fontFamily: 'monospace' }}>{metrics ? `${(metrics.spatialRatio * 100).toFixed(1)}%` : '--'}</span>
+            <span style={{ opacity: 0.4 }}>DENSITY:</span> <span style={{ color: '#ffaa44', fontFamily: 'monospace' }}>{metrics?.status === 'ACTIVE' ? `${(metrics.spatialRatio * 100).toFixed(1)}%` : '---'}</span>
          </div>
       </div>
 

@@ -1,70 +1,164 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { StatsGl } from "@react-three/drei";
 import { useGameStore } from "@/store/gameStore";
-import { SCENARIO_A_ROUTINE, SCENARIO_B_PROPAGATION, SCENARIO_C_COLLABORATION } from "@/config/ResearchEvaluationScenarios";
+import { useShallow } from "zustand/react/shallow";
+import { 
+  SCENARIO_A_ROUTINE, 
+  SCENARIO_B_PROPAGATION, 
+  SCENARIO_C_COLLABORATION 
+} from "@/config/ResearchEvaluationScenarios";
 
 function ResearchHUD() {
-  const activeScenarioId = useGameStore((state) => state.activeScenarioId);
-  const setActiveScenarioId = useGameStore((state) => state.setActiveScenarioId);
-  const agentMetrics = useGameStore((state) => state.agentMetrics);
-  const currentFps = useGameStore((state) => state.currentFps);
-  
-  // Extract metrics for the primary agent
-  const primaryMetrics = agentMetrics["agent-01"] || { latency: 0, spatialRatio: 0 };
+  const { 
+    activeScenarioId, 
+    setActiveScenarioId, 
+    agentMetrics, 
+    currentFps, 
+    inspectedAgentId,
+    activeResearchAgents
+  } = useGameStore(useShallow((state) => ({
+    activeScenarioId: state.activeScenarioId,
+    setActiveScenarioId: state.setActiveScenarioId,
+    agentMetrics: state.agentMetrics,
+    currentFps: state.currentFps,
+    inspectedAgentId: state.inspectedAgentId,
+    activeResearchAgents: state.activeResearchAgents
+  })));
+
+  // Determine which metrics to display: Inspected Agent or Global Cluster Average
+  const displayData = useMemo(() => {
+    if (inspectedAgentId && agentMetrics[inspectedAgentId]) {
+      const agent = activeResearchAgents.find(a => a.id === inspectedAgentId);
+      return {
+        label: agent?.name?.toUpperCase() || inspectedAgentId.toUpperCase(),
+        latency: agentMetrics[inspectedAgentId].latency,
+        spatial: agentMetrics[inspectedAgentId].spatialRatio,
+        status: agentMetrics[inspectedAgentId].status || 'ACTIVE',
+        isGlobal: false
+      };
+    }
+
+    // Default to Cluster Average
+    const metricValues = Object.values(agentMetrics);
+    if (metricValues.length === 0) {
+      return { label: "CLUSTER: STANDBY", latency: 0, spatial: 0, status: 'IDLE', isGlobal: true };
+    }
+
+    const avgLatency = metricValues.reduce((acc, m) => acc + m.latency, 0) / metricValues.length;
+    const avgSpatial = metricValues.reduce((acc, m) => acc + (m.spatialRatio || 0), 0) / metricValues.length;
+    
+    return {
+      label: "CLUSTER: AGGREGATE",
+      latency: Math.round(avgLatency),
+      spatial: avgSpatial,
+      status: 'ACTIVE',
+      isGlobal: true
+    };
+  }, [inspectedAgentId, agentMetrics, activeResearchAgents]);
+
+  const scenarioName = activeScenarioId.split("-").slice(1, 2).join(" ").toUpperCase() || "A";
 
   return (
     <div style={{
       color: "#00f2ff",
-      fontFamily: "monospace",
+      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
       fontSize: "10px",
-      marginTop: "8px",
-      padding: "8px",
-      borderTop: "1px solid rgba(0, 242, 255, 0.2)",
+      marginTop: "12px",
+      padding: "10px",
+      borderTop: "1px solid rgba(0, 242, 255, 0.3)",
       pointerEvents: "auto",
       display: "flex",
       flexDirection: "column",
-      gap: "4px",
-      textShadow: "0 0 5px rgba(0, 242, 255, 0.5)"
+      gap: "6px",
+      background: "linear-gradient(to bottom, rgba(0, 242, 255, 0.05), transparent)",
+      position: "relative",
+      overflow: "hidden"
     }}>
-      <div style={{ fontWeight: "bold", borderBottom: "1px solid rgba(0, 242, 255, 0.1)", paddingBottom: "2px", marginBottom: "2px" }}>
-        RESEARCH CONTROL [SO3/SO5]
+      {/* Decorative Grid Line */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "1px",
+        background: "linear-gradient(to right, transparent, #00f2ff, transparent)",
+        opacity: 0.5
+      }} />
+
+      <div style={{ 
+        fontWeight: "bold", 
+        letterSpacing: "1px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        color: "#fff",
+        textShadow: "0 0 8px rgba(0, 242, 255, 0.6)"
+      }}>
+        <span>RESEARCH CONTROL</span>
+        <span style={{ fontSize: "8px", opacity: 0.5 }}>V3.0.0-PRO</span>
       </div>
       
-      <div style={{ opacity: 0.8 }}>
-        SCENARIO: <span style={{ color: "#fff" }}>{activeScenarioId.split("-").slice(1, 2).join(" ").toUpperCase()}</span>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div style={{ fontSize: "8px", opacity: 0.5, color: "#00f2ff" }}>CONTEXT_SCOPE</div>
+          <div style={{ color: displayData.isGlobal ? "#ff00ff" : "#fff", fontWeight: "600" }}>
+            {displayData.label}
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "right" }}>
+          <div style={{ fontSize: "8px", opacity: 0.5, color: "#00f2ff" }}>SCENARIO_ID</div>
+          <div style={{ color: "#fff" }}>{scenarioName}</div>
+        </div>
       </div>
-      <div style={{ opacity: 0.8 }}>
-        COGNITION: <span style={{ color: "#fff" }}>LLAMA-3.1-8B-INSTANT</span>
-      </div>
-      <div style={{ opacity: 0.8 }}>
-        LATENCY: <span style={{ color: "#fff" }}>{primaryMetrics.latency}ms</span>
-      </div>
-      <div style={{ opacity: 0.8 }}>
-        SPATIAL RATIO: <span style={{ color: "#fff" }}>{(primaryMetrics.spatialRatio * 100).toFixed(1)}%</span>
-      </div>
-      <div style={{ opacity: 0.8 }}>
-        WORLD FPS: <span style={{ color: "#fff" }}>{currentFps}</span>
+
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "4px", 
+        padding: "6px 0",
+        borderTop: "1px dashed rgba(0, 242, 255, 0.1)",
+        borderBottom: "1px dashed rgba(0, 242, 255, 0.1)"
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ opacity: 0.7 }}>COG_LATENCY</span>
+          <span style={{ color: displayData.status === 'INITIALIZING' ? "#ffd700" : "#fff" }}>
+            {displayData.status === 'INITIALIZING' ? "INIT..." : `${displayData.latency}ms`}
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ opacity: 0.7 }}>SPATIAL_DENSITY</span>
+          <span style={{ color: "#fff" }}>
+            {(displayData.spatial * 100).toFixed(1)}%
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ opacity: 0.7 }}>SYSTEM_FPS</span>
+          <span style={{ color: currentFps < 30 ? "#ff4d4d" : "#00ff00" }}>{currentFps}</span>
+        </div>
       </div>
 
       <div style={{
         display: "flex",
         gap: "4px",
-        marginTop: "6px"
+        marginTop: "4px"
       }}>
         {[SCENARIO_A_ROUTINE, SCENARIO_B_PROPAGATION, SCENARIO_C_COLLABORATION].map((s) => (
           <button
             key={s.id}
             onClick={() => setActiveScenarioId(s.id)}
             style={{
-              background: activeScenarioId === s.id ? "rgba(0, 242, 255, 0.3)" : "rgba(255, 255, 255, 0.05)",
-              border: `1px solid ${activeScenarioId === s.id ? "#00f2ff" : "rgba(255, 255, 255, 0.2)"}`,
+              flex: 1,
+              background: activeScenarioId === s.id ? "rgba(0, 242, 255, 0.2)" : "rgba(255, 255, 255, 0.03)",
+              border: `1px solid ${activeScenarioId === s.id ? "#00f2ff" : "rgba(0, 242, 255, 0.1)"}`,
               color: activeScenarioId === s.id ? "#fff" : "#00f2ff",
               fontSize: "8px",
-              padding: "2px 4px",
+              padding: "3px 0",
               cursor: "pointer",
-              borderRadius: "3px",
-              textTransform: "uppercase"
+              borderRadius: "2px",
+              textTransform: "uppercase",
+              transition: "all 0.2s ease",
+              boxShadow: activeScenarioId === s.id ? "0 0 10px rgba(0, 242, 255, 0.2)" : "none"
             }}
           >
             {s.name.split(" ")[1] || s.name.split(" ")[0]}
@@ -79,7 +173,7 @@ export function DynamicStatsIslandUI() {
   const setStatsParent = useGameStore((state) => state.setStatsParent);
   const [mounted, setMounted] = React.useState(false);
 
-  const [elements] = useState(() => {
+  const [elements] = React.useState(() => {
     if (typeof window === "undefined") return null;
 
     const sticker = document.createElement("div");
@@ -95,18 +189,18 @@ export function DynamicStatsIslandUI() {
     sticker.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
     sticker.style.willChange = "transform, left, top";
 
-    sticker.style.padding = "6px";
-    sticker.style.background = "rgba(10, 12, 20, 0.85)";
-    sticker.style.backdropFilter = "blur(10px)";
-    sticker.style.borderRadius = "12px";
-    sticker.style.border = "1px solid rgba(0, 242, 255, 0.2)";
-    sticker.style.boxShadow = "0 0 15px rgba(0, 242, 255, 0.1)";
+    sticker.style.padding = "4px";
+    sticker.style.background = "rgba(6, 8, 12, 0.9)";
+    sticker.style.backdropFilter = "blur(12px)";
+    sticker.style.borderRadius = "4px";
+    sticker.style.border = "1px solid rgba(0, 242, 255, 0.3)";
+    sticker.style.boxShadow = "inset 0 0 20px rgba(0, 242, 255, 0.05), 0 10px 30px rgba(0,0,0,0.5)";
     sticker.style.display = "flex";
     sticker.style.flexDirection = "column";
+    sticker.style.minWidth = "180px";
 
     const inner = document.createElement("div");
     inner.style.pointerEvents = "auto";
-    // StatsGL will append itself here
     sticker.appendChild(inner);
 
     const hudContainer = document.createElement("div");
@@ -172,7 +266,7 @@ export function DynamicStatsIslandStats() {
   return (
     <StatsGl
       parent={statsParent as any}
-      clearStatsGlStyle={false} // Keeping default styles for visibility, but parent handles glassmorphism
+      clearStatsGlStyle={false} 
     />
   );
 }

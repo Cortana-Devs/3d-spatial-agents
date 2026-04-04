@@ -139,10 +139,18 @@ export const createAgentSlice: StateCreator<
         personalDeskByAgent,
       ),
     };
+
+    // Initialize metrics to avoid UI flashing
+    const agentMetrics = {
+      ...state.agentMetrics,
+      [newAgent.id]: { latency: 0, spatialRatio: 0, status: 'INITIALIZING' as const }
+    };
+
     return {
       activeResearchAgents: [...state.activeResearchAgents, newAgent],
       personalDeskByAgent,
       agentScenarioContext,
+      agentMetrics,
     };
   }),
 
