@@ -1,6 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { MemoryObject } from './types';
 import type { ConversationRecord } from './conversationTypes';
+import type { KnowledgeFact } from './KnowledgeGraph';
 
 interface MemoryDB extends DBSchema {
     memories: {
@@ -17,6 +18,12 @@ interface MemoryDB extends DBSchema {
         key: string;
         value: { agentId: string; payload: string };
     };
+    /** Semantic knowledge graph — Phase 2 */
+    'knowledge-facts': {
+        key: string;
+        value: KnowledgeFact;
+        indexes: { 'by-agent': string };
+    };
 }
 
 const DB_NAME = 'agent-memory-db';
@@ -30,7 +37,7 @@ class IDBAdapter {
     private getDb() {
         if (typeof window === 'undefined') return null; // Server-side guard
         if (!this.dbPromise) {
-            this.dbPromise = openDB<MemoryDB>(DB_NAME, 2, {
+            this.dbPromise = openDB<MemoryDB>(DB_NAME, 3, {  // v3: adds knowledge-facts store
                 upgrade(db) {
                     if (!db.objectStoreNames.contains(STORE_NAME)) {
                         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
@@ -42,6 +49,11 @@ class IDBAdapter {
                     }
                     if (!db.objectStoreNames.contains(EXPLORER_STORE)) {
                         db.createObjectStore(EXPLORER_STORE, { keyPath: 'agentId' });
+                    }
+                    // v3 — semantic knowledge graph
+                    if (!db.objectStoreNames.contains('knowledge-facts')) {
+                        const kgStore = db.createObjectStore('knowledge-facts', { keyPath: 'id' });
+                        kgStore.createIndex('by-agent', 'agentId');
                     }
                 },
             });
@@ -135,6 +147,30 @@ class IDBAdapter {
         if (!db) return null;
         const row = await (await db).get(EXPLORER_STORE, agentId);
         return row?.payload ?? null;
+    }
+
+    // ── Knowledge Graph (Phase 2) ───────────────────────────────────────────
+
+    async putKnowledgeFact(fact: KnowledgeFact): Promise<void> {
+        const db = this.getDb();
+        if (!db) return;
+        await (await db).put('knowledge-facts', fact);
+    }
+
+    async getKnowledgeFacts(agentId: string): Promise<KnowledgeFact[]> {
+        const db = this.getDb();
+        if (!db) return [];
+        const tx = (await db).transaction('knowledge-facts', 'readonly');
+        return tx.store.index('by-agent').getAll(agentId);
+    }
+
+    async deleteKnowledgeFacts(ids: string[]): Promise<void> {
+        const db = this.getDb();
+        if (!db) return;
+        const tx = (await db).transaction('knowledge-facts', 'readwrite');
+        const store = tx.objectStore('knowledge-facts');
+        await Promise.all(ids.map((id) => store.delete(id)));
+        await tx.done;
     }
 }
 

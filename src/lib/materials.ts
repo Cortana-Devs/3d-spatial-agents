@@ -1,9 +1,18 @@
+/**
+ * Shared Three.js material factory.
+ *
+ * Relocated from src/systems/Materials.ts — this is a factory/helper pattern,
+ * not a system. Lives in lib/ so world components can import without pulling
+ * in all of systems/.
+ */
+
 import * as THREE from "three";
-import { TextureGenerator } from "./TextureGenerator";
+import { TextureGenerator } from "@/systems/TextureGenerator";
 
-// We can't create materials globally because they might need textures that are generated
-// or need to be disposed. But we can have a factory or a hook.
-
+/**
+ * Create and return a fresh set of PBR materials for the world geometry.
+ * Call inside a `useMemo` to avoid re-creating materials every render.
+ */
 export const createMaterials = () => {
   const metalTex = TextureGenerator.generateTexture("metal");
   const sandDiffuse = TextureGenerator.generateTexture("sand");
@@ -86,7 +95,9 @@ export const createMaterials = () => {
       map: fabricTex,
       roughness: 1.0,
       metalness: 0.0,
-      color: 0x0088aa, // Teal
+      color: 0x0088aa,
     }),
   };
 };
+
+export type SceneMaterials = ReturnType<typeof createMaterials>;

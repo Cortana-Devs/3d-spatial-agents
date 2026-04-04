@@ -1,4 +1,4 @@
-import { SUBCONSCIOUS_AFTER_LLM_SUPPRESS_MS } from "@/constants/brain";
+import { SUBCONSCIOUS_AFTER_LLM_SUPPRESS_MS } from "@/constants/simulation";
 
 const lastLlmSpeechMs = new Map<string, number>();
 

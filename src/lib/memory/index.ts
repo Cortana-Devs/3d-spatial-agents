@@ -4,3 +4,4 @@ export * from "./types";
 export * from "./idb-adapter";
 export * from "./conversationTypes";
 export * from "./ConversationMemory";
+export * from "./KnowledgeGraph";

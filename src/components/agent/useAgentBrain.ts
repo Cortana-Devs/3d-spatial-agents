@@ -34,8 +34,8 @@ import {
   type PerceptionRecord,
 } from "@/lib/SensorySystem";
 import { UtilityBrain } from "@/lib/UtilityBrain";
-import { formatWorldTasksForPrompt } from "@/lib/worldTaskPrompt";
-import { applyWorldTaskStepCompletion } from "@/lib/worldTaskCompletion";
+import { formatWorldTasksForPrompt } from "@/lib/worldTasks";
+import { applyWorldTaskStepCompletion } from "@/lib/worldTasks";
 import { InterestMap } from "@/store/InterestMap";
 import { SpatialFamiliarity } from "@/lib/SpatialFamiliarity";
 import {
@@ -43,7 +43,7 @@ import {
   getEffectiveCooldownSec,
   resolveCurrentBehavior,
 } from "@/lib/agent-brain-utils";
-import { MAX_SAFE_RADIUS, RING_INNER_RADIUS } from "@/constants/world";
+import { MAX_SAFE_RADIUS, RING_INNER_RADIUS } from "@/constants/simulation";
 import { getPodDeployExitPosition } from "@/config/agentPods";
 import {
   MAX_STEP_UP,
@@ -52,12 +52,12 @@ import {
   PLAYER_LEAVE_DISTANCE,
   SCRIPT_COOLDOWN_MS,
   STUCK_TIMER_THRESHOLD_SEC,
-} from "@/constants/agent";
+} from "@/constants/simulation";
 import {
   BRAIN_FAILURE_RETRY_SEC,
   LLM_COOLDOWN_FAR_SEC,
   UTILITY_CHECK_INTERVAL_MS,
-} from "@/constants/brain";
+} from "@/constants/simulation";
 import {
   buildDefaultDonutLabIdleLocations,
   getIdleExplorer,

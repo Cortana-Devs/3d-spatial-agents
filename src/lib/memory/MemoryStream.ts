@@ -1,10 +1,22 @@
 import {
   MemoryObject,
   MemoryType,
+  MemorySource,
   RetrievalContext,
   MemoryConfig,
 } from "./types";
 import { memoryStorage } from "./idb-adapter";
+
+/** Trust multiplier per provenance source — used in retrieval scoring. */
+const TRUST_WEIGHT: Record<MemorySource, number> = {
+  direct_observation: 1.0,
+  self_action:        0.95,
+  player:             0.9,
+  peer:               0.8,
+  reflection:         0.75,
+  llm_inference:      0.6,
+  system:             0.5,
+};
 import { generateReflection } from "@/app/actions";
 import { v4 as uuidv4 } from "uuid";
 
@@ -29,11 +41,15 @@ export class MemoryStream {
    * Heuristic importance is calculated here to avoid LLM calls.
    */
   async add(
-    agentId: string | undefined, // Added parameter
+    agentId: string | undefined,
     type: MemoryType,
     content: string,
     tags: string[] = [],
     sessionId?: string,
+    /** Provenance — defaults to 'system' so all writes must explicitly declare origin. */
+    source: MemorySource = "system",
+    sourceAgentId?: string,
+    sourceModel?: string,
   ): Promise<void> {
     const importance = this.calculateHeuristicImportance(type, tags);
     const memory: MemoryObject = {
@@ -45,6 +61,9 @@ export class MemoryStream {
       importance,
       tags,
       isInsight: false,
+      source,
+      sourceAgentId,
+      sourceModel,
     };
 
     await memoryStorage.add(memory);
@@ -76,16 +95,20 @@ export class MemoryStream {
       );
     }
 
-    // 2. Score
+    // 2. Score — importance × 0.5 + recency × 0.2 + trust × 0.3
     const scored = candidates.map((m) => {
       const importanceScore = m.importance / 10; // 0.1 to 1.0
 
-      // Decay: 1 hour = 0.9, 24 hours = 0.5 (approx)
+      // Decay: 1 hour ≈ 0.9, 24 hours ≈ 0.5
       const hoursOld = (now - m.timestamp) / (1000 * 60 * 60);
       const recencyScore = 1 / (1 + hoursOld * 0.1);
 
-      // Weighted Total
-      const finalScore = importanceScore * 0.7 + recencyScore * 0.3;
+      // Trust score from provenance — missing source defaults to 0.7
+      const trustScore = TRUST_WEIGHT[m.source ?? "system"] ?? 0.7;
+
+      // Weighted total: direct observations surface over LLM-inferred guesses
+      const finalScore =
+        importanceScore * 0.5 + recencyScore * 0.2 + trustScore * 0.3;
 
       return { memory: m, score: finalScore };
     });
@@ -126,6 +149,8 @@ export class MemoryStream {
       "OBSERVATION",
       "SESSION_START: All previous memories have been cleared. Begin fresh observation from current state. Do not reference any earlier session.",
       ["session", "reset"],
+      undefined,
+      "system",
     );
     console.log("[MemoryStream] ✓ All memories cleared. Fresh session started.");
   }
@@ -177,16 +202,17 @@ export class MemoryStream {
       const summary = await generateReflection(textToSummarize, sessionId);
 
       if (summary) {
-        // Add Insight
+        // Add Insight — tagged as 'reflection' so retrieval knows it is a synthesis
         const insight: MemoryObject = {
           id: uuidv4(),
-          agentId: sessionId?.split('-')[0] || "system", // Optional mapping
+          agentId: sessionId?.split('-')[0] || "system",
           type: "THOUGHT",
           content: `[REFLECTION] ${summary}`,
           timestamp: Date.now(),
-          importance: 10, // High importance for insights
+          importance: 10,
           tags: ["insight"],
           isInsight: true,
+          source: "reflection",
         };
         await memoryStorage.add(insight);
         /*

@@ -4,11 +4,11 @@ import React, { useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { AgentTaskRegistry, type AgentTask } from "@/systems/AgentTaskQueue";
 import { InteractableRegistry } from "@/systems/InteractableRegistry";
-import { inferWorldPayloadFromPending } from "@/lib/worldTaskEnqueue";
+import { inferWorldPayloadFromPending } from "@/lib/worldTasks";
 import {
   enqueueWorldTaskForAgent,
   pickAnyAvailableAgent,
-} from "@/lib/worldTaskDispatch";
+} from "@/lib/worldTasks";
 
 // ============================================================================
 // Action definitions

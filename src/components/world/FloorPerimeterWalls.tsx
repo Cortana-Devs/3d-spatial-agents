@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
-import { createMaterials } from "@/systems/Materials";
+import { createMaterials } from "@/lib/materials";
 import {
   DEFAULT_LAB_FLOOR_DEPTH,
   DEFAULT_LAB_FLOOR_WIDTH,

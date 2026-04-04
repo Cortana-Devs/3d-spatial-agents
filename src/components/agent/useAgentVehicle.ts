@@ -3,7 +3,7 @@ import * as YUKA from "yuka";
 import * as THREE from "three";
 import AIManager from "@/systems/AIManager";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
-import { AGENT_VEHICLE_SPAWN_Y } from "@/constants/agent";
+import { AGENT_VEHICLE_SPAWN_Y } from "@/constants/simulation";
 import { getNavigationObstacleStateSignature } from "@/systems/NavigationNetwork";
 import type { Obstacle } from "@/types/world";
 

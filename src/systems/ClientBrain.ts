@@ -24,8 +24,10 @@ export interface AgentDecision {
 
 import { memoryStream } from "@/lib/memory/MemoryStream";
 import { conversationMemory } from "@/lib/memory/ConversationMemory";
+import { KnowledgeGraph } from "@/lib/memory/KnowledgeGraph";
+import { TickSnapshotBuffer } from "@/debug/TickSnapshot";
 import { getIdleExplorer } from "@/systems/autonomy/IdleExplorer";
-import { dispatchSimulationLog } from "@/lib/logging/SimulationLogger";
+import { dispatchSimulationLog } from "@/lib/logging/logger";
 import { calculateSpatialLanguageFrequency } from "@/lib/nlp-parser";
 import { useGameStore } from "@/store/gameStore";
 import AIManager from "@/systems/AIManager";
@@ -94,6 +96,7 @@ export class ClientBrain {
           "New session started.",
           ["session", "reset"],
           this.sessionId,
+          "system",
         )
         .catch(() => {});
     }
@@ -174,6 +177,17 @@ export class ClientBrain {
         ? `[SCENARIO CONTEXT]: ${scenarioContext}\n\n${memoryContextStr}` 
         : memoryContextStr;
 
+      // --- Knowledge Graph Context (Phase 2) ---
+      const kg = KnowledgeGraph.getInstance(this.id);
+      const nearbyEntityIds = nearbyEntities
+        .filter((e) => e.id)
+        .map((e) => e.id!);
+      const kgContext = kg.toContextString(nearbyEntityIds, 8);
+      // Prepend KG facts so the LLM sees structured beliefs before episodic memories
+      const fullMemoryContext = kgContext
+        ? `${kgContext}\n\n## Episodic Memories\n${memoryContextWithScenario}`
+        : memoryContextWithScenario;
+
       // --- 2. THINK (Server Side) with Critic Loop ---
       (this as any)._thinkStartTime = Date.now();
       let retryCount = 0;
@@ -184,8 +198,8 @@ export class ClientBrain {
         response = await generateAgentThought(
           context,
           criticFeedback 
-            ? `[PHYSICAL CRITIC FEEDBACK]: ${criticFeedback}\n\n${memoryContextWithScenario}` 
-            : memoryContextWithScenario,
+            ? `[PHYSICAL CRITIC FEEDBACK]: ${criticFeedback}\n\n${fullMemoryContext}` 
+            : fullMemoryContext,
           this.sessionId,
         );
 
@@ -510,6 +524,32 @@ export class ClientBrain {
             console.error(`[ClientBrain:${this.id}] Failed parsing tool call:`, e);
           }
         }
+
+        // --- Auto-extract Knowledge Graph facts (Phase 2) ---
+        // Successful tool invocations imply facts about the world.
+        for (const tc of response.tool_calls ?? []) {
+          if (tc.type !== "function") continue;
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const fn = tc.function.name;
+            if (fn === "pick_up" && args.itemId) {
+              kg.upsert(args.itemId, "last_interacted_by", this.id, 0.85, "self_action").catch(() => {});
+            }
+            if ((fn === "interact") && args.itemId) {
+              kg.upsert(args.itemId, "interacted_with", this.id, 0.8, "self_action").catch(() => {});
+            }
+            if (fn === "go_to" && args.zoneId) {
+              kg.upsert(this.id, "visited_zone", args.zoneId, 0.9, "self_action").catch(() => {});
+            }
+            if (fn === "claim_desk" && args.deskId) {
+              kg.upsert(this.id, "owns_desk", args.deskId, 0.95, "self_action").catch(() => {});
+            }
+            if (fn === "collaborate" && args.agentId) {
+              kg.upsert(this.id, "collaborated_with", args.agentId, 0.9, "self_action").catch(() => {});
+              kg.upsert(args.agentId, "collaborated_with", this.id, 0.85, "peer").catch(() => {});
+            }
+          } catch { /* JSON parse failures are non-fatal */ }
+        }
       }
 
       const decision: AgentDecision = {
@@ -552,6 +592,39 @@ export class ClientBrain {
         spatialRatio: metrics.spatial_language_freq
       });
 
+      // --- Tick Snapshot for Cognitive Dashboard (Phase 3) ---
+      TickSnapshotBuffer.getInstance(this.id).push({
+        timestamp: Date.now(),
+        agentId: this.id,
+        // Drives: parse from the drives string if available, else empty
+        drives: richContext?.drives
+          ? Object.fromEntries(
+              richContext.drives
+                .split(",")
+                .map((s) => s.split(":").map((v) => v.trim()))
+                .filter((p) => p.length === 2 && !isNaN(Number(p[1])))
+                .map(([k, v]) => [k, Number(v)]),
+            )
+          : {},
+        taskPhase: taskState?.phase ?? "IDLE",
+        currentTaskType: taskState?.currentTask ?? null,
+        queuedTaskCount: taskState?.queuedTasksCount ?? 0,
+        decision: operation,
+        thought: decision.thought,
+        toolCalls: (response?.tool_calls ?? []).map((tc: any) => tc.function?.name ?? "unknown"),
+        zoneId:
+          richContext?.zoneContext?.match(/Zone:\s*([a-z0-9-]+)/i)?.[1] ?? null,
+        nearbyEntityCount: nearbyEntities.length,
+        nearbyAgentIds: nearbyEntities
+          .filter((e) => e.type === "AGENT" && e.id)
+          .map((e) => e.id!),
+        latencyMs: metrics.latency_ms,
+        tokenCount: metrics.token_count,
+        spatialLanguageFreq: metrics.spatial_language_freq,
+        wasSubconscious: false,
+        criticRetries: retryCount,
+      });
+
       this.state.thought = decision.thought;
       this.state.lastThoughtTime = Date.now();
       this.state.isThinking = false;
@@ -560,9 +633,16 @@ export class ClientBrain {
 
       // --- 3. MEMORIZE (Client Side) ---
       if (decision.thought) {
-        // Store the thought/action
+        // Every action the agent takes is tagged 'self_action' — its own decision.
         memoryStream
-          .add(this.id, "ACTION", decision.thought, contextTags, this.sessionId)
+          .add(
+            this.id,
+            "ACTION",
+            decision.thought,
+            contextTags,
+            this.sessionId,
+            "self_action",
+          )
           .catch((err) =>
             console.error(`[ClientBrain:${this.id}] Memory add failed:`, err),
           );

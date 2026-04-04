@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { GameState, WorldTaskSlice } from "./gameStoreTypes";
-import { enqueueWorldTaskForAgent, pickAgentForWorldTask } from "@/lib/worldTaskDispatch";
+import { enqueueWorldTaskForAgent, pickAgentForWorldTask } from "@/lib/worldTasks";
 import { InterAgentComms } from "@/systems/InterAgentComms";
 import { AgentTaskRegistry } from "@/systems/AgentTaskQueue";
 import type { WorldTask } from "@/types/worldTask";

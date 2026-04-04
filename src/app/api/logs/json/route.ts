@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/logging/db";
-import type { SimulationLog } from "@/lib/logging/SimulationLogger";
+import type { SimulationLog } from "@/lib/logging/logger";
 
 export async function POST(req: Request) {
   try {

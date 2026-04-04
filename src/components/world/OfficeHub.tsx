@@ -3,7 +3,7 @@
 import React, { useMemo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
-import { createMaterials } from "@/systems/Materials";
+import { createMaterials } from "@/lib/materials";
 import { Text, Bvh } from "@react-three/drei";
 
 import {

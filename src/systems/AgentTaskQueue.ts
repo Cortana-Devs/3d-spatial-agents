@@ -22,7 +22,7 @@ import {
   TASK_SIT_DEFAULT_DURATION,
   TASK_STUCK_MIN_DISTANCE,
   TASK_STUCK_WINDOW_SEC,
-} from "@/constants/taskQueue";
+} from "@/constants/simulation";
 import type { AgentTask, SteeringCommand, TaskPhase } from "@/types/agent";
 
 export type {

@@ -6,14 +6,14 @@ import {
   DONUT_OUTER_MARGIN,
   MAX_SAFE_RADIUS,
   RING_INNER_RADIUS,
-} from "@/constants/world";
+} from "@/constants/simulation";
 import {
   LLM_COOLDOWN_FAR_SEC,
   LLM_COOLDOWN_MID_SEC,
   LLM_COOLDOWN_NEAR_SEC,
   PLAYER_MID_DIST,
   PLAYER_NEAR_DIST,
-} from "@/constants/brain";
+} from "@/constants/simulation";
 
 export function clampToDonutRing(pos: { x: number; y: number; z: number }) {
   const distSq = pos.x * pos.x + pos.z * pos.z;
