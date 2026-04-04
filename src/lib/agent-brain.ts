@@ -28,6 +28,21 @@ const TOOL_FORMAT_SYSTEM =
   "Never write XML, markdown code fences, or text like <function=name>...</function> for tools. " +
   "Each tool argument object must be valid JSON (e.g. say uses {\"message\":\"...\"}).";
 
+/** In-prompt catalog so small models reliably map intents → registered function names. */
+const TOOL_CATALOG_FOR_PROMPT = `
+## Tool catalog (you may call these via tool_calls)
+| Group | Tools | When |
+|-------|-------|------|
+| Manipulation | pick_up, place_at, interact | Use exact **IDs** from Perception (items on floor vs surfaces; empty area slots). |
+| Movement | go_to (prefer zoneId), explore, rest, sit (bench/chair id), rest_in_pod, contemplate | Navigate sectors, rest, dwell at POI. |
+| Speech | **say**, message_agent, announce | **say** = nearby hears you. **message_agent** = one peer sees it next think. **announce** = everyone. |
+| Social | collaborate | Approach another agent (their id from Perception) for joint work. |
+| Lab workspace | **claim_desk**, **claim_task**, **release_task** | **claim_desk**: desk-east-0..3 or extra-table-A..D. **claim_task** / **release_task**: exact Task ID from **World tasks** table (e.g. wt-…). |
+| Expression | emote, present | Gestures; present = conference-area podium. |
+| Info | web_search | External facts when useful. |
+| Passive | observe | No action needed; keep current behavior; **no filler speech required**. |
+`.trim();
+
 export async function processAgentThought(
   context: AgentContext,
   memoryContext: string = "",
@@ -84,7 +99,7 @@ There are specialized **Agent Pods** (appearing as 'pod' in your perception) loc
 ${context.drives || "All drives balanced."}
 
 Your physical needs (rest, tidying, exploring) are managed automatically.
-Focus on social interaction, responding to what you observe, and personality-driven expression.
+Prioritize **meaningful** interaction: shared tasks, coordination, and reactions to what is actually happening.
 
 ## Spatial Memory (Recent Visits)
 ${context.spatialMemory ?? "No recorded logs."}
@@ -123,14 +138,25 @@ ${memoryContext || "Clear environment."}
 | interior-ring | The full curved research ring corridor |
 | exterior-plaza | Outdoor plaza outside the building |
 
+${TOOL_CATALOG_FOR_PROMPT}
+
+## Speech discipline (important)
+- Use **say** only when there is a **clear purpose**: answer the player or a peer, **ask a question**, report a concrete result, coordinate a shared task, or react briefly to something **specific** you perceive. Do **not** narrate vague internal monologue, generic "pondering", or the same metaphor (architecture, structural integrity, etc.) every turn.
+- **Questions are encouraged** when you need information, consent, or help — use **say** (nearby) or **message_agent** (targeted peer).
+- If nothing needs saying, use **observe** or action-only tools; **silence is correct**.
+- **Vary** wording from turn to turn; avoid repeating your own last line or a stock catchphrase.
+- Your personality **speechStyle** guides tone, not an excuse to repeat one theme endlessly.
+
 ## Rules
 - Use tools to act. 1–3 tool calls max per turn. Use only the API's structured tool_calls — never fake tool syntax in plain text.
-- 'say' — general speech (TTS + bubble), 1–2 short sentences, no formatting. To reach other agents' minds use 'message_agent' (one id from perception) or 'announce' (everyone); those update their next-turn context. 'say' alone does not.
+- Combine tools when natural: e.g. **claim_task** + **say** (one short line), or **go_to** + **message_agent**.
+- 'say' — 1–2 short sentences, plain text. For another agent's **next** thought cycle use **message_agent** (exact AGENT id); for everyone use **announce**.
 - 'present' → navigates to conference-area podium.
 - 'sit' → use an ID from the Perception table.
 - 'emote' gestures: wave, nod, shrug, cheer, think.
-- Shared lab tasks: use **claim_task** with the exact Task ID from the World tasks table to take an unassigned (**open**) task; use **release_task** to give it back. If a task says to coordinate, use **message_agent** or **collaborate**.
-- If tasks are running, use 'observe' unless a drive is critically LOW.
+- Shared lab tasks: **claim_task** with exact Task ID for **open** / unassigned rows; **release_task** to hand back. Coordinate with **message_agent** or **collaborate** when helpers are needed.
+- Personal desk: **claim_desk** with ids from scenario / desk labels.
+- If tasks are running, prefer **observe** unless a drive is critically LOW or you must coordinate.
 - CRITICAL: Copy entity IDs exactly from the Perception table above.
   `;
 
@@ -142,8 +168,8 @@ ${memoryContext || "Clear environment."}
       const client = getGroqClient();
 
       const systemBase = context.personality
-        ? `You are ${context.personality.name}, ${context.personality.trait} in the Donut Research Lab. You have drives, spatial memory, and personality. Use your tools to act naturally. Speak in a ${context.personality.speechStyle} style. 1–3 tool calls max per turn.`
-        : "You are an intelligent agent in the Donut Research Lab. Use your tools to act based on your drives and environment. 1–3 tool calls max.";
+        ? `You are ${context.personality.name}, ${context.personality.trait} in the Donut Research Lab. You have full access to the tool catalog in the user message (manipulation, movement, say/message_agent/announce, claim_desk, claim_task, release_task, collaborate, etc.). Use tools to act; speak only when it adds information, asks something, or coordinates — avoid repetitive filler. Tone: ${context.personality.speechStyle}. 1–3 tool calls max per turn.`
+        : "You are an intelligent agent in the Donut Research Lab with the full tool catalog in the user message. Use tools deliberately; speak with purpose, not repetitive monologue. 1–3 tool calls max per turn.";
 
       const messages: ChatCompletionMessageParam[] = [
         {

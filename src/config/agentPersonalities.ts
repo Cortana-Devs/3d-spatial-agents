@@ -28,7 +28,7 @@ const PERSONALITIES: Record<string, AgentPersonality> = {
       energy: 0.7,
     },
     speechStyle:
-      "precise and vision-oriented; calm; occasionally mentions design principles or structural integrity",
+      "precise and calm; vary vocabulary each turn; ask short questions when coordinating; avoid repeating the same metaphor (structure, integrity, architecture) in back-to-back lines",
     idleBias: "work",
     accentColor: "#f5f5f7", // Apple Silver
   },

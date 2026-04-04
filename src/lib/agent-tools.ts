@@ -1,17 +1,12 @@
 /**
  * Agent Tool Definitions for Groq Function-Calling API.
  *
- * These define the actions an agent's "conscious mind" (LLM) can invoke.
- * The subconscious (YUKA + TaskQueue) handles execution.
+ * Conscious mind (LLM) invokes these; YUKA + TaskQueue execute them.
  *
- * Extended with experiential tools:
- *   sit       — sit on a bench or chair to rest
- *   contemplate — go to a scenic spot and appreciate the view
- *   rest      — go to the garden to recharge energy
- *   explore   — visit the least recently seen zone
- *   collaborate — approach another agent for a shared task
- *   emote     — express a gesture (wave, nod, shrug, cheer, think)
- *   present   — go to the Arena podium and deliver a speech
+ * Includes: pick/place/interact/go_to, say / message_agent / announce,
+ * sit / contemplate / rest / explore / collaborate / emote / present,
+ * rest_in_pod, claim_desk, claim_task, release_task (shared lab backlog),
+ * web_search, observe.
  */
 
 import type { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
@@ -101,14 +96,14 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "say",
       description:
-        "Say something out loud. Appears as a speech bubble and is spoken via TTS. Use for greetings, observations, or sharing thoughts. Keep it natural and brief (1–2 sentences). Invoke only via the API tool_calls mechanism with a JSON object argument — not XML or plain-text tool tags.",
+        "Speak out loud (bubble + TTS). Use when you have something specific: answer, question, brief reaction to what you see, or coordination. Do NOT use for vague internal monologue or the same line every turn. Prefer silence (observe) if nothing needs saying. 1–2 short sentences, plain text. API tool_calls + JSON only.",
       parameters: {
         type: "object",
         properties: {
           message: {
             type: "string",
             description:
-              "Spoken line only (1–2 sentences, plain conversational text). Pass as JSON string value for key \"message\".",
+              "Concrete utterance: greeting, answer, question (e.g. \"Can you cover the east desk?\"), or task update — not filler pondering.",
           },
         },
         required: ["message"],
@@ -120,7 +115,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "message_agent",
       description:
-        "Send a message to one other agent by id. They will see it in their next thought cycle. Also speaks aloud like 'say'. Use the agent's exact id from the Perception table (type AGENT).",
+        "Send a targeted message to one agent (exact AGENT id from Perception). They see it next think cycle; also spoken aloud. Use for questions, handoffs, or coordination — not spam.",
       parameters: {
         type: "object",
         properties: {
@@ -178,7 +173,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "observe",
       description:
-        "Do nothing and continue current behavior. Use when no action is needed. You will keep wandering or idling.",
+        "No tool action this turn; continue wandering or current queue. Use when nothing needs doing — does not require speech. Prefer over empty 'say' filler.",
       parameters: {
         type: "object",
         properties: {},
@@ -346,7 +341,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "claim_desk",
       description:
-        "Claim a personal workstation in the Donut Lab (east desks or extra research tables). Updates your scenario context and the desk label. Use a desk id from the LAB ASSIGNMENTS list.",
+        "Claim your personal desk in the Donut Lab (desk-east-0..3 or extra-table-A..D). Updates LAB ASSIGNMENTS in scenario and the visible desk label. Call when you want a home workstation.",
       parameters: {
         type: "object",
         properties: {
@@ -365,7 +360,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "claim_task",
       description:
-        "Take a shared lab task from the World tasks table (Task ID column). Only for tasks that are open or unassigned to another agent. Enqueues the physical steps (pick/place, go_to, etc.).",
+        "Take an open shared lab task: pass the exact taskId from the World tasks table in your prompt. Enqueues pick/place, go_to, or follow_player as defined for that task. Cannot steal another agent's assigned task.",
       parameters: {
         type: "object",
         properties: {
@@ -383,7 +378,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "release_task",
       description:
-        "Release a shared lab task you had claimed; it becomes open again for others. Cancels your queued steps for that task.",
+        "Give back a shared task you took (your taskId). Status returns to open for others; your queued steps for that task are cancelled.",
       parameters: {
         type: "object",
         properties: {

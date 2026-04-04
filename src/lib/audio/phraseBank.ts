@@ -16,7 +16,12 @@ export const PhraseBank = {
       "All systems nominal.",
       "Just taking a moment.",
       "Recalibrating...",
-      "Everything seems to be in order."
+      "Everything seems to be in order.",
+      "I'll wait for a task or a cue.",
+      "Scanning the room — nothing urgent.",
+      "Standing by.",
+      "Could use a clear next step.",
+      "Idle for now."
    ],
    MOVING: [
       "Heading there now.",
@@ -26,7 +31,10 @@ export const PhraseBank = {
       "Moving to position.",
       "On my way.",
       "Adjusting coordinates.",
-      "Transferring to the next sector."
+      "Transferring to the next sector.",
+      "En route.",
+      "Cutting across the floor.",
+      "Almost there."
    ],
    WORKING: [
       "Picking this up.",
@@ -36,7 +44,10 @@ export const PhraseBank = {
       "Moving this out of the way.",
       "Cleaning up the workspace.",
       "Systematic organization in progress.",
-      "Done. That's better."
+      "Done. That's better.",
+      "Got it.",
+      "Setting this down carefully.",
+      "Task step in progress."
    ],
    INTERACTING: [
       "Let's see what we have here.",
@@ -45,16 +56,23 @@ export const PhraseBank = {
       "Adjusting settings.",
       "Analyzing this object.",
       "Beginning interaction sequence.",
-      "Operation successful."
+      "Operation successful.",
+      "Interface responding.",
+      "That did the trick."
    ],
    RESEARCHING: [
       "Fascinating results.",
       "This data is... unexpected.",
       "Recording observations.",
-      "Contemplating the architecture.",
       "Synthesizing new insights.",
       "The garden is quite peaceful today.",
-      "Interesting. I should report this."
+      "Interesting. I should report this.",
+      "Cross-checking with the last run.",
+      "Not sure yet — need another sample.",
+      "Worth a second look.",
+      "Logging this for the team.",
+      "Quiet focus for a bit.",
+      "Hypothesis still open."
    ]
 };
 
