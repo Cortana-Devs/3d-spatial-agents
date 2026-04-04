@@ -71,14 +71,17 @@ const DEFAULT_MAX_SIZE = 60;
 export class TickSnapshotBuffer {
   private static instances = new Map<string, TickSnapshotBuffer>();
 
-  private buffer: AgentSnapshot[] = [];
+  private buffer: (AgentSnapshot | null)[];
   private maxSize: number;
+  private head = 0;
+  private length = 0;
   private tickCounter = 0;
   private readonly agentId: string;
 
   private constructor(agentId: string, maxSize: number) {
     this.agentId = agentId;
     this.maxSize = maxSize;
+    this.buffer = new Array(maxSize).fill(null);
   }
 
   /**
@@ -102,14 +105,18 @@ export class TickSnapshotBuffer {
 
   /**
    * Push a new snapshot into the ring buffer.
-   * If the buffer is full, the oldest snapshot is silently evicted.
+   * O(1) time and memory — overwrites oldest entry.
    */
   public push(snapshot: Omit<AgentSnapshot, "tickId">): AgentSnapshot {
     const full = { ...snapshot, tickId: this.tickCounter++ };
-    this.buffer.push(full);
-    if (this.buffer.length > this.maxSize) {
-      this.buffer.shift(); // Evict oldest
+    
+    this.buffer[this.head] = full;
+    this.head = (this.head + 1) % this.maxSize;
+    
+    if (this.length < this.maxSize) {
+      this.length++;
     }
+    
     return full;
   }
 
@@ -117,10 +124,18 @@ export class TickSnapshotBuffer {
 
   /**
    * All snapshots currently in the buffer, oldest first.
-   * Returns a shallow copy — do not mutate entries.
+   * Returns a new array.
    */
   public getAll(): AgentSnapshot[] {
-    return [...this.buffer];
+    const result: AgentSnapshot[] = [];
+    const start = this.length < this.maxSize ? 0 : this.head;
+    
+    for (let i = 0; i < this.length; i++) {
+        const idx = (start + i) % this.maxSize;
+        const val = this.buffer[idx];
+        if (val) result.push(val);
+    }
+    return result;
   }
 
   /**
@@ -128,15 +143,27 @@ export class TickSnapshotBuffer {
    * @param n Number of snapshots to retrieve (clamped to buffer length).
    */
   public getRecent(n: number): AgentSnapshot[] {
-    return this.buffer.slice(-Math.min(n, this.buffer.length));
+    const count = Math.min(n, this.length);
+    const result: AgentSnapshot[] = [];
+    
+    for (let i = 0; i < count; i++) {
+        const idx = (this.head - count + i + this.maxSize) % this.maxSize;
+        const val = this.buffer[idx];
+        if (val) result.push(val);
+    }
+    return result;
   }
 
   /**
    * Retrieve a snapshot by its tick ID.
-   * Returns null if the tick has been evicted from the ring or never existed.
+   * Searches the buffer — O(length).
    */
   public getByTick(tickId: number): AgentSnapshot | null {
-    return this.buffer.find((s) => s.tickId === tickId) ?? null;
+    for (let i = 0; i < this.length; i++) {
+        const val = this.buffer[i];
+        if (val && val.tickId === tickId) return val;
+    }
+    return null;
   }
 
   // ── Metadata ───────────────────────────────────────────────────────────────
@@ -148,7 +175,7 @@ export class TickSnapshotBuffer {
 
   /** Current number of snapshots in the ring (0 to maxSize). */
   public getSize(): number {
-    return this.buffer.length;
+    return this.length;
   }
 
   /** Agent ID this buffer belongs to. */
@@ -160,7 +187,9 @@ export class TickSnapshotBuffer {
 
   /** Discard all snapshots. Useful for test resets or scenario changes. */
   public clear(): void {
-    this.buffer = [];
+    this.buffer.fill(null);
+    this.head = 0;
+    this.length = 0;
     this.tickCounter = 0;
   }
 }

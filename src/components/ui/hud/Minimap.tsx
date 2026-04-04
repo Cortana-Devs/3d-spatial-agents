@@ -1,63 +1,53 @@
 import React, { useRef, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
 
 export function Minimap() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const playerPosition = useGameStore((state) => state.playerPosition);
-    const agentPositions = useGameStore((state) => state.agentPositions);
     const interactables = useGameStore((state) => state.interactables);
     const obstacles = useGameStore((state) => state.obstacles);
 
     // Map Configuration
-    const mapSize = 250; // Size of the canvas in pixels
-    const worldScale = 3.0; // Pixels per world unit (higher = more zoomed in)
-
-    // Center map on player? Or static lab view?
-    // Let's do Static Lab View centered on 0,0 for now, as lab is built around origin.
-    // Lab bounds approx -20 to 20 X, -10 to 60 Z based on Robot initial pos [0, 5, 65] (Lobby?)
-    // Actually, Robot starts at [0, 5, 65].
-    // Let's center on the average interactable position or just 0,0.
-    // Better: Center on Player, but clamped?
-    // Let's try Centered on Player for a "Minimap" feel.
+    const mapSize = 250; 
+    const worldScale = 3.0; 
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (canvas) {
+            canvas.getContext("2d", { alpha: false }); 
+        }
+    }, []);
+
+    useFrame(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
+
+        const { agentPositionsRef } = useGameStore.getState();
 
         // Clear
         ctx.clearRect(0, 0, mapSize, mapSize);
 
         // Background
-        ctx.fillStyle = "rgba(10, 12, 20, 0.85)";
+        ctx.fillStyle = "rgba(10, 12, 20, 1)";
         ctx.fillRect(0, 0, mapSize, mapSize);
 
         const centerX = mapSize / 2;
         const centerY = mapSize / 2;
 
-        // Transform World -> Canvas
-        // Canvas X = (World X - Player X) * scale + CenterX
-        // Canvas Y = (World Z - Player Z) * scale + CenterY (Z is Y in 2D top-down)
-
         const worldToCanvas = (x: number, z: number) => {
             const dx = (x - playerPosition.x) * worldScale;
             const dy = (z - playerPosition.z) * worldScale;
-            // Rotate? No, keeping North up (World -Z) is easier for now.
-            // Actually, standard minimaps rotate with player. 
-            // But let's stick to "North Up" (Fixed orientation) for simplicity first.
-            // World +Z is "Down" on screen?
-            // World -Z is "Up" (Forward).
             return { x: centerX + dx, y: centerY + dy };
         };
 
-        // 1. Draw Static Geometry (Obstacles - Walls, Furniture collisions)
+        // 1. Draw Static Geometry (Obstacles)
         obstacles.forEach(ob => {
             const p = worldToCanvas(ob.position.x, ob.position.z);
-
             if (ob.halfExtents) {
-                // OBB — draw a rotated rectangle
                 const w = ob.halfExtents.x * 2 * worldScale;
                 const h = ob.halfExtents.z * 2 * worldScale;
                 ctx.save();
@@ -69,7 +59,6 @@ export function Minimap() {
                 ctx.fillRect(-w / 2, -h / 2, w, h);
                 ctx.restore();
             } else if (ob.radius) {
-                // Sphere — draw circle
                 const r = ob.radius * worldScale;
                 ctx.fillStyle = "rgba(140, 150, 180, 0.3)";
                 ctx.beginPath();
@@ -78,43 +67,34 @@ export function Minimap() {
             }
         });
 
-        // 2. Draw Interactables (Active items - highlight them)
-        ctx.fillStyle = "#00e5ff"; // Matched to robotGlow / premium cyan
+        // 2. Draw Interactables
+        ctx.fillStyle = "#00e5ff";
         interactables.forEach(item => {
             const p = worldToCanvas(item.position.x, item.position.z);
-            // Draw small dot
             ctx.beginPath();
             ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // Draw Agents
-        ctx.fillStyle = "#ef5350"; // Match --color-danger
-        Object.values(agentPositions).forEach(pos => {
+        // 3. Draw Agents using mutable Ref
+        ctx.fillStyle = "#ef5350";
+        Object.values(agentPositionsRef).forEach(pos => {
+            if (!pos) return;
             const p = worldToCanvas(pos.x, pos.z);
-            // Check bounds (don't draw if off map?) 
-            // Canvas clips automatically, but good to know.
             ctx.beginPath();
             ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
             ctx.fill();
-
-            // Direction? (Need rotation, not currently synced)
         });
 
-        // Draw Player (Center)
-        ctx.fillStyle = "#4caf50"; // Match --color-success
+        // 4. Draw Player (Center)
+        ctx.fillStyle = "#4caf50";
         ctx.beginPath();
         ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Player View Cone (approx)
-        // We need player rotation for this. Not in store yet.
-        // For now, just a dot.
-
         // Grid lines
         ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
         ctx.beginPath();
-        // Scanlines style
         for (let i = 0; i < mapSize; i += 20) {
             ctx.moveTo(0, i);
             ctx.lineTo(mapSize, i);
@@ -122,8 +102,7 @@ export function Minimap() {
             ctx.lineTo(i, mapSize);
         }
         ctx.stroke();
-
-    }, [playerPosition, agentPositions, interactables, obstacles]);
+    });
 
     return (
         <div style={{
@@ -148,8 +127,6 @@ export function Minimap() {
                     height={mapSize}
                     style={{ width: '100%', height: '100%' }}
                 />
-
-                {/* Legend / Overlay Text */}
                 <div style={{
                     position: 'absolute',
                     bottom: 8,

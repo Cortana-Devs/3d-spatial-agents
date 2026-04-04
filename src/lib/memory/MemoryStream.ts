@@ -27,13 +27,14 @@ const DEFAULT_CONFIG: MemoryConfig = {
 
 export class MemoryStream {
   private isCompacting = false;
+  /** In-memory count eliminates an IDB count() call on every add(). */
+  private _memCount = 0;
 
   constructor(private config: MemoryConfig = DEFAULT_CONFIG) { }
 
   async init() {
-    // Any async setup if needed, IDB open is handled in adapter lazy-load
     const count = await this.count();
-    // console.log(`[MemoryStream] Initialized with ${count} memories.`);
+    this._memCount = count;
   }
 
   /**
@@ -67,6 +68,7 @@ export class MemoryStream {
     };
 
     await memoryStorage.add(memory);
+    this._memCount++;
     this.checkCompaction(sessionId);
   }
 
@@ -75,15 +77,18 @@ export class MemoryStream {
    * Uses Heuristic Scoring: (Importance * 0.7) + (Recency * 0.3)
    */
   async retrieve(context: RetrievalContext): Promise<MemoryObject[]> {
-    const allMemories = await memoryStorage.getAll();
+    // Use agent-scoped index when available — avoids full-store scan
+    const allMemories = context.agentId
+      ? await memoryStorage.getByAgent(context.agentId, 200)
+      : await memoryStorage.getAll();
     const limit = context.limit || 10;
     const now = Date.now();
 
-    // 1. Filter
     let candidates = allMemories;
     if (context.agentId) {
-       // Get global memories (no agentId) AND agent's own memories
-       candidates = candidates.filter(m => !m.agentId || m.agentId === context.agentId);
+      // Already scoped by agent — also include global (no agentId) memories
+      const globals = (await memoryStorage.getAll()).filter((m) => !m.agentId);
+      candidates = [...allMemories, ...globals];
     }
     if (context.tags && context.tags.length > 0) {
       candidates = candidates.filter(
@@ -157,17 +162,11 @@ export class MemoryStream {
 
   /**
    * Checks if memory limit is reached and triggers compaction if needed.
+   * Synchronous: uses in-memory counter (no IDB call).
    */
-  private async checkCompaction(sessionId?: string) {
+  private checkCompaction(sessionId?: string) {
     if (this.isCompacting) return;
-
-    const count = await this.count();
-    if (count >= this.config.compactionThreshold) {
-      /*
-      console.log(
-        `[MemoryStream] Compaction threshold reached (${count}/${this.config.maxMemories}). triggering reflection...`,
-      );
-      */
+    if (this._memCount >= this.config.compactionThreshold) {
       this.reflect(sessionId).catch((err) =>
         console.error("[MemoryStream] Reflection failed:", err),
       );
@@ -224,7 +223,7 @@ export class MemoryStream {
         // Prune old memories
         const idsToDelete = oldest.map((m) => m.id);
         await memoryStorage.delete(idsToDelete);
-        // console.log(`[MemoryStream] Pruned ${idsToDelete.length} old memories.`);
+        this._memCount = Math.max(0, this._memCount - idsToDelete.length);
       }
     } finally {
       this.isCompacting = false;

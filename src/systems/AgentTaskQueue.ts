@@ -71,18 +71,19 @@ export class AgentTaskQueue {
   }
 
   public enqueue(task: AgentTask): void {
-    this.queue.push(task);
-    this.queue.sort((a, b) => b.priority - a.priority);
-
+    // 1. If higher priority than current, preempt immediately
     if (this.currentTask && task.priority > this.currentTask.priority) {
       this.cleanupTask(this.currentTask);
       this.queue.push(this.currentTask);
-      this.queue.sort((a, b) => b.priority - a.priority);
-      this.startNextTask();
-      return;
+      this.currentTask = null; // Forces startNextTask to take the highest
     }
 
-    if (this.phase === "IDLE" || this.phase === "COMPLETED") {
+    // 2. Add to queue and sort once
+    this.queue.push(task);
+    this.queue.sort((a, b) => b.priority - a.priority);
+
+    // 3. Start if idle or just preempted
+    if (this.phase === "IDLE" || this.phase === "COMPLETED" || !this.currentTask) {
       this.startNextTask();
     }
   }

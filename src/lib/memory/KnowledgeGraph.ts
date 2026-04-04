@@ -62,6 +62,8 @@ export class KnowledgeGraph {
   private facts = new Map<string, KnowledgeFact>();
   private agentId: string;
   private loaded = false;
+  /** Memoized context string — invalidated on any write. */
+  private _contextCache: { key: string; result: string } | null = null;
 
   private constructor(agentId: string) {
     this.agentId = agentId;
@@ -91,10 +93,9 @@ export class KnowledgeGraph {
   // ── Stable ID ─────────────────────────────────────────────────────────────
 
   private factId(subject: string, predicate: string, object: string): string {
-    // Deterministic key so duplicate observations reinforce instead of duplicate
-    return [this.agentId, subject, predicate, object]
-      .map(encodeURIComponent)
-      .join(":");
+    // § delimiter — avoids 4 encodeURIComponent calls. Characters are entity IDs
+    // (alphanumeric + hyphens) that never contain §.
+    return `${this.agentId}§${subject}§${predicate}§${object}`;
   }
 
   // ── Write API ─────────────────────────────────────────────────────────────
@@ -148,6 +149,7 @@ export class KnowledgeGraph {
     }
 
     this.facts.set(id, fact);
+    this._contextCache = null; // Invalidate on write
     await memoryStorage.putKnowledgeFact(fact).catch(() => {});
     return fact;
   }
@@ -164,6 +166,7 @@ export class KnowledgeGraph {
     await this.ensureLoaded();
     const id = this.factId(subject, predicate, object);
     const existed = this.facts.delete(id);
+    this._contextCache = null; // Invalidate on write
     if (existed) {
       await memoryStorage.deleteKnowledgeFacts([id]).catch(() => {});
     }
@@ -177,6 +180,7 @@ export class KnowledgeGraph {
     await this.ensureLoaded();
     const ids = Array.from(this.facts.keys());
     this.facts.clear();
+    this._contextCache = null; // Invalidate on write
     if (ids.length > 0) {
       await memoryStorage.deleteKnowledgeFacts(ids).catch(() => {});
     }
@@ -248,6 +252,7 @@ export class KnowledgeGraph {
     await this.ensureLoaded();
     const now = Date.now();
     const toPrune: string[] = [];
+    const toUpdate: KnowledgeFact[] = [];
 
     for (const [id, fact] of this.facts.entries()) {
       // Check TTL expiry
@@ -263,11 +268,11 @@ export class KnowledgeGraph {
       if (decayed < PRUNE_THRESHOLD) {
         toPrune.push(id);
       } else {
-        // Update in-place if significantly decayed
+        // Collect significantly decayed facts for a single batch write
         if (Math.abs(decayed - fact.confidence) > 0.01) {
           const updated = { ...fact, confidence: decayed, updatedAt: now };
           this.facts.set(id, updated);
-          await memoryStorage.putKnowledgeFact(updated).catch(() => {});
+          toUpdate.push(updated);
         }
       }
     }
@@ -276,7 +281,32 @@ export class KnowledgeGraph {
     if (toPrune.length > 0) {
       await memoryStorage.deleteKnowledgeFacts(toPrune).catch(() => {});
     }
+    // Single batch IDB write for all decayed-but-alive facts
+    if (toUpdate.length > 0) {
+      await memoryStorage.putKnowledgeFactsBatch(toUpdate).catch(() => {});
+    }
+    if (toPrune.length > 0 || toUpdate.length > 0) {
+      this._contextCache = null;
+    }
     return toPrune.length;
+  }
+
+  /**
+   * Schedule prune() in a requestIdleCallback so it never blocks the frame.
+   * Falls back to setTimeout(0) in SSR / environments without rIC.
+   */
+  pruneDeferred(): void {
+    const runPrune = () => this.prune().catch(() => {});
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(runPrune, { timeout: 5000 });
+    } else {
+      setTimeout(runPrune, 0);
+    }
+  }
+
+  /** Pre-warm: ensures IDB facts are loaded before the first LLM tick. */
+  async warmUp(): Promise<void> {
+    await this.ensureLoaded();
   }
 
   // ── LLM Prompt Injection ──────────────────────────────────────────────────
@@ -295,6 +325,10 @@ export class KnowledgeGraph {
   ): string {
     if (this.facts.size === 0) return "";
 
+    // Dirty-flag memoization: rebuild only when facts or entity set changes
+    const cacheKey = relevantEntityIds.slice().sort().join(',') + ':' + this.facts.size;
+    if (this._contextCache?.key === cacheKey) return this._contextCache.result;
+
     const idSet = new Set(relevantEntityIds);
     const relevant = Array.from(this.facts.values())
       .filter(
@@ -305,7 +339,10 @@ export class KnowledgeGraph {
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, maxFacts);
 
-    if (relevant.length === 0) return "";
+    if (relevant.length === 0) {
+      this._contextCache = { key: cacheKey, result: "" };
+      return "";
+    }
 
     const rows = relevant
       .map(
@@ -314,12 +351,14 @@ export class KnowledgeGraph {
       )
       .join("\n");
 
-    return (
+    const result =
       `## Known Facts (Semantic Memory)\n` +
       `| Subject | Relation | Value | Confidence |\n` +
       `|---|---|---|---|\n` +
-      rows
-    );
+      rows;
+
+    this._contextCache = { key: cacheKey, result };
+    return result;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -247,9 +247,14 @@ export class SensorySystem {
     const agent = records.find(r => r.type === "AGENT" && r.isVisible);
     if (agent && agent.position) return new THREE.Vector3(agent.position.x, agent.position.y, agent.position.z);
 
-    // 3. Most recent loud noise
+    // 3. Most recent loud noise (find max loudness without mutating the array)
     if (this.recentNoises.length > 0) {
-      const loudest = this.recentNoises.sort((a, b) => b.loudness - a.loudness)[0];
+      let loudest = this.recentNoises[0];
+      for (let i = 1; i < this.recentNoises.length; i++) {
+        if (this.recentNoises[i].loudness > loudest.loudness) {
+          loudest = this.recentNoises[i];
+        }
+      }
       return loudest.position;
     }
 

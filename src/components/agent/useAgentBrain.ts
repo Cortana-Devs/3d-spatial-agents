@@ -174,6 +174,9 @@ export function useAgentBrain(
     let lastThought = "";
     
     const interval = setInterval(() => {
+      // 1. Throttling for background tabs
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
       if (brain.state.thought !== lastThought) {
         lastThought = brain.state.thought;
         updateAgentCognition(id, lastThought);
@@ -189,6 +192,9 @@ export function useAgentBrain(
     let lastThinking = false;
     
     const interval = setInterval(() => {
+      // 1. Throttling for background tabs
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
       const isThinking = brain.state.isThinking;
       if (isThinking !== lastThinking) {
         lastThinking = isThinking;
@@ -397,22 +403,9 @@ export function useAgentBrain(
   const agentSphereRef = useRef(new THREE.Sphere(new THREE.Vector3(), 3));
 
   useFrame((state, delta) => {
-    // Remote Logic: Update inspected agent data
-    if (id === inspectedAgentId) {
-      const currentThought = brainRef.current.state.thought;
-      if (
-        lastInspectedState.current !== animationState ||
-        lastInspectedThought.current !== currentThought
-      ) {
-        lastInspectedState.current = animationState;
-        lastInspectedThought.current = currentThought;
-        setInspectedAgentData({
-          id,
-          thought: currentThought,
-          state: animationState,
-        });
-      }
-    }
+    // 2. Main-thread logic throttling for background tabs
+    const isTabVisible = typeof document !== 'undefined' && document.visibilityState === 'visible';
+    if (!isTabVisible) return;
 
     const vehicle = vehicleRef.current;
     if (!vehicle) return;
@@ -1801,15 +1794,20 @@ export function useAgentBrain(
     // Carried items are hidden (invisible) while being transported.
     // They reappear at the destination when placed.
 
-    // Update Minimap Position (Throttled to reduce state updates)
-    const currentPos = new THREE.Vector3(
-      vehicle.position.x,
-      vehicle.position.y,
-      vehicle.position.z,
-    );
+    // Update Minimap Position
+    // --- POSITION SYNC (Zero-Allocation) ---
+    const { agentPositionsRef } = useGameStore.getState();
+    const currentPos = vehicle.position as unknown as THREE.Vector3;
+    agentPositionsRef[id] = { x: currentPos.x, y: currentPos.y, z: currentPos.z };
+
+    // Update the official Zustand state less frequently (e.g., every 30 frames)
+    // for non-critical UI subscribers that don't use the Ref.
+    if (frameRef.current % 30 === 0) {
+      setAgentPosition(id, currentPos);
+    }
+
     if (lastMinimapPos.current.distanceToSquared(currentPos) > 1.0) {
       lastMinimapPos.current.copy(currentPos);
-      setAgentPosition(id, currentPos);
       
       // Emit movement heat
       InterestMap.getInstance().addHeat(currentPos, 0.2);

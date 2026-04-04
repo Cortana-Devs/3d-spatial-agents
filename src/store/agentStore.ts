@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { useShallow } from "zustand/react/shallow";
 import type { StateCreator } from "zustand";
 import {
   DEFAULT_AGENT_DESK,
@@ -25,6 +26,8 @@ export const createAgentSlice: StateCreator<
   followingAgentId: null,
   setFollowingAgentId: (id) => set({ followingAgentId: id }),
 
+  // High-frequency mutable positions to avoid object allocation in useFrame
+  agentPositionsRef: {}, 
   agentPositions: {},
   setAgentPosition: (id, pos) =>
     set((state) => ({

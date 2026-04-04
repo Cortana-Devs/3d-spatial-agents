@@ -127,6 +127,7 @@ export interface AgentSlice {
   ) => void;
   followingAgentId: string | null;
   setFollowingAgentId: (id: string | null) => void;
+  agentPositionsRef: Record<string, { x: number; y: number; z: number }>;
   agentPositions: Record<string, THREE.Vector3>;
   setAgentPosition: (id: string, pos: THREE.Vector3) => void;
   agentTrajectories: Record<string, THREE.Vector3[]>;

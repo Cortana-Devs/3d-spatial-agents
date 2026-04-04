@@ -39,6 +39,11 @@ export class ClientBrain {
   public id: string;
   private sessionId: string;
   private _sessionInitialized = false;
+  /** Cached drives string to avoid re-parsing when unchanged. */
+  private _lastDrivesRaw = "";
+  private _lastDrivesParsed: Record<string, number> = {};
+  /** Spatial language ratio computed off-thread, 1-tick lag is acceptable. */
+  private _lastSpatialFreq = 0;
 
   constructor(id: string = "agent-01") {
     this.id = id;
@@ -89,6 +94,8 @@ export class ClientBrain {
 
     if (!this._sessionInitialized) {
       this._sessionInitialized = true;
+      // Pre-warm KG: ensures IDB facts load before first LLM tick
+      KnowledgeGraph.getInstance(this.id).warmUp().catch(() => {});
       memoryStream
         .add(
           this.id,
@@ -562,11 +569,26 @@ export class ClientBrain {
 
       const verificationResult = (retryCount === 0) && (tasks.length > 0);
       
+      // Offload expensive spatial frequency calculation to idle callback
+      const spatialFreq = this._lastSpatialFreq;
+      const thoughtSnap = decision.thought;
+      const scheduleFreq = () => {
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(() => {
+            this._lastSpatialFreq = calculateSpatialLanguageFrequency(thoughtSnap);
+          });
+        } else {
+          setTimeout(() => { this._lastSpatialFreq = calculateSpatialLanguageFrequency(thoughtSnap); }, 0);
+        }
+      };
+      scheduleFreq();
+
+
       const metrics = {
         latency_ms: Date.now() - (this as any)._thinkStartTime,
         token_count: response.usage?.total_tokens || 0,
         fps: useGameStore.getState().currentFps || 60,
-        spatial_language_freq: calculateSpatialLanguageFrequency(decision.thought)
+        spatial_language_freq: spatialFreq,
       };
 
       dispatchSimulationLog({
@@ -593,19 +615,25 @@ export class ClientBrain {
       });
 
       // --- Tick Snapshot for Cognitive Dashboard (Phase 3) ---
-      TickSnapshotBuffer.getInstance(this.id).push({
-        timestamp: Date.now(),
-        agentId: this.id,
-        // Drives: parse from the drives string if available, else empty
-        drives: richContext?.drives
+      // Memoized drives parsing: only split/map when the string actually changes
+      const drivesRaw = richContext?.drives ?? "";
+      if (drivesRaw !== this._lastDrivesRaw) {
+        this._lastDrivesRaw = drivesRaw;
+        this._lastDrivesParsed = drivesRaw
           ? Object.fromEntries(
-              richContext.drives
+              drivesRaw
                 .split(",")
                 .map((s) => s.split(":").map((v) => v.trim()))
                 .filter((p) => p.length === 2 && !isNaN(Number(p[1])))
                 .map(([k, v]) => [k, Number(v)]),
             )
-          : {},
+          : {};
+      }
+
+      TickSnapshotBuffer.getInstance(this.id).push({
+        timestamp: Date.now(),
+        agentId: this.id,
+        drives: this._lastDrivesParsed,
         taskPhase: taskState?.phase ?? "IDLE",
         currentTaskType: taskState?.currentTask ?? null,
         queuedTaskCount: taskState?.queuedTasksCount ?? 0,
