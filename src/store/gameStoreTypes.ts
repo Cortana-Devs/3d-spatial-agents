@@ -147,6 +147,8 @@ export interface AgentSlice {
   removeAgent: (id: string) => void;
   updateAgentCognition: (id: string, thought: string) => void;
   updateAgentStatus: (id: string, status: ResearchAgent['status']) => void;
+  purgeAgentMemory: (id: string) => Promise<void>;
+  purgeGlobalPersistence: () => Promise<void>;
 
   playerPosition: THREE.Vector3;
   setPlayerPosition: (pos: THREE.Vector3) => void;

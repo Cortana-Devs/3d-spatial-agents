@@ -174,6 +174,28 @@ export class KnowledgeGraph {
   }
 
   /**
+   * Discard all beliefs for this agent in-memory and in IDB.
+   */
+  public async clear(): Promise<void> {
+    await this.ensureLoaded();
+    this.facts.clear();
+    this._contextCache = null;
+    try {
+      await memoryStorage.clearKnowledgeFacts(this.agentId);
+    } catch (e) {
+      console.warn(`[KnowledgeGraph] Failed to clear facts for ${this.agentId}:`, e);
+    }
+  }
+
+  /**
+   * Static helper to retrieve and clear a specific agent's graph.
+   */
+  public static async clear(agentId: string): Promise<void> {
+    const kg = KnowledgeGraph.getInstance(agentId);
+    await kg.clear();
+  }
+
+  /**
    * Wipe ALL facts for this agent from memory and IDB.
    */
   async clearAll(): Promise<void> {

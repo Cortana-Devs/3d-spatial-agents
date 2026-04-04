@@ -99,12 +99,40 @@ class IDBAdapter {
         return (await db).count(STORE_NAME);
     }
 
-    /** Wipes every record from the store in a single transaction. */
+    /** Wipes every record from ALL stores in the database. */
     async clearAll(): Promise<void> {
         const db = this.getDb();
         if (!db) return;
+        const stores: (keyof MemoryDB)[] = [STORE_NAME, CONV_STORE, EXPLORER_STORE, 'knowledge-facts' as any];
+        const tx = (await db).transaction(stores as any, 'readwrite');
+        await Promise.all(stores.map(s => tx.objectStore(s as any).clear()));
+        await tx.done;
+    }
+
+    /** Wipes memories for a specific agent from 'memories' store. */
+    async clearByAgent(agentId: string): Promise<void> {
+        const db = this.getDb();
+        if (!db) return;
         const tx = (await db).transaction(STORE_NAME, 'readwrite');
-        await tx.objectStore(STORE_NAME).clear();
+        const store = tx.objectStore(STORE_NAME);
+        // Use by-agent-ts if available, otherwise iterate all
+        if (store.indexNames.contains('by-agent-ts')) {
+            const index = store.index('by-agent-ts');
+            const range = IDBKeyRange.bound([agentId, 0], [agentId, Infinity]);
+            let cursor = await index.openCursor(range);
+            while (cursor) {
+                await cursor.delete();
+                cursor = await cursor.continue();
+            }
+        } else {
+            let cursor = await store.openCursor();
+            while (cursor) {
+                if (cursor.value.agentId === agentId) {
+                    await cursor.delete();
+                }
+                cursor = await cursor.continue();
+            }
+        }
         await tx.done;
     }
 
@@ -180,6 +208,22 @@ class IDBAdapter {
         const tx = (await db).transaction('knowledge-facts', 'readwrite');
         const store = tx.objectStore('knowledge-facts');
         await Promise.all(ids.map((id) => store.delete(id)));
+        await tx.done;
+    }
+
+    /** Wipes beliefs for a specific agent from 'knowledge-facts' store. */
+    async clearKnowledgeFacts(agentId: string): Promise<void> {
+        const db = this.getDb();
+        if (!db) return;
+        const tx = (await db).transaction('knowledge-facts', 'readwrite');
+        const store = tx.objectStore('knowledge-facts');
+        const index = store.index('by-agent');
+        const range = IDBKeyRange.only(agentId);
+        let cursor = await index.openCursor(range);
+        while (cursor) {
+            await cursor.delete();
+            cursor = await cursor.continue();
+        }
         await tx.done;
     }
 

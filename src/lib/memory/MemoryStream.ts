@@ -229,6 +229,19 @@ export class MemoryStream {
       this.isCompacting = false;
     }
   }
+
+  /**
+   * Wipe all memories for a specific agent in IDB and reset count.
+   */
+  async clear(agentId: string): Promise<void> {
+    try {
+      await memoryStorage.clearByAgent(agentId);
+      // Recalculate global count after selective deletion
+      await this.init();
+    } catch (e) {
+      console.warn(`[MemoryStream] Failed to clear memories for ${agentId}:`, e);
+    }
+  }
 }
 
 export const memoryStream = new MemoryStream();

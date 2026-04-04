@@ -164,6 +164,30 @@ export const createAgentSlice: StateCreator<
     )
   })),
 
+  purgeAgentMemory: async (id) => {
+    // Dynamic imports to avoid circular dependency and SSR issues
+    const { KnowledgeGraph } = await import("@/lib/memory/KnowledgeGraph");
+    const { memoryStream } = await import("@/lib/memory/MemoryStream");
+    const { TickSnapshotBuffer } = await import("@/debug/TickSnapshot");
+    
+    await memoryStream.clear(id);
+    await KnowledgeGraph.clear(id);
+    TickSnapshotBuffer.getInstance(id).clear();
+    
+    set((state) => ({
+      activeResearchAgents: state.activeResearchAgents.map(a => 
+        a.id === id ? { ...a, thoughtHistory: [] } : a
+      )
+    }));
+  },
+
+  purgeGlobalPersistence: async () => {
+    const { memoryStorage } = await import("@/lib/memory/idb-adapter");
+    await memoryStorage.clearAll();
+    // Safety reload to ensure all in-memory caches are invalidated
+    if (typeof window !== 'undefined') window.location.reload(); 
+  },
+
   playerPosition: new THREE.Vector3(),
   setPlayerPosition: (pos) => set({ playerPosition: pos }),
 
