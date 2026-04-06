@@ -384,10 +384,11 @@ export default React.memo(function RobotModel({
 
   // Create unique materials for this instance
   const mats = useMemo(() => {
+    const isOfficer = id === "agent-04";
     const armor = new THREE.MeshStandardMaterial({
-      color: ARMOR_COLOR,
-      roughness: 0.15,
-      metalness: 0.2,
+      color: isOfficer ? "#1e293b" : ARMOR_COLOR, // Dark suit for officer
+      roughness: isOfficer ? 0.8 : 0.15,
+      metalness: isOfficer ? 0.0 : 0.2,
     });
 
     const accent = new THREE.MeshStandardMaterial({
@@ -666,6 +667,12 @@ export default React.memo(function RobotModel({
               castShadow
               receiveShadow
             />
+            {id === "agent-03" && (
+               <mesh position={[0, -0.06, 0.082]} rotation={[0.05, 0, 0]} castShadow receiveShadow>
+                 <boxGeometry args={[0.035, 0.18, 0.01]} />
+                 <meshStandardMaterial color="#0f172a" roughness={0.8} />
+               </mesh>
+            )}
 
             {/* Neck & Head */}
             <group ref={neckRef} position={[0, 0.22, 0]}>

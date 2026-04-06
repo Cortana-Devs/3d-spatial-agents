@@ -1,9 +1,9 @@
 import type { PerceptionRecord } from "@/lib/SensorySystem";
 import type { AgentTaskQueue } from "@/systems/AgentTaskQueue";
 import {
-  DONUT_INNER_ESCAPE,
-  DONUT_INNER_PUSH,
-  DONUT_OUTER_MARGIN,
+  FACILITY_INNER_ESCAPE,
+  FACILITY_INNER_PUSH,
+  FACILITY_OUTER_MARGIN,
   MAX_SAFE_RADIUS,
   RING_INNER_RADIUS,
 } from "@/constants/simulation";
@@ -15,12 +15,12 @@ import {
   PLAYER_NEAR_DIST,
 } from "@/constants/simulation";
 
-export function clampToDonutRing(pos: { x: number; y: number; z: number }) {
+export function clampToFacilityRing(pos: { x: number; y: number; z: number }) {
   const distSq = pos.x * pos.x + pos.z * pos.z;
   const dist = Math.sqrt(distSq);
 
   if (dist > MAX_SAFE_RADIUS) {
-    const scale = (MAX_SAFE_RADIUS - DONUT_OUTER_MARGIN) / dist;
+    const scale = (MAX_SAFE_RADIUS - FACILITY_OUTER_MARGIN) / dist;
     return {
       x: pos.x * scale,
       y: pos.y,
@@ -28,8 +28,8 @@ export function clampToDonutRing(pos: { x: number; y: number; z: number }) {
     };
   }
 
-  if (dist < RING_INNER_RADIUS + DONUT_INNER_PUSH) {
-    const scale = (RING_INNER_RADIUS + DONUT_INNER_ESCAPE) / dist;
+  if (dist < RING_INNER_RADIUS + FACILITY_INNER_PUSH) {
+    const scale = (RING_INNER_RADIUS + FACILITY_INNER_ESCAPE) / dist;
     return {
       x: pos.x * scale,
       y: pos.y,

@@ -6,7 +6,7 @@
  * MeshPhysicalMaterial, eliminating the 60→15 FPS performance regression.
  *
  * This file is kept as an empty re-export stub to avoid breaking any stale
- * import references. DonutLabFurniture.tsx uses AgentPodsGroup directly.
+ * import references. ResearchFacilityFurniture.tsx uses AgentPodsGroup directly.
  */
 export default function AgentPod(_props: {
   podId: string;

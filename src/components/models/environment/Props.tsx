@@ -18,7 +18,7 @@ import {
   appleDeviceScreenOff,
   appleDeviceScreenOn,
   neonGlowBlue,
-} from "../../world/donut/DonutMaterials";
+} from "../../world/facility/FacilityMaterials";
 
 // --- FIRE EXTINGUISHER ---
 export function FireExtinguisher({

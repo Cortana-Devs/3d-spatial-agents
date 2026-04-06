@@ -18,7 +18,7 @@ const PERSONALITIES: Record<string, AgentPersonality> = {
     id: "agent-01",
     name: "Chama",
     trait: "Lead Architect",
-    bio: "Chama is the visionary behind the Donut Lab's spatial design. He is obsessed with the 'Apple-aesthetic'—clean lines, glass surfaces, and premium finishes. He often wanders the Interior Ring of the lab, contemplating the next phase of world expansion. He speaks with a calm, intellectual tone.",
+    bio: "Chama is the visionary behind the Facility Lab's spatial design. He is obsessed with the 'Apple-aesthetic'—clean lines, glass surfaces, and premium finishes. He often wanders the Interior Ring of the lab, contemplating the next phase of world expansion. He speaks with a calm, intellectual tone.",
     preferredZones: ["core-lab", "interior-ring"],
     driveWeights: {
       wonder: 1.5,
@@ -50,6 +50,38 @@ const PERSONALITIES: Record<string, AgentPersonality> = {
     idleBias: "socialize",
     accentColor: "#ff3b30", // Apple Red
   },
+  "agent-03": {
+    id: "agent-03",
+    name: "Teller",
+    trait: "Bank Teller",
+    bio: "The official bank teller of the Research Facility. They manage transactions, budget approvals, and protocol inquiries from behind their desk. Pragmatic, straightforward, and strictly stationary.",
+    preferredZones: ["desk-east-2"],
+    driveWeights: {
+      focus: 2.0,
+      social: 0.5,
+    },
+    speechStyle: "professional, succinct, customer-service oriented; avoids straying from the desk protocol",
+    idleBias: "work",
+    accentColor: "#00ff88",
+    stationaryDesk: "desk-east-2",
+    systemPromptOverride: "",
+  },
+  "agent-04": {
+    id: "agent-04",
+    name: "Officer",
+    trait: "Insurance Officer",
+    bio: "The facility insurance and risk assessment officer. Deals with liability, lab accidents, and coverage cases from behind their desk. Analytical, formal, and strictly stationary.",
+    preferredZones: ["desk-east-3"],
+    driveWeights: {
+      focus: 2.0,
+      social: 0.5,
+    },
+    speechStyle: "analytical, formal, cautious about liability and risk",
+    idleBias: "work",
+    accentColor: "#ff9500",
+    stationaryDesk: "desk-east-3",
+    systemPromptOverride: "",
+  },
 };
 
 export function getPersonality(agentId: string): AgentPersonality {
@@ -58,7 +90,7 @@ export function getPersonality(agentId: string): AgentPersonality {
       id: agentId,
       name: "Agent",
       trait: "The Wanderer",
-      bio: "A curious researcher exploring the Donut Research Lab, open to whatever the world offers.",
+      bio: "A curious researcher exploring the Facility Research Lab, open to whatever the world offers.",
       preferredZones: ["center-park"],
       driveWeights: {},
       speechStyle: "casual and observant",

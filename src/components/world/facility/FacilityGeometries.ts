@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { createRingExtrudeGeometry } from "./donutFloorGeometry";
+import { createRingExtrudeGeometry } from "./facilityFloorGeometry";
 import { DEFAULT_RING_INNER_RADIUS, DEFAULT_RING_OUTER_RADIUS, DEFAULT_RING_CURVE_SEGMENTS } from "./labFloorConstants";
 
 export const DOOR_WIDTH = 10;

@@ -26,7 +26,7 @@ import {
   getZoneCenterPosition, 
   getNearestBench, 
   ALL_ZONE_IDS 
-} from "@/config/donutLabRoutines";
+} from "@/config/facilityLabRoutines";
 import {
   SensorySystem,
   HearingBus,
@@ -39,7 +39,7 @@ import { applyWorldTaskStepCompletion } from "@/lib/worldTasks";
 import { InterestMap } from "@/store/InterestMap";
 import { SpatialFamiliarity } from "@/lib/SpatialFamiliarity";
 import {
-  clampToDonutRing,
+  clampToFacilityRing,
   getEffectiveCooldownSec,
   resolveCurrentBehavior,
 } from "@/lib/agent-brain-utils";
@@ -59,7 +59,7 @@ import {
   UTILITY_CHECK_INTERVAL_MS,
 } from "@/constants/simulation";
 import {
-  buildDefaultDonutLabIdleLocations,
+  buildDefaultResearchFacilityIdleLocations,
   getIdleExplorer,
 } from "@/systems/autonomy/IdleExplorer";
 import {
@@ -281,18 +281,22 @@ export function useAgentBrain(
       const scriptId = "startup_explore";
       const priority = 8;
 
-      // Navigate to the agent's preferred zone on startup
-      const preferredZone = personality.preferredZones[0] ?? "center-park";
-      const zonePos = getZoneCenterPosition(preferredZone);
-      if (zonePos) {
-        queue.enqueue({ type: "GO_TO", priority, scriptId, targetPos: zonePos });
-        queue.enqueue({ type: "WAIT", priority, scriptId, duration: 2 });
-        queue.enqueue({ type: "EXPLORE", priority: 0, scriptId: "subconscious_explore", targetAreaId: preferredZone } as any);
+      if (personality.stationaryDesk) {
+        queue.enqueue({ type: "SIT", priority, scriptId, itemId: personality.stationaryDesk });
+        console.debug(`[useAgentBrain:${id}] ${personality.name} is stationary, seated at desk: ${personality.stationaryDesk}`);
+      } else {
+        // Navigate to the agent's preferred zone on startup
+        const preferredZone = personality.preferredZones[0] ?? "center-park";
+        const zonePos = getZoneCenterPosition(preferredZone);
+        if (zonePos) {
+          queue.enqueue({ type: "GO_TO", priority, scriptId, targetPos: zonePos });
+          queue.enqueue({ type: "WAIT", priority, scriptId, duration: 2 });
+          queue.enqueue({ type: "EXPLORE", priority: 0, scriptId: "subconscious_explore", targetAreaId: preferredZone } as any);
+        }
+
+        queue.enqueue({ type: "WANDER", priority: 0, scriptId: "subconscious_wander" });
+        console.debug(`[useAgentBrain:${id}] ${personality.name} heading to preferred zone: ${preferredZone}`);
       }
-
-      queue.enqueue({ type: "WANDER", priority: 0, scriptId: "subconscious_wander" });
-
-      console.debug(`[useAgentBrain:${id}] ${personality.name} heading to preferred zone: ${preferredZone}`);
     }, 2000 + Math.random() * 1000);
 
     return () => {
@@ -307,7 +311,7 @@ export function useAgentBrain(
     const explorer = getIdleExplorer(id);
     void explorer.loadFromIdb();
     const seedTimer = setTimeout(() => {
-      explorer.setLocations(buildDefaultDonutLabIdleLocations());
+      explorer.setLocations(buildDefaultResearchFacilityIdleLocations());
     }, 2500);
     const saveIv = setInterval(() => {
       void explorer.saveToIdb();
@@ -1069,7 +1073,7 @@ export function useAgentBrain(
         );
       }
 
-      // Radial Donut Ring Soft Clamping
+      // Radial Facility Ring Soft Clamping
       const dist = Math.sqrt(vehicle.position.x * vehicle.position.x + vehicle.position.z * vehicle.position.z);
       
       // Soft clamp: Hit Outer Wall
@@ -1392,6 +1396,7 @@ export function useAgentBrain(
                   trait: personality.trait,
                   speechStyle: personality.speechStyle,
                   bio: personality.bio,
+                  systemPromptOverride: useGameStore.getState().agentPromptOverrides[id],
                 },
               },
             )
@@ -1467,9 +1472,9 @@ export function useAgentBrain(
                   // Inject the tasks into the priority queue (Atomic insertion for AgentTaskQueue v2)
                   decision.tasks.forEach((task) => {
                     // Clamp LLM-generated coordinates to world bounds safely
-                    // (Ensure they land in walkable donut lab area)
+                    // (Ensure they land in walkable facility lab area)
                     if (task.type === "GO_TO" && task.targetPos) {
-                      const clamped = clampToDonutRing(task.targetPos);
+                      const clamped = clampToFacilityRing(task.targetPos);
                       task.targetPos = new THREE.Vector3(
                         clamped.x,
                         clamped.y,
@@ -1488,11 +1493,20 @@ export function useAgentBrain(
                   // We don't need to do anything, but let's ensure the subconscious is at least wandering
                   // if the queue is completely empty.
                   if (taskQueue.getCurrentPhase() === "IDLE") {
-                    taskQueue.enqueue({
-                      type: "WANDER",
-                      priority: 0,
-                      scriptId: "subconscious_wander",
-                    });
+                    if (personalityRef.current.stationaryDesk) {
+                      taskQueue.enqueue({
+                        type: "SIT",
+                        priority: 5,
+                        scriptId: "auto_return_desk",
+                        itemId: personalityRef.current.stationaryDesk,
+                      });
+                    } else {
+                      taskQueue.enqueue({
+                        type: "WANDER",
+                        priority: 0,
+                        scriptId: "subconscious_wander",
+                      });
+                    }
                   }
                 }
               } else {
@@ -1546,41 +1560,50 @@ export function useAgentBrain(
         playerProximityState.current !== "CHATTING" &&
         playerProximityState.current !== "GREETING"
       ) {
-        const pacingTask = utilityBrainRef.current.checkPacing(
-          driveManagerRef.current.drives,
-          true,
-          performance.now() / 1000,
-        );
-        if (pacingTask) taskQueue.enqueue(pacingTask);
+        if (personalityRef.current.stationaryDesk) {
+            taskQueue.enqueue({
+              type: "SIT",
+              priority: 5,
+              scriptId: "auto_return_desk",
+              itemId: personalityRef.current.stationaryDesk,
+            });
+        } else {
+          const pacingTask = utilityBrainRef.current.checkPacing(
+            driveManagerRef.current.drives,
+            true,
+            performance.now() / 1000,
+          );
+          if (pacingTask) taskQueue.enqueue(pacingTask);
+        }
       }
     }
 
-    // --- Idle exploration (autonomous GO_TO between zones) ---
-    {
-      const interruptingBusy = (() => {
-        const phase = taskQueue.getCurrentPhase();
-        if (phase === "DOCKED") return true;
-        if (!taskQueue.isBusy()) return false;
-        const cur = taskQueue.getCurrentTask();
-        const qlen = taskQueue.getQueueLength();
-        if (
-          cur?.source === "idle_explorer" &&
-          cur.type === "GO_TO" &&
-          qlen === 0 &&
-          phase === "NAVIGATING"
-        ) {
-          return false;
-        }
-        if (
-          cur?.source === "idle_explorer" &&
-          cur.type === "LOOK_AT" &&
-          qlen === 0 &&
-          phase === "GAZING"
-        ) {
-          return false;
-        }
-        return true;
-      })();
+      {
+        const interruptingBusy = (() => {
+          if (personalityRef.current.stationaryDesk) return true; // Block explorer for stationary agents
+          const phase = taskQueue.getCurrentPhase();
+          if (phase === "DOCKED") return true;
+          if (!taskQueue.isBusy()) return false;
+          const cur = taskQueue.getCurrentTask();
+          const qlen = taskQueue.getQueueLength();
+          if (
+            cur?.source === "idle_explorer" &&
+            cur.type === "GO_TO" &&
+            qlen === 0 &&
+            phase === "NAVIGATING"
+          ) {
+            return false;
+          }
+          if (
+            cur?.source === "idle_explorer" &&
+            cur.type === "LOOK_AT" &&
+            qlen === 0 &&
+            phase === "GAZING"
+          ) {
+            return false;
+          }
+          return true;
+        })();
 
       const isInConversation =
         playerProximityState.current === "CHATTING" ||

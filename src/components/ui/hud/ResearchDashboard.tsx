@@ -630,7 +630,7 @@ function QuickTaskBuilder({
 }) {
   const [kind, setKind] = useState<'deliver' | 'go_zone' | 'follow_player'>('deliver');
   const [itemId, setItemId] = useState('rack-3');
-  const [areaId, setAreaId] = useState('desk-supervisor-donut-inbox');
+  const [areaId, setAreaId] = useState('desk-supervisor-facility-inbox');
   const [zoneId, setZoneId] = useState('center-park');
 
   const handleAdd = () => {
@@ -740,7 +740,7 @@ function QuickTaskBuilder({
                 onChange={(e) => setAreaId(e.target.value)}
                 style={inputStyle}
               >
-                <option value="desk-supervisor-donut-inbox">Supervisor Inbox</option>
+                <option value="desk-supervisor-facility-inbox">Supervisor Inbox</option>
                 <option value="lab-bench-south-0">South Lab Bench</option>
                 <option value="data-node-alpha-inbox">Data Node Alpha</option>
               </select>

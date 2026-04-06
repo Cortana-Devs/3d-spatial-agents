@@ -42,6 +42,7 @@ export interface AgentContext {
     trait: string;
     speechStyle: string;
     bio: string;
+    systemPromptOverride?: string;
   };
   /** Structured recall of past talks with a nearby entity (client-filled before server action). */
   conversationHistory?: string;
@@ -70,6 +71,8 @@ export interface AgentPersonality {
   speechStyle: string;
   idleBias: "contemplate" | "explore" | "socialize" | "work";
   accentColor: string;
+  systemPromptOverride?: string;
+  stationaryDesk?: string;
 }
 
 export type AgentTaskType =
@@ -110,7 +113,7 @@ export interface AgentTask {
   destAreaId?: string;
   targetAreaId?: string;
   targetPos?: Vector3;
-  /** Optional annulus for WANDER (world units); defaults to lab donut ring. */
+  /** Optional annulus for WANDER (world units); defaults to lab facility ring. */
   wanderInnerRadius?: number;
   wanderOuterRadius?: number;
   duration?: number;

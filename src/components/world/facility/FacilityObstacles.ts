@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { Obstacle } from "@/store/gameStore";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_OUTER_RADIUS } from "./labFloorConstants";
 
-// Park layout — must match DonutLabWorld.tsx
+// Park layout — must match ResearchFacilityWorld.tsx
 const POND_RADIUS = 16.0;
 // Only the fishing dock bench remains — obstacle inlined directly below.
 const TREE_POSITIONS: [number, number][] = [
@@ -12,7 +12,7 @@ const TREE_POSITIONS: [number, number][] = [
   [12, -20],
 ];
 
-export function buildDonutObstacles(): Obstacle[] {
+export function buildFacilityObstacles(): Obstacle[] {
   const obstacles: Obstacle[] = [];
   const cx = DEFAULT_LAB_HUB.x;
   const cy = DEFAULT_LAB_HUB.y;

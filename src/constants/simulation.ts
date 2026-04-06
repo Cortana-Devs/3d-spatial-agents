@@ -8,7 +8,7 @@
  *   A — Agent physics & interaction
  *   B — LLM / Brain timing
  *   C — Task queue & navigation
- *   D — World geometry (Donut lab)
+ *   D — World geometry (Facility lab)
  */
 
 // ── A: Agent physics & interaction ────────────────────────────────────────────
@@ -69,9 +69,9 @@ export const TASK_LOOKAT_DEFAULT_DURATION = 4.0;
 export const TASK_EMOTE_DEFAULT_DURATION = 2.5;
 export const TASK_PRESENT_DEFAULT_DURATION = 8.0;
 
-// ── D: World geometry (Donut lab) ─────────────────────────────────────────────
+// ── D: World geometry (Facility lab) ─────────────────────────────────────────────
 
-/** Donut lab radial bounds (align with scene geometry). */
+/** Facility lab radial bounds (align with scene geometry). */
 export const RING_INNER_VOID = 38;
 export const RING_INNER_RADIUS = 39;
 export const MAX_SAFE_RADIUS = 94;
@@ -79,7 +79,7 @@ export const RING_OUTER_WALL = 95;
 
 export const FLOOR_Y = 0;
 
-/** Margins used inside clampToDonutRing. */
-export const DONUT_OUTER_MARGIN = 1.0;
-export const DONUT_INNER_PUSH = 1.5;
-export const DONUT_INNER_ESCAPE = 2.5;
+/** Margins used inside clampToFacilityRing. */
+export const FACILITY_OUTER_MARGIN = 1.0;
+export const FACILITY_INNER_PUSH = 1.5;
+export const FACILITY_INNER_ESCAPE = 2.5;

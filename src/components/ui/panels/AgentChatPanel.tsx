@@ -17,6 +17,8 @@ import {
 import { getIdleExplorer } from "@/systems/autonomy/IdleExplorer";
 import styles from "./AgentChatPanel.module.css";
 import { useAudioController } from "@/lib/audio/useAudioController";
+import { useSpeechToText } from "@/lib/audio/useSpeechToText";
+import { Mic, MicOff, Loader2 } from "lucide-react";
 
 function formatAgentLabel(agentId: string): string {
   const match = /^agent-0*(\d+)$/.exec(agentId);
@@ -53,6 +55,23 @@ export const AgentChatPanel: React.FC = () => {
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { isRecording, isTranscribing, error: sttError, startRecording, stopRecording } = useSpeechToText();
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      try {
+        const transcript = await stopRecording();
+        if (transcript) {
+          setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        }
+      } catch (err) {
+        console.error("STT Failed:", err);
+      }
+    } else {
+      await startRecording();
+    }
+  };
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -845,12 +864,33 @@ export const AgentChatPanel: React.FC = () => {
 
       {/* Input */}
       <div className={styles.chatInputArea}>
+        {sttError && <div style={{ color: "red", fontSize: 12, marginBottom: 5 }}>{sttError}</div>}
         <div className={styles.chatInputWrapper}>
+          <button
+            onClick={handleMicClick}
+            disabled={isThinking || isTranscribing}
+            className={styles.chatMicBtn}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: isThinking || isTranscribing ? "not-allowed" : "pointer",
+              padding: "8px",
+              color: isRecording ? "#ef4444" : "#9ca3af",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title={isRecording ? "Stop recording" : "Start recording"}
+          >
+            {isTranscribing ? <Loader2 size={20} className="animate-spin" /> : (
+               isRecording ? <MicOff size={20} /> : <Mic size={20} />
+            )}
+          </button>
           <input
             ref={inputRef}
             className={styles.chatInput}
             type="text"
-            placeholder="Type a message..."
+            placeholder={isRecording ? "Listening..." : "Type a message..."}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
@@ -860,12 +900,12 @@ export const AgentChatPanel: React.FC = () => {
                 handleSend();
               }
             }}
-            disabled={isThinking}
+            disabled={isThinking || isRecording || isTranscribing}
           />
           <button
             className={styles.chatSendBtn}
             onClick={handleSend}
-            disabled={isThinking || !inputValue.trim()}
+            disabled={isThinking || !inputValue.trim() || isRecording || isTranscribing}
           >
             Send
           </button>

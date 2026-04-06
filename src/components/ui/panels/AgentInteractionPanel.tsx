@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { ClientBrain } from "@/systems/ClientBrain";
-import { MessageSquare, Cpu, Activity, Clock, Terminal } from "lucide-react";
+import { MessageSquare, Cpu, Activity, Clock, Terminal, Edit3 } from "lucide-react";
 import { useGameStore } from "@/store/gameStore";
 import styles from "./AgentInteractionPanel.module.css";
 
@@ -19,7 +19,7 @@ interface ThoughtLog {
   timestamp: number;
 }
 
-type TabType = "interaction" | "intelligence";
+type TabType = "interaction" | "intelligence" | "protocol";
 
 export const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   agentId,
@@ -36,6 +36,16 @@ export const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   
   const isNearby = chatPromptVisible && nearbyAgentId === agentId;
   const isInspected = inspectedAgentId === agentId;
+
+  const agentOverrides = useGameStore((state) => state.agentPromptOverrides);
+  const setAgentOverride = useGameStore((state) => state.setAgentPromptOverride);
+  const [draftPrompt, setDraftPrompt] = useState("");
+
+  useEffect(() => {
+    if (activeTab === "protocol") {
+      setDraftPrompt(agentOverrides[agentId] || "");
+    }
+  }, [agentOverrides, agentId, activeTab]);
 
   // Sync tab with proximity
   useEffect(() => {
@@ -117,10 +127,43 @@ export const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
               <Cpu size={12} />
               <span>Intelligence</span>
             </div>
+            <div 
+              className={`${styles.tab} ${activeTab === 'protocol' ? styles.activeTab : ""}`}
+              onClick={() => setActiveTab("protocol")}
+            >
+              <Edit3 size={12} />
+              <span>Protocol</span>
+            </div>
           </div>
 
           <div className={styles.content}>
-            {activeTab === "interaction" ? (
+            {activeTab === "protocol" ? (
+               <div className={styles.intelContent} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: '4px' }}>System Prompt Override</div>
+                  <textarea 
+                    value={draftPrompt}
+                    onChange={(e) => setDraftPrompt(e.target.value)}
+                    onPointerDownCapture={(e) => e.stopPropagation()} // Let user drag inside text area
+                    placeholder="Enter custom instructions to override default personality..."
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', padding: '8px', fontSize: '11px', borderRadius: '4px', resize: 'none', minHeight: '80px', pointerEvents: 'auto' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                     <button 
+                       onClick={() => setDraftPrompt("")} 
+                       style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', cursor: 'pointer', padding: '4px 8px', fontSize: '10px', borderRadius: '4px', pointerEvents: 'auto' }}>
+                       Clear
+                     </button>
+                     <button 
+                       onClick={() => {
+                          setAgentOverride(agentId, draftPrompt);
+                          setActiveTab("intelligence"); 
+                       }} 
+                       style={{ background: '#00f2ff', color: 'black', border: 'none', cursor: 'pointer', padding: '4px 12px', fontSize: '10px', fontWeight: 'bold', borderRadius: '4px', pointerEvents: 'auto' }}>
+                       Save Protocol
+                     </button>
+                  </div>
+               </div>
+            ) : activeTab === "interaction" ? (
               <div className={styles.interactionContent}>
                 <div className={styles.greeting}>👋 Hello! Need any help?</div>
                 <div className={styles.keys}>

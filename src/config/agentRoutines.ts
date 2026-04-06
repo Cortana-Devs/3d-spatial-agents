@@ -3,12 +3,12 @@ import { InteractableRegistry } from '@/systems/InteractableRegistry';
 import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
 
 // ============================================================================
-// Agent → Assigned storage table (donut-lab storage cupboards 1–5)
+// Agent → Assigned storage table (facility-lab storage cupboards 1–5)
 // ============================================================================
 
 const AGENT_ASSIGNED_TABLE: Record<string, string> = {
-  "agent-01": "cupboard-donut-1",
-  "agent-02": "cupboard-donut-2",
+  "agent-01": "cupboard-facility-1",
+  "agent-02": "cupboard-facility-2",
 };
 
 export function getAssignedStorageTable(agentId: string): string | null {
@@ -20,15 +20,15 @@ export function getAssignedStorageTable(agentId: string): string | null {
 // ============================================================================
 
 const STORAGE_TABLE_CHECKLISTS: Record<string, string[]> = {
-  "cupboard-donut-1": ["cupboard-donut-1-laptop", "cupboard-donut-1-protocols"],
-  "cupboard-donut-2": ["cupboard-donut-2-sample-logs", "cupboard-donut-2-backup-drive"],
-  "cupboard-donut-3": [
+  "cupboard-facility-1": ["cupboard-facility-1-laptop", "cupboard-facility-1-protocols"],
+  "cupboard-facility-2": ["cupboard-facility-2-sample-logs", "cupboard-facility-2-backup-drive"],
+  "cupboard-facility-3": [
     "file-rack3-to-supervisor",
-    "cupboard-donut-3-sops",
-    "cupboard-donut-3-manuals",
+    "cupboard-facility-3-sops",
+    "cupboard-facility-3-manuals",
   ],
-  "cupboard-donut-4": ["cupboard-donut-4-laptop", "cupboard-donut-4-usb"],
-  "cupboard-donut-5": ["cupboard-donut-5-archive", "cupboard-donut-5-archive-usb"],
+  "cupboard-facility-4": ["cupboard-facility-4-laptop", "cupboard-facility-4-usb"],
+  "cupboard-facility-5": ["cupboard-facility-5-archive", "cupboard-facility-5-archive-usb"],
 };
 
 export function getStorageTableChecklist(tableId: string): string[] {

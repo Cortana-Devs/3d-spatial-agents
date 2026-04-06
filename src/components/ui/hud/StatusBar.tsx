@@ -23,7 +23,7 @@ import type { TtsStatusDetail, TtsStatusState } from "@/lib/audio/useAudioContro
 const TIER_COLORS: Record<string, string> = {
   gemini:     "#34C759", // system green  (cloud, high quality)
   piper:      "#0A84FF", // system blue   (local ONNX)
-  puter:      "#FF9F0A", // system orange (cloud, backup)
+  googlecloud:"#FF9F0A", // system orange (cloud, backup)
   webspeech:  "#8E8E93", // system grey   (emergency)
 };
 

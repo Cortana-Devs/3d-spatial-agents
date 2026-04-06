@@ -11,11 +11,11 @@ import {
   type LabHubCenter,
 } from "@/components/world/labFloorConstants";
 import {
-  buildDonutOuterWallSegments,
+  buildFacilityOuterWallSegments,
   mergeWallSegmentGeometries,
 } from "@/components/world/perimeterWallBuild";
 
-export interface DonutOuterWallsProps {
+export interface FacilityOuterWallsProps {
   enabled?: boolean;
   hubCenter?: LabHubCenter;
   outerRadius?: number;
@@ -27,14 +27,14 @@ export interface DonutOuterWallsProps {
 /**
  * Single outer circular wall (faceted OBBs), no inner wall around the hole.
  */
-export default function DonutOuterWalls({
+export default function FacilityOuterWalls({
   enabled = true,
   hubCenter = DEFAULT_LAB_HUB,
   outerRadius = DEFAULT_RING_OUTER_RADIUS,
   wallHeight,
   wallThickness,
   segmentCount = DEFAULT_RING_WALL_SEGMENTS,
-}: DonutOuterWallsProps) {
+}: FacilityOuterWallsProps) {
   const addCollidableMesh = useGameStore((state) => state.addCollidableMesh);
   const removeCollidableMesh = useGameStore(
     (state) => state.removeCollidableMesh,
@@ -46,7 +46,7 @@ export default function DonutOuterWalls({
 
   const { segments, obstacles } = useMemo(
     () =>
-      buildDonutOuterWallSegments({
+      buildFacilityOuterWallSegments({
         hubCenter: { x: hubCenter.x, y: hubCenter.y, z: hubCenter.z },
         outerRadius,
         wallHeight,
@@ -93,7 +93,7 @@ export default function DonutOuterWalls({
   if (!enabled) return null;
 
   return (
-    <group ref={rootRef} name="DonutOuterWalls">
+    <group ref={rootRef} name="FacilityOuterWalls">
       {mergedSolidGeometry ? (
         <mesh
           name="Walls-Outer-Merged"

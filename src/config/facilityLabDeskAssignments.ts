@@ -1,8 +1,8 @@
 /**
- * Donut lab: desk / chair pairs, default agent assignments, and sample task copy for scenario context.
+ * Facility lab: desk / chair pairs, default agent assignments, and sample task copy for scenario context.
  */
 
-/** East wing + extra research tables (see DonutLabFurniture). */
+/** East wing + extra research tables (see ResearchFacilityFurniture). */
 export const CLAIMABLE_DESK_IDS: string[] = [
   "desk-east-0",
   "desk-east-1",
@@ -45,7 +45,7 @@ export function getChairIdForPersonalDesk(
 }
 
 /** Scenario text for LLM: concrete lab tasks. */
-export function buildDonutLabScenarioContext(
+export function buildResearchFacilityScenarioContext(
   agentId: string,
   personalDeskByAgent: Record<string, string>
 ): string {
@@ -57,7 +57,7 @@ export function buildDonutLabScenarioContext(
     `[LAB ASSIGNMENTS]`,
     `- Your personal desk (use claim_desk to change): **${desk}**. Chair to sit at your station: **${chair}**.`,
     `- Data Analysis laptops: some show an email outbox (finish and send); some show a fault screen (needs repair / IT).`,
-    `- **Storage Cupboard 3** (cupboard-donut-3): pick **file-rack3-to-supervisor** and place it at **desk-supervisor-donut-inbox** on the Supervisor Desk.`,
+    `- **Storage Cupboard 3** (cupboard-facility-3): pick **file-rack3-to-supervisor** and place it at **desk-supervisor-facility-inbox** on the Supervisor Desk.`,
     `- When resting at your station, sit in your chair.`,
   ].join("\n");
 }

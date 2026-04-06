@@ -3,14 +3,14 @@ import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
 import { POIRegistry } from "@/systems/POIRegistry";
-import DonutFloor from "./DonutFloor";
-import DonutWalls from "./DonutWalls";
-import DonutCenterPark, { getTerrainHeight } from "./DonutCenterPark";
-import { buildDonutObstacles } from "./DonutObstacles";
-import DonutLabFurniture from "./DonutLabFurniture";
+import FacilityFloor from "./FacilityFloor";
+import FacilityWalls from "./FacilityWalls";
+import FacilityCenterPark, { getTerrainHeight } from "./FacilityCenterPark";
+import { buildFacilityObstacles } from "./FacilityObstacles";
+import ResearchFacilityFurniture from "./ResearchFacilityFurniture";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, DEFAULT_RING_OUTER_RADIUS, ENV_PROP_SCALE_FACTOR } from "./labFloorConstants";
 import { buildPodInteractables } from "@/config/agentPods";
-import { buildDonutLabWorldTaskSeeds } from "@/config/donutWorldTasksSeed";
+import { buildResearchFacilityWorldTaskSeeds } from "@/config/facilityWorldTasksSeed";
 
 // --- Curated Dream Park Layout ---
 const treeData = [
@@ -27,7 +27,7 @@ const benchData = [
 ];
 
 // --- Interactables Registration ---
-function getDonutInteractables() {
+function getFacilityInteractables() {
   const items: any[] = [];
   
   // Bench seat height in world units (local 0.42 * scale factor).
@@ -84,7 +84,7 @@ function getDonutInteractables() {
   return items;
 }
 
-export default function DonutLabWorld() {
+export default function ResearchFacilityWorld() {
   const addCollidableMesh = useGameStore((s) => s.addCollidableMesh);
   const removeCollidableMesh = useGameStore((s) => s.removeCollidableMesh);
   const addObstacles = useGameStore((s) => s.addObstacles);
@@ -93,8 +93,8 @@ export default function DonutLabWorld() {
   const removeInteractables = useGameStore((s) => s.removeInteractables);
   
   const groupRef = useRef<THREE.Group>(null);
-  const obstacles = useMemo(() => buildDonutObstacles(), []);
-  const interactables = useMemo(() => getDonutInteractables(), []);
+  const obstacles = useMemo(() => buildFacilityObstacles(), []);
+  const interactables = useMemo(() => getFacilityInteractables(), []);
 
   useEffect(() => {
     if (groupRef.current) addCollidableMesh(groupRef.current);
@@ -113,7 +113,7 @@ export default function DonutLabWorld() {
         t.payload.itemId === "file-rack3-to-supervisor",
     );
     if (!hasRackTask) {
-      for (const seed of buildDonutLabWorldTaskSeeds()) {
+      for (const seed of buildResearchFacilityWorldTaskSeeds()) {
         gs.addWorldTask(seed);
       }
     }
@@ -246,10 +246,10 @@ export default function DonutLabWorld() {
 
   return (
     <group ref={groupRef}>
-      <DonutFloor />
-      <DonutWalls />
-      <DonutCenterPark treeData={treeData} benchData={benchData} />
-      <DonutLabFurniture />
+      <FacilityFloor />
+      <FacilityWalls />
+      <FacilityCenterPark treeData={treeData} benchData={benchData} />
+      <ResearchFacilityFurniture />
     </group>
   );
 }

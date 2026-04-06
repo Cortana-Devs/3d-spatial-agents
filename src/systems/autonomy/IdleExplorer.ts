@@ -3,7 +3,7 @@ import { memoryStorage } from "@/lib/memory/idb-adapter";
 import {
   getZoneCenterPosition,
   ZONE_NAMES,
-} from "@/config/donutLabRoutines";
+} from "@/config/researchFacilityRoutines";
 import { InterestMap } from "@/store/InterestMap";
 import type { WalkPace } from "@/types/agent";
 
@@ -48,8 +48,8 @@ const SEED: { zoneId: string; interest: number }[] = [
   { zoneId: "exterior-plaza", interest: 0.5 },
 ];
 
-/** Build POI list from live zone centers (call after DonutLabWorld registers zones). */
-export function buildDefaultDonutLabIdleLocations(): LabLocation[] {
+/** Build POI list from live zone centers (call after ResearchFacilityWorld registers zones). */
+export function buildDefaultResearchFacilityIdleLocations(): LabLocation[] {
   return SEED.map(({ zoneId, interest }) => {
     const p = getZoneCenterPosition(zoneId);
     return {

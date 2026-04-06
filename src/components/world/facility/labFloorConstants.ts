@@ -3,7 +3,7 @@ export type LabHubCenter = { x: number; y: number; z: number };
 
 export const DEFAULT_LAB_HUB: LabHubCenter = { x: 0, y: 4, z: 0 };
 
-/** Donut minimal world: walkable ring between inner and outer radii. */
+/** Facility minimal world: walkable ring between inner and outer radii. */
 export const DEFAULT_RING_OUTER_RADIUS = 95;
 export const DEFAULT_RING_INNER_RADIUS = 38;
 export const DEFAULT_RING_CURVE_SEGMENTS = 72;

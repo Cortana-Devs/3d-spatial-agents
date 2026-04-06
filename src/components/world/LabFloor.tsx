@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "@/store/gameStore";
 import { createMaterials } from "@/lib/materials";
-import { createRingExtrudeGeometry } from "@/components/world/donutFloorGeometry";
+import { createRingExtrudeGeometry } from "@/components/world/facilityFloorGeometry";
 import {
   DEFAULT_LAB_HUB,
   DEFAULT_RING_CURVE_SEGMENTS,
@@ -24,7 +24,7 @@ export interface LabFloorProps {
 }
 
 /**
- * Donut-shaped foundation + tiled slab (open center, no inner wall). Registers collidables only.
+ * Facility-shaped foundation + tiled slab (open center, no inner wall). Registers collidables only.
  */
 export default function LabFloor({
   hubCenter = DEFAULT_LAB_HUB,
