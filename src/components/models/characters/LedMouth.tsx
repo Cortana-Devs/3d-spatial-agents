@@ -127,6 +127,13 @@ export default function LedMouth({
       if (meshRef.current) {
         const mouthW = 0.045 * state.current.width;
         const mouthH = 0.010 * state.current.openness;
+        
+        // Ensure color buffer exists before raw manipulation
+        if (!meshRef.current.instanceColor) {
+          meshRef.current.setColorAt(0, colorIdle);
+        }
+        const matArray = meshRef.current.instanceMatrix.array;
+        const colArray = meshRef.current.instanceColor!.array;
 
         for (let i = 0; i < count; i++) {
           const p = particleData[i];
@@ -145,24 +152,31 @@ export default function LedMouth({
             y += freq * 0.0015 * (p.isUpper ? 1 : -1);
           }
 
-          dummy.position.set(x, y, p.z);
           const pulse = freq * 1.5;
-          dummy.scale.setScalar(p.baseScale + pulse);
-          dummy.updateMatrix();
-          meshRef.current.setMatrixAt(i, dummy.matrix);
+          const scale = p.baseScale + pulse;
+          
+          // Direct Float32Array write — bypasses updateMatrix(), matrix.compose(), and setMatrixAt()
+          const mIdx = i * 16;
+          matArray[mIdx + 0] = scale;  matArray[mIdx + 4] = 0;      matArray[mIdx + 8] = 0;       matArray[mIdx + 12] = x;
+          matArray[mIdx + 1] = 0;      matArray[mIdx + 5] = scale;  matArray[mIdx + 9] = 0;       matArray[mIdx + 13] = y;
+          matArray[mIdx + 2] = 0;      matArray[mIdx + 6] = 0;      matArray[mIdx + 10] = scale;  matArray[mIdx + 14] = p.z;
+          matArray[mIdx + 3] = 0;      matArray[mIdx + 7] = 0;      matArray[mIdx + 11] = 0;      matArray[mIdx + 15] = 1;
 
           if (freq > 0.6) {
             colorObj.lerpColors(colorActive, colorPeak, (freq - 0.6) * 2.5);
           } else {
             colorObj.lerpColors(colorIdle, colorActive, freq * 1.6);
           }
-          meshRef.current.setColorAt(i, colorObj);
+          
+          // Direct color array write — bypasses setColorAt()
+          const cIdx = i * 3;
+          colArray[cIdx] = colorObj.r;
+          colArray[cIdx + 1] = colorObj.g;
+          colArray[cIdx + 2] = colorObj.b;
         }
         
         meshRef.current.instanceMatrix.needsUpdate = true;
-        if (meshRef.current.instanceColor) {
-          meshRef.current.instanceColor.needsUpdate = true;
-        }
+        meshRef.current.instanceColor!.needsUpdate = true;
       }
     } else {
       // Resting state when no analyser is present
@@ -179,6 +193,12 @@ export default function LedMouth({
       if (meshRef.current) {
         const mouthW = 0.045 * state.current.width;
         const mouthH = 0.010 * state.current.openness;
+        
+        if (!meshRef.current.instanceColor) {
+          meshRef.current.setColorAt(0, colorIdle);
+        }
+        const matArray = meshRef.current.instanceMatrix.array;
+        const colArray = meshRef.current.instanceColor!.array;
 
         for (let i = 0; i < count; i++) {
           const p = particleData[i];
@@ -187,14 +207,20 @@ export default function LedMouth({
             ? (mouthH * p.envelope * p.cupidsBow) + (state.current.smile * p.nx * p.nx * 0.015)
             : -(mouthH * p.envelope) + (state.current.smile * p.nx * p.nx * 0.015);
 
-          dummy.position.set(x, y, p.z);
-          dummy.scale.setScalar(p.baseScale);
-          dummy.updateMatrix();
-          meshRef.current.setMatrixAt(i, dummy.matrix);
-          meshRef.current.setColorAt(i, colorIdle);
+          const scale = p.baseScale;
+          const mIdx = i * 16;
+          matArray[mIdx + 0] = scale;  matArray[mIdx + 4] = 0;      matArray[mIdx + 8] = 0;       matArray[mIdx + 12] = x;
+          matArray[mIdx + 1] = 0;      matArray[mIdx + 5] = scale;  matArray[mIdx + 9] = 0;       matArray[mIdx + 13] = y;
+          matArray[mIdx + 2] = 0;      matArray[mIdx + 6] = 0;      matArray[mIdx + 10] = scale;  matArray[mIdx + 14] = p.z;
+          matArray[mIdx + 3] = 0;      matArray[mIdx + 7] = 0;      matArray[mIdx + 11] = 0;      matArray[mIdx + 15] = 1;
+
+          const cIdx = i * 3;
+          colArray[cIdx] = colorIdle.r;
+          colArray[cIdx + 1] = colorIdle.g;
+          colArray[cIdx + 2] = colorIdle.b;
         }
         meshRef.current.instanceMatrix.needsUpdate = true;
-        if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+        meshRef.current.instanceColor!.needsUpdate = true;
       }
     }
   });
