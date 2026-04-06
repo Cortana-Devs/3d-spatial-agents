@@ -19,13 +19,13 @@ import {
   appleDeviceScreenOff,
   appleDeviceScreenOn,
   neonGlowBlue,
-} from "../../world/donut/DonutMaterials";
+} from "../../world/facility/FacilityMaterials";
 
 // Map local legacy material names directly to the High-Performance Apple Design System tokens
 const woodMaterial = applePremiumWood;
 const metalMaterial = appleAluminumMaterial;
 const whitePlastic = appleWhiteMaterial;
-const glassMaterial = appleScreenMaterial; // Will be optimized transparent glass in DonutMaterials
+const glassMaterial = appleScreenMaterial; // Will be optimized transparent glass in FacilityMaterials
 const lightGlowMaterial = new THREE.MeshBasicMaterial({ color: "#f0f4ff" });
 const lightOffMaterial = appleDeviceScreenOff;
 

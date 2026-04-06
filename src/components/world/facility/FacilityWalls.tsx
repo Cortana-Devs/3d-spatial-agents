@@ -3,12 +3,12 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
 import AIManager from "@/systems/AIManager";
-import { glassMaterial, structuralMetalMaterial, soffitMaterial, doorHandleMaterial } from "./DonutMaterials";
+import { glassMaterial, structuralMetalMaterial, soffitMaterial, doorHandleMaterial } from "./FacilityMaterials";
 import { 
   outerWallSegmentGeo, innerWallSegmentGeo,
   outerRingGeometry, roofGeometry, roofSoffitGeometry,
   mullionGeo, transomGeo, finGeo, doorPillarGeo, doorLintelGeo, doorTrackGeo, doorGlassGeo, doorHandleGeo, DOOR_WIDTH
-} from "./DonutGeometries";
+} from "./FacilityGeometries";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_OUTER_RADIUS } from "./labFloorConstants";
 
 function Door({ radius, angle, id }: { radius: number, angle: number, id: string }) {
@@ -209,7 +209,7 @@ function Fins({ radius, count, yPos }: { radius: number, count: number, yPos: nu
   return <instancedMesh name="Ceiling_Fins" ref={meshRef} args={[finGeo, structuralMetalMaterial, count]} castShadow receiveShadow />;
 }
 
-export default function DonutWalls() {
+export default function FacilityWalls() {
   const wallHeight = 30;
   const yPos = DEFAULT_LAB_HUB.y + wallHeight / 2;
   const segments = [0, 1, 2, 3];

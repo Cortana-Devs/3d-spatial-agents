@@ -2,10 +2,10 @@ import * as THREE from "three";
 import {
   DEFAULT_LAB_HUB,
   DEFAULT_RING_OUTER_RADIUS,
-} from "@/components/world/donut/labFloorConstants";
+} from "@/components/world/facility/labFloorConstants";
 import type { GameInteractable } from "@/store/gameStoreTypes";
 
-/** Outer walk radius — matches DonutLabFurniture OUTER_WALK. */
+/** Outer walk radius — matches ResearchFacilityFurniture OUTER_WALK. */
 export const AGENT_POD_RING_RADIUS = DEFAULT_RING_OUTER_RADIUS - 6;
 
 /** Five pods evenly spaced (degrees). 0° = +Z in ring space (same as furniture). */

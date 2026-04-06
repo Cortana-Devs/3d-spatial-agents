@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { InteractableRegistry } from "./InteractableRegistry";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
-import { getZoneCenterPosition, getNearestBench } from "@/config/donutLabRoutines";
+import { getZoneCenterPosition, getNearestBench } from "@/config/researchFacilityRoutines";
 import { HearingBus } from "@/lib/SensorySystem";
 import { markAgentLlmSpeech, allowSubconsciousUtterance } from "@/lib/agentSpeechGate";
 import AIManager from "@/systems/AIManager";
@@ -394,7 +394,7 @@ export class AgentTaskQueue {
             const dist = innerR + Math.random() * (outerR - innerR);
             const theta = Math.random() * Math.PI * 2;
             // Custom-radius wandering (e.g. pacing) is relative to agent position;
-            // default donut-ring wandering is relative to world origin.
+            // default facility-ring wandering is relative to world origin.
             const cx = hasCustomRadius ? vehiclePos.x : 0;
             const cz = hasCustomRadius ? vehiclePos.z : 0;
             this.currentTask!.targetPos = new THREE.Vector3(

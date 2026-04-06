@@ -477,7 +477,7 @@ export default function ResearchDashboard() {
                 textAlign: 'center',
               }}
             >
-              No shared tasks. Scenario seeds appear when the Donut Lab loads;
+              No shared tasks. Scenario seeds appear when the Facility Lab loads;
               use Task Assignment (M) to add more.
             </div>
           ) : (

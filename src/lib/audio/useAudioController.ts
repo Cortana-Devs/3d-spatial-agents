@@ -14,7 +14,7 @@ import { DEFAULT_VOICE_SETTINGS, type PhonemeTiming } from "./voiceTypes";
 export type AudioState = "idle" | "fetching" | "speaking" | "error";
 
 /** Ordered list of synthesis backends tried per utterance. */
-type TierName = "gemini" | "piper" | "puter" | "webspeech";
+type TierName = "gemini" | "piper" | "googlecloud" | "webspeech";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TTS status broadcast  (consumed by StatusBar UI)
@@ -296,56 +296,29 @@ async function tierPiper(
   return { buffer, schedule: schedules };
 }
 
-/**
- * Puter.js injects a "Low Balance" / error dialog into document.body when an
- * API call fails. We suppress it with a MutationObserver that is active only
- * for the duration of the request, so nothing else is affected.
- */
-function suppressPuterDialogs(): () => void {
-  if (typeof document === "undefined") return () => {};
+/** Tier: Google Cloud TTS — high quality cloud backup, ~1-2s, 8s hard timeout. */
+async function tierGoogleCloud(text: string, voiceName: string = "en-US-Journey-F"): Promise<HTMLAudioElement> {
+  const response = await withTimeout(
+    fetch("/api/audio/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voiceName }),
+    }),
+    8_000,
+  );
 
-  const remove = (node: Node) => {
-    if (!(node instanceof HTMLElement)) return;
-    // Puter wraps the dialog in an overlay div; the content itself has
-    // .dialog-content. Match either the wrapper or the content directly.
-    const target =
-      node.querySelector?.(".dialog-content") ??
-      (node.classList?.contains("dialog-content") ? node : null);
-    if (target) {
-      // Remove the outermost injected container, not just the inner content
-      const root = target.closest("body > *:not(#__next)") ?? target;
-      try {
-        root.remove();
-      } catch {
-        /* already removed */
-      }
-    }
-  };
-
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      m.addedNodes.forEach(remove);
-    }
-  });
-
-  observer.observe(document.body, { childList: true, subtree: false });
-  return () => observer.disconnect();
-}
-
-/** Tier: Puter / OpenAI TTS — cloud backup, ~1-2s, 8s hard timeout. */
-async function tierPuter(text: string): Promise<HTMLAudioElement> {
-  const stopSuppressing = suppressPuterDialogs();
-  try {
-    const puter = (await import("@heyputer/puter.js")).default;
-    return await withTimeout<HTMLAudioElement>(
-      puter.ai.txt2speech(text, { provider: "openai", voice: "nova" }),
-      8_000,
-    );
-  } finally {
-    // Keep observer alive briefly so any dialog triggered by the failure
-    // response is still caught before we disconnect.
-    setTimeout(stopSuppressing, 300);
+  if (!response.ok) {
+    throw new Error(`Google TTS API returned ${response.status}`);
   }
+
+  const { audioContent } = await response.json();
+  if (!audioContent) {
+    throw new Error("No audio content returned from Google TTS API");
+  }
+
+  const el = new Audio(`data:audio/mp3;base64,${audioContent}`);
+  el.crossOrigin = "anonymous";
+  return el;
 }
 
 /**
@@ -385,12 +358,12 @@ function buildTierOrder(
   const base: TierName[] =
     backend === "local"
       ? hasPiper
-        ? ["piper", "gemini", "puter"]
-        : ["gemini", "puter"]
+        ? ["piper", "gemini", "googlecloud"]
+        : ["gemini", "googlecloud"]
       : // "google" — default: best quality first
         hasPiper
-        ? ["gemini", "piper", "puter"]
-        : ["gemini", "puter"];
+        ? ["gemini", "piper", "googlecloud"]
+        : ["gemini", "googlecloud"];
 
   return disableWebSpeech ? base : [...base, "webspeech"];
 }
@@ -507,7 +480,7 @@ export function useAudioController() {
       const TIER_LABELS: Record<TierName, string> = {
         gemini: "Gemini",
         piper: "Local Voice",
-        puter: "OpenAI",
+        googlecloud: "Google Cloud",
         webspeech: "Browser Voice",
       };
 
@@ -559,9 +532,9 @@ export function useAudioController() {
             return;
           }
 
-          // ── Puter / OpenAI ────────────────────────────────────────────────
-          if (tier === "puter") {
-            const el = await tierPuter(text);
+          // ── Google Cloud TTS ──────────────────────────────────────────────
+          if (tier === "googlecloud") {
+            const el = await tierGoogleCloud(text, voiceSettings.googleVoiceName);
             if (requestId !== reqIdRef.current) {
               globalSpeechLock = false;
               return;
@@ -600,7 +573,7 @@ export function useAudioController() {
 
           // If cloud tiers are failing, try to kick off Piper warmup for future
           if (
-            (tier === "gemini" || tier === "puter") &&
+            (tier === "gemini" || tier === "googlecloud") &&
             piperBase &&
             !globalPiperReady
           ) {

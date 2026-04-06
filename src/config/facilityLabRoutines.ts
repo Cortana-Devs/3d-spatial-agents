@@ -1,11 +1,11 @@
 /**
- * Donut Lab Routines
+ * Facility Lab Routines
  *
  * Single source of truth for zone positions, bench positions, and navigation
- * helpers for the Donut Research Lab world.
+ * helpers for the Facility Research Lab world.
  *
  * All zone positions are derived DYNAMICALLY from ZoneInfluenceSystem at runtime,
- * which is registered by DonutLabWorld.tsx on mount. This means world layout
+ * which is registered by ResearchFacilityWorld.tsx on mount. This means world layout
  * changes automatically propagate to agent navigation without touching this file.
  *
  * Replaces the old parkRoutines.ts (Guangming Science Park phantom zones).
@@ -16,7 +16,7 @@ import { ZoneInfluenceSystem } from "@/systems/ZoneInfluenceSystem";
 import { InteractableRegistry } from "@/systems/InteractableRegistry";
 
 // ============================================================================
-// Zone IDs — must match what DonutLabWorld.tsx registers in ZoneInfluenceSystem
+// Zone IDs — must match what ResearchFacilityWorld.tsx registers in ZoneInfluenceSystem
 // ============================================================================
 
 export const ALL_ZONE_IDS = [
@@ -64,7 +64,7 @@ export const SEMANTIC_LOCATION_MAP: Record<string, string> = {
 
 /**
  * Returns the world-space center Vector3 for a given zone ID.
- * Derives from ZoneInfluenceSystem to stay in sync with DonutLabWorld.tsx.
+ * Derives from ZoneInfluenceSystem to stay in sync with ResearchFacilityWorld.tsx.
  */
 export function getZoneCenterPosition(zoneId: string): THREE.Vector3 | null {
   const zone = ZoneInfluenceSystem.getZoneById(zoneId);
@@ -95,7 +95,7 @@ export function getRestPositionForZone(zoneId: string): THREE.Vector3 | null {
 
 /**
  * Returns the nearest bench/chair interactable to the given world position.
- * Queries InteractableRegistry so new benches added to DonutLabWorld.tsx
+ * Queries InteractableRegistry so new benches added to ResearchFacilityWorld.tsx
  * are automatically discovered.
  */
 export function getNearestBench(position: THREE.Vector3): THREE.Vector3 | null {

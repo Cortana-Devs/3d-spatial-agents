@@ -223,7 +223,7 @@ export default function Scene() {
         <Environment preset="city" />
         <BakeShadows />
 
-        {/* SceneWorldRoot dispatches to DonutLabWorld (via sceneWorldConfig "donut" mode) */}
+        {/* SceneWorldRoot dispatches to ResearchFacilityWorld (via sceneWorldConfig "facility" mode) */}
         <SceneWorldRoot />
 
         {/*

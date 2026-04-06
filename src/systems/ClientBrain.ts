@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { generateAgentThought } from "@/app/actions";
 import type { AgentContext, NearbyEntity } from "@/lib/agent-brain";
-import { ALL_ZONE_IDS, getNearestBench } from "@/config/donutLabRoutines";
-import { CLAIMABLE_DESK_IDS } from "@/config/donutLabDeskAssignments";
+import { ALL_ZONE_IDS, getNearestBench } from "@/config/researchFacilityRoutines";
+import { CLAIMABLE_DESK_IDS } from "@/config/researchFacilityDeskAssignments";
 import { SpatialMemory } from "@/lib/memory/SpatialMemory";
 
 export interface BrainState {

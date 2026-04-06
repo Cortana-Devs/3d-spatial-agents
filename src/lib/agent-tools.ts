@@ -57,7 +57,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "go_to",
       description:
-        "Walk to a specific position or named sector in the Donut Lab. Use sector IDs exclusively: 'center-park', 'fishing-dock', 'core-lab', 'data-analysis', 'break-room', 'conference-area', 'interior-ring', 'exterior-plaza'. Avoid raw coordinates if possible.",
+        "Walk to a specific position or named sector in the Facility Lab. Use sector IDs exclusively: 'center-park', 'fishing-dock', 'core-lab', 'data-analysis', 'break-room', 'conference-area', 'interior-ring', 'exterior-plaza'. Avoid raw coordinates if possible.",
       parameters: {
         type: "object",
         properties: {
@@ -341,7 +341,7 @@ export const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "claim_desk",
       description:
-        "Claim your personal desk in the Donut Lab (desk-east-0..3 or extra-table-A..D). Updates LAB ASSIGNMENTS in scenario and the visible desk label. Call when you want a home workstation.",
+        "Claim your personal desk in the Facility Lab (desk-east-0..3 or extra-table-A..D). Updates LAB ASSIGNMENTS in scenario and the visible desk label. Call when you want a home workstation.",
       parameters: {
         type: "object",
         properties: {

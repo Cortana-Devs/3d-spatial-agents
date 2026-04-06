@@ -75,7 +75,7 @@ class NavigationNetwork {
   // Agent's physical bounding radius is 1.0.
   private padding: number = 0.8;
 
-  // World bounds (from Donut Research Lab: 160 max radius)
+  // World bounds (from Facility Research Lab: 160 max radius)
   private minX: number = -160;
   private maxX: number = 160;
   private minZ: number = -160;
@@ -172,7 +172,7 @@ class NavigationNetwork {
       }
     }
 
-    if (SCENE_WORLD_MODE === "minimal" || SCENE_WORLD_MODE === "donut") {
+    if (SCENE_WORLD_MODE === "minimal" || SCENE_WORLD_MODE === "facility") {
       // Carve the center park pond from the nav grid
       this.carveCircularVoid(
         DEFAULT_LAB_HUB.x,
@@ -181,7 +181,7 @@ class NavigationNetwork {
       );
     }
 
-    if (SCENE_WORLD_MODE === "donut") {
+    if (SCENE_WORLD_MODE === "facility") {
       // Also block everything OUTSIDE the outer glass wall (r > 94)
       // This stops agents from being routed out of the building entirely.
       this.carveOuterVoid(DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.z, 94);
@@ -290,7 +290,7 @@ class NavigationNetwork {
     }
   }
 
-  /** Block grid cells whose centers lie inside the hole (minimal donut world). */
+  /** Block grid cells whose centers lie inside the hole (minimal facility world). */
   private carveCircularVoid(cx: number, cz: number, radius: number): void {
     const r2 = radius * radius;
     for (let row = 0; row < this.rows; row++) {

@@ -2,7 +2,7 @@ import React, { useMemo, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, extend } from "@react-three/fiber";
 import { shaderMaterial } from "@react-three/drei";
-import { pondBottomMat } from "./DonutMaterials";
+import { pondBottomMat } from "./FacilityMaterials";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, ENV_PROP_SCALE_FACTOR } from "./labFloorConstants";
 import { useGameStore } from "@/store/gameStore";
 
@@ -59,7 +59,7 @@ import {
   armRestGeo,
   fishBodyGeo,
   fishTailGeo,
-} from "./DonutGeometries";
+} from "./FacilityGeometries";
 import {
   grassMaterial as grassMat,
   trunkMat,
@@ -72,7 +72,7 @@ import {
   pathMat,
   benchWoodMat,
   benchMetalMat,
-} from "./DonutMaterials";
+} from "./FacilityMaterials";
 
 const benchWidth = 1.6;
 const MAX_BENCH_INSTANCES = 8;
@@ -618,7 +618,7 @@ function PondCollision() {
   );
 }
 
-export default function DonutCenterPark({ benchData, treeData }: { benchData: any[], treeData: any[] }) {
+export default function FacilityCenterPark({ benchData, treeData }: { benchData: any[], treeData: any[] }) {
   const pathGeo = useMemo(() => {
     const steps = 200;
     const baseWidth = 0.9; // Base width of path

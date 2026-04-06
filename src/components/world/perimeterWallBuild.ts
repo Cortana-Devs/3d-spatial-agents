@@ -85,7 +85,7 @@ export function buildFloorPerimeterWalls(
   return { segments, obstacles };
 }
 
-export interface DonutOuterWallParams {
+export interface FacilityOuterWallParams {
   hubCenter: { x: number; y: number; z: number };
   /** Outer edge of the walkable floor ring; wall sits just outside this radius. */
   outerRadius: number;
@@ -97,8 +97,8 @@ export interface DonutOuterWallParams {
 /**
  * Faceted outer wall only (no inner cylinder). Segments lie on a circle through wall centers.
  */
-export function buildDonutOuterWallSegments(
-  p: DonutOuterWallParams,
+export function buildFacilityOuterWallSegments(
+  p: FacilityOuterWallParams,
 ): { segments: FloorWallSegment[]; obstacles: Obstacle[] } {
   const {
     hubCenter,

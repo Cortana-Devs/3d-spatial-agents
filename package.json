@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@google/genai": "^1.46.0",
-    "@heyputer/puter.js": "^2.2.14",
     "@huggingface/transformers": "^3.8.1",
     "@libsql/client": "^0.17.2",
     "@react-three/cannon": "^6.6.0",
@@ -45,5 +44,10 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "overrides": {
+      "three-mesh-bvh": "^0.9.9"
+    }
   }
 }

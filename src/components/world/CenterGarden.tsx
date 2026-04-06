@@ -132,7 +132,7 @@ export interface CenterGardenProps {
 }
 
 /**
- * Organic garden filling the donut's center void.
+ * Organic garden filling the facility's center void.
  * No collision registration — navigation already blocks this zone.
  * Performance: all repeated elements use InstancedMesh (one draw call each).
  */

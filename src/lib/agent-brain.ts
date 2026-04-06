@@ -66,16 +66,20 @@ export async function processAgentThought(
           .join("\n")
       : "No entities nearby.";
 
+  const overrideBlock = context.personality?.systemPromptOverride
+    ? `\n\n## SYSTEM OVERRIDE PROTOCOL (High Priority):\n${context.personality.systemPromptOverride}\n`
+    : "";
+
   const personalityBlock = context.personality
-    ? `You are **${context.personality.name}**, ${context.personality.trait}. ${context.personality.bio} You are a high-value researcher at the Donut Research Lab. Speak in a ${context.personality.speechStyle} style.`
-    : `You are an intelligent agent in the Donut Research Lab, a circular research facility with a garden at its center and specialized lab sectors around the ring.`;
+    ? `You are **${context.personality.name}**, ${context.personality.trait}. ${context.personality.bio} You are a high-value researcher at the Facility Research Lab. Speak in a ${context.personality.speechStyle} style.${overrideBlock}`
+    : `You are an intelligent agent in the Facility Research Lab, a circular research facility with a garden at its center and specialized lab sectors around the ring.`;
 
   const prompt = `
-You are ${context.personality?.name ?? "an agent"} — ${context.personality?.trait ?? "a researcher"} — at the Donut Research Lab.
+You are ${context.personality?.name ?? "an agent"} — ${context.personality?.trait ?? "a researcher"} — at the Facility Research Lab.
 ${personalityBlock}
 
-## Your Environment (The Donut Ring)
-The Donut Lab is a recursive circular ring subdivided into 8 semantic sectors. You navigate primarily between these sectors.
+## Your Environment (The Facility Ring)
+The Facility Lab is a recursive circular ring subdivided into 8 semantic sectors. You navigate primarily between these sectors.
 **Available Point-of-Interest (POI) IDs for 'go_to' or 'contemplate':**
 - 'center-park' (Zen Garden / Pond)
 - 'fishing-dock' (Waterfall / Wooden Dock)
@@ -168,8 +172,8 @@ ${TOOL_CATALOG_FOR_PROMPT}
       const client = getGroqClient();
 
       const systemBase = context.personality
-        ? `You are ${context.personality.name}, ${context.personality.trait} in the Donut Research Lab. You have full access to the tool catalog in the user message (manipulation, movement, say/message_agent/announce, claim_desk, claim_task, release_task, collaborate, etc.). Use tools to act; speak only when it adds information, asks something, or coordinates — avoid repetitive filler. Tone: ${context.personality.speechStyle}. 1–3 tool calls max per turn.`
-        : "You are an intelligent agent in the Donut Research Lab with the full tool catalog in the user message. Use tools deliberately; speak with purpose, not repetitive monologue. 1–3 tool calls max per turn.";
+        ? `You are ${context.personality.name}, ${context.personality.trait} in the Facility Research Lab. You have full access to the tool catalog in the user message (manipulation, movement, say/message_agent/announce, claim_desk, claim_task, release_task, collaborate, etc.). Use tools to act; speak only when it adds information, asks something, or coordinates — avoid repetitive filler. Tone: ${context.personality.speechStyle}. 1–3 tool calls max per turn.`
+        : "You are an intelligent agent in the Facility Research Lab with the full tool catalog in the user message. Use tools deliberately; speak with purpose, not repetitive monologue. 1–3 tool calls max per turn.";
 
       const messages: ChatCompletionMessageParam[] = [
         {

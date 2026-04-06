@@ -1,9 +1,9 @@
 import React from "react";
-import { interiorFloorGeometry, exteriorPlazaGeometry } from "./DonutGeometries";
-import { floorMaterial, concreteMaterial } from "./DonutMaterials";
+import { interiorFloorGeometry, exteriorPlazaGeometry } from "./FacilityGeometries";
+import { floorMaterial, concreteMaterial } from "./FacilityMaterials";
 import { DEFAULT_LAB_HUB } from "./labFloorConstants";
 
-export default function DonutFloor() {
+export default function FacilityFloor() {
   return (
     <group>
       {/* Base ground slab to prevent falling off edge of plaza */}

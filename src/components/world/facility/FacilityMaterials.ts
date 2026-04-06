@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { TextureGenerator } from "./DonutTextureGenerator";
+import { TextureGenerator } from "./FacilityTextureGenerator";
 
 // Elite Performance: Instantiate materials exactly once globally.
 // This avoids memory leaks and garbage collection stutters during React re-renders.

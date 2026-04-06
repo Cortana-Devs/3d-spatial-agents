@@ -140,6 +140,8 @@ export interface AgentSlice {
   personalDeskByAgent: Record<string, string>;
   setPersonalDesk: (agentId: string, deskId: string) => void;
   seedDefaultPersonalDesks: (agentIds: string[]) => void;
+  agentPromptOverrides: Record<string, string>;
+  setAgentPromptOverride: (id: string, prompt: string) => void;
 
   // --- Research Management ---
   activeResearchAgents: ResearchAgent[];

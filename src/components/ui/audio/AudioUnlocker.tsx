@@ -53,19 +53,8 @@ export function AudioUnlocker() {
 
     events.forEach((e) => document.addEventListener(e, resumeAll));
 
-    // Add Puter script support - if Puter.js is loaded later, it might create its own context
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === "childList") {
-          // Potential for Puter logic here if needed
-        }
-      });
-    });
-    observer.observe(document.head, { childList: true });
-
     return () => {
       events.forEach((e) => document.removeEventListener(e, resumeAll));
-      observer.disconnect();
     };
   }, []);
 

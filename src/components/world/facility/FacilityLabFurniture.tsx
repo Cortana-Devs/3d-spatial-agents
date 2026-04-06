@@ -1,5 +1,5 @@
 /**
- * DonutLabFurniture — Research lab equipment distributed around the donut ring.
+ * ResearchFacilityFurniture — Research lab equipment distributed around the facility ring.
  *
  * The walkable ring spans from inner radius ~40 to outer radius ~93.
  * Furniture is placed at the midpoint of the ring (~66) and oriented
@@ -118,7 +118,52 @@ function DeskClaimLabel({
   );
 }
 
-export default function DonutLabFurniture() {
+function ServiceCounter({ position, rotation, userData, children }: any) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]} userData={userData}>
+      {/* Main Base Desk */}
+      <mesh position={[0, 2.0, 0]} castShadow receiveShadow>
+        <boxGeometry args={[9, 4.0, 4]} />
+        <meshStandardMaterial color="#2c3038" />
+      </mesh>
+      {/* Wooden Desktop */}
+      <mesh position={[0, 4.05, 0]} castShadow receiveShadow>
+        <boxGeometry args={[9.2, 0.1, 4.2]} />
+        <meshStandardMaterial color="#554433" />
+      </mesh>
+      {/* Elevated Transaction Shelf facing user (user stands at z < 0 relative to desk, or z > 0?) 
+          Desks face center (rotation = faceCenter). Wait, faceCenter means local +Z points to the center.
+          The user walks on the inner ring (which is towards center). 
+          So the glass/shelf should be at local +Z or -Z? 
+          Wait, OfficeChair is at `MID_RING - 1`, desk is at `MID_RING + 6`. So the chair is *closer to the center*.
+          So the agent sits closer to the center, facing outward. Wait, no.
+          The chair is at `MID_RING - 1` with rotation `faceOutward`. It faces the desk.
+          The desk is at `MID_RING + 6` with rotation `faceCenter`. It faces the chair.
+          So the user walks up behind the *chair*. Wait, the inner walk is radius 42. Men walk there. The desk is at 72.
+          This means the chair is between the desk and the inner walk. 
+          Actually, we want the counters to face the walkway. That means the player approaches the desk. 
+          Let's put the glass at the player side. 
+          Player side for desk facing center is local +Z (the front of the desk). */}
+      <mesh position={[0, 4.6, 1.2]} castShadow receiveShadow>
+        <boxGeometry args={[9.2, 0.2, 1.5]} />
+        <meshStandardMaterial color="#91a2af" />
+      </mesh>
+      {/* Protective Glass Partition */}
+      <mesh position={[0, 5.8, 1.2]} castShadow>
+        <boxGeometry args={[9.0, 2.5, 0.1]} />
+        <meshStandardMaterial color="#ffffff" transparent opacity={0.2} roughness={0.05} />
+      </mesh>
+      {/* Glass frame base */}
+      <mesh position={[0, 4.7, 1.2]} castShadow receiveShadow>
+        <boxGeometry args={[9.2, 0.1, 0.2]} />
+        <meshStandardMaterial color="#111111" />
+      </mesh>
+      {children}
+    </group>
+  );
+}
+
+export default function ResearchFacilityFurniture() {
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTOR ANGLES (using radians, 0 = +Z axis, clockwise).
   // Doors are at 0, π/2, π, 3π/2, so we place furniture BETWEEN doors.
@@ -161,7 +206,7 @@ export default function DonutLabFurniture() {
   ];
 
   return (
-    <group name="DonutLabFurniture">
+    <group name="ResearchFacilityFurniture">
       <AgentPodsGroup />
 
       {/* ════════════════════════════════════════════════════════════════════ */}
@@ -436,55 +481,81 @@ export default function DonutLabFurniture() {
 
       {deskAngles.map((angle, i) => {
         const deskPos = ringPos(angle, MID_RING + 6);
+        const isCounter = i >= 2;
         const emailDesk = i === 0 || i === 2;
+        const deskId = `desk-east-${i}`;
+        const name = isCounter
+          ? i === 2 ? "Bank Teller Counter" : "Insurance Desk"
+          : `Research Desk ${String.fromCharCode(65 + i)}`;
+        
+        const content = (
+          <>
+            <Laptop
+              position={isCounter ? [2.2, 4.12, -0.5] : [2.2, 4.12, 0.5]}
+              rotation={Math.PI}
+              screenVariant={emailDesk ? "email" : "fault"}
+              userData={{
+                type: "Prop",
+                id: `${deskId}-laptop`,
+                name: "Workstation terminal",
+                interactable: true,
+                pickable: true,
+                objectType: "laptop",
+              }}
+            />
+            <FileFolder
+              position={isCounter ? [-3.0, 4.1, -0.8] : [-3.0, 4.1, 0.8]}
+              rotation={0.15}
+              color="blue"
+              userData={{
+                type: "Prop",
+                id: `${deskId}-sop`,
+                name: isCounter ? "Client Forms" : "Research Notes",
+                interactable: true,
+                pickable: true,
+                objectType: "file",
+              }}
+            />
+          </>
+        );
+
         return (
           <group key={`desk-east-${i}`}>
-            <OfficeDesk
-              position={deskPos}
-              rotation={faceCenter(angle)}
-              userData={{
-                type: "Furniture",
-                id: `desk-east-${i}`,
-                name: `Research Desk ${String.fromCharCode(65 + i)}`,
-                interactable: true,
-              }}
-            >
-              <Laptop
-                position={[2.2, 4.12, 0.5]}
-                rotation={Math.PI}
-                screenVariant={emailDesk ? "email" : "fault"}
+            {isCounter ? (
+              <ServiceCounter
+                position={deskPos}
+                rotation={faceCenter(angle)}
                 userData={{
-                  type: "Prop",
-                  id: `desk-east-${i}-laptop`,
-                  name: emailDesk
-                    ? "Workstation — Email & tasks"
-                    : "Workstation — System fault",
+                  type: "Furniture",
+                  id: deskId,
+                  name: name,
                   interactable: true,
-                  pickable: true,
-                  objectType: "laptop",
                 }}
-              />
-              <FileFolder
-                position={[-3.0, 4.1, 0.8]}
-                rotation={0.15}
-                color="blue"
+              >
+                {content}
+              </ServiceCounter>
+            ) : (
+              <OfficeDesk
+                position={deskPos}
+                rotation={faceCenter(angle)}
                 userData={{
-                  type: "Prop",
-                  id: `desk-east-${i}-sop`,
-                  name: "Research Notes",
+                  type: "Furniture",
+                  id: deskId,
+                  name: name,
                   interactable: true,
-                  pickable: true,
-                  objectType: "file",
                 }}
-              />
-            </OfficeDesk>
+              >
+                {content}
+              </OfficeDesk>
+            )}
+
             <DeskClaimLabel
-              deskId={`desk-east-${i}`}
+              deskId={deskId}
               x={deskPos[0]}
               y={cy}
               z={deskPos[2]}
               rotationY={faceCenter(angle)}
-              prefix={`Desk ${String.fromCharCode(65 + i)}`}
+              prefix={isCounter ? "Service Counter" : `Desk ${String.fromCharCode(65 + i)}`}
             />
             <OfficeChair
               id={`chair-east-${i}`}
@@ -493,7 +564,7 @@ export default function DonutLabFurniture() {
               userData={{
                 type: "Furniture",
                 id: `chair-east-${i}`,
-                name: `Research Chair ${String.fromCharCode(65 + i)}`,
+                name: isCounter ? "Teller Chair" : `Research Chair ${String.fromCharCode(65 + i)}`,
               }}
             />
           </group>
@@ -514,19 +585,19 @@ export default function DonutLabFurniture() {
         rotation={faceCenter(mgrAngle)}
         userData={{
           type: "Furniture",
-          id: "desk-supervisor-donut",
+          id: "desk-supervisor-facility",
           name: "Supervisor Desk",
         }}
-        initialItemsLeft={["file-supervisor-donut"]}
-        initialItemsMid={["laptop-supervisor-donut"]}
-        initialItemsRight={["pendrive-supervisor-donut"]}
+        initialItemsLeft={["file-supervisor-facility"]}
+        initialItemsMid={["laptop-supervisor-facility"]}
+        initialItemsRight={["pendrive-supervisor-facility"]}
       >
         <FileFolder
           position={[-5, 4.1, -2]}
           color="blue"
           userData={{
             type: "Prop",
-            id: "file-supervisor-donut",
+            id: "file-supervisor-facility",
             name: "Grant Proposal Dossier",
             interactable: true,
             pickable: true,
@@ -538,7 +609,7 @@ export default function DonutLabFurniture() {
           rotation={-Math.PI}
           userData={{
             type: "Prop",
-            id: "laptop-supervisor-donut",
+            id: "laptop-supervisor-facility",
             name: "Supervisor Workstation",
             interactable: true,
             pickable: true,
@@ -550,7 +621,7 @@ export default function DonutLabFurniture() {
           rotation={0.3}
           userData={{
             type: "Prop",
-            id: "pendrive-supervisor-donut",
+            id: "pendrive-supervisor-facility",
             name: "USB Drive",
             interactable: true,
             pickable: true,
@@ -562,7 +633,7 @@ export default function DonutLabFurniture() {
           rotation={Math.PI / 2}
           userData={{
             type: "Prop",
-            id: "phone-supervisor-donut",
+            id: "phone-supervisor-facility",
             name: "Desk Telephone",
             interactable: true,
             objectType: "telephone",
@@ -570,12 +641,12 @@ export default function DonutLabFurniture() {
         />
       </ManagersDesk>
       <OfficeChair
-        id="chair-supervisor-donut"
+        id="chair-supervisor-facility"
         position={ringPos(mgrAngle, MID_RING - 5)}
         rotation={faceOutward(mgrAngle)}
         userData={{
           type: "Furniture",
-          id: "chair-supervisor-donut",
+          id: "chair-supervisor-facility",
           name: "Supervisor Chair",
         }}
       />
@@ -610,11 +681,11 @@ export default function DonutLabFurniture() {
         rotation={faceCenter(mgrAngle)}
         userData={{
           type: "Furniture",
-          id: "rack-supervisor-donut",
+          id: "rack-supervisor-facility",
           name: "Supervisor Archive Rack",
           interactable: true,
         }}
-        initialItems={["flower-supervisor-donut"]}
+        initialItems={["flower-supervisor-facility"]}
         initialItemsMiddle={["archive-box-d1", "archive-box-d2"]}
       >
         <FileFolder
@@ -647,7 +718,7 @@ export default function DonutLabFurniture() {
           position={[0, 4.2, 0]}
           userData={{
             type: "Prop",
-            id: "flower-supervisor-donut",
+            id: "flower-supervisor-facility",
             name: "Supervisor Flower Pot",
             interactable: true,
           }}
@@ -688,7 +759,7 @@ export default function DonutLabFurniture() {
         rotation={faceCenter((breakAngle1 + breakAngle2) / 2)}
         userData={{
           type: "Furniture",
-          id: "tv-break-donut",
+          id: "tv-break-facility",
           name: "Break Room TV",
           interactable: true,
           description: "A large flat screen TV.",
@@ -700,16 +771,16 @@ export default function DonutLabFurniture() {
         position={ringPos(breakAngle1 - 0.20, MID_RING + 14)}
         userData={{
           type: "Furniture",
-          id: "coffee-station-donut-v2",
+          id: "coffee-station-facility-v2",
           name: "Coffee Station",
         }}
-        initialItems={["coffee-machine-donut-v2", "cup-coffee-donut-v2"]}
+        initialItems={["coffee-machine-facility-v2", "cup-coffee-facility-v2"]}
       >
         <CoffeeMachine
           position={[0, 4, 0]}
           userData={{
             type: "Prop",
-            id: "coffee-machine-donut-v2",
+            id: "coffee-machine-facility-v2",
             name: "Coffee Machine",
             interactable: true,
             description: "Brew a fresh cup of coffee.",
@@ -720,7 +791,7 @@ export default function DonutLabFurniture() {
           position={[2, 4.1, 0.5]}
           userData={{
             type: "Prop",
-            id: "cup-coffee-donut-v2",
+            id: "cup-coffee-facility-v2",
             name: "Coffee Cup",
             interactable: true,
             pickable: true,
@@ -732,13 +803,13 @@ export default function DonutLabFurniture() {
       {/* Storage Cupboards — spread along the west arc */}
       {storageAngles.map((angle, i) => (
         <CupboardUnit
-          key={`cupboard-donut-${i}`}
+          key={`cupboard-facility-${i}`}
           position={ringPos(angle, OUTER_WALK - 2)}
           rotation={faceCenter(angle)}
           label={(i + 1).toString()}
           userData={{
             type: "Furniture",
-            id: `cupboard-donut-${i + 1}`,
+            id: `cupboard-facility-${i + 1}`,
             name: `Storage Cupboard ${i + 1}`,
           }}
           levelInitialItems={

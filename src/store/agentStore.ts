@@ -3,8 +3,8 @@ import { useShallow } from "zustand/react/shallow";
 import type { StateCreator } from "zustand";
 import {
   DEFAULT_AGENT_DESK,
-  buildDonutLabScenarioContext,
-} from "@/config/donutLabDeskAssignments";
+  buildResearchFacilityScenarioContext,
+} from "@/config/facilityLabDeskAssignments";
 import type { AgentSlice, GameState, ResearchAgent } from "./gameStoreTypes";
 
 export const createAgentSlice: StateCreator<
@@ -63,7 +63,7 @@ export const createAgentSlice: StateCreator<
         personalDeskByAgent,
         agentScenarioContext: {
           ...state.agentScenarioContext,
-          [agentId]: buildDonutLabScenarioContext(agentId, personalDeskByAgent),
+          [agentId]: buildResearchFacilityScenarioContext(agentId, personalDeskByAgent),
         },
       };
     }),
@@ -77,13 +77,19 @@ export const createAgentSlice: StateCreator<
       }
       const scenario = { ...state.agentScenarioContext };
       for (const id of agentIds) {
-        scenario[id] = buildDonutLabScenarioContext(id, next);
+        scenario[id] = buildResearchFacilityScenarioContext(id, next);
       }
       return {
         personalDeskByAgent: next,
         agentScenarioContext: scenario,
       };
     }),
+
+  agentPromptOverrides: {},
+  setAgentPromptOverride: (id, prompt) =>
+    set((state) => ({
+      agentPromptOverrides: { ...state.agentPromptOverrides, [id]: prompt },
+    })),
 
   activeResearchAgents: [
     {
@@ -103,6 +109,24 @@ export const createAgentSlice: StateCreator<
       thoughtHistory: [],
       currentTask: "None",
       spawnPosition: [-22, 5.0, 48],
+    },
+    {
+      id: "agent-03",
+      name: "Bank Teller",
+      color: "#00ff88", // Mint green
+      status: "IDLE",
+      thoughtHistory: [],
+      currentTask: "None",
+      spawnPosition: [2, 5.0, 52], 
+    },
+    {
+      id: "agent-04",
+      name: "Insurance Officer",
+      color: "#ff9500", // Amber
+      status: "IDLE",
+      thoughtHistory: [],
+      currentTask: "None",
+      spawnPosition: [8, 5.0, 42],
     }
   ],
 
@@ -134,7 +158,7 @@ export const createAgentSlice: StateCreator<
     }
     const agentScenarioContext = {
       ...state.agentScenarioContext,
-      [newAgent.id]: buildDonutLabScenarioContext(
+      [newAgent.id]: buildResearchFacilityScenarioContext(
         newAgent.id,
         personalDeskByAgent,
       ),
