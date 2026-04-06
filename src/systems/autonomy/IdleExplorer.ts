@@ -3,7 +3,7 @@ import { memoryStorage } from "@/lib/memory/idb-adapter";
 import {
   getZoneCenterPosition,
   ZONE_NAMES,
-} from "@/config/researchFacilityRoutines";
+} from "@/config/facilityLabRoutines";
 import { InterestMap } from "@/store/InterestMap";
 import type { WalkPace } from "@/types/agent";
 

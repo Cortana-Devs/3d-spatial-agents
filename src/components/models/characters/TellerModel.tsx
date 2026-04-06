@@ -11,11 +11,9 @@ const ARMOR_COLOR = "#f8fafc"; // Premium glossy white
 const ACCENT_COLOR = "#94a3b8"; // Light metallic accent
 const JOINT_COLOR = "#0f172a"; // Deep carbon/metallic
 const VISOR_COLOR = "#000000"; // Pitch black glass
-const EMISSIVE_COLOR = "#0ea5e9"; // Cyan glow
+const EMISSIVE_COLOR = "#10b981"; // Emerald green
 
-
-
-export default React.memo(function RobotModel({
+export default React.memo(function TellerModel({
   joints,
   analyser,
   id,
@@ -66,16 +64,37 @@ export default React.memo(function RobotModel({
       toneMapped: false,
     });
 
+    const fabricNavy = new THREE.MeshStandardMaterial({
+      color: "#1e3a8a", // Deep navy blue for bank vest
+      roughness: 0.9,
+      metalness: 0.05,
+    });
+    
+    const tieMat = new THREE.MeshStandardMaterial({
+      color: "#10b981", // Emerald green tie matching eyes
+      roughness: 0.4,
+      metalness: 0.2,
+    });
+    
+    const headsetMat = new THREE.MeshStandardMaterial({
+      color: "#334155", // Slate for headset
+      roughness: 0.3,
+      metalness: 0.8,
+    });
+
     return { 
       armorMat: armor, 
       accentMat: accent, 
       jointMat: joint, 
       visorMat: visor, 
-      emissiveMat: emissive 
+      emissiveMat: emissive,
+      fabricNavy,
+      tieMat,
+      headsetMat
     };
   }, [tintColor]);
 
-  const { armorMat, accentMat, jointMat, visorMat, emissiveMat } = mats;
+  const { armorMat, accentMat, jointMat, visorMat, emissiveMat, fabricNavy, tieMat, headsetMat } = mats;
 
   useLayoutEffect(() => {
     if (logoTexture) {
@@ -307,16 +326,36 @@ export default React.memo(function RobotModel({
                 />
               </Decal>
             </RoundedBox>
+            {/* Bank Teller Corporate Vest overlays */}
             <RoundedBox
-              position={[0, -0.02, 0.08]}
-              args={[0.1, 0.005, 0.01]}
-              radius={0.002}
+              position={[0, 0.06, 0.01]}
+              args={[0.33, 0.23, 0.16]}
+              radius={0.06}
               smoothness={4}
-              material={emissiveMat}
+              material={fabricNavy}
               castShadow
               receiveShadow
             />
-
+            {/* V-neck cut of the vest */}
+            <mesh position={[0, 0.12, 0.091]} rotation={[0, 0, Math.PI / 4]} castShadow material={armorMat}>
+              <boxGeometry args={[0.18, 0.18, 0.02]} />
+            </mesh>
+            
+            {/* Elegant 3D Tie */}
+            <group position={[0, 0.11, 0.095]}>
+              {/* Tie Knot */}
+              <mesh castShadow receiveShadow material={tieMat}>
+                <coneGeometry args={[0.025, 0.04, 4]} />
+              </mesh>
+              {/* Tie Body */}
+              <mesh position={[0, -0.09, 0.005]} rotation={[0.05, 0, 0]} castShadow receiveShadow material={tieMat}>
+                <boxGeometry args={[0.035, 0.15, 0.015]} />
+              </mesh>
+              {/* Tie Bottom */}
+              <mesh position={[0, -0.175, 0.013]} rotation={[0, 0, Math.PI / 4]} castShadow receiveShadow material={tieMat}>
+                <boxGeometry args={[0.025, 0.025, 0.015]} />
+              </mesh>
+            </group>
 
             {/* Neck & Head */}
             <group ref={neckRef} position={[0, 0.22, 0]}>
@@ -374,6 +413,23 @@ export default React.memo(function RobotModel({
                   animationState={animationState}
                   mats={mats}
                 />
+                
+                {/* Banking Customer Service Headset */}
+                <group position={[0.1, 0, 0]}>
+                  {/* Earpiece */}
+                  <mesh position={[0.01, 0.02, 0]} material={headsetMat} castShadow>
+                    <cylinderGeometry args={[0.03, 0.03, 0.015, 16]} />
+                  </mesh>
+                  {/* Boom Microphone */}
+                  <mesh position={[0.01, -0.01, 0.04]} rotation={[0.3, 0, 0]} material={headsetMat} castShadow>
+                    <cylinderGeometry args={[0.004, 0.004, 0.08, 8]} />
+                  </mesh>
+                  {/* Mic Tip */}
+                  <mesh position={[0.01, -0.045, 0.075]} material={tieMat}>
+                    <sphereGeometry args={[0.008, 8, 8]} />
+                  </mesh>
+                </group>
+
                 <LedMouth position={[0, -0.035, 0.076]} analyser={analyser} />
               </group>
             </group>

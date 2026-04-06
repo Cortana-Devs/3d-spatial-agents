@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { InteractableRegistry } from "./InteractableRegistry";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
-import { getZoneCenterPosition, getNearestBench } from "@/config/researchFacilityRoutines";
+import { getZoneCenterPosition, getNearestBench } from "@/config/facilityLabRoutines";
 import { HearingBus } from "@/lib/SensorySystem";
 import { markAgentLlmSpeech, allowSubconsciousUtterance } from "@/lib/agentSpeechGate";
 import AIManager from "@/systems/AIManager";

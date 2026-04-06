@@ -93,6 +93,15 @@ function CameraRig({
 
   const raycaster = useRef(new THREE.Raycaster());
 
+  // Preallocate ALL reusable objects — eliminates ~420 GC allocations/sec
+  const _robotHead = useRef(new THREE.Vector3());
+  const _forward = useRef(new THREE.Vector3());
+  const _idealPos = useRef(new THREE.Vector3());
+  const _quat = useRef(new THREE.Quaternion());
+  const _euler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
+  const _offset = useRef(new THREE.Vector3());
+  const _direction = useRef(new THREE.Vector3());
+
   useFrame(() => {
     let currentTarget = target.current;
     let isInspecting = false;
@@ -109,44 +118,44 @@ function CameraRig({
 
     if (!currentTarget) return;
 
-    // Head position (Pivot point)
-    const robotHead = currentTarget.position
-      .clone()
-      .add(new THREE.Vector3(0, 5.5, 0));
+    // Head position (Pivot point) — zero allocations
+    const robotHead = _robotHead.current;
+    robotHead.copy(currentTarget.position);
+    robotHead.y += 5.5;
 
     if (isInspecting) {
-      const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(
+      const forward = _forward.current.set(0, 0, 1).applyQuaternion(
         currentTarget.quaternion,
       );
-      const idealPos = robotHead
-        .clone()
-        .add(forward.multiplyScalar(8.0))
-        .add(new THREE.Vector3(0, 1.5, 0));
+      const idealPos = _idealPos.current
+        .copy(robotHead)
+        .add(forward.multiplyScalar(8.0));
+      idealPos.y += 1.5;
 
       camera.position.lerp(idealPos, 0.1);
       camera.lookAt(robotHead);
       return;
     }
 
-    const quat = new THREE.Quaternion();
-    quat.setFromEuler(
-      new THREE.Euler(
-        cameraState.current.pitch,
-        cameraState.current.yaw,
-        0,
-        "YXZ",
-      ),
+    const quat = _quat.current;
+    const euler = _euler.current;
+    euler.set(
+      cameraState.current.pitch,
+      cameraState.current.yaw,
+      0,
+      "YXZ",
     );
+    quat.setFromEuler(euler);
 
-    // Define Offset (Right 2.5, Up 0.5, Back 12.0)
-    const offset = new THREE.Vector3(2.5, 0.5, 12.0);
+    // Define Offset (Right 2.5, Up 0.5, Back 12.0) — reuse ref
+    const offset = _offset.current.set(2.5, 0.5, 12.0);
     offset.applyQuaternion(quat);
 
-    // Ideal Position
-    const idealPos = robotHead.clone().add(offset);
+    // Ideal Position — reuse ref
+    const idealPos = _idealPos.current.copy(robotHead).add(offset);
 
-    // Collision Detection
-    const direction = idealPos.clone().sub(robotHead);
+    // Collision Detection — reuse ref
+    const direction = _direction.current.copy(idealPos).sub(robotHead);
     const distanceToIdeal = direction.length();
     direction.normalize();
 

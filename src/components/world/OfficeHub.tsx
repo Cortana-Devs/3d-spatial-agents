@@ -107,9 +107,31 @@ export default function ResearchLabHub() {
     nextSlotIndex: 0,
   });
 
-  const { materials } = useMemo(() => {
+  const { materials, labMats } = useMemo(() => {
     const mats = createMaterials();
-    return { materials: mats };
+    // Hoist inline materials — eliminates per-reconcile shader compilations
+    const windowGlass = new THREE.MeshPhysicalMaterial({
+      color: 0xc0dff0,
+      metalness: 0,
+      roughness: 0,
+      transmission: 0.92,
+      transparent: true,
+      thickness: 0.5,
+    });
+    const tubeRackMat = new THREE.MeshStandardMaterial({ color: "#d0d4e0" });
+    const tubeSampleMat = new THREE.MeshStandardMaterial({ color: "#5cc0ff" });
+    const analyzerBodyMat = new THREE.MeshStandardMaterial({ color: "#f5f5f5" });
+    const analyzerScreenMat = new THREE.MeshStandardMaterial({
+      color: "#202531",
+      emissive: "#102040",
+      emissiveIntensity: 0.4,
+    });
+    const projectorWhiteMat = new THREE.MeshStandardMaterial({ color: "#fff" });
+    const projectorLensMat = new THREE.MeshStandardMaterial({ color: "#222" });
+    return {
+      materials: mats,
+      labMats: { windowGlass, tubeRackMat, tubeSampleMat, analyzerBodyMat, analyzerScreenMat, projectorWhiteMat, projectorLensMat },
+    };
   }, []);
 
   // --- BUILDING GENERATION ---
@@ -483,14 +505,7 @@ export default function ResearchLabHub() {
             <primitive
               object={
                 w.isWindow
-                  ? new THREE.MeshPhysicalMaterial({
-                    color: 0xc0dff0,
-                    metalness: 0,
-                    roughness: 0,
-                    transmission: 0.92,
-                    transparent: true,
-                    thickness: 0.5,
-                  })
+                  ? labMats.windowGlass
                   : materials.concrete
               }
               attach="material"
@@ -613,7 +628,7 @@ export default function ResearchLabHub() {
             castShadow
             receiveShadow
             position={[0, 0, 0]}
-            material={new THREE.MeshStandardMaterial({ color: "#d0d4e0" })}
+            material={labMats.tubeRackMat}
           >
             <boxGeometry args={[5, 0.2, 2]} />
           </mesh>
@@ -622,7 +637,7 @@ export default function ResearchLabHub() {
               key={`tube-${i}`}
               position={[-2 + i * 1, 0.6, 0]}
               castShadow
-              material={new THREE.MeshStandardMaterial({ color: "#5cc0ff" })}
+              material={labMats.tubeSampleMat}
             >
               <cylinderGeometry args={[0.2, 0.2, 1.0, 12]} />
             </mesh>
@@ -633,17 +648,13 @@ export default function ResearchLabHub() {
           <mesh
             castShadow
             receiveShadow
-            material={new THREE.MeshStandardMaterial({ color: "#f5f5f5" })}
+            material={labMats.analyzerBodyMat}
           >
             <boxGeometry args={[6, 1.6, 4]} />
           </mesh>
           <mesh
             position={[0, 1, 1.2]}
-            material={new THREE.MeshStandardMaterial({
-              color: "#202531",
-              emissive: "#102040",
-              emissiveIntensity: 0.4,
-            })}
+            material={labMats.analyzerScreenMat}
           >
             <boxGeometry args={[4.5, 0.6, 0.1]} />
           </mesh>
@@ -1208,13 +1219,13 @@ export default function ResearchLabHub() {
       >
         <mesh
           castShadow
-          material={new THREE.MeshStandardMaterial({ color: "#fff" })}
+          material={labMats.projectorWhiteMat}
         >
           <boxGeometry args={[4, 2, 4]} />
         </mesh>
         <mesh
           position={[0, -1, 0]}
-          material={new THREE.MeshStandardMaterial({ color: "#222" })}
+          material={labMats.projectorLensMat}
         >
           <cylinderGeometry args={[0.5, 0.5, 0.5]} />
         </mesh>

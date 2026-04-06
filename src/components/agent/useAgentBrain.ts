@@ -1093,8 +1093,12 @@ export function useAgentBrain(
       }
     }
 
-    // --- PER-FRAME DRIVES + SENSORY (independent of LLM cooldown) ---
-    if (!hasManualTask) {
+    // --- PER-FRAME DRIVES + SENSORY ---
+    // ALWAYS run perception & drives so agents are cognitively ALIVE even while
+    // executing tasks. Previously gated by `!hasManualTask` which blocked ALL
+    // cognition whenever a task was queued (i.e. always, since startup enqueues
+    // GO_TO+EXPLORE+WANDER). Agents appeared brain-dead until met by the player.
+    {
       const registry = InteractableRegistry.getInstance();
       const vPos = vehicle.position as unknown as THREE.Vector3;
       const items30 = registry.getNearby(vPos, 30);
@@ -1246,9 +1250,19 @@ export function useAgentBrain(
         const neverThought = lastBrainCallTimeRef.current === 0;
         const longSilence =
           nowSec - lastBrainCallTimeRef.current > LLM_COOLDOWN_FAR_SEC * 2;
+
+        // FIX: Allow LLM to fire even during low-priority tasks for key triggers.
+        // Previously required `!taskQueue.isBusy()` which blocked ALL LLM thinking
+        // while startup tasks (EXPLORE/WANDER) ran — agents appeared brain-dead.
+        // Now: isBusy gate only applies when there's no strong trigger.
+        const currentTaskPriority = taskQueue.getCurrentTask()?.priority ?? 0;
+        const isLowPriorityTask = currentTaskPriority <= 2; // WANDER=0, EXPLORE=0, idle_explorer=2
+        const hasStrongTrigger = hasNearbyPlayer || neverThought || longSilence || socialDriveUrgent;
+        const queueAllowsLLM = isIdle || (isLowPriorityTask && hasStrongTrigger);
+
         const shouldUseLLM =
           canThinkLLM &&
-          !taskQueue.isBusy() &&
+          queueAllowsLLM &&
           followingAgentId !== id &&
           (hasNearbyPlayer ||
             socialDriveUrgent ||
@@ -1527,6 +1541,7 @@ export function useAgentBrain(
         }
       }
 
+      // --- UTILITY BRAIN + IDLE FALLBACK (only when queue is empty) ---
       const utilityNow = Date.now();
       if (
         !isDocked &&

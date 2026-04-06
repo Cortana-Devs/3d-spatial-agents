@@ -9,6 +9,8 @@ import { useAudioController } from "@/lib/audio/useAudioController";
 import { useAgentAudio } from "@/lib/audio/useAgentAudio";
 import { useThree } from "@react-three/fiber";
 import RobotModel from '@/components/models/characters/RobotModel';
+import OfficerModel from '@/components/models/characters/OfficerModel';
+import TellerModel from '@/components/models/characters/TellerModel';
 
 export default function Agent({
   playerRef,
@@ -178,14 +180,34 @@ export default function Agent({
       <SpeechIndicator agentId={id} />
       <positionalAudio ref={audioRef as any} args={[listener]} />
       {/* eslint-disable-next-line react-hooks/refs */}
-      <RobotModel
-        joints={joints}
-        id={id}
-        color={color}
-        analyser={analyserRef.current}
-        animationState={animationState}
-        brain={brain}
-      />
+      {id === "agent-03" ? (
+        <TellerModel
+          joints={joints}
+          id={id}
+          color={color}
+          analyser={analyserRef.current}
+          animationState={animationState}
+          brain={brain}
+        />
+      ) : id === "agent-04" ? (
+        <OfficerModel
+          joints={joints}
+          id={id}
+          color={color}
+          analyser={analyserRef.current}
+          animationState={animationState}
+          brain={brain}
+        />
+      ) : (
+        <RobotModel
+          joints={joints}
+          id={id}
+          color={color}
+          analyser={analyserRef.current}
+          animationState={animationState}
+          brain={brain}
+        />
+      )}
     </group>
   );
 }

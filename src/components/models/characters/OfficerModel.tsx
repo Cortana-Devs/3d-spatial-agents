@@ -7,15 +7,13 @@ import { useGameStore } from "@/store/gameStore";
 import type { ClientBrain } from "@/systems/ClientBrain";
 import { RobotAnimationState, ProstheticHand, LedEyes } from "./parts/SharedRobotParts";
 
-const ARMOR_COLOR = "#f8fafc"; // Premium glossy white
-const ACCENT_COLOR = "#94a3b8"; // Light metallic accent
-const JOINT_COLOR = "#0f172a"; // Deep carbon/metallic
+const ARMOR_COLOR = "#0f172a"; // Dark authority suit
+const ACCENT_COLOR = "#d4af37"; // Brass/Gold accents
+const JOINT_COLOR = "#000000"; // Deep carbon/metallic
 const VISOR_COLOR = "#000000"; // Pitch black glass
-const EMISSIVE_COLOR = "#0ea5e9"; // Cyan glow
+const EMISSIVE_COLOR = "#f59e0b"; // Amber warning light
 
-
-
-export default React.memo(function RobotModel({
+export default React.memo(function OfficerModel({
   joints,
   analyser,
   id,
@@ -66,16 +64,44 @@ export default React.memo(function RobotModel({
       toneMapped: false,
     });
 
+    const fabricDark = new THREE.MeshStandardMaterial({
+      color: "#1e293b", // Slate jacket
+      roughness: 0.8,
+      metalness: 0.1,
+    });
+    
+    const capVisorMat = new THREE.MeshStandardMaterial({
+      color: "#020617", // Glossy black peak
+      roughness: 0.2,
+      metalness: 0.6,
+    });
+    
+    const glassesMat = new THREE.MeshStandardMaterial({
+      color: "#111827", // Dark frames
+      roughness: 0.5,
+      metalness: 0.8,
+    });
+
+    const brassMat = new THREE.MeshStandardMaterial({
+      color: "#fbbf24", // Brass buttons/badge
+      roughness: 0.3,
+      metalness: 1.0,
+    });
+
     return { 
       armorMat: armor, 
       accentMat: accent, 
       jointMat: joint, 
       visorMat: visor, 
-      emissiveMat: emissive 
+      emissiveMat: emissive,
+      fabricDark,
+      capVisorMat,
+      glassesMat,
+      brassMat
     };
   }, [tintColor]);
 
-  const { armorMat, accentMat, jointMat, visorMat, emissiveMat } = mats;
+  const { armorMat, accentMat, jointMat, visorMat, emissiveMat, fabricDark, capVisorMat, glassesMat, brassMat } = mats;
 
   useLayoutEffect(() => {
     if (logoTexture) {
@@ -316,7 +342,48 @@ export default React.memo(function RobotModel({
               castShadow
               receiveShadow
             />
+            
+            {/* Inspector Overcoat Jacket */}
+            <RoundedBox
+              position={[0, 0.04, 0.0]}
+              args={[0.38, 0.28, 0.18]}
+              radius={0.06}
+              smoothness={4}
+              material={fabricDark}
+              castShadow
+              receiveShadow
+            />
+            {/* Jacket Flaps */}
+            <mesh position={[0.08, 0.0, 0.1]} rotation={[0, 0, 0]} material={fabricDark} castShadow>
+              <boxGeometry args={[0.15, 0.25, 0.02]} />
+            </mesh>
+            <mesh position={[-0.08, 0.0, 0.1]} rotation={[0, 0, 0]} material={fabricDark} castShadow>
+              <boxGeometry args={[0.15, 0.25, 0.02]} />
+            </mesh>
 
+            {/* Brass Buttons */}
+            {[-0.05, 0.03, 0.11].map((y, i) => (
+              <mesh key={`btn-${i}`} position={[0.04, y, 0.11]} material={brassMat}>
+                <cylinderGeometry args={[0.015, 0.015, 0.01, 8]} />
+              </mesh>
+            ))}
+            {[-0.05, 0.03, 0.11].map((y, i) => (
+              <mesh key={`btn2-${i}`} position={[-0.04, y, 0.11]} material={brassMat}>
+                <cylinderGeometry args={[0.015, 0.015, 0.01, 8]} />
+              </mesh>
+            ))}
+
+            {/* Badge */}
+            <mesh position={[0.12, 0.12, 0.11]} material={brassMat} castShadow rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.025, 0.025, 0.01, 6]} />
+            </mesh>
+            
+            {/* Epaulettes (Shoulder Boards) */}
+            <RoundedBox position={[0.18, 0.2, 0]} args={[0.12, 0.02, 0.06]} radius={0.005} material={fabricDark} castShadow />
+            <mesh position={[0.2, 0.21, 0]} material={brassMat}><cylinderGeometry args={[0.008, 0.008, 0.01, 8]} /></mesh>
+            
+            <RoundedBox position={[-0.18, 0.2, 0]} args={[0.12, 0.02, 0.06]} radius={0.005} material={fabricDark} castShadow />
+            <mesh position={[-0.2, 0.21, 0]} material={brassMat}><cylinderGeometry args={[0.008, 0.008, 0.01, 8]} /></mesh>
 
             {/* Neck & Head */}
             <group ref={neckRef} position={[0, 0.22, 0]}>
@@ -374,6 +441,47 @@ export default React.memo(function RobotModel({
                   animationState={animationState}
                   mats={mats}
                 />
+                
+                {/* Officer Peaked Cap */}
+                <group position={[0, 0.1, 0]} rotation={[-0.1, 0, 0]}>
+                  {/* Cap Base */}
+                  <mesh position={[0, -0.02, 0]} material={fabricDark} castShadow>
+                    <cylinderGeometry args={[0.12, 0.12, 0.08, 32]} />
+                  </mesh>
+                  {/* Cap Crown (Top) */}
+                  <mesh position={[0, 0.02, 0.02]} rotation={[0.1, 0, 0]} material={fabricDark} castShadow scale={[1.2, 0.8, 1.2]}>
+                    <sphereGeometry args={[0.12, 32, 16, 0, Math.PI * 2, 0, Math.PI/2]} />
+                  </mesh>
+                  {/* Cap Visor (Peak) */}
+                  <group position={[0, -0.04, 0.11]} rotation={[-0.2, 0, 0]}>
+                    <mesh material={capVisorMat} castShadow rotation={[0, 0, Math.PI/2]}>
+                      <capsuleGeometry args={[0.02, 0.16, 8, 16]} />
+                    </mesh>
+                  </group>
+                  {/* Cap Badge */}
+                  <mesh position={[0, 0.02, 0.13]} material={brassMat} rotation={[Math.PI/2, 0, 0]}>
+                    <cylinderGeometry args={[0.02, 0.02, 0.01, 8]} />
+                  </mesh>
+                  <mesh position={[0, 0.02, 0.135]} material={accentMat}>
+                    <boxGeometry args={[0.015, 0.015, 0.01]} />
+                  </mesh>
+                </group>
+
+                {/* Inspecting Glasses overlay on visor */}
+                <group position={[0, 0.03, 0.095]}>
+                  {/* Frame */}
+                  <mesh position={[0, 0, 0]} material={glassesMat}>
+                    <boxGeometry args={[0.16, 0.01, 0.01]} />
+                  </mesh>
+                  {/* Lenses */}
+                  <mesh position={[0.04, -0.015, 0]} material={glassesMat}>
+                    <torusGeometry args={[0.025, 0.005, 8, 16]} />
+                  </mesh>
+                  <mesh position={[-0.04, -0.015, 0]} material={glassesMat}>
+                    <torusGeometry args={[0.025, 0.005, 8, 16]} />
+                  </mesh>
+                </group>
+
                 <LedMouth position={[0, -0.035, 0.076]} analyser={analyser} />
               </group>
             </group>
