@@ -109,24 +109,6 @@ export const createAgentSlice: StateCreator<
       thoughtHistory: [],
       currentTask: "None",
       spawnPosition: [-22, 5.0, 48],
-    },
-    {
-      id: "agent-03",
-      name: "Bank Teller",
-      color: "#00ff88", // Mint green
-      status: "IDLE",
-      thoughtHistory: [],
-      currentTask: "None",
-      spawnPosition: [2, 5.0, 52], 
-    },
-    {
-      id: "agent-04",
-      name: "Insurance Officer",
-      color: "#ff9500", // Amber
-      status: "IDLE",
-      thoughtHistory: [],
-      currentTask: "None",
-      spawnPosition: [8, 5.0, 42],
     }
   ],
 

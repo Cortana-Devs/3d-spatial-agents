@@ -244,6 +244,21 @@ export interface ChatResponse {
   }[];
 }
 
+/** Detect Groq 400 tool_use_failed errors (model emitted XML instead of JSON tool syntax). */
+function isChatToolUseFailed(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  if (msg.includes("tool_use_failed")) return true;
+  const raw = (error as { error?: { code?: string; error?: { code?: string } } })?.error;
+  if (!raw || typeof raw !== "object") return false;
+  if (raw.code === "tool_use_failed") return true;
+  return raw.error?.code === "tool_use_failed";
+}
+
+const CHAT_TOOL_FORMAT_INSTRUCTION =
+  "Tool use: respond ONLY with the chat API's native function/tool_calls (JSON arguments per schema). " +
+  "Never write XML, markdown code fences, or text like <function=name>...</function> for tools. " +
+  "Each tool argument object must be valid JSON.";
+
 export async function chatWithAgent(
   agentId: string,
   userMessage: string,
@@ -258,22 +273,20 @@ export async function chatWithAgent(
     sessionId || "chat-session-" + crypto.randomUUID().slice(0, 8);
   const model = "llama-3.1-8b-instant";
   const startTime = Date.now();
+  const MAX_CHAT_RETRIES = 3;
 
   const executeTasksTool: any = {
     type: "function",
     function: {
       name: "execute_agent_tasks",
       description:
-        "Execute physical actions or digital tasks in the research lab.",
+        "Execute one or more physical actions in the lab. Call this tool with a JSON object containing a 'tasks' array.",
       parameters: {
         type: "object",
         properties: {
-          thought_process: {
-            type: "string",
-            description: "Your step-by-step reasoning on what to do and why.",
-          },
           tasks: {
             type: "array",
+            description: "Array of task objects to execute.",
             items: {
               type: "object",
               properties: {
@@ -301,7 +314,7 @@ export async function chatWithAgent(
                 },
                 targetAreaId: {
                   type: "string",
-                  description: "The name of the zone/area to go to.",
+                  description: "The name of the zone/area to go to. Use for GO_TO tasks.",
                 },
                 content: {
                   type: "string",
@@ -320,155 +333,199 @@ export async function chatWithAgent(
             },
           },
         },
-        required: ["thought_process", "tasks"],
+        required: ["tasks"],
       },
     },
   };
 
   // Build message history for multi-turn conversation
-  const messages: any[] = [
-    {
-      role: "system",
-      content: `You are ${agentId}, a helpful research lab robot.
+  const buildMessages = (extraSuffix: string = "") => {
+    const msgs: any[] = [
+      {
+        role: "system",
+        content: `You are ${agentId}, a helpful research lab robot.
 CONSTRAINTS:
 - Replies < 2 sentences. No markdown/emojis.
 - Use execute_agent_tasks for physical acts.
 - If an item/location is MIA in Context, state it clearly.
+${CHAT_TOOL_FORMAT_INSTRUCTION}
 
 CONTEXT:
 ${worldContext || "Clear."}
-${entityConversationMemory ? `\n\nMEMORY:\n${entityConversationMemory}` : ""}`,
-    },
-  ];
+${entityConversationMemory ? `\n\nMEMORY:\n${entityConversationMemory}` : ""}${extraSuffix}`,
+      },
+    ];
+    // Add conversation history (lean window for speed)
+    const recentHistory = conversationHistory.slice(-4);
+    for (const msg of recentHistory) {
+      msgs.push({
+        role: msg.role === "user" ? "user" : "assistant",
+        content: msg.text,
+      });
+    }
+    // Add current user message
+    msgs.push({ role: "user", content: userMessage });
+    return msgs;
+  };
 
-  // Add conversation history (lean window for speed)
-  const recentHistory = conversationHistory.slice(-4);
-  for (const msg of recentHistory) {
-    messages.push({
-      role: msg.role === "user" ? "user" : "assistant",
-      content: msg.text,
-    });
-  }
+  let chatAttempt = 0;
+  let retrySuffix = "";
+  let dropTools = false;
 
-  // Add current user message
-  messages.push({ role: "user", content: userMessage });
+  while (chatAttempt < MAX_CHAT_RETRIES) {
+    try {
+      const client = getGroqClient();
+      const messages = buildMessages(retrySuffix);
 
-  try {
-    const client = getGroqClient();
+      const completionParams: any = {
+        messages,
+        model,
+        temperature: dropTools ? 0.5 : 0.4,
+        max_completion_tokens: 300,
+        top_p: 1,
+        stream: false,
+      };
 
-    let completion = await client.chat.completions.create({
-      messages,
-      model,
-      temperature: 0.4,
-      max_completion_tokens: 300,
-      top_p: 1,
-      stream: false,
-      tools: [executeTasksTool],
-      tool_choice: "auto",
-    });
+      // On final retry, drop tools so the model can only reply with text (guaranteed to work)
+      if (!dropTools) {
+        completionParams.tools = [executeTasksTool];
+        completionParams.tool_choice = "auto";
+      }
 
-    let choice = completion.choices[0];
-    let reply = choice.message?.content?.trim() || "";
-    let tasks: any[] | undefined;
+      let completion = await client.chat.completions.create(completionParams);
 
-    const extractTasks = (msg: any) => {
-      if (msg?.tool_calls?.length) {
-        for (const toolCall of msg.tool_calls) {
-          if (toolCall.function.name === "execute_agent_tasks") {
-            try {
-              const args = JSON.parse(toolCall.function.arguments);
-              if (args.tasks && Array.isArray(args.tasks)) {
-                if (!tasks) tasks = [];
-                tasks.push(...args.tasks);
+      let choice = completion.choices[0];
+      let reply = choice.message?.content?.trim() || "";
+      let tasks: any[] | undefined;
+
+      const extractTasks = (msg: any) => {
+        if (msg?.tool_calls?.length) {
+          for (const toolCall of msg.tool_calls) {
+            if (toolCall.function.name === "execute_agent_tasks") {
+              try {
+                const args = JSON.parse(toolCall.function.arguments);
+                if (args.tasks && Array.isArray(args.tasks)) {
+                  if (!tasks) tasks = [];
+                  tasks.push(...args.tasks);
+                }
+              } catch (e) {
+                console.error("Failed to parse tool arguments", e);
               }
-            } catch (e) {
-              console.error("Failed to parse tool arguments", e);
             }
           }
         }
+      };
+
+      if (!dropTools) {
+        extractTasks(choice.message);
+
+        // --- Web Search Handling ---
+        const searchTask = tasks?.find((t: any) => t.type === "WEB_SEARCH");
+        if (searchTask && searchTask.query) {
+          const searchResults = await performWebSearch(searchTask.query);
+
+          messages.push(choice.message);
+          const searchToolCall = choice.message.tool_calls?.find(
+            (tc: any) => tc.function.name === "execute_agent_tasks",
+          );
+
+          messages.push({
+            role: "tool",
+            tool_call_id: searchToolCall?.id || "unknown",
+            content: JSON.stringify(searchResults),
+          });
+
+          completion = await client.chat.completions.create({
+            messages,
+            model,
+            temperature: 0.3,
+            max_completion_tokens: 300,
+            tools: [executeTasksTool],
+            tool_choice: "auto",
+          });
+
+          choice = completion.choices[0];
+          reply = choice.message?.content?.trim() || reply;
+          extractTasks(choice.message);
+        }
       }
-    };
 
-    extractTasks(choice.message);
+      const endTime = Date.now();
 
-    // --- Web Search Handling ---
-    const searchTask = tasks?.find((t: any) => t.type === "WEB_SEARCH");
-    if (searchTask && searchTask.query) {
-      const searchResults = await performWebSearch(searchTask.query);
-
-      messages.push(choice.message);
-      const searchToolCall = choice.message.tool_calls?.find(
-        (tc: any) => tc.function.name === "execute_agent_tasks",
+      after(() =>
+        logAgentInteraction({
+          timestamp: new Date().toISOString(),
+          session_id: effectiveSessionId,
+          request_id: requestId,
+          agent_type: "agent-chat",
+          request_type: "chat_message",
+          request_content: userMessage,
+          response_content: reply + (tasks ? JSON.stringify(tasks) : ""),
+          response_status: "success",
+          processing_time_ms: endTime - startTime,
+          input_tokens: completion.usage?.prompt_tokens,
+          output_tokens: completion.usage?.completion_tokens,
+          model_version: model,
+        }).catch(console.error),
       );
 
-      messages.push({
-        role: "tool",
-        tool_call_id: searchToolCall?.id || "unknown",
-        content: JSON.stringify(searchResults),
-      });
+      return {
+        reply: reply || "I'll get right on that!",
+        tasks: tasks,
+      };
+    } catch (error: any) {
+      console.error(`Agent Chat Error (Attempt ${chatAttempt + 1}/${MAX_CHAT_RETRIES}):`, error);
 
-      completion = await client.chat.completions.create({
-        messages,
-        model,
-        temperature: 0.3,
-        max_completion_tokens: 300,
-        tools: [executeTasksTool],
-        tool_choice: "auto",
-      });
+      // If it's a tool_use_failed error, retry
+      if (isChatToolUseFailed(error) && chatAttempt < MAX_CHAT_RETRIES - 1) {
+        chatAttempt++;
+        
+        if (chatAttempt >= MAX_CHAT_RETRIES - 1) {
+          // Final retry: drop tools entirely so model can only reply with text
+          console.warn("[chatWithAgent] tool_use_failed: final retry WITHOUT tools (text-only fallback)");
+          dropTools = true;
+          retrySuffix =
+            "\n\n[IMPORTANT] You cannot use tools right now. Just reply with a helpful plain text response. " +
+            "If the user asked you to do something physical, acknowledge it and say you will do it.";
+        } else {
+          console.warn("[chatWithAgent] tool_use_failed detected, retrying with corrective prompt...");
+          retrySuffix =
+            "\n\n[IMPORTANT] The API rejected the last reply due to invalid tool format. " +
+            "Use ONLY native tool_calls with JSON arguments. " +
+            "Do NOT output <function=...>, XML tags, or tool syntax inside message text. " +
+            "If you cannot use the tool correctly, just reply with plain text instead.";
+        }
+        continue;
+      }
 
-      choice = completion.choices[0];
-      reply = choice.message?.content?.trim() || reply;
-      extractTasks(choice.message);
+      after(() =>
+        logAgentInteraction({
+          timestamp: new Date().toISOString(),
+          session_id: effectiveSessionId,
+          request_id: requestId,
+          agent_type: "agent-chat",
+          request_type: "chat_message",
+          request_content: userMessage,
+          response_content: "",
+          response_status: "error",
+          processing_time_ms: Date.now() - startTime,
+          error_code: error.code || error.status,
+          error_message: error.message,
+          model_version: model,
+        }).catch(console.error),
+      );
+
+      return {
+        reply:
+          "Sorry, I'm having some trouble processing right now. Could you try again in a moment?",
+      };
     }
-
-    const endTime = Date.now();
-
-    after(() =>
-      logAgentInteraction({
-        timestamp: new Date().toISOString(),
-        session_id: effectiveSessionId,
-        request_id: requestId,
-        agent_type: "agent-chat",
-        request_type: "chat_message",
-        request_content: userMessage,
-        response_content: reply + (tasks ? JSON.stringify(tasks) : ""),
-        response_status: "success",
-        processing_time_ms: endTime - startTime,
-        input_tokens: completion.usage?.prompt_tokens,
-        output_tokens: completion.usage?.completion_tokens,
-        model_version: model,
-      }).catch(console.error),
-    );
-
-    return {
-      reply: reply || "I'll get right on that!",
-      tasks: tasks,
-    };
-  } catch (error: any) {
-    console.error("Agent Chat Error:", error);
-
-    after(() =>
-      logAgentInteraction({
-        timestamp: new Date().toISOString(),
-        session_id: effectiveSessionId,
-        request_id: requestId,
-        agent_type: "agent-chat",
-        request_type: "chat_message",
-        request_content: userMessage,
-        response_content: "",
-        response_status: "error",
-        processing_time_ms: Date.now() - startTime,
-        error_code: error.code || error.status,
-        error_message: error.message,
-        model_version: model,
-      }).catch(console.error),
-    );
-
-    return {
-      reply:
-        "Sorry, I'm having some trouble processing right now. Could you try again in a moment?",
-    };
   }
+
+  // Exhausted all retries
+  return {
+    reply: "Sorry, I'm having some trouble processing right now. Could you try again in a moment?",
+  };
 }
 
 /** Diagnostic tool to verify Groq API health. */
