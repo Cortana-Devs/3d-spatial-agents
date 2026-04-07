@@ -29,6 +29,8 @@ export const DESK_TO_CHAIR: Record<string, string> = {
 export const DEFAULT_AGENT_DESK: Record<string, string> = {
   "agent-01": "desk-east-0",
   "agent-02": "desk-east-1",
+  "agent-03": "desk-east-2",
+  "agent-04": "desk-east-3",
 };
 
 export function getDefaultPersonalDesk(agentId: string): string {

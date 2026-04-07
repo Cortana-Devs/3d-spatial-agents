@@ -73,6 +73,7 @@ export interface AgentPersonality {
   accentColor: string;
   systemPromptOverride?: string;
   stationaryDesk?: string;
+  stationaryStand?: boolean;
 }
 
 export type AgentTaskType =

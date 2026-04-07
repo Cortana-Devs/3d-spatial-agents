@@ -64,6 +64,7 @@ const PERSONALITIES: Record<string, AgentPersonality> = {
     idleBias: "work",
     accentColor: "#00ff88",
     stationaryDesk: "desk-east-2",
+    stationaryStand: true,
     systemPromptOverride: "",
   },
   "agent-04": {
@@ -80,6 +81,7 @@ const PERSONALITIES: Record<string, AgentPersonality> = {
     idleBias: "work",
     accentColor: "#ff9500",
     stationaryDesk: "desk-east-3",
+    stationaryStand: true,
     systemPromptOverride: "",
   },
 };

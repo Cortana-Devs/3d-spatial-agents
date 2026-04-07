@@ -488,7 +488,7 @@ export class AgentTaskQueue {
       this.recordPosition(vehiclePos.x, vehiclePos.z, this.elapsedTime);
 
       const type = this.currentTask!.type;
-      const arrivalDist = (type === "REST_IN_POD") ? 0.4 : TASK_ARRIVAL_DIST;
+      const arrivalDist = (type === "REST_IN_POD" || type === "SIT" || type === "REST") ? 0.4 : TASK_ARRIVAL_DIST;
 
       if (distToTarget < arrivalDist) {
         if (["GO_TO", "WANDER", "EXPLORE", "COLLABORATE"].includes(type)) { this.setPhase("COMPLETED"); return { type: "STOP" }; }

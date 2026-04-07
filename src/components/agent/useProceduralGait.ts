@@ -404,6 +404,8 @@ export function useProceduralGait(
         );
         j.leftArm.elbow.rotation.x = THREE.MathUtils.lerp(j.leftArm.elbow.rotation.x, -0.05, f);
         j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(j.rightArm.elbow.rotation.x, -0.05, f);
+        j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.z, 0.15, f);
+        j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.z, -0.15, f);
 
         j.torso.rotation.y = THREE.MathUtils.lerp(j.torso.rotation.y, 0, f);
         j.torso.rotation.x = THREE.MathUtils.lerp(

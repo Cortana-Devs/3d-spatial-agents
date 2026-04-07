@@ -1,0 +1,289 @@
+<svg viewBox="0 0 1600 920" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: 'Inter','SF Pro Display',-apple-system,sans-serif; }
+    .lbl { font-size:11px; font-weight:700; letter-spacing:1.2px; }
+    .ttl { font-size:15px; font-weight:600; fill:#0F172A; }
+    .sub { font-size:11px; font-weight:500; fill:#64748B; }
+    .det { font-size:10.5px; fill:#94A3B8; }
+    .bdg { font-size:9.5px; font-weight:700; }
+    .path-lbl { font-size:10.5px; font-weight:600; }
+    .legend-txt { font-size:11px; fill:#64748B; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1L10 5L0 9z" fill="#94A3B8"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1L10 5L0 9z" fill="#16A34A"/></marker>
+    <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1L10 5L0 9z" fill="#4F46E5"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="5" refY="9" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 0L5 10L9 0z" fill="#94A3B8"/></marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1600" height="920" fill="#FAFBFC"/>
+
+  <!-- ============ TITLE ============ -->
+  <text x="800" y="32" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A" letter-spacing="-0.3">System Architecture</text>
+  <text x="800" y="52" text-anchor="middle" font-size="13" fill="#64748B">3D Spatial Agents — Neuro-Symbolic Multi-Agent Platform</text>
+
+  <!-- ============ LAYER 1: PRESENTATION ============ -->
+  <rect x="60" y="68" width="1480" height="95" rx="12" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="82" y="88" class="lbl" fill="#3B82F6">PRESENTATION LAYER</text>
+
+  <rect x="82" y="98" width="440" height="55" rx="8" fill="#FFF" stroke="#93C5FD" stroke-width="1.2"/>
+  <text x="302" y="122" text-anchor="middle" class="ttl">Next.js App Shell</text>
+  <text x="302" y="140" text-anchor="middle" class="sub">Server Actions · App Router</text>
+
+  <rect x="542" y="98" width="440" height="55" rx="8" fill="#FFF" stroke="#93C5FD" stroke-width="1.2"/>
+  <text x="762" y="122" text-anchor="middle" class="ttl">3D Scene (R3F + Rapier)</text>
+  <text x="762" y="140" text-anchor="middle" class="sub">Three.js · Physics · Lighting</text>
+
+  <rect x="1002" y="98" width="520" height="55" rx="8" fill="#FFF" stroke="#93C5FD" stroke-width="1.2"/>
+  <text x="1262" y="122" text-anchor="middle" class="ttl">HUD &amp; Dashboard</text>
+  <text x="1262" y="140" text-anchor="middle" class="sub">Chat · Inspector · Minimap · Task Panel</text>
+
+  <!-- Down arrows L1→L2 -->
+  <line x1="302" y1="163" x2="302" y2="178" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ad)"/>
+  <line x1="762" y1="163" x2="762" y2="178" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ad)"/>
+  <line x1="1262" y1="163" x2="1262" y2="178" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ad)"/>
+
+  <!-- ============ LAYER 2: STATE ============ -->
+  <rect x="60" y="183" width="1480" height="58" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="82" y="203" class="lbl" fill="#475569">STATE MANAGEMENT</text>
+
+  <rect x="82" y="210" width="1440" height="24" rx="6" fill="#FFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="800" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">Zustand Store</text>
+  <text x="380" y="227" text-anchor="middle" font-size="10" fill="#94A3B8">World · Agent · Chat</text>
+  <text x="1220" y="227" text-anchor="middle" font-size="10" fill="#94A3B8">UI · Settings · Pod · Tasks</text>
+
+  <!-- Down arrow L2→L3 -->
+  <line x1="800" y1="241" x2="800" y2="260" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ad)"/>
+
+  <!-- ============ LAYER 3: COGNITIVE PIPELINE (HERO) ============ -->
+  <rect x="60" y="265" width="1480" height="310" rx="14" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.2"/>
+  <text x="82" y="287" class="lbl" fill="#4F46E5">AGENT COGNITIVE ARCHITECTURE</text>
+  <text x="500" y="287" font-size="11" fill="#818CF8" font-weight="500">(per agent instance · each frame)</text>
+
+  <!-- PERCEPTION (left pillar) -->
+  <rect x="90" y="305" width="195" height="245" rx="10" fill="#F0F9FF" stroke="#0EA5E9" stroke-width="1.3"/>
+  <text x="187" y="332" text-anchor="middle" class="ttl">Perception</text>
+  <text x="187" y="349" text-anchor="middle" class="sub">SensorySystem</text>
+  <line x1="110" y1="362" x2="265" y2="362" stroke="#E0F2FE" stroke-width="1"/>
+  <text x="110" y="385" class="det" fill="#64748B">• FOV 126° cone</text>
+  <text x="110" y="403" class="det" fill="#64748B">• BVH Line-of-Sight</text>
+  <text x="110" y="421" class="det" fill="#64748B">• Hearing Bus</text>
+  <text x="110" y="439" class="det" fill="#64748B">• 10s Working Memory</text>
+
+  <!-- AFFECT / DRIVES (inside perception area, bottom) -->
+  <rect x="100" y="455" width="175" height="82" rx="8" fill="#FFF" stroke="#BAE6FD" stroke-width="1"/>
+  <text x="187" y="477" text-anchor="middle" font-size="12" font-weight="600" fill="#0369A1">Drives (8)</text>
+  <text x="187" y="494" text-anchor="middle" class="det" fill="#64748B">Energy · Social · Focus</text>
+  <text x="187" y="509" text-anchor="middle" class="det" fill="#64748B">Curiosity · Wonder +3</text>
+  <text x="187" y="526" text-anchor="middle" class="det" fill="#94A3B8">Urgency decay curves</text>
+
+  <!-- ═══ FAST PATH (subconscious) ═══ -->
+  <text x="340" y="316" class="path-lbl" fill="#16A34A">FAST PATH</text>
+  <text x="420" y="316" font-size="10" fill="#86EFAC">(every frame · no LLM)</text>
+
+  <!-- Arrow: Perception → Subconscious -->
+  <line x1="285" y1="348" x2="330" y2="348" stroke="#16A34A" stroke-width="1.8" marker-end="url(#ag)"/>
+
+  <rect x="340" y="325" width="220" height="90" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.3"/>
+  <text x="450" y="353" text-anchor="middle" class="ttl">Subconscious</text>
+  <text x="450" y="370" text-anchor="middle" class="sub">UtilityBrain</text>
+  <text x="450" y="393" text-anchor="middle" class="det" fill="#64748B">Drive-urgency evaluation</text>
+  <!-- Badge -->
+  <rect x="485" y="329" width="60" height="18" rx="9" fill="#DCFCE7"/>
+  <text x="515" y="342" text-anchor="middle" class="bdg" fill="#16A34A">60fps</text>
+
+  <!-- Arrow: Subconscious → TaskQueue (horizontal, over slow path) -->
+  <line x1="560" y1="370" x2="1070" y2="370" stroke="#16A34A" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#ag)"/>
+  <text x="810" y="362" text-anchor="middle" font-size="9.5" fill="#86EFAC" font-weight="500">fallback actions</text>
+
+  <!-- ═══ SLOW PATH (conscious LLM) ═══ -->
+  <text x="340" y="442" class="path-lbl" fill="#4F46E5">SLOW PATH</text>
+  <text x="425" y="442" font-size="10" fill="#A5B4FC">(rate-limited · LLM)</text>
+
+  <!-- Arrow: Perception → Context Mixer -->
+  <line x1="285" y1="475" x2="330" y2="475" stroke="#4F46E5" stroke-width="1.8" marker-end="url(#ai)"/>
+
+  <!-- Context Mixer -->
+  <rect x="340" y="455" width="170" height="80" rx="10" fill="#FFF" stroke="#6366F1" stroke-width="1.3"/>
+  <text x="425" y="483" text-anchor="middle" class="ttl">Context Mixer</text>
+  <text x="425" y="500" text-anchor="middle" class="sub">Prompt assembly</text>
+  <text x="425" y="518" text-anchor="middle" class="det" fill="#64748B">~3.5K tokens/cycle</text>
+
+  <!-- Arrow: Context Mixer → LLM -->
+  <line x1="510" y1="495" x2="545" y2="495" stroke="#4F46E5" stroke-width="1.5" marker-end="url(#ai)"/>
+
+  <!-- LLM Reasoning -->
+  <rect x="555" y="455" width="195" height="80" rx="10" fill="#FFF" stroke="#6366F1" stroke-width="1.3"/>
+  <text x="652" y="483" text-anchor="middle" class="ttl">LLM Reasoning</text>
+  <text x="652" y="500" text-anchor="middle" class="sub">ClientBrain</text>
+  <text x="652" y="518" text-anchor="middle" class="det" fill="#64748B">Tool-call parsing</text>
+  <!-- Badge -->
+  <rect x="665" y="459" width="72" height="18" rx="9" fill="#EEF2FF"/>
+  <text x="701" y="472" text-anchor="middle" class="bdg" fill="#4F46E5">≤8 req/min</text>
+
+  <!-- Arrow: LLM → Verification -->
+  <line x1="750" y1="495" x2="785" y2="495" stroke="#4F46E5" stroke-width="1.5" marker-end="url(#ai)"/>
+  <text x="768" y="487" text-anchor="middle" font-size="9" fill="#A5B4FC">tool calls</text>
+
+  <!-- Verification (SYMBOLIC - green border) -->
+  <rect x="795" y="455" width="195" height="80" rx="10" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="892" y="483" text-anchor="middle" class="ttl">Verification</text>
+  <text x="892" y="500" text-anchor="middle" class="sub">Critic Loop</text>
+  <text x="892" y="518" text-anchor="middle" class="det" fill="#64748B">Entity ID validation</text>
+  <!-- Badge -->
+  <rect x="905" y="459" width="72" height="18" rx="9" fill="#DCFCE7"/>
+  <text x="941" y="472" text-anchor="middle" class="bdg" fill="#059669">Symbolic</text>
+
+  <!-- Arrow: Verification → TaskQueue -->
+  <line x1="990" y1="495" x2="1070" y2="495" stroke="#059669" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="1030" y="487" text-anchor="middle" font-size="9" fill="#86EFAC">valid actions</text>
+
+  <!-- TASK EXECUTION (right pillar) -->
+  <rect x="1080" y="305" width="240" height="245" rx="10" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.3"/>
+  <text x="1200" y="332" text-anchor="middle" class="ttl">Task Execution</text>
+  <text x="1200" y="349" text-anchor="middle" class="sub">AgentTaskQueue</text>
+  <line x1="1100" y1="362" x2="1300" y2="362" stroke="#FEF3C7" stroke-width="1"/>
+  <text x="1100" y="385" class="det" fill="#64748B">• 18 action types</text>
+  <text x="1100" y="403" class="det" fill="#64748B">• A* pathfinding</text>
+  <text x="1100" y="421" class="det" fill="#64748B">• Yuka steering</text>
+  <text x="1100" y="439" class="det" fill="#64748B">• Procedural IK gait</text>
+
+  <!-- Task phase mini pipeline -->
+  <rect x="1100" y="455" width="55" height="22" rx="11" fill="#FEF3C7"/>
+  <text x="1127" y="470" text-anchor="middle" font-size="9" font-weight="600" fill="#92400E">IDLE</text>
+  <text x="1162" y="470" text-anchor="middle" font-size="10" fill="#D97706">→</text>
+  <rect x="1172" y="455" width="55" height="22" rx="11" fill="#FEF3C7"/>
+  <text x="1199" y="470" text-anchor="middle" font-size="9" font-weight="600" fill="#92400E">NAV</text>
+  <text x="1234" y="470" text-anchor="middle" font-size="10" fill="#D97706">→</text>
+  <rect x="1244" y="455" width="55" height="22" rx="11" fill="#FEF3C7"/>
+  <text x="1271" y="470" text-anchor="middle" font-size="9" font-weight="600" fill="#92400E">ACT</text>
+
+  <text x="1200" y="506" text-anchor="middle" class="det" fill="#64748B">• Inter-Agent Comms</text>
+  <text x="1200" y="524" text-anchor="middle" class="det" fill="#64748B">• Spatial Audio output</text>
+
+  <!-- ══ MEMORY SIDEBAR (inside L3, right edge) ══ -->
+  <rect x="1370" y="305" width="155" height="245" rx="10" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.2"/>
+  <text x="1447" y="332" text-anchor="middle" font-size="13" font-weight="600" fill="#0F172A">Memory</text>
+  <text x="1447" y="348" text-anchor="middle" class="sub">IndexedDB</text>
+  <line x1="1385" y1="358" x2="1510" y2="358" stroke="#EDE9FE" stroke-width="1"/>
+
+  <rect x="1382" y="368" width="130" height="40" rx="6" fill="#FFF" stroke="#C4B5FD" stroke-width="0.8"/>
+  <text x="1447" y="385" text-anchor="middle" font-size="10.5" font-weight="600" fill="#6D28D9">Episodic Stream</text>
+  <text x="1447" y="399" text-anchor="middle" font-size="9" fill="#A78BFA">Trust-weighted retrieval</text>
+
+  <rect x="1382" y="418" width="130" height="40" rx="6" fill="#FFF" stroke="#C4B5FD" stroke-width="0.8"/>
+  <text x="1447" y="435" text-anchor="middle" font-size="10.5" font-weight="600" fill="#6D28D9">Knowledge Graph</text>
+  <text x="1447" y="449" text-anchor="middle" font-size="9" fill="#A78BFA">(S,P,O) triples + decay</text>
+
+  <rect x="1382" y="468" width="130" height="40" rx="6" fill="#FFF" stroke="#C4B5FD" stroke-width="0.8"/>
+  <text x="1447" y="485" text-anchor="middle" font-size="10.5" font-weight="600" fill="#6D28D9">Spatial Memory</text>
+  <text x="1447" y="499" text-anchor="middle" font-size="9" fill="#A78BFA">Zone visit frequency</text>
+
+  <rect x="1382" y="518" width="130" height="25" rx="6" fill="#FFF" stroke="#C4B5FD" stroke-width="0.8"/>
+  <text x="1447" y="535" text-anchor="middle" font-size="10.5" font-weight="600" fill="#6D28D9">Conversation</text>
+
+  <!-- Arrow: Context Mixer ↔ Memory -->
+  <line x1="425" y1="535" x2="425" y2="560" stroke="#8B5CF6" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <line x1="425" y1="560" x2="1430" y2="560" stroke="#8B5CF6" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <line x1="1430" y1="560" x2="1430" y2="543" stroke="#8B5CF6" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <text x="900" y="555" text-anchor="middle" font-size="9" fill="#A78BFA">read memories / write facts</text>
+
+  <!-- ============ LAYER 4: RUNTIME SERVICES ============ -->
+  <rect x="60" y="590" width="1480" height="100" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="82" y="612" class="lbl" fill="#475569">RUNTIME SERVICES</text>
+
+  <!-- Navigation -->
+  <rect x="82" y="622" width="280" height="55" rx="8" fill="#F0FDFA" stroke="#14B8A6" stroke-width="1.2"/>
+  <text x="222" y="644" text-anchor="middle" class="ttl" font-size="13">A* Navigation Grid</text>
+  <text x="222" y="662" text-anchor="middle" class="sub">160×160 cells · obstacle carving</text>
+
+  <!-- Zone Influence -->
+  <rect x="382" y="622" width="250" height="55" rx="8" fill="#FFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="507" y="644" text-anchor="middle" class="ttl" font-size="13">Zone Influence</text>
+  <text x="507" y="662" text-anchor="middle" class="sub">Drive modifiers per area</text>
+
+  <!-- Object Registry -->
+  <rect x="652" y="622" width="250" height="55" rx="8" fill="#FFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="777" y="644" text-anchor="middle" class="ttl" font-size="13">Object Registry</text>
+  <text x="777" y="662" text-anchor="middle" class="sub">Claim system · fuzzy lookup</text>
+
+  <!-- POI System -->
+  <rect x="922" y="622" width="200" height="55" rx="8" fill="#FFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="1022" y="644" text-anchor="middle" class="ttl" font-size="13">POI System</text>
+  <text x="1022" y="662" text-anchor="middle" class="sub">Novelty-scored landmarks</text>
+
+  <!-- Audio Pipeline -->
+  <rect x="1142" y="622" width="220" height="55" rx="8" fill="#FFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="1252" y="644" text-anchor="middle" class="ttl" font-size="13">Audio Pipeline</text>
+  <text x="1252" y="662" text-anchor="middle" class="sub">Spatial TTS · Web Audio API</text>
+
+  <!-- Arrow L3 TaskExec → L4 Nav -->
+  <line x1="1200" y1="550" x2="1200" y2="570" stroke="#94A3B8" stroke-width="1.2"/>
+  <line x1="1200" y1="570" x2="222" y2="570" stroke="#94A3B8" stroke-width="1.2"/>
+  <line x1="222" y1="570" x2="222" y2="622" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#ad)"/>
+  <text x="700" y="582" text-anchor="middle" font-size="9" fill="#94A3B8">pathfinding requests</text>
+
+  <!-- ============ LAYER 5: EXTERNAL SERVICES ============ -->
+  <rect x="60" y="710" width="1480" height="78" rx="12" fill="#1E293B"/>
+  <text x="82" y="732" class="lbl" fill="#94A3B8">EXTERNAL SERVICES</text>
+
+  <rect x="82" y="742" width="480" height="36" rx="8" fill="#334155" stroke="#475569" stroke-width="1"/>
+  <text x="322" y="765" text-anchor="middle" font-size="13" font-weight="600" fill="#F1F5F9">Groq Cloud LLM</text>
+  <text x="500" y="765" font-size="11" fill="#94A3B8">Llama 3.1 8B / Llama 4 Maverick</text>
+
+  <rect x="600" y="742" width="400" height="36" rx="8" fill="#334155" stroke="#475569" stroke-width="1"/>
+  <text x="800" y="765" text-anchor="middle" font-size="13" font-weight="600" fill="#F1F5F9">TTS Web Workers</text>
+  <text x="950" y="765" font-size="11" fill="#94A3B8">Piper · eSpeak</text>
+
+  <rect x="1040" y="742" width="300" height="36" rx="8" fill="#334155" stroke="#475569" stroke-width="1"/>
+  <text x="1190" y="765" text-anchor="middle" font-size="13" font-weight="600" fill="#F1F5F9">Google Cloud APIs</text>
+  <text x="1300" y="765" font-size="11" fill="#94A3B8">TTS · STT</text>
+
+  <!-- Arrow: LLM Reasoning → Groq API -->
+  <line x1="652" y1="535" x2="652" y2="700" stroke="#4F46E5" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <line x1="652" y1="700" x2="322" y2="700" stroke="#4F46E5" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <line x1="322" y1="700" x2="322" y2="742" stroke="#4F46E5" stroke-width="1.2" marker-end="url(#ai)"/>
+  <text x="652" y="696" text-anchor="middle" font-size="9" fill="#818CF8">API request via Web Worker</text>
+
+  <!-- ============ LEGEND ============ -->
+  <rect x="60" y="808" width="1480" height="95" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="0.8"/>
+  <text x="82" y="830" class="lbl" fill="#64748B">LEGEND</text>
+
+  <!-- Neural -->
+  <rect x="90" y="845" width="14" height="14" rx="3" fill="#EEF2FF" stroke="#6366F1" stroke-width="1.2"/>
+  <text x="112" y="857" class="legend-txt" font-weight="500">Neural (LLM)</text>
+
+  <!-- Symbolic -->
+  <rect x="220" y="845" width="14" height="14" rx="3" fill="#F0FDF4" stroke="#059669" stroke-width="1.2"/>
+  <text x="242" y="857" class="legend-txt" font-weight="500">Symbolic (Verification)</text>
+
+  <!-- Perception -->
+  <rect x="405" y="845" width="14" height="14" rx="3" fill="#F0F9FF" stroke="#0EA5E9" stroke-width="1.2"/>
+  <text x="427" y="857" class="legend-txt" font-weight="500">Perception</text>
+
+  <!-- Memory -->
+  <rect x="520" y="845" width="14" height="14" rx="3" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.2"/>
+  <text x="542" y="857" class="legend-txt" font-weight="500">Memory (IndexedDB)</text>
+
+  <!-- Execution -->
+  <rect x="680" y="845" width="14" height="14" rx="3" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.2"/>
+  <text x="702" y="857" class="legend-txt" font-weight="500">Task Execution</text>
+
+  <!-- External -->
+  <rect x="820" y="845" width="14" height="14" rx="3" fill="#334155" stroke="#475569" stroke-width="1.2"/>
+  <text x="842" y="857" class="legend-txt" font-weight="500">External Service</text>
+
+  <!-- Arrow types -->
+  <line x1="960" y1="852" x2="990" y2="852" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="998" y="857" class="legend-txt">Fast path</text>
+
+  <line x1="1070" y1="852" x2="1100" y2="852" stroke="#4F46E5" stroke-width="1.5"/>
+  <text x="1108" y="857" class="legend-txt">Slow path (LLM)</text>
+
+  <line x1="1210" y1="852" x2="1240" y2="852" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="1248" y="857" class="legend-txt">Data flow</text>
+
+  <!-- Dual-path annotation -->
+  <text x="90" y="880" font-size="10" fill="#94A3B8" font-style="italic">The neuro-symbolic pipeline splits perception into two paths: a deterministic subconscious (60fps) and a rate-limited LLM conscious layer with symbolic verification.</text>
+</svg>

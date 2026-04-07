@@ -11,6 +11,7 @@ import { useThree } from "@react-three/fiber";
 import RobotModel from '@/components/models/characters/RobotModel';
 import OfficerModel from '@/components/models/characters/OfficerModel';
 import TellerModel from '@/components/models/characters/TellerModel';
+import { RigidBody, CapsuleCollider } from "@react-three/rapier";
 
 export default function Agent({
   playerRef,
@@ -26,7 +27,7 @@ export default function Agent({
   const groupRef = useRef<THREE.Group>(null);
   const joints = useRef<any>({});
 
-  const { vehicle, brain, animationState } = useAgentBrain(
+  const { vehicle, brain, animationState, rigidbodyRef } = useAgentBrain(
     id,
     groupRef,
     playerRef,
@@ -165,9 +166,16 @@ export default function Agent({
   }, [audioDistanceModel, audioRefDistance, audioMaxDistance, audioRolloffFactor]);
 
   return (
+    <RigidBody 
+      ref={rigidbodyRef} 
+      type="dynamic" 
+      colliders={false} 
+      lockRotations 
+      position={initialPosition} 
+      name={`agent-rb-${id}`}
+    >
     <group
       ref={groupRef}
-      position={initialPosition}
       name="Agent"
       userData={{
         type: "AI Entity",
@@ -176,6 +184,7 @@ export default function Agent({
       }}
       onClick={handleClick}
     >
+      <CapsuleCollider args={[1.2, 0.5]} position={[0, 1.7, 0]} />
       <AgentInteractionPanel agentId={id} brain={brain} />
       <SpeechIndicator agentId={id} />
       <positionalAudio ref={audioRef as any} args={[listener]} />
@@ -209,6 +218,7 @@ export default function Agent({
         />
       )}
     </group>
+    </RigidBody>
   );
 }
 

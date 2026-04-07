@@ -11,6 +11,7 @@ import ResearchFacilityFurniture from "./FacilityLabFurniture";
 import { DEFAULT_LAB_HUB, DEFAULT_RING_INNER_RADIUS, DEFAULT_RING_OUTER_RADIUS, ENV_PROP_SCALE_FACTOR } from "./labFloorConstants";
 import { buildPodInteractables } from "@/config/agentPods";
 import { buildResearchFacilityWorldTaskSeeds } from "@/config/facilityWorldTasksSeed";
+import { RigidBody } from "@react-three/rapier";
 
 // --- Curated Dream Park Layout ---
 const treeData = [

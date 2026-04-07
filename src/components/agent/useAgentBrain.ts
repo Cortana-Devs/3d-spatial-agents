@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 // Fix #2: Removed @ts-nocheck — targeted @ts-ignore used on Yuka↔Three casts below
 import { useEffect, useRef, useState } from "react";
 import * as YUKA from "yuka";
@@ -5,12 +6,14 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import AIManager from "@/systems/AIManager";
 import { useGameStore } from "@/store/gameStore";
+import { DESK_TO_CHAIR } from "@/config/facilityLabDeskAssignments";
 import { useProceduralGait } from "@/components/agent/useProceduralGait";
 import { useAgentVehicle } from "@/components/agent/useAgentVehicle";
 
 import { ClientBrain } from "@/systems/ClientBrain";
 import type { NearbyEntity } from "@/lib/agent-brain";
 import { InteractableRegistry } from "@/systems/InteractableRegistry";
+import type { RapierRigidBody } from "@react-three/rapier";
 import { AgentTaskQueue, AgentTaskRegistry } from "@/systems/AgentTaskQueue";
 import { InterAgentComms } from "@/systems/InterAgentComms";
 import type { SteeringCommand } from "@/systems/AgentTaskQueue";
@@ -79,6 +82,7 @@ export function useAgentBrain(
   joints: React.MutableRefObject<any>,
 ) {
   const vehicleRef = useRef<YUKA.Vehicle | null>(null);
+  const rigidbodyRef = useRef<RapierRigidBody>(null);
   const aiManager = AIManager.getInstance();
   const obstacles = useGameStore((state) => state.obstacles);
   const collidableMeshes = useGameStore((state) => state.collidableMeshes);
@@ -119,6 +123,8 @@ export function useAgentBrain(
   const sensorySystemRef = useRef<SensorySystem>(new SensorySystem(id));
   const utilityBrainRef = useRef<UtilityBrain>(new UtilityBrain(id));
   const lastUtilityCheckTimeRef = useRef(0);
+  // Separate throttle for the idle-fallback re-queue to prevent per-frame spam
+  const lastIdleFallbackTimeRef = useRef(0);
   // Zone update timer (throttle zone tracking to every 2 seconds)
   const zoneUpdateTimer = useRef(0);
   const poiUpdateTimer = useRef(0);
@@ -238,7 +244,8 @@ export function useAgentBrain(
       ) {
         getIdleExplorer(id).onArrival(completedTask.targetAreaId);
       }
-      console.log(`[useAgentBrain:${id}] Task completed: ${taskType} - Satisfying drives.`);
+      // Demoted to debug - was causing per-frame console spam when SIT task fails instantly
+      // console.debug(`[useAgentBrain:${id}] Task completed: ${taskType}`);
 
       switch (taskType) {
         case "REST":
@@ -282,8 +289,18 @@ export function useAgentBrain(
       const priority = 8;
 
       if (personality.stationaryDesk) {
-        queue.enqueue({ type: "SIT", priority, scriptId, itemId: personality.stationaryDesk });
-        console.debug(`[useAgentBrain:${id}] ${personality.name} is stationary, seated at desk: ${personality.stationaryDesk}`);
+        // Try to map their desk ID to a specific chair ID so they properly path to the seat rather than the desk bounding box
+        const chairId = DESK_TO_CHAIR[personality.stationaryDesk] || personality.stationaryDesk;
+        
+        if (personality.stationaryStand) {
+          queue.enqueue({ type: "GO_TO", priority, scriptId, itemId: chairId });
+          // Face the counter/desk
+          queue.enqueue({ type: "LOOK_AT", priority: priority - 1, scriptId, itemId: personality.stationaryDesk });
+          console.debug(`[useAgentBrain:${id}] ${personality.name} is stationary, standing at ${chairId} (desk: ${personality.stationaryDesk})`);
+        } else {
+          queue.enqueue({ type: "SIT", priority, scriptId, itemId: chairId });
+          console.debug(`[useAgentBrain:${id}] ${personality.name} is stationary, seated at ${chairId} (desk: ${personality.stationaryDesk})`);
+        }
       } else {
         // Navigate to the agent's preferred zone on startup
         const preferredZone = personality.preferredZones[0] ?? "center-park";
@@ -440,9 +457,10 @@ export function useAgentBrain(
     const myPodId = store.getPodIdForAgent(id);
 
     let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
-    if (!pauseForOpenChat) {
-      steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
-    }
+    // Only pause for chat if not currently doing high-priority work (priority >= 6)
+    // Actually, let's allow the queue to ALWAYS update during chat for a more "seamless" experience.
+    // The CHATTING block below handles specific movement constraints.
+    steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
 
     if (steeringCmd.type === "FOLLOW_PATH" && steeringCmd.cornerAngles?.length) {
       lastCornerAnglesRef.current = steeringCmd.cornerAngles;
@@ -663,114 +681,54 @@ export function useAgentBrain(
             vehicle.rotation.copy(targetQuat as unknown as YUKA.Quaternion);
           }
         }
+
+        // Align exactly with the seat if seated
+        const currentTask = taskQueue.getCurrentTask();
+        if (taskQueue.getCurrentPhase() === "SEATED" && currentTask?.itemId) {
+           const reg = InteractableRegistry.getInstance();
+           const sitPos = reg.getWorldPosition(currentTask.itemId);
+           const sitRot = reg.getWorldRotation(currentTask.itemId);
+           if (sitPos && sitRot && rigidbodyRef.current) {
+              const pPos = rigidbodyRef.current.translation();
+              rigidbodyRef.current.setTranslation({
+                 x: THREE.MathUtils.lerp(pPos.x, sitPos.x, delta * 3.0),
+                 y: pPos.y,
+                 z: THREE.MathUtils.lerp(pPos.z, sitPos.z, delta * 3.0),
+              }, true);
+
+              const tRot = vehicle.rotation as unknown as THREE.Quaternion;
+              tRot.slerp(sitRot, delta * 4.0);
+           }
+        }
+      }
+    }
+    // --- RAPID PHYSICS BRIDGE ---
+    if (rigidbodyRef.current) {
+      const currentLinvel = rigidbodyRef.current.linvel();
+      
+      // 1. Output Yuka velocity as a physical impulse (preserving gravity's Y)
+      rigidbodyRef.current.setLinvel(
+        {
+          x: vehicle.velocity.x,
+          y: currentLinvel.y,
+          z: vehicle.velocity.z,
+        },
+        true
+      );
+
+      // 2. Read back actual physical position (post-collision) to Yuka
+      const physPos = rigidbodyRef.current.translation();
+      vehicle.position.set(physPos.x, physPos.y, physPos.z);
+      
+      // Sync visual rotation to inner mesh (since lockRotations=true on RigidBody)
+      if (groupRef.current) {
+        groupRef.current.quaternion.copy(
+          vehicle.rotation as unknown as THREE.Quaternion
+        );
       }
     }
 
-    // --- WALL AVOIDANCE (Multi-Ray + Sliding) ---
-    // FIX: Uses raw `delta` instead of `dt` (which was delta*15, causing 15x overstrength)
-    // FIX: Clamps total push magnitude to prevent corner-squeeze teleports
-    // PERF: Throttle wall avoidance to every 2nd frame to save CPU on raycasts
-    if (frameRef.current % 2 === 0 && collidableMeshes.length > 0) {
-      const speed = vehicle.velocity.length();
-      if (speed > 0.1) {
-        // Rays: Center, Left (30deg), Right (30deg)
-        const forward = forwardRef.current
-          .set(vehicle.velocity.x, vehicle.velocity.y, vehicle.velocity.z)
-          .normalize();
-        const left = leftRef.current
-          .copy(forward)
-          .applyAxisAngle(yAxisRef.current, Math.PI / 6);
-        const right = rightRef.current
-          .copy(forward)
-          .applyAxisAngle(yAxisRef.current, -Math.PI / 6);
-
-        const directions = [forward, left, right];
-        const raycaster = raycasterRef.current;
-        const rayOrigin = rayOriginRef.current;
-        rayOrigin.set(
-          vehicle.position.x,
-          vehicle.position.y + 1.0,
-          vehicle.position.z,
-        );
-
-        // Accumulate total push to clamp later
-        let totalPushX = 0;
-        let totalPushZ = 0;
-
-        rayStats.wall += 3;
-        for (const dir of directions) {
-          raycaster.set(rayOrigin, dir);
-          raycaster.far = 3.0;
-
-          const hits = raycaster.intersectObjects(collidableMeshes, true);
-          if (hits.length > 0) {
-            const hit = hits[0];
-            const dist = hit.distance;
-
-            const normal = normalRef.current.set(0, 0, 0);
-            if (hit.face) {
-              normal
-                .copy(hit.face.normal)
-                .transformDirection(hit.object.matrixWorld)
-                .normalize();
-            } else {
-              normal
-                .set(
-                  vehicle.position.x - hit.point.x,
-                  vehicle.position.y - hit.point.y,
-                  vehicle.position.z - hit.point.z,
-                )
-                .normalize();
-              normal.y = 0;
-            }
-
-            // 1. Repulsion force — use raw delta, NOT dt (=delta*15)
-            // Dampen during close approach (ARRIVE active) to let agent converge
-            const basePush = (3.0 - dist) * 40.0;
-            const pushStrength = bArrive.active ? basePush * 0.4 : basePush;
-            totalPushX += normal.x * pushStrength * delta;
-            totalPushZ += normal.z * pushStrength * delta;
-
-            // 2. Hard Velocity Slide (very close to wall)
-            if (dist < 1.5) {
-              const vel = vehicle.velocity as unknown as THREE.Vector3;
-              const dot = vel.dot(normal);
-              if (dot < 0) {
-                vel.x -= normal.x * dot;
-                vel.z -= normal.z * dot;
-                vel.multiplyScalar(0.9);
-              }
-            }
-
-            // 3. Hard Position Clamp (clipping)
-            if (dist < 0.8) {
-              const pushOut = normal.multiplyScalar(0.8 - dist);
-              vehicle.position.x += pushOut.x;
-              vehicle.position.z += pushOut.z;
-            }
-          }
-        }
-
-        // Removed manual corner escape wiggle because it caused left/right jitter.
-        // YUKA's steering/pathfinder will solve stalemates via route recalculations.
-
-        // Clamp total push magnitude to prevent teleports
-        const pushMag = Math.sqrt(
-          totalPushX * totalPushX + totalPushZ * totalPushZ,
-        );
-        const maxPush = 15.0;
-        if (pushMag > maxPush) {
-          const scale = maxPush / pushMag;
-          totalPushX *= scale;
-          totalPushZ *= scale;
-        }
-        vehicle.velocity.x += totalPushX;
-        vehicle.velocity.z += totalPushZ;
-
-        raycaster.far = Infinity;
-      }
-
-      // --- STUCK DETECTION AND RECOVERY ---
+    // --- STUCK DETECTION AND RECOVERY ---
       // If the agent is trying to move (speed > 0.5) but the position displacement is 
       // minimal (< 0.2m) over several seconds, they are likely stuck against 
       // an obstacle or in a Navmesh hole.
@@ -801,7 +759,6 @@ export function useAgentBrain(
         stuckTimer.current = 0;
         lastStuckCheckPos.current.copy(vehicle.position as unknown as THREE.Vector3);
       }
-    }
 
     const spdPostWall = Math.hypot(vehicle.velocity.x, vehicle.velocity.z);
     const neighborFx = computeVehicleNeighborEffects(vehicle, id, aiManager, {
@@ -829,37 +786,42 @@ export function useAgentBrain(
         if (
           distToPlayer < PLAYER_GREET_DISTANCE &&
           !storeState.nearbyAgentId &&
-          !storeState.isChatOpen &&
-          !taskQueue.isBusy()
+          !storeState.isChatOpen
         ) {
           playerProximityState.current = "GREETING";
-          const greetScript = `player_greet_${Date.now()}`;
-          const pp = playerRef.current.position.clone();
-          taskQueue.enqueue({
-            type: "LOOK_AT",
-            priority: 6,
-            scriptId: greetScript,
-            lookTarget: pp,
-            duration: 2,
-          });
-          taskQueue.enqueue({
-            type: "EMOTE",
-            priority: 6,
-            scriptId: greetScript,
-            gesture: "wave",
-            duration: 2,
-          });
-          taskQueue.enqueue({
-            type: "SAY",
-            priority: 6,
-            scriptId: greetScript,
-            content: getRandomPhrase("GREETINGS"),
-          });
+          const currentTask = taskQueue.getCurrentTask();
+          const isHighPriorityWork = currentTask && currentTask.priority >= 6;
+
+          // Only perform physical greeting if not doing high-priority work (SIT, LLM script, etc.)
+          if (!isHighPriorityWork) {
+            const greetScript = `player_greet_${Date.now()}`;
+            const pp = playerRef.current.position.clone();
+            taskQueue.enqueue({
+              type: "LOOK_AT",
+              priority: 6,
+              scriptId: greetScript,
+              lookTarget: pp,
+              duration: 2,
+            });
+            taskQueue.enqueue({
+              type: "EMOTE",
+              priority: 6,
+              scriptId: greetScript,
+              gesture: "wave",
+              duration: 2,
+            });
+            taskQueue.enqueue({
+              type: "SAY",
+              priority: 6,
+              scriptId: greetScript,
+              content: getRandomPhrase("GREETINGS"),
+            });
+          }
 
           storeState.setNearbyAgentId(id);
           storeState.setChatPromptVisible(true);
 
-          brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). Greeting and offering assistance.`;
+          brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). ${isHighPriorityWork ? "Available for chat." : "Greeting and offering assistance."}`;
           brain.state.lastThoughtTime = Date.now();
         }
       } else if (playerProximityState.current === "GREETING") {
@@ -893,11 +855,18 @@ export function useAgentBrain(
           brain.state.lastThoughtTime = Date.now();
         }
       } else if (playerProximityState.current === "CHATTING") {
-        // Agent stays idle while chatting
-        vehicle.velocity.set(0, 0, 0);
+        // Intelligence improvement: Only stop if we weren't doing high-priority work
+        // or let the steering command from taskQueue dictate the movement.
+        const currentTask = taskQueue.getCurrentTask();
+        const isHighPriorityWork = currentTask && currentTask.priority >= 6;
+        const speed = vehicle.velocity.length();
 
-        // Face the player continuously during chat
-        if (groupRef.current && playerRef.current) {
+        if (!isHighPriorityWork && speed < 0.2) {
+           vehicle.velocity.set(0, 0, 0);
+        }
+
+        // Face the player if we are relatively stationary (e.g. sitting or idle-chatting)
+        if (speed < 0.5 && groupRef.current && playerRef.current) {
           const toPlayer = toPlayerRef.current.set(
             playerRef.current.position.x - vehicle.position.x,
             0,
@@ -949,10 +918,11 @@ export function useAgentBrain(
     // Record familiarity (Phase 3: Individual Dispersion)
     familiarityRef.current.visit(vehicle.position as unknown as THREE.Vector3, delta);
 
-    // --- PHYSICS (Gravity / Ground Detection) ---
-    // FIX: Runs every frame (was every-other-frame, causing missed ground + free-fall)
-    // FIX: Agents no longer walk on workbenches — max step-up height limits Y snapping
-    if (collidableMeshes.length > 0) {
+    // --- LEGACY PHYSICS (Gravity / Ground Detection via BVH Raycasting) ---
+    // DISABLED when Rapier RigidBody is present — Rapier handles gravity, ground
+    // contact and collisions natively. Running both causes duplicate work, BVH
+    // deprecation-warning spam, and incorrect double-correction of position.Y.
+    if (!rigidbodyRef.current && collidableMeshes.length > 0) {
       const raycaster = raycasterRef.current;
       const rayOrigin = rayOriginRef.current;
 
@@ -1575,20 +1545,42 @@ export function useAgentBrain(
         playerProximityState.current !== "CHATTING" &&
         playerProximityState.current !== "GREETING"
       ) {
-        if (personalityRef.current.stationaryDesk) {
-            taskQueue.enqueue({
-              type: "SIT",
-              priority: 5,
-              scriptId: "auto_return_desk",
-              itemId: personalityRef.current.stationaryDesk,
-            });
-        } else {
-          const pacingTask = utilityBrainRef.current.checkPacing(
-            driveManagerRef.current.drives,
-            true,
-            performance.now() / 1000,
-          );
-          if (pacingTask) taskQueue.enqueue(pacingTask);
+        // Prevent infinite spam if the desk is unreachable or task fails instantly.
+        // Use a DEDICATED ref so the utility check interval doesn't reset this guard.
+        const now = Date.now();
+        if (now - lastIdleFallbackTimeRef.current > 8000) {
+          lastIdleFallbackTimeRef.current = now;
+          if (personalityRef.current.stationaryDesk) {
+              const chairId = DESK_TO_CHAIR[personalityRef.current.stationaryDesk] || personalityRef.current.stationaryDesk;
+              if (personalityRef.current.stationaryStand) {
+                taskQueue.enqueue({
+                  type: "GO_TO",
+                  priority: 5,
+                  scriptId: "auto_return_desk",
+                  itemId: chairId,
+                });
+                taskQueue.enqueue({
+                  type: "LOOK_AT",
+                  priority: 4,
+                  scriptId: "auto_return_desk",
+                  itemId: personalityRef.current.stationaryDesk,
+                });
+              } else {
+                taskQueue.enqueue({
+                  type: "SIT",
+                  priority: 5,
+                  scriptId: "auto_return_desk",
+                  itemId: chairId,
+                });
+              }
+          } else {
+            const pacingTask = utilityBrainRef.current.checkPacing(
+              driveManagerRef.current.drives,
+              true,
+              performance.now() / 1000,
+            );
+            if (pacingTask) taskQueue.enqueue(pacingTask);
+          }
         }
       }
     }
@@ -1858,5 +1850,6 @@ export function useAgentBrain(
     vehicle: vehicleRef.current,
     brain: brainRef.current,
     animationState,
+    rigidbodyRef,
   };
 }

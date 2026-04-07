@@ -16,7 +16,7 @@
 /** Player proximity / greet flow */
 export const PLAYER_GREET_DISTANCE = 6.0;
 export const PLAYER_LEAVE_DISTANCE = 10.0;
-export const PLAYER_COOLDOWN_TIME = 15.0;
+export const PLAYER_COOLDOWN_TIME = 4.0;
 
 /** Dedupe repeated LLM script injections */
 export const SCRIPT_COOLDOWN_MS = 30_000;
@@ -38,12 +38,12 @@ export const UTILITY_CHECK_INTERVAL_MS = 3000;
 /** LLM cooldown tiers based on player distance (meters). */
 export const PLAYER_NEAR_DIST = 5;
 export const PLAYER_MID_DIST = 15;
-export const LLM_COOLDOWN_NEAR_SEC = 8;
-export const LLM_COOLDOWN_MID_SEC = 20;
-export const LLM_COOLDOWN_FAR_SEC = 45;
+export const LLM_COOLDOWN_NEAR_SEC = 12;
+export const LLM_COOLDOWN_MID_SEC = 45;
+export const LLM_COOLDOWN_FAR_SEC = 120;
 
 /** After a failed/null brain call, apply this many seconds of elapsed cooldown (faster retry). */
-export const BRAIN_FAILURE_RETRY_SEC = 4;
+export const BRAIN_FAILURE_RETRY_SEC = 8;
 
 /** Suppress random subconscious phrases this long after LLM-driven speech (ms). */
 export const SUBCONSCIOUS_AFTER_LLM_SUPPRESS_MS = 9000;

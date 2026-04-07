@@ -358,14 +358,15 @@ function buildTierOrder(
   const base: TierName[] =
     backend === "local"
       ? hasPiper
-        ? ["piper", "gemini", "googlecloud"]
-        : ["gemini", "googlecloud"]
+        ? ["piper", "gemini"]
+        : ["gemini"]
       : // "google" — default: best quality first
         hasPiper
-        ? ["gemini", "piper", "googlecloud"]
-        : ["gemini", "googlecloud"];
+        ? ["gemini", "piper"]
+        : ["gemini"];
 
   return disableWebSpeech ? base : [...base, "webspeech"];
+  // NOTE: "googlecloud" tier disabled — API not enabled in current GCP project
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

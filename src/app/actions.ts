@@ -331,25 +331,18 @@ export async function chatWithAgent(
       role: "system",
       content: `You are ${agentId}, a helpful research lab robot.
 CONSTRAINTS:
-- Keep spoken replies under 2 sentences.
-- Never use markdown or emojis. Talk naturally.
-- You can perform tasks using the execute_agent_tasks tool.
-- If asked to do something, call the tool AND provide a brief spoken acknowledgment.
-- If an item/location is NOT in the Context below, you CANNOT interact with it. State this clearly.
-- Note: you must hold a file to read/write it.
-
-EXAMPLE TOOL USE:
-User: "Bring me the datapad."
-Tool Call (execute_agent_tasks): {"thought_process": "The user wants the datapad. It is on the floor.", "tasks": [{"type": "FETCH_AND_PLACE", "itemId": "datapad_1", "destAreaId": "user_desk"}]}
+- Replies < 2 sentences. No markdown/emojis.
+- Use execute_agent_tasks for physical acts.
+- If an item/location is MIA in Context, state it clearly.
 
 CONTEXT:
-${worldContext || "No items or areas nearby."}
-${entityConversationMemory ? `\n\n## Your memory of past talks with this person\n${entityConversationMemory}` : ""}`,
+${worldContext || "Clear."}
+${entityConversationMemory ? `\n\nMEMORY:\n${entityConversationMemory}` : ""}`,
     },
   ];
 
-  // Add conversation history (limit to last 6 messages to stay under token limits)
-  const recentHistory = conversationHistory.slice(-6);
+  // Add conversation history (lean window for speed)
+  const recentHistory = conversationHistory.slice(-4);
   for (const msg of recentHistory) {
     messages.push({
       role: msg.role === "user" ? "user" : "assistant",
@@ -477,3 +470,31 @@ ${entityConversationMemory ? `\n\n## Your memory of past talks with this person\
     };
   }
 }
+
+/** Diagnostic tool to verify Groq API health. */
+export async function testGroqAPI() {
+  const startTime = Date.now();
+  try {
+    const client = getGroqClient();
+    const completion = await client.chat.completions.create({
+      messages: [{ role: "user", content: "Ping" }],
+      model: "llama-3.1-8b-instant",
+      max_completion_tokens: 5,
+    });
+    const duration = Date.now() - startTime;
+    return {
+      status: "success",
+      reply: completion.choices[0]?.message?.content || "No reply",
+      duration_ms: duration,
+      model: completion.model,
+    };
+  } catch (error: any) {
+    return {
+      status: "error",
+      message: error.message || "Unknown API Error",
+      code: error.status || "Unknown",
+      duration_ms: Date.now() - startTime,
+    };
+  }
+}
+

@@ -48,20 +48,20 @@ export async function processAgentThought(
   memoryContext: string = "",
   trace?: TraceOptions,
 ): Promise<{ message: ChatCompletionMessage; usage?: any; model?: string }> {
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 1;
   let attempt = 0;
   let userPromptSuffix = "";
 
   // Context Compression: Convert entities to Markdown Table (Truncated to top 5 closest for 8B token budget)
   const entityTable =
     context.nearbyEntities.length > 0
-      ? `| Type | ID (use this) | DisplayName | Dist | Status |\n|---|---|---|---|---|\n` +
+      ? `| ID | Name | Dist |\n|---|---|---|\n` +
         context.nearbyEntities
           .sort((a, b) => a.distance - b.distance)
-          .slice(0, 5)
+          .slice(0, 3)
           .map(
             (e) =>
-              `| ${e.type} | ${e.id} | ${e.name || e.objectType || "-"} | ${e.distance.toFixed(1)}m | ${e.status || "-"} |`,
+              `| ${e.id} | ${e.name || e.objectType || "-"} | ${e.distance.toFixed(1)}m |`,
           )
           .join("\n")
       : "No entities nearby.";
@@ -131,37 +131,23 @@ ${entityTable}
 ${memoryContext || "Clear environment."}
 
 ## Navigation Zones (use as zoneId in go_to)
-| Zone ID | Location |
+| POI | Description |
 |---|---|
-| center-park | Interior garden with pond and arowana fish |
-| fishing-dock | Calm dock beside the koi pond |
-| core-lab | North sector — chemistry and biology workbenches |
-| data-analysis | East sector — desktop computers and analysis stations |
-| break-room | South sector — sofas, TV, coffee machine |
-| conference-area | West sector — conference table and manager's desk |
-| interior-ring | The full curved research ring corridor |
-| exterior-plaza | Outdoor plaza outside the building |
+| center-park | Zen Garden |
+| fishing-dock | Waterfall |
+| core-lab | North Sector |
+| data-analysis | East Sector |
+| break-room | South Sector |
+| conference-area | West Sector |
+| interior-ring | Main Walkway |
+| exterior-plaza | Observation |
 
 ${TOOL_CATALOG_FOR_PROMPT}
 
-## Speech discipline (important)
-- Use **say** only when there is a **clear purpose**: answer the player or a peer, **ask a question**, report a concrete result, coordinate a shared task, or react briefly to something **specific** you perceive. Do **not** narrate vague internal monologue, generic "pondering", or the same metaphor (architecture, structural integrity, etc.) every turn.
-- **Questions are encouraged** when you need information, consent, or help — use **say** (nearby) or **message_agent** (targeted peer).
-- If nothing needs saying, use **observe** or action-only tools; **silence is correct**.
-- **Vary** wording from turn to turn; avoid repeating your own last line or a stock catchphrase.
-- Your personality **speechStyle** guides tone, not an excuse to repeat one theme endlessly.
-
-## Rules
-- Use tools to act. 1–3 tool calls max per turn. Use only the API's structured tool_calls — never fake tool syntax in plain text.
-- Combine tools when natural: e.g. **claim_task** + **say** (one short line), or **go_to** + **message_agent**.
-- 'say' — 1–2 short sentences, plain text. For another agent's **next** thought cycle use **message_agent** (exact AGENT id); for everyone use **announce**.
-- 'present' → navigates to conference-area podium.
-- 'sit' → use an ID from the Perception table.
-- 'emote' gestures: wave, nod, shrug, cheer, think.
-- Shared lab tasks: **claim_task** with exact Task ID for **open** / unassigned rows; **release_task** to hand back. Coordinate with **message_agent** or **collaborate** when helpers are needed.
-- Personal desk: **claim_desk** with ids from scenario / desk labels.
-- If tasks are running, prefer **observe** unless a drive is critically LOW or you must coordinate.
-- CRITICAL: Copy entity IDs exactly from the Perception table above.
+- Goal: Answer player, coordinate tasks, react specifically.
+- Questions encouraged. Silence is correct if idle.
+- 1–2 tool calls max. Use tool_calls ONLY.
+- IDs must be exact from perception.
   `;
 
   while (attempt < MAX_RETRIES) {

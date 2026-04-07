@@ -61,6 +61,22 @@ export class InteractableRegistry {
   }
 
   /**
+   * Get the authoritative WORLD rotation of an object.
+   * Reads from the mesh's world matrix if available, otherwise falls back to stored rotation.
+   */
+  public getWorldRotation(objectId: string): THREE.Quaternion | null {
+    const obj = this.objects.get(objectId);
+    if (!obj) return null;
+
+    if (obj.meshRef) {
+      obj.meshRef.getWorldQuaternion(_tempQuat);
+      return _tempQuat.clone();
+    }
+
+    return null;
+  }
+
+  /**
    * Get the authoritative WORLD position of a placing area.
    * Uses the stored area.position which includes the correct vertical offset
    * (h/2 + 0.15) computed during registration in usePlacingArea.

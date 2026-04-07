@@ -35,26 +35,27 @@ export function useAgentVehicle(
     vehicle.mass = 2.0;
     vehicle.boundingRadius = 1.0;
 
+    const worldPos = new THREE.Vector3();
+    groupRef.current.getWorldPosition(worldPos);
+
     vehicle.position.set(
-      groupRef.current.position.x,
-      AGENT_VEHICLE_SPAWN_Y,
-      groupRef.current.position.z,
+      worldPos.x,
+      worldPos.y,
+      worldPos.z,
     );
-    groupRef.current.position.y = AGENT_VEHICLE_SPAWN_Y;
+
     vehicle.rotation.copy(
       groupRef.current.quaternion as unknown as YUKA.Quaternion,
     );
     lastGroundedPosRef.current.set(
-      groupRef.current.position.x,
-      AGENT_VEHICLE_SPAWN_Y,
-      groupRef.current.position.z,
+      worldPos.x,
+      worldPos.y,
+      worldPos.z,
     );
 
-    vehicle.setRenderComponent(groupRef.current, (entity, renderComponent) => {
-      const mesh = renderComponent as THREE.Group;
-      mesh.position.copy(entity.position as unknown as THREE.Vector3);
-      mesh.quaternion.copy(entity.rotation as unknown as THREE.Quaternion);
-    });
+    // Physics Bridge: We no longer sync Yuka directly to the mesh.
+    // Rapier physics handles the mesh translation based on RigidBody velocities.
+    // vehicle.setRenderComponent is intentionally omitted.
 
     const followPath = new YUKA.FollowPathBehavior();
     followPath.active = false;

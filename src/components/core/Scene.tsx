@@ -3,6 +3,7 @@
 import React, { useRef, useEffect } from "react";
 import { getPodDeployExitPosition } from "@/config/agentPods";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Physics } from "@react-three/rapier";
 import "@/lib/bvh-setup";
 import { AdaptiveEvents, Environment, BakeShadows } from "@react-three/drei";
 import * as THREE from "three";
@@ -232,36 +233,38 @@ export default function Scene() {
         <Environment preset="city" />
         <BakeShadows />
 
-        {/* SceneWorldRoot dispatches to ResearchFacilityWorld (via sceneWorldConfig "facility" mode) */}
-        <SceneWorldRoot />
+        <Physics>
+          {/* SceneWorldRoot dispatches to ResearchFacilityWorld (via sceneWorldConfig "facility" mode) */}
+          <SceneWorldRoot />
 
-        {/*
-          Spawn on the interior ring floor (z=72 is safely inside the outer wall at r=95).
-          Agents start nearby so they're visible on first load.
-        */}
-        <Robot groupRef={robotRef} initialPosition={[0, 5.0, 72]} />
-        {/* Dynamic Research Agents */}
-        {activeResearchAgents.map((agent) => (
-          <Agent
-            key={agent.id}
-            playerRef={robotRef}
-            initialPosition={agent.spawnPosition}
-            id={agent.id}
-            color={agent.color}
-          />
-        ))}
+          {/*
+            Spawn on the interior ring floor (z=72 is safely inside the outer wall at r=95).
+            Agents start nearby so they're visible on first load.
+          */}
+          <Robot groupRef={robotRef} initialPosition={[0, 5.0, 72]} />
+          {/* Dynamic Research Agents */}
+          {activeResearchAgents.map((agent) => (
+            <Agent
+              key={agent.id}
+              playerRef={robotRef}
+              initialPosition={agent.spawnPosition}
+              id={agent.id}
+              color={agent.color}
+            />
+          ))}
 
-        <YukaSystem />
-        <DebugCrosshair />
-        <ObstacleVisualizer />
-        <PlacingAreaMarkers playerRef={robotRef} />
-        <ObjectHighlighter />
+          <YukaSystem />
+          <DebugCrosshair />
+          <ObstacleVisualizer />
+          <PlacingAreaMarkers playerRef={robotRef} />
+          <ObjectHighlighter />
+          <IntentVisualizer />
+          <ScenarioManager />
+          <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
+        </Physics>
+        
         <FPSMonitor />
-        <IntentVisualizer />
-        <ScenarioManager />
         <DynamicStatsIslandStats />
-
-        <CameraRig target={robotRef as React.RefObject<THREE.Group | null>} />
       </Canvas>
       <DynamicStatsIslandUI />
     </div>

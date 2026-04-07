@@ -2,26 +2,29 @@ import React from "react";
 import { interiorFloorGeometry, exteriorPlazaGeometry } from "./FacilityGeometries";
 import { floorMaterial, concreteMaterial } from "./FacilityMaterials";
 import { DEFAULT_LAB_HUB } from "./labFloorConstants";
+import { RigidBody } from "@react-three/rapier";
 
 export default function FacilityFloor() {
   return (
     <group>
       {/* Base ground slab to prevent falling off edge of plaza */}
-      <mesh
-        position={[DEFAULT_LAB_HUB.x, 0, DEFAULT_LAB_HUB.z]}
-        receiveShadow
-        userData={{
-          type: "Structure",
-          id: "ground-main",
-          name: "Lab Ground",
-        }}
-        onUpdate={(self) => {
-          self.layers.enable(1);
-        }}
-      >
-        <boxGeometry args={[400, 6, 400]} />
-        <meshStandardMaterial color="#2a2f38" />
-      </mesh>
+      <RigidBody type="fixed" colliders="cuboid">
+        <mesh
+          position={[DEFAULT_LAB_HUB.x, DEFAULT_LAB_HUB.y - 3.2, DEFAULT_LAB_HUB.z]}
+          receiveShadow
+          userData={{
+            type: "Structure",
+            id: "ground-main",
+            name: "Lab Ground",
+          }}
+          onUpdate={(self) => {
+            self.layers.enable(1);
+          }}
+        >
+          <boxGeometry args={[400, 6, 400]} />
+          <meshStandardMaterial color="#2a2f38" />
+        </mesh>
+      </RigidBody>
 
       {/* Interior Wooden Floor */}
       <mesh

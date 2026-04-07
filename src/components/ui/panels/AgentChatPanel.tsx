@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { chatWithAgent } from "@/app/actions";
+import { chatWithAgent, testGroqAPI } from "@/app/actions";
 import { buildWorldContext } from "@/lib/nlp-parser";
 import { AgentTaskRegistry } from "@/systems/AgentTaskQueue";
 import { InteractableRegistry } from "@/systems/InteractableRegistry";
@@ -740,9 +740,9 @@ export const AgentChatPanel: React.FC = () => {
       // Build world context restricted to the agent's spatial awareness
       const agentPos = useGameStore.getState().agentPositions[chatAgentId];
       // Guard: if position is unknown, build context without spatial filter
-      // Reduce search radius to prevent LLM payload from exceeding token limits (Groq 413)
+      // Reduce search radius (12m) to keep context small and replies fast (<5s)
       const ctx = agentPos
-        ? buildWorldContext(agentPos, 30)
+        ? buildWorldContext(agentPos, 12)
         : buildWorldContext();
 
       // 1. Fetch persistent core facts (insights)
@@ -783,8 +783,8 @@ export const AgentChatPanel: React.FC = () => {
         entityConversationMemory,
       );
 
-      // Add agent's reply to chat and to common agent communication
       addChatMessage(chatAgentId, { role: "agent", text: response.reply });
+      
       addCommonAgentMessage(chatAgentId, {
         role: "agent",
         text: response.reply,
@@ -805,10 +805,34 @@ export const AgentChatPanel: React.FC = () => {
         );
         processTasks(chatAgentId, response.tasks);
       }
-    } catch (err) {
-      const errMsg = "Sorry, I'm having trouble responding right now.";
+    } catch (err: any) {
+      console.error("Chat Error:", err);
+      const errMsg = `⚠️ Error: ${err.message || "Failed to contact agent."}. Please check if your Groq API key is valid.`;
       addChatMessage(chatAgentId, { role: "agent", text: errMsg });
       addCommonAgentMessage(chatAgentId, { role: "agent", text: errMsg });
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const handleTestDiagnostics = async () => {
+    setIsThinking(true);
+    addChatMessage(chatAgentId!, { role: "user", text: "[System] Testing API connectivity..." });
+    try {
+      const res = await testGroqAPI();
+      if (res.status === "success") {
+        addChatMessage(chatAgentId!, { 
+          role: "agent", 
+          text: `✅ API Connection Success! Model ${res.model} replied in ${res.duration_ms}ms. Response: "${res.reply}"` 
+        });
+      } else {
+        addChatMessage(chatAgentId!, { 
+          role: "agent", 
+          text: `❌ API Connection Failed! Status: ${res.code}. Message: ${res.message}. Duration: ${res.duration_ms}ms.` 
+        });
+      }
+    } catch (err: any) {
+      addChatMessage(chatAgentId!, { role: "agent", text: `❌ Fatal Diagnostics Error: ${err.message}` });
     } finally {
       setIsThinking(false);
     }
@@ -831,9 +855,25 @@ export const AgentChatPanel: React.FC = () => {
             <span>Research Lab Assistant</span>
           </div>
         </div>
-        <button className={styles.chatCloseBtn} onClick={handleClose}>
-          ESC <span style={{ opacity: 0.6 }}>Close</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+                onClick={handleTestDiagnostics}
+                disabled={isThinking}
+                style={{ 
+                    fontSize: '10px', 
+                    padding: '4px 8px', 
+                    borderRadius: '4px', 
+                    border: '1px solid #444', 
+                    background: '#222', 
+                    color: '#888',
+                    cursor: 'pointer'
+                }}>
+                Test API
+            </button>
+            <button className={styles.chatCloseBtn} onClick={handleClose}>
+            ESC <span style={{ opacity: 0.6 }}>Close</span>
+            </button>
+        </div>
       </div>
 
       {/* Messages */}
