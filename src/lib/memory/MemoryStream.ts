@@ -51,6 +51,8 @@ export class MemoryStream {
     source: MemorySource = "system",
     sourceAgentId?: string,
     sourceModel?: string,
+    zoneId?: string,
+    zoneSatisfaction?: number,
   ): Promise<void> {
     const importance = this.calculateHeuristicImportance(type, tags);
     const memory: MemoryObject = {
@@ -62,6 +64,8 @@ export class MemoryStream {
       importance,
       tags,
       isInsight: false,
+      zoneId,
+      zoneSatisfaction,
       source,
       sourceAgentId,
       sourceModel,
@@ -100,7 +104,7 @@ export class MemoryStream {
       );
     }
 
-    // 2. Score — importance × 0.5 + recency × 0.2 + trust × 0.3
+    // 2. Score — importance × 0.45 + recency × 0.15 + trust × 0.25 + zoneAffinity × 0.10 + satisfaction × 0.05
     const scored = candidates.map((m) => {
       const importanceScore = m.importance / 10; // 0.1 to 1.0
 
@@ -111,9 +115,17 @@ export class MemoryStream {
       // Trust score from provenance — missing source defaults to 0.7
       const trustScore = TRUST_WEIGHT[m.source ?? "system"] ?? 0.7;
 
-      // Weighted total: direct observations surface over LLM-inferred guesses
+      // Method of Loci boosts
+      const zoneAffinityScore = (context.zoneId && m.zoneId === context.zoneId) ? 1.0 : 0.0;
+      const satisfactionScore = m.zoneSatisfaction ? (m.zoneSatisfaction / 100) : 0.5;
+
+      // Weighted total: direct observations surface over LLM-inferred guesses, zones provide priming
       const finalScore =
-        importanceScore * 0.5 + recencyScore * 0.2 + trustScore * 0.3;
+        importanceScore * 0.45 +
+        recencyScore * 0.15 +
+        trustScore * 0.25 +
+        zoneAffinityScore * 0.10 +
+        satisfactionScore * 0.05;
 
       return { memory: m, score: finalScore };
     });
@@ -140,6 +152,17 @@ export class MemoryStream {
 
   private async count(): Promise<number> {
     return memoryStorage.count();
+  }
+
+  /**
+   * Helper to retrieve memories specifically primed by a zone.
+   */
+  async retrieveByZone(agentId: string, zoneId: string, limit: number = 3): Promise<MemoryObject[]> {
+    return this.retrieve({
+      agentId,
+      zoneId,
+      limit,
+    });
   }
 
   /**

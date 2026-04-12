@@ -28,6 +28,12 @@ export interface MemoryObject {
   tags: string[];       // For fast filtering e.g. ['entity:player', 'location:desk']
   isInsight?: boolean;  // True if this is a system-generated summary / reflection
 
+  // ── Method of Loci fields ──────────────────────────────────────────────
+  /** Zone where this memory was formed (Method of Loci). */
+  zoneId?: string;
+  /** Zone satisfaction at write time (0–100). Boosts retrieval salience. */
+  zoneSatisfaction?: number;
+
   // ── Provenance fields (Phase 1) ──────────────────────────────────────────
   /** How this memory was created. Required for trust-weighted retrieval. */
   source: MemorySource;
@@ -42,6 +48,8 @@ export interface RetrievalContext {
   query?: string;    // Natural language query (optional for now, future use)
   tags?: string[];   // Filter by tags (e.g. "What do I know about PLAYER?")
   limit?: number;    // Max memories to return (default 10)
+  /** If set, boost memories from this zone (Method of Loci priming). */
+  zoneId?: string;
 }
 
 export interface MemoryConfig {

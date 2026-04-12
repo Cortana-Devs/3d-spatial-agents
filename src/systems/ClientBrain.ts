@@ -44,6 +44,7 @@ export class ClientBrain {
   private _lastDrivesParsed: Record<string, number> = {};
   /** Spatial language ratio computed off-thread, 1-tick lag is acceptable. */
   private _lastSpatialFreq = 0;
+  private _lastZoneId: string | null = null;
 
   constructor(id: string = "agent-01") {
     this.id = id;
@@ -156,17 +157,16 @@ export class ClientBrain {
       }
 
       // Fix D: Include zone-specific tags for location-aware memory retrieval
-      if (richContext?.zoneContext) {
-        const zoneMatch = richContext.zoneContext.match(/Zone: ([a-z0-9-]+)/i);
-        if (zoneMatch) {
-          contextTags.push(`zone:${zoneMatch[1]}`);
-        }
+      const currentZoneId = SpatialMemory.getInstance(this.id).getCurrentZone();
+      if (currentZoneId) {
+        contextTags.push(`zone:${currentZoneId}`);
       }
 
       const relevantMemories = await memoryStream.retrieve({
         agentId: this.id,
         tags: contextTags,
         limit: 5,
+        zoneId: currentZoneId || undefined,
       });
 
       const memoryContextStr =
@@ -179,10 +179,25 @@ export class ClientBrain {
               .join("\n")
           : "No relevant past memories.";
 
+      // ── Zone Re-Entry Priming ──
+      let zonePrimingContext = "";
+      if (currentZoneId && currentZoneId !== this._lastZoneId) {
+        const spatialMem = SpatialMemory.getInstance(this.id);
+        const entry = spatialMem.getEntry(currentZoneId);
+        if (entry && entry.visitCount > 1) {
+          const zoneMemories = await memoryStream.retrieveByZone(this.id, currentZoneId, 3);
+          if (zoneMemories.length > 0) {
+            zonePrimingContext = `\n[ZONE PRIMING - Re-entering ${entry.zoneName}]:\n` + 
+              zoneMemories.map(m => `- [${new Date(m.timestamp).toLocaleTimeString()}] ${m.content}`).join("\n") + "\n\n";
+          }
+        }
+      }
+      this._lastZoneId = currentZoneId;
+
       const scenarioContext = useGameStore.getState().agentScenarioContext[this.id] || "";
       const memoryContextWithScenario = scenarioContext 
-        ? `[SCENARIO CONTEXT]: ${scenarioContext}\n\n${memoryContextStr}` 
-        : memoryContextStr;
+        ? `[SCENARIO CONTEXT]: ${scenarioContext}\n\n${zonePrimingContext}${memoryContextStr}` 
+        : `${zonePrimingContext}${memoryContextStr}`;
 
       // --- Knowledge Graph Context (Phase 2) ---
       const kg = KnowledgeGraph.getInstance(this.id);
@@ -642,7 +657,7 @@ export class ClientBrain {
         thought: decision.thought,
         toolCalls: (response?.tool_calls ?? []).map((tc: any) => tc.function?.name ?? "unknown"),
         zoneId:
-          richContext?.zoneContext?.match(/Zone:\s*([a-z0-9-]+)/i)?.[1] ?? null,
+          SpatialMemory.getInstance(this.id).getCurrentZone(),
         nearbyEntityCount: nearbyEntities.length,
         nearbyAgentIds: nearbyEntities
           .filter((e) => e.type === "AGENT" && e.id)
@@ -663,6 +678,8 @@ export class ClientBrain {
       // --- 3. MEMORIZE (Client Side) ---
       if (decision.thought) {
         // Every action the agent takes is tagged 'self_action' — its own decision.
+        const currentZoneId = SpatialMemory.getInstance(this.id).getCurrentZone();
+        const memEntry = currentZoneId ? SpatialMemory.getInstance(this.id).getEntry(currentZoneId) : undefined;
         memoryStream
           .add(
             this.id,
@@ -671,6 +688,10 @@ export class ClientBrain {
             contextTags,
             this.sessionId,
             "self_action",
+            undefined,
+            undefined,
+            currentZoneId || undefined,
+            memEntry?.avgSatisfaction
           )
           .catch((err) =>
             console.error(`[ClientBrain:${this.id}] Memory add failed:`, err),
