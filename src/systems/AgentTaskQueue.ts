@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ConversationBus } from "@/systems/behavior/ConversationBus";
 import { InteractableRegistry } from "./InteractableRegistry";
 import { AgentBrainClient } from "@/lib/workers/AgentBrainClient";
 import { getRandomPhrase } from "@/lib/audio/phraseBank";
@@ -297,6 +298,13 @@ export class AgentTaskQueue {
     }
 
     if (this.currentTask?.type === "SAY" || this.currentTask?.type === "WAIT") {
+        if (this.currentTask.type === "SAY" && this.phaseTimer === 0) {
+            // Attempt to claim the conversational floor
+            if (!ConversationBus.getInstance().requestFloor(this.agentId)) {
+                return { type: "STOP", faceTarget: this.currentTask?.lookTarget };
+            }
+        }
+
         if (this.phaseTimer === 0 && this.currentTask.type === "SAY") {
             markAgentLlmSpeech(this.agentId);
             window.dispatchEvent(new CustomEvent("agent-speak", {
@@ -314,8 +322,17 @@ export class AgentTaskQueue {
         if (this.currentTask.type === "SAY") {
             const content = (this.currentTask as any).message || this.currentTask.content || "";
             dur = Math.max(2.0, content.length * 0.08);
+            if (this.phaseTimer <= dur) {
+               // Hold the floor actively while speaking
+               ConversationBus.getInstance().holdFloor(this.agentId, 300); // Hold it slightly ahead of delta
+            }
         }
-        if (this.phaseTimer > dur) this.setPhase("COMPLETED");
+        if (this.phaseTimer > dur) {
+            if (this.currentTask.type === "SAY") {
+                ConversationBus.getInstance().releaseFloor(this.agentId);
+            }
+            this.setPhase("COMPLETED");
+        }
         return { type: "STOP" };
     }
 

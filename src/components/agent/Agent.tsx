@@ -27,7 +27,7 @@ export default function Agent({
   const groupRef = useRef<THREE.Group>(null);
   const joints = useRef<any>({});
 
-  const { vehicle, brain, animationState, rigidbodyRef } = useAgentBrain(
+  const { vehicle, brain, animationState, rigidbodyRef, driveManager, movementPersonality, gazeController, idleBehaviorSystem } = useAgentBrain(
     id,
     groupRef,
     playerRef,
@@ -197,6 +197,10 @@ export default function Agent({
           analyser={analyserRef.current}
           animationState={animationState}
           brain={brain}
+          driveManager={driveManager}
+          movementPersonality={movementPersonality}
+          gazeController={gazeController}
+          idleBehaviorSystem={idleBehaviorSystem}
         />
       ) : id === "agent-04" ? (
         <OfficerModel
@@ -206,6 +210,10 @@ export default function Agent({
           analyser={analyserRef.current}
           animationState={animationState}
           brain={brain}
+          driveManager={driveManager}
+          movementPersonality={movementPersonality}
+          gazeController={gazeController}
+          idleBehaviorSystem={idleBehaviorSystem}
         />
       ) : (
         <RobotModel
@@ -215,6 +223,10 @@ export default function Agent({
           analyser={analyserRef.current}
           animationState={animationState}
           brain={brain}
+          driveManager={driveManager}
+          movementPersonality={movementPersonality}
+          gazeController={gazeController}
+          idleBehaviorSystem={idleBehaviorSystem}
         />
       )}
     </group>

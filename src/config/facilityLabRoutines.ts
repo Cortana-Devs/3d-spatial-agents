@@ -127,3 +127,14 @@ export function getStartingZoneForAgent(
 ): string {
   return preferredZones[0] ?? "center-park";
 }
+
+/**
+ * Returns a list of default idle locations (LabLocation interface)
+ * based on the registered world zones.
+ */
+export function buildDefaultResearchFacilityIdleLocations(): { id: string; label: string }[] {
+  return ALL_ZONE_IDS.map(id => ({
+    id,
+    label: ZONE_NAMES[id] || id
+  }));
+}

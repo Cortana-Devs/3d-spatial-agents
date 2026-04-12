@@ -28,7 +28,8 @@ import { getPersonality } from "@/config/agentPersonalities";
 import { 
   getZoneCenterPosition, 
   getNearestBench, 
-  ALL_ZONE_IDS 
+  ALL_ZONE_IDS,
+  buildDefaultResearchFacilityIdleLocations
 } from "@/config/facilityLabRoutines";
 import {
   SensorySystem,
@@ -61,14 +62,18 @@ import {
   LLM_COOLDOWN_FAR_SEC,
   UTILITY_CHECK_INTERVAL_MS,
 } from "@/constants/simulation";
-import {
-  buildDefaultResearchFacilityIdleLocations,
-  getIdleExplorer,
-} from "@/systems/autonomy/IdleExplorer";
+import { getIdleExplorer } from "@/systems/autonomy/IdleExplorer";
 import {
   applyConversationOpenStance,
   computeVehicleNeighborEffects,
 } from "@/systems/autonomy/ProxemicsSystem";
+import { MovementPersonality } from "@/systems/behavior/MovementPersonality";
+import { GazeController } from "@/systems/behavior/GazeController";
+import { IdleBehaviorSystem } from "@/systems/behavior/IdleBehaviorSystem";
+import { DeliberationLayer } from "@/systems/behavior/DeliberationLayer";
+import { ProxemicsController } from "@/systems/autonomy/ProxemicsController";
+import { PlayerAwarenessModule } from "@/systems/behavior/PlayerAwarenessModule";
+import { MovementHumanizer } from "@/systems/behavior/MovementHumanizer";
 import {
   perfBeginAgentFrame,
   perfEndAgentFrame,
@@ -99,9 +104,7 @@ export function useAgentBrain(
   const lastPerceivedEntitiesRef = useRef<PerceptionRecord[]>([]);
 
   // Player Proximity Chat State
-  const playerProximityState = useRef<
-    "NONE" | "GREETING" | "CHATTING" | "COOLDOWN"
-  >("NONE");
+  const playerAwarenessRef = useRef(new PlayerAwarenessModule());
   const playerProximityCooldown = useRef(0);
 
   // Optimization Refs
@@ -133,6 +136,12 @@ export function useAgentBrain(
   const lastStuckCheckPos = useRef(new THREE.Vector3());
   const prevTaskPhaseRef = useRef<string>("IDLE");
   const autoRestIdleSecRef = useRef(0);
+  
+  const movementPersonalityRef = useRef(new MovementPersonality(driveManagerRef.current.drives, getPersonality(id)));
+  const gazeControllerRef = useRef(new GazeController(id));
+  const idleBehaviorSystemRef = useRef(new IdleBehaviorSystem(id));
+  const gazeTickTimerRef = useRef(0);
+  
   /** Seconds of sustained empty queue before auto REST_IN_POD */
   const AUTO_REST_IDLE_SEC = 12;
 
@@ -433,6 +442,10 @@ export function useAgentBrain(
 
     const perfT = perfBeginAgentFrame();
     const rayStats = { wall: 0, ground: 0, los: 0 };
+    
+    // Access game store and derive pod ownership once per frame
+    const store = useGameStore.getState();
+    const myPodId = Object.entries(store.pods).find(([_, p]) => p.assignedAgentId === id)?.[0];
 
     const dt = delta * 15; // Speed multiplier for simulation steps
     frameRef.current++;
@@ -451,15 +464,23 @@ export function useAgentBrain(
       playerPos = playerRef.current.position;
     }
 
-    const pauseForOpenChat = playerProximityState.current === "CHATTING";
-
-    const store = useGameStore.getState();
-    const myPodId = store.getPodIdForAgent(id);
-
     let steeringCmd: SteeringCommand = { type: "NONE" } as SteeringCommand;
-    // Only pause for chat if not currently doing high-priority work (priority >= 6)
-    // Actually, let's allow the queue to ALWAYS update during chat for a more "seamless" experience.
-    // The CHATTING block below handles specific movement constraints.
+    
+    // Evaluate Player Awareness
+    let pauseForOpenChat = false;
+    if (playerPos) {
+      const distToPlayer = vehicle.position.distanceTo(
+        playerPos as unknown as YUKA.Vector3,
+      );
+      const awarenessState = playerAwarenessRef.current.evaluate(
+        distToPlayer,
+        store.isChatOpen && store.chatAgentId === id,
+        delta,
+        movementPersonalityRef.current.getProfile(driveManagerRef.current.drives)
+      );
+      pauseForOpenChat = awarenessState === "INTERACTING";
+    }
+
     steeringCmd = taskQueue.update(delta, vehiclePos, playerPos);
 
     if (steeringCmd.type === "FOLLOW_PATH" && steeringCmd.cornerAngles?.length) {
@@ -486,8 +507,8 @@ export function useAgentBrain(
         podSnap.assignedAgentId === id &&
         podSnap.isDeployed &&
         followingAgentId !== id &&
-        playerProximityState.current !== "GREETING" &&
-        playerProximityState.current !== "CHATTING" &&
+        playerAwarenessRef.current.state !== "GREETING" &&
+        playerAwarenessRef.current.state !== "INTERACTING" &&
         !pauseForOpenChat &&
         phaseNow !== "DOCKED"
       ) {
@@ -517,6 +538,22 @@ export function useAgentBrain(
       .behaviors[0] as YUKA.FollowPathBehavior;
     const bSeek = vehicle.steering.behaviors[1] as YUKA.SeekBehavior;
     const bArrive = vehicle.steering.behaviors[2] as YUKA.ArriveBehavior;
+
+    const profile = movementPersonalityRef.current.getProfile(driveManagerRef.current.drives);
+
+    gazeTickTimerRef.current += delta;
+    if (gazeTickTimerRef.current >= 0.25) {
+      gazeTickTimerRef.current = 0;
+      gazeControllerRef.current.resolveTarget(
+        Array.from((sensorySystemRef.current as any).workingMemory?.values() || []),
+        taskQueue.getCurrentTask()?.type === "SAY" || taskQueue.getCurrentTask()?.type === "COLLABORATE" ? taskQueue.getCurrentTask()?.partnerId || null : null,
+        vehicle.velocity,
+        vehicle.position,
+        playerPos || new THREE.Vector3(),
+        profile,
+        0.25
+      );
+    }
 
     if (pauseForOpenChat) {
       bFollowPath.active = false;
@@ -648,10 +685,29 @@ export function useAgentBrain(
         }
       } else if (steeringCmd.type === "ARRIVE" && steeringCmd.target) {
         resetBehaviors();
+        
+        let finalTarget = steeringCmd.target.clone();
+        const currentTaskType = taskQueue.getCurrentTask()?.type;
+        if (currentTaskType === "FOLLOW_PLAYER") {
+          finalTarget = ProxemicsController.calculateArrivalPosition(
+            finalTarget, 
+            vehiclePosRef.current, 
+            movementPersonalityRef.current.getProfile(driveManagerRef.current.drives), 
+            "player"
+          );
+        } else if (currentTaskType === "COLLABORATE") {
+          finalTarget = ProxemicsController.calculateArrivalPosition(
+            finalTarget, 
+            vehiclePosRef.current, 
+            movementPersonalityRef.current.getProfile(driveManagerRef.current.drives), 
+            "agent"
+          );
+        }
+        
         bArrive.target = new YUKA.Vector3(
-          steeringCmd.target.x,
-          steeringCmd.target.y,
-          steeringCmd.target.z,
+          finalTarget.x,
+          finalTarget.y,
+          finalTarget.z,
         );
         bArrive.active = true;
       } else if (steeringCmd.type === "STOP") {
@@ -769,94 +825,61 @@ export function useAgentBrain(
     vehicle.velocity.x += neighborFx.proxAccX * delta * 2.4;
     vehicle.velocity.z += neighborFx.proxAccZ * delta * 2.4;
 
+    // --- ORGANIC MOVEMENT MODIFIER ---
+    MovementHumanizer.applyOrganicDrift(
+      vehicle,
+      movementPersonalityRef.current.getProfile(driveManagerRef.current.drives),
+      delta,
+      performance.now() / 1000
+    );
+
     // --- PHYSICS CONSTRAINT ---
     vehicle.velocity.y = 0; // Lock Y velocity to prevent pitching
 
     // --- PLAYER PROXIMITY CHAT ---
-    // Check if the player is nearby and trigger greeting/chat flow
+    // Actions based on awareness state
     const brain = brainRef.current;
     if (playerRef.current) {
-      const distToPlayer = vehicle.position.distanceTo(
-        playerRef.current.position as unknown as YUKA.Vector3,
-      );
       const storeState = useGameStore.getState();
+      const awarenessState = playerAwarenessRef.current.state;
 
-      if (playerProximityState.current === "NONE") {
-        // Trigger greeting when player enters range
-        if (
-          distToPlayer < PLAYER_GREET_DISTANCE &&
-          !storeState.nearbyAgentId &&
-          !storeState.isChatOpen
-        ) {
-          playerProximityState.current = "GREETING";
-          const currentTask = taskQueue.getCurrentTask();
-          const isHighPriorityWork = currentTask && currentTask.priority >= 6;
+      if (awarenessState === "GREETING" && !storeState.nearbyAgentId && !storeState.isChatOpen) {
+        const currentTask = taskQueue.getCurrentTask();
+        const isHighPriorityWork = currentTask && currentTask.priority >= 6;
 
-          // Only perform physical greeting if not doing high-priority work (SIT, LLM script, etc.)
-          if (!isHighPriorityWork) {
-            const greetScript = `player_greet_${Date.now()}`;
-            const pp = playerRef.current.position.clone();
-            taskQueue.enqueue({
-              type: "LOOK_AT",
-              priority: 6,
-              scriptId: greetScript,
-              lookTarget: pp,
-              duration: 2,
-            });
+        // Only perform physical greeting if not doing high-priority work (SIT, LLM script, etc.)
+        if (!isHighPriorityWork && taskQueue.getCurrentTask()?.scriptId?.indexOf("player_greet_") === -1) {
+          const greetScript = `player_greet_${Date.now()}`;
+          const pp = playerRef.current.position.clone();
+          taskQueue.enqueue({
+            type: "LOOK_AT",
+            priority: 4, // Intentionally < 6
+            duration: 2.5,
+            lookTarget: pp,
+            scriptId: greetScript,
+          });
+
+          if (Math.random() > 0.5) {
             taskQueue.enqueue({
               type: "EMOTE",
-              priority: 6,
-              scriptId: greetScript,
               gesture: "wave",
-              duration: 2,
-            });
-            taskQueue.enqueue({
-              type: "SAY",
-              priority: 6,
+              priority: 4,
+              duration: 2.0,
               scriptId: greetScript,
-              content: getRandomPhrase("GREETINGS"),
             });
           }
-
-          storeState.setNearbyAgentId(id);
-          storeState.setChatPromptVisible(true);
-
-          brain.state.thought = `Player detected nearby (${distToPlayer.toFixed(1)}m). ${isHighPriorityWork ? "Available for chat." : "Greeting and offering assistance."}`;
-          brain.state.lastThoughtTime = Date.now();
         }
-      } else if (playerProximityState.current === "GREETING") {
-        // Check if prompt was dismissed (N pressed)
-        if (!storeState.chatPromptVisible && !storeState.isChatOpen) {
-          playerProximityState.current = "COOLDOWN";
-          playerProximityCooldown.current = 0;
-          storeState.setNearbyAgentId(null);
-
-          brain.state.thought = "Player declined assistance. Resuming patrol.";
-          brain.state.lastThoughtTime = Date.now();
+        
+        useGameStore.setState({ nearbyAgentId: id, chatPromptVisible: true });
+        brain.state.thought = `Player detected. Greeting and offering assistance.`;
+        brain.state.lastThoughtTime = Date.now();
+        
+      } else if (awarenessState === "OBSERVING" || awarenessState === "IGNORING") {
+        if (storeState.nearbyAgentId === id && !storeState.isChatOpen) {
+          useGameStore.setState({ nearbyAgentId: null, chatPromptVisible: false });
         }
-        // Check if chat was opened (Y pressed)
-        else if (storeState.isChatOpen && storeState.chatAgentId === id) {
-          playerProximityState.current = "CHATTING";
-          getIdleExplorer(id).pause();
-
-          brain.state.thought =
-            "Engaged in conversation with the user. Standing by for instructions.";
-          brain.state.lastThoughtTime = Date.now();
-        }
-        // Check if player walked away
-        else if (distToPlayer > PLAYER_LEAVE_DISTANCE) {
-          playerProximityState.current = "COOLDOWN";
-          playerProximityCooldown.current = 0;
-          storeState.setChatPromptVisible(false);
-          storeState.setNearbyAgentId(null);
-
-          brain.state.thought =
-            "Player walked away before responding. Resuming patrol.";
-          brain.state.lastThoughtTime = Date.now();
-        }
-      } else if (playerProximityState.current === "CHATTING") {
+      } else if (awarenessState === "INTERACTING") {
         // Intelligence improvement: Only stop if we weren't doing high-priority work
-        // or let the steering command from taskQueue dictate the movement.
         const currentTask = taskQueue.getCurrentTask();
         const isHighPriorityWork = currentTask && currentTask.priority >= 6;
         const speed = vehicle.velocity.length();
@@ -891,26 +914,9 @@ export function useAgentBrain(
           brain.state.thought = `Executing task from chat: ${currentTask?.type || "unknown"} (Phase: ${phase})`;
           brain.state.lastThoughtTime = Date.now();
         }
-
-        // Check if chat was closed
-        if (!storeState.isChatOpen || storeState.chatAgentId !== id) {
-          playerProximityState.current = "COOLDOWN";
-          playerProximityCooldown.current = 0;
-          storeState.setNearbyAgentId(null);
-
-          // Show task status in thought if tasks were assigned
-          if (taskQueue.isBusy()) {
-            brain.state.thought = `Chat ended. Executing assigned task: ${taskQueue.getCurrentTask()?.type || "pending"}.`;
-          } else {
-            brain.state.thought = "Chat ended. Resuming normal operations.";
-          }
-          brain.state.lastThoughtTime = Date.now();
-        }
-      } else if (playerProximityState.current === "COOLDOWN") {
-        playerProximityCooldown.current += delta;
-        if (playerProximityCooldown.current > PLAYER_COOLDOWN_TIME) {
-          playerProximityState.current = "NONE";
-          playerProximityCooldown.current = 0;
+      } else if (awarenessState === "COOLDOWN") {
+        if (storeState.nearbyAgentId === id && !storeState.isChatOpen) {
+          useGameStore.setState({ nearbyAgentId: null, chatPromptVisible: false });
         }
       }
     }
@@ -1198,8 +1204,8 @@ export function useAgentBrain(
       // --- LLM (social / reactive + periodic introspection) ---
       if (
         !isDocked &&
-        playerProximityState.current !== "GREETING" &&
-        playerProximityState.current !== "CHATTING"
+        playerAwarenessRef.current.state !== "GREETING" &&
+        playerAwarenessRef.current.state !== "INTERACTING"
       ) {
         const nowSec = Date.now() / 1000;
         const mem = sensorySystemRef.current.getWorkingMemory();
@@ -1452,9 +1458,14 @@ export function useAgentBrain(
                   lastScriptIdRef.current = scriptId;
                   lastScriptTimeRef.current = Date.now();
 
-                  // Inject the tasks into the priority queue
                   // Inject the tasks into the priority queue (Atomic insertion for AgentTaskQueue v2)
-                  decision.tasks.forEach((task) => {
+                  const deliberatedTasks = DeliberationLayer.processTaskSequence(
+                    decision.tasks,
+                    movementPersonalityRef.current.getProfile(driveManagerRef.current.drives),
+                    vehicle.position as unknown as THREE.Vector3
+                  );
+
+                  deliberatedTasks.forEach((task) => {
                     // Clamp LLM-generated coordinates to world bounds safely
                     // (Ensure they land in walkable facility lab area)
                     if (task.type === "GO_TO" && task.targetPos) {
@@ -1542,8 +1553,8 @@ export function useAgentBrain(
         taskQueue.getCurrentPhase() === "IDLE" &&
         taskQueue.getQueueLength() === 0 &&
         !isDocked &&
-        playerProximityState.current !== "CHATTING" &&
-        playerProximityState.current !== "GREETING"
+        playerAwarenessRef.current.state !== "INTERACTING" &&
+        playerAwarenessRef.current.state !== "GREETING"
       ) {
         // Prevent infinite spam if the desk is unreachable or task fails instantly.
         // Use a DEDICATED ref so the utility check interval doesn't reset this guard.
@@ -1613,8 +1624,8 @@ export function useAgentBrain(
         })();
 
       const isInConversation =
-        playerProximityState.current === "CHATTING" ||
-        playerProximityState.current === "GREETING";
+        playerAwarenessRef.current.state === "INTERACTING" ||
+        playerAwarenessRef.current.state === "GREETING";
 
       const explorer = getIdleExplorer(id);
       const explorerAction = explorer.tick(delta, {
@@ -1851,5 +1862,9 @@ export function useAgentBrain(
     brain: brainRef.current,
     animationState,
     rigidbodyRef,
+    driveManager: driveManagerRef.current,
+    movementPersonality: movementPersonalityRef.current,
+    gazeController: gazeControllerRef.current,
+    idleBehaviorSystem: idleBehaviorSystemRef.current,
   };
 }

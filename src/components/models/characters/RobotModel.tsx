@@ -6,6 +6,11 @@ import LedMouth from "@/components/models/characters/LedMouth";
 import { useGameStore } from "@/store/gameStore";
 import type { ClientBrain } from "@/systems/ClientBrain";
 import { RobotAnimationState, ProstheticHand, LedEyes } from "./parts/SharedRobotParts";
+import type { DriveManager } from "@/lib/agent-drives";
+import type { MovementPersonality } from "@/systems/behavior/MovementPersonality";
+import type { GazeController } from "@/systems/behavior/GazeController";
+import type { IdleBehaviorSystem } from "@/systems/behavior/IdleBehaviorSystem";
+import { AgentTaskRegistry } from "@/systems/AgentTaskQueue";
 
 const ARMOR_COLOR = "#f8fafc"; // Premium glossy white
 const ACCENT_COLOR = "#94a3b8"; // Light metallic accent
@@ -30,6 +35,10 @@ export default React.memo(function RobotModel({
   color?: string;
   animationState?: RobotAnimationState;
   brain?: ClientBrain | null;
+  driveManager?: DriveManager | null;
+  movementPersonality?: MovementPersonality | null;
+  gazeController?: GazeController | null;
+  idleBehaviorSystem?: IdleBehaviorSystem | null;
 } & Omit<React.JSX.IntrinsicElements["group"], "id">) {
   const logoTexture = useTexture("/usjp-logo.svg");
 
@@ -144,60 +153,30 @@ export default React.memo(function RobotModel({
       emissiveMat.emissiveIntensity = 1.5 + Math.sin(t * 4) * 0.5;
     }
 
-    // Head tracking logic
-    if (headRef.current) {
-      const state = useGameStore.getState();
-      const isChattingWithMe = id && state.chatAgentId === id;
+    if (idleBehaviorSystem && movementPersonality && driveManager) {
+      const personality = movementPersonality.getProfile(driveManager.drives);
+      idleBehaviorSystem.start(personality);
+      const phase = AgentTaskRegistry.getInstance().getOrCreate(id || "").getCurrentPhase();
+      idleBehaviorSystem.applyToJoints({
+        pelvis: pelvisRef.current || undefined,
+        spine: spineRef.current || undefined,
+        head: headRef.current || undefined,
+      }, delta, phase);
+    }
 
-      lookAtTimer.current -= delta;
-      if (isChattingWithMe) {
-        isLookingAtPlayer.current = true;
-      } else if (lookAtTimer.current <= 0) {
-        lookAtTimer.current = 2 + Math.random() * 4;
-        // 80% chance to track player if nearby
-        isLookingAtPlayer.current = Math.random() < 0.8;
-      }
-
-      const playerPos = state.playerPosition;
+    // Head tracking logic using the centralized GazeController
+    if (headRef.current && gazeController) {
       const headWorldPos = headWorldPosRef.current;
       headRef.current.getWorldPosition(headWorldPos);
 
-      const distance = headWorldPos.distanceTo(playerPos);
-
-      if (isLookingAtPlayer.current && distance < 10.0) {
-        const dummy = dummyRef.current;
-        dummy.position.copy(headWorldPos);
-        dummy.lookAt(playerPos);
-
-        if (headRef.current.parent) {
-          const parentWorldQuat = parentWorldQuatRef.current;
-          headRef.current.parent.getWorldQuaternion(parentWorldQuat);
-          targetHeadQuaternion.current.copy(
-            parentWorldQuat.invert().multiply(dummy.quaternion),
-          );
-        } else {
-          targetHeadQuaternion.current.copy(dummy.quaternion);
-        }
-
-        // Clamp angles to prevent breaking neck
-        const euler = eulerRef.current.setFromQuaternion(
-          targetHeadQuaternion.current,
-          "YXZ",
-        );
-        const normalizeAngle = (angle: number) => {
-          let a = angle % (2 * Math.PI);
-          if (a > Math.PI) a -= 2 * Math.PI;
-          if (a < -Math.PI) a += 2 * Math.PI;
-          return a;
-        };
-        euler.x = THREE.MathUtils.clamp(normalizeAngle(euler.x), -0.6, 0.6);
-        euler.y = THREE.MathUtils.clamp(normalizeAngle(euler.y), -1.2, 1.2);
-        euler.z = 0;
-        targetHeadQuaternion.current.setFromEuler(euler);
+      const parentWorldQuat = parentWorldQuatRef.current;
+      if (headRef.current.parent) {
+        headRef.current.parent.getWorldQuaternion(parentWorldQuat);
       } else {
-        targetHeadQuaternion.current.identity();
+        parentWorldQuat.identity();
       }
 
+      gazeController.getTargetQuaternion(headWorldPos, parentWorldQuat, targetHeadQuaternion.current);
       headRef.current.quaternion.slerp(targetHeadQuaternion.current, delta * 5);
     }
   });
