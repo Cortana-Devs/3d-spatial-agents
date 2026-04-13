@@ -20,6 +20,8 @@ interface CustomGaitOptions {
   lookTarget?: THREE.Vector3;
   /** Agent's current world position (for LookAt angle calculation) */
   agentPosition?: THREE.Vector3;
+  /** Behavioral offsets from IdleBehaviorSystem to avoid direct joint mutation */
+  behaviorOffsets?: { pelvisX: number; pelvisZ: number; spineX: number; headY: number };
 }
 
 export function useProceduralGait(
@@ -50,6 +52,8 @@ export function useProceduralGait(
   const workBlend = useRef(0);
   const presentBlend = useRef(0);
   const restBlend = useRef(0);
+  const hipsBaseline = useRef(-1);
+  const torsoBaseline = useRef(-1);
 
   const update = useCallback(
     (
@@ -62,6 +66,12 @@ export function useProceduralGait(
 
       if (idleOffset.current === -1) {
         idleOffset.current = Math.random() * 100;
+      }
+      if (hipsBaseline.current === -1 && j.hips) {
+        hipsBaseline.current = j.hips.position.y;
+      }
+      if (torsoBaseline.current === -1 && j.torso) {
+        torsoBaseline.current = j.torso.position.y;
       }
 
       // ── Speed smoothing ──────────────────────────────────────────────────
@@ -392,8 +402,20 @@ export function useProceduralGait(
           -weightShift * 0.25,
           0.06,
         );
-        // STANDING BASELINE: ensure hips are at 1.0 when not walking
-        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 1.0, 0.1);
+        // STANDING BASELINE: ensure hips are at their original baseline when not walking
+        const baseHipsY = hipsBaseline.current !== -1 ? hipsBaseline.current : 1.0;
+        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, baseHipsY, 0.1);
+
+        // Apply behavioral offsets (noise) to hips rotation
+        const bOff = customOptions.behaviorOffsets;
+        if (bOff) {
+          j.hips.rotation.x = THREE.MathUtils.lerp(j.hips.rotation.x, bOff.pelvisX, 0.1);
+          j.hips.rotation.z = THREE.MathUtils.lerp(j.hips.rotation.z, bOff.pelvisZ, 0.1);
+          j.torso.rotation.x = THREE.MathUtils.lerp(j.torso.rotation.x, bOff.spineX, 0.1);
+          if (j.head) {
+             j.head.rotation.y = THREE.MathUtils.lerp(j.head.rotation.y, bOff.headY, 0.1);
+          }
+        }
 
         j.leftKnee.rotation.x = THREE.MathUtils.lerp(
           j.leftKnee.rotation.x,
@@ -515,9 +537,10 @@ export function useProceduralGait(
         // Half-cycle shift: hip shifts toward the planted foot
         const hipShift = Math.sin(walkTime.current) * 0.08 * legFactor;
         j.hips.position.x = THREE.MathUtils.lerp(j.hips.position.x, hipShift, 0.12);
-        // Vertical pelvis bob: double-step dip relative to 1.0 baseline
+        // Vertical pelvis bob: double-step dip relative to baseline
+        const baseHipsY = hipsBaseline.current !== -1 ? hipsBaseline.current : 1.0;
         const hipBob = Math.abs(Math.sin(walkTime.current)) * 0.025 * legFactor;
-        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 1.0 - hipBob, 0.15);
+        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, baseHipsY - hipBob, 0.15);
 
         // ── Legs ────────────────────────────────────────────────────────────
         j.leftHip.rotation.x  = Math.sin(walkTime.current)            * legAmp;
@@ -576,7 +599,8 @@ export function useProceduralGait(
         // abs(sin) produces two peaks per cycle — matches real human vertical oscillation
         const bounceIntensity = 0.04 + speedFactor * 0.025; // more bounce when running
         const bounce = Math.abs(Math.sin(walkTime.current)) * bounceIntensity;
-        j.torso.position.y = THREE.MathUtils.lerp(j.torso.position.y, bounce + 0.05, 0.25);
+        const baseTorsoY = torsoBaseline.current !== -1 ? torsoBaseline.current : 0.1;
+        j.torso.position.y = THREE.MathUtils.lerp(j.torso.position.y, bounce + baseTorsoY, 0.25);
 
         // ── Shoulder counter-rotation (trunk rotation) ────────────────────────
         const shoulderTwist = Math.sin(walkTime.current) * (0.10 + speedFactor * 0.06);

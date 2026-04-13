@@ -235,6 +235,10 @@ export function useAgentBrain(
 
     const queue = AgentTaskRegistry.getInstance().getOrCreate(id);
     const driveManager = driveManagerRef.current;
+    
+    // Start behavioral noise generator
+    const personality = movementPersonalityRef.current.getProfile(driveManager.drives);
+    idleBehaviorSystemRef.current.start(personality);
 
     /** Hook up task completion events to satisfy drives */
     const handleTaskCompletion = (e: any) => {
@@ -1720,10 +1724,16 @@ export function useAgentBrain(
         null
       ) as any;
 
+      const behaviorOffsets = idleBehaviorSystemRef.current.getPosturalOffsets(
+        realDelta,
+        taskQueue.getCurrentPhase(),
+      );
+
       updateGait(vehicle.velocity as unknown as THREE.Vector3, realDelta, {
         strideLength,
         targetDirection,
         extraState: gaitExtraState,
+        behaviorOffsets,
       });
 
       const animSpeed = smoothSpeed.current;

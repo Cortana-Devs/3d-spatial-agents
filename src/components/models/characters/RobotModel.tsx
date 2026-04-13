@@ -161,15 +161,10 @@ export default React.memo(function RobotModel({
       emissiveMat.emissiveIntensity = 1.5 + Math.sin(t * 4) * 0.5;
     }
 
+    // Idle behavior system is now driven centrally by useAgentBrain + useProceduralGait
     if (idleBehaviorSystem && movementPersonality && driveManager) {
       const personality = movementPersonality.getProfile(driveManager.drives);
       idleBehaviorSystem.start(personality);
-      const phase = AgentTaskRegistry.getInstance().getOrCreate(id || "").getCurrentPhase();
-      idleBehaviorSystem.applyToJoints({
-        pelvis: pelvisRef.current || undefined,
-        spine: spineRef.current || undefined,
-        head: headRef.current || undefined,
-      }, delta, phase);
     }
 
     // Head tracking logic using the centralized GazeController

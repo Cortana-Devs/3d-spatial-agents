@@ -107,11 +107,14 @@ export class IdleBehaviorSystem {
     }
   }
 
-  public applyToJoints(
-    joints: JointRefs,
+  /** 
+   * Updates the internal state and returns postural noise (offsets).
+   * Does NOT touch joint refs directly to prevent accumulation bugs.
+   */
+  public getPosturalOffsets(
     delta: number,
     phase: string // e.g. from AgentTaskQueue.getCurrentPhase()
-  ): void {
+  ): { pelvisX: number; pelvisZ: number; spineX: number; headY: number } {
     // Only apply behaviors in strictly idle/dwelling phases
     if (!['IDLE', 'COMPLETED', 'GAZING', 'DWELLING'].includes(phase)) {
       this.stop();
@@ -133,16 +136,6 @@ export class IdleBehaviorSystem {
     this.currentOffsets.spineX += (this.targetOffsets.spineX - this.currentOffsets.spineX) * lerpRate;
     this.currentOffsets.headY += (this.targetOffsets.headY - this.currentOffsets.headY) * lerpRate;
 
-    // Apply additive offsets
-    if (joints.pelvis) {
-      joints.pelvis.rotation.x += this.currentOffsets.pelvisX;
-      joints.pelvis.rotation.z += this.currentOffsets.pelvisZ;
-    }
-    if (joints.spine) {
-      joints.spine.rotation.x += this.currentOffsets.spineX;
-    }
-    if (joints.head) {
-      joints.head.rotation.y += this.currentOffsets.headY;
-    }
+    return { ...this.currentOffsets };
   }
 }
