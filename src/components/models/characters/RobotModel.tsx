@@ -27,6 +27,10 @@ export default React.memo(function RobotModel({
   color: tintColor = EMISSIVE_COLOR, // Renamed to avoid confusion with THREE.Color
   animationState = "Idle",
   brain,
+  driveManager,
+  movementPersonality,
+  gazeController,
+  idleBehaviorSystem,
   ...props
 }: {
   joints: React.MutableRefObject<any>;
@@ -111,6 +115,8 @@ export default React.memo(function RobotModel({
   const rKneeRef = useRef<THREE.Group>(null);
   const lAnkleRef = useRef<THREE.Group>(null);
   const rAnkleRef = useRef<THREE.Group>(null);
+  const lWristRef = useRef<THREE.Group>(null);
+  const rWristRef = useRef<THREE.Group>(null);
 
   // Sync refs to joints.current for useProceduralGait
   useLayoutEffect(() => {
@@ -128,10 +134,12 @@ export default React.memo(function RobotModel({
       if (!joints.current.leftArm) joints.current.leftArm = {};
       joints.current.leftArm.shoulder = lShoulderRef.current;
       joints.current.leftArm.elbow = lElbowRef.current;
+      joints.current.leftArm.wrist = lWristRef.current;
 
       if (!joints.current.rightArm) joints.current.rightArm = {};
       joints.current.rightArm.shoulder = rShoulderRef.current;
       joints.current.rightArm.elbow = rElbowRef.current;
+      joints.current.rightArm.wrist = rWristRef.current;
     }
   }, [joints]);
 
@@ -373,14 +381,14 @@ export default React.memo(function RobotModel({
                 receiveShadow
               />
               <mesh
-                position={[0.02, -0.15, 0]}
+                position={[0, -0.15, 0]}
                 material={armorMat}
                 castShadow
                 receiveShadow
               >
                 <cylinderGeometry args={[0.045, 0.035, 0.24, 32]} />
               </mesh>
-              <group ref={lElbowRef} position={[0.02, -0.28, 0]}>
+              <group ref={lElbowRef} position={[0, -0.28, 0]}>
                 <mesh material={jointMat} castShadow receiveShadow>
                   <sphereGeometry args={[0.04, 32, 32]} />
                 </mesh>
@@ -392,7 +400,7 @@ export default React.memo(function RobotModel({
                 >
                   <cylinderGeometry args={[0.04, 0.025, 0.24, 32]} />
                 </mesh>
-                <group position={[0, -0.28, 0]}>
+                <group ref={lWristRef} position={[0, -0.28, 0]}>
                   <mesh material={jointMat} castShadow receiveShadow>
                     <sphereGeometry args={[0.025, 32, 32]} />
                   </mesh>
@@ -418,14 +426,14 @@ export default React.memo(function RobotModel({
                 receiveShadow
               />
               <mesh
-                position={[-0.02, -0.15, 0]}
+                position={[0, -0.15, 0]}
                 material={armorMat}
                 castShadow
                 receiveShadow
               >
                 <cylinderGeometry args={[0.045, 0.035, 0.24, 32]} />
               </mesh>
-              <group ref={rElbowRef} position={[-0.02, -0.28, 0]}>
+              <group ref={rElbowRef} position={[0, -0.28, 0]}>
                 <mesh material={jointMat} castShadow receiveShadow>
                   <sphereGeometry args={[0.04, 32, 32]} />
                 </mesh>
@@ -437,7 +445,7 @@ export default React.memo(function RobotModel({
                 >
                   <cylinderGeometry args={[0.04, 0.025, 0.24, 32]} />
                 </mesh>
-                <group position={[0, -0.28, 0]}>
+                <group ref={rWristRef} position={[0, -0.28, 0]}>
                   <mesh material={jointMat} castShadow receiveShadow>
                     <sphereGeometry args={[0.025, 32, 32]} />
                   </mesh>

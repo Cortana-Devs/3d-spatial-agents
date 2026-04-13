@@ -61,6 +61,7 @@ export default function Agent({
   } = useAudioController();
   const audioRef = useRef<THREE.PositionalAudio>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const [analyserReady, setAnalyserReady] = useState<AnalyserNode | null>(null);
   const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   // Setup Listener for native positional audio
@@ -118,6 +119,7 @@ export default function Agent({
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 64;
       analyserRef.current = analyser;
+      setAnalyserReady(analyser); // triggers model re-render with live analyser
 
       const gainNode = audio.getOutput();
       if (gainNode) {
@@ -194,7 +196,7 @@ export default function Agent({
           joints={joints}
           id={id}
           color={color}
-          analyser={analyserRef.current}
+          analyser={analyserReady}
           animationState={animationState}
           brain={brain}
           driveManager={driveManager}
@@ -207,7 +209,7 @@ export default function Agent({
           joints={joints}
           id={id}
           color={color}
-          analyser={analyserRef.current}
+          analyser={analyserReady}
           animationState={animationState}
           brain={brain}
           driveManager={driveManager}
@@ -220,7 +222,7 @@ export default function Agent({
           joints={joints}
           id={id}
           color={color}
-          analyser={analyserRef.current}
+          analyser={analyserReady}
           animationState={animationState}
           brain={brain}
           driveManager={driveManager}

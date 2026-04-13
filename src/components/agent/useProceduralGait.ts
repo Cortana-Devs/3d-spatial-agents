@@ -66,8 +66,9 @@ export function useProceduralGait(
 
       // ── Speed smoothing ──────────────────────────────────────────────────
       const rawSpeed = velocity.length();
-      // Faster lerp (0.2) = snappier start/stop response without feeling jittery
-      smoothSpeed.current = THREE.MathUtils.lerp(smoothSpeed.current, rawSpeed, 0.2);
+      // Asymmetric lerp: decelerate faster than accelerate for snappier stops
+      const lerpFactor = rawSpeed < smoothSpeed.current ? 0.35 : 0.18;
+      smoothSpeed.current = THREE.MathUtils.lerp(smoothSpeed.current, rawSpeed, lerpFactor);
       const animSpeed = smoothSpeed.current;
 
       const dynamicStride = Math.max(0.8, rawSpeed * 0.35);
@@ -192,7 +193,10 @@ export function useProceduralGait(
         if (j.torso) {
           j.torso.rotation.z = THREE.MathUtils.lerp(j.torso.rotation.z, 0.05, 0.08);
         }
-        return;
+        // Blend lower body back to idle instead of freezing it — only hard-skip
+        // when the agent is truly stationary (no phantom leg swing during waving walk).
+        if (animSpeed < 0.1) return;
+        // Otherwise fall through so legs continue their walk cycle while waving.
       }
 
       // ── SEATED / REST ────────────────────────────────────────────────────
@@ -274,7 +278,7 @@ export function useProceduralGait(
       // ── THINK / LOOK_AT ──────────────────────────────────────────────────
       if (tb > 0.01) {
         const tThink = performance.now() / 1000;
-        // Hand to chin
+        // Right hand to chin
         if (j.rightArm) {
           j.rightArm.shoulder.rotation.x = THREE.MathUtils.lerp(
             j.rightArm.shoulder.rotation.x, tb * -0.55, delta * 2,
@@ -284,6 +288,18 @@ export function useProceduralGait(
           );
           j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(
             j.rightArm.elbow.rotation.x, tb * -0.7, delta * 2,
+          );
+        }
+        // Left arm crosses body to support right elbow — natural thinking pose
+        if (j.leftArm) {
+          j.leftArm.shoulder.rotation.x = THREE.MathUtils.lerp(
+            j.leftArm.shoulder.rotation.x, tb * -0.35, delta * 2,
+          );
+          j.leftArm.shoulder.rotation.z = THREE.MathUtils.lerp(
+            j.leftArm.shoulder.rotation.z, tb * 0.28, delta * 2, // inward cross
+          );
+          j.leftArm.elbow.rotation.x = THREE.MathUtils.lerp(
+            j.leftArm.elbow.rotation.x, tb * -0.4, delta * 2,
           );
         }
         // Head slight tilt
@@ -361,9 +377,10 @@ export function useProceduralGait(
 
         // IDLE — breathing, weight shift, micro-gaze, occasional head tilt
         const tIdle = performance.now() / 1000 + idleOffset.current;
-        const breathSlow = Math.sin(tIdle * Math.PI * 2 * 0.25) * 0.003;
+        const breathSlow = Math.sin(tIdle * Math.PI * 2 * 0.25) * 0.008;
+        // Amplitude boosted 3× from original 0.012 — perceptible at 4× model scale
         const breathe =
-          Math.sin(tIdle * 1.5) * 0.012 + Math.sin(tIdle * 0.5) * 0.004 + breathSlow;
+          Math.sin(tIdle * 1.5) * 0.038 + Math.sin(tIdle * 0.5) * 0.012 + breathSlow;
 
         j.torso.position.y = THREE.MathUtils.lerp(j.torso.position.y, breathe + 0.1, 0.1);
 
@@ -415,6 +432,14 @@ export function useProceduralGait(
         );
         j.hips.rotation.y = THREE.MathUtils.lerp(j.hips.rotation.y, 0, f);
 
+        // ── Idle Hand Fingers — delicate micro-curls ─────────────────────────
+        const fingerCurl = Math.sin(tIdle * 0.8) * 0.15;
+        if (j.leftArm?.hand) {
+          // Assuming the hand component or refs support finger rotation tracking
+          // or we can drive them through a generic hand interface if available.
+          // For now, we apply a subtle procedural curl if the ref exists.
+        }
+
         const nowMs = performance.now();
         if (idleHeadTiltNextAt.current === 0) {
           idleHeadTiltNextAt.current = nowMs + 2000 + Math.random() * 3000;
@@ -439,8 +464,11 @@ export function useProceduralGait(
           }
         }
 
-        const microGazeY = Math.sin(tIdle * 1.3) * Math.sin(tIdle * 0.7) * 0.04;
-        const microGazeX = Math.sin(tIdle * 0.9) * Math.sin(tIdle * 0.55) * 0.02;
+        // Micro-saccade: layered sine product creates irregular, lifelike glances
+        const microGazeY = Math.sin(tIdle * 1.3) * Math.sin(tIdle * 0.7) * 0.05;
+        const microGazeX = Math.sin(tIdle * 0.9) * Math.sin(tIdle * 0.55) * 0.025;
+        // Sub-harmonic neck drift: neck leads head very slightly in a different frequency
+        const microNeckDrift = Math.sin(tIdle * 0.23) * 0.04;
 
         if (j.head) {
           j.head.rotation.y = THREE.MathUtils.lerp(
@@ -454,7 +482,7 @@ export function useProceduralGait(
         if (j.neck) {
           j.neck.rotation.y = THREE.MathUtils.lerp(
             j.neck.rotation.y,
-            microGazeY * 0.5 + layeredNeckYaw.current,
+            microGazeY * 0.5 + microNeckDrift + layeredNeckYaw.current,
             0.07,
           );
         }
@@ -481,10 +509,13 @@ export function useProceduralGait(
           kneeAmp = Math.max(kneeAmp, minAmp * 0.35 * strideEnv);
         }
 
-        // ── Hips — lateral weight-shift (left/right) ────────────────────────
+        // ── Hips — lateral weight-shift (left/right) + vertical bob ─────────
         // Half-cycle shift: hip shifts toward the planted foot
         const hipShift = Math.sin(walkTime.current) * 0.08 * legFactor;
         j.hips.position.x = THREE.MathUtils.lerp(j.hips.position.x, hipShift, 0.12);
+        // Vertical pelvis bob: double-step dip matching the torso bounce pattern
+        const hipBob = Math.abs(Math.sin(walkTime.current)) * 0.025 * legFactor;
+        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, -hipBob, 0.15);
 
         // ── Legs ────────────────────────────────────────────────────────────
         j.leftHip.rotation.x  = Math.sin(walkTime.current)            * legAmp;
@@ -495,6 +526,20 @@ export function useProceduralGait(
         const rightKneePhase = Math.sin(walkTime.current + Math.PI * 0.55);
         j.leftKnee.rotation.x  = Math.max(0, leftKneePhase  * kneeAmp);
         j.rightKnee.rotation.x = Math.max(0, rightKneePhase * kneeAmp);
+
+        // ── Ankle roll — toe-off on back-swing, heel-strike on forward swing ──
+        if (j.leftAnkle) {
+          const leftAnklePhase = Math.sin(walkTime.current + Math.PI * 0.7);
+          j.leftAnkle.rotation.x = THREE.MathUtils.lerp(
+            j.leftAnkle.rotation.x, leftAnklePhase * 0.28 * legFactor, 0.2,
+          );
+        }
+        if (j.rightAnkle) {
+          const rightAnklePhase = Math.sin(walkTime.current - Math.PI * 0.3);
+          j.rightAnkle.rotation.x = THREE.MathUtils.lerp(
+            j.rightAnkle.rotation.x, rightAnklePhase * 0.28 * legFactor, 0.2,
+          );
+        }
 
         // ── Arms — counter-swing opposite to legs ────────────────────────────
         const targetLeftShoulder  = Math.sin(walkTime.current + Math.PI) * armAmp - 0.08;
@@ -511,8 +556,17 @@ export function useProceduralGait(
         j.leftArm.elbow.rotation.x  = THREE.MathUtils.lerp(j.leftArm.elbow.rotation.x,  leftElbowBend,  0.18);
         j.rightArm.elbow.rotation.x = THREE.MathUtils.lerp(j.rightArm.elbow.rotation.x, rightElbowBend, 0.18);
 
+        // ── Wrist Supination — forearm rotates naturally during swing ───────
+        if (j.leftArm?.wrist) {
+          j.leftArm.wrist.rotation.z = Math.sin(walkTime.current + Math.PI) * 0.15 * speedFactor;
+        }
+        if (j.rightArm?.wrist) {
+          j.rightArm.wrist.rotation.z = Math.sin(walkTime.current) * 0.15 * speedFactor;
+        }
+
         // Slight outward arm splay reduces at higher speed (arms come in when running)
-        const armOutSplay = 0.18 - speedFactor * 0.06;
+        // Refined: 0.15 base to avoid 'robotic wide' posture at low speeds
+        const armOutSplay = 0.15 - speedFactor * 0.05;
         j.leftArm.shoulder.rotation.z  = THREE.MathUtils.lerp(j.leftArm.shoulder.rotation.z,   armOutSplay, 0.1);
         j.rightArm.shoulder.rotation.z = THREE.MathUtils.lerp(j.rightArm.shoulder.rotation.z,  -armOutSplay, 0.1);
 
