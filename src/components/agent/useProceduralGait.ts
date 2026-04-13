@@ -392,6 +392,8 @@ export function useProceduralGait(
           -weightShift * 0.25,
           0.06,
         );
+        // STANDING BASELINE: ensure hips are at 1.0 when not walking
+        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 1.0, 0.1);
 
         j.leftKnee.rotation.x = THREE.MathUtils.lerp(
           j.leftKnee.rotation.x,
@@ -513,9 +515,9 @@ export function useProceduralGait(
         // Half-cycle shift: hip shifts toward the planted foot
         const hipShift = Math.sin(walkTime.current) * 0.08 * legFactor;
         j.hips.position.x = THREE.MathUtils.lerp(j.hips.position.x, hipShift, 0.12);
-        // Vertical pelvis bob: double-step dip matching the torso bounce pattern
+        // Vertical pelvis bob: double-step dip relative to 1.0 baseline
         const hipBob = Math.abs(Math.sin(walkTime.current)) * 0.025 * legFactor;
-        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, -hipBob, 0.15);
+        j.hips.position.y = THREE.MathUtils.lerp(j.hips.position.y, 1.0 - hipBob, 0.15);
 
         // ── Legs ────────────────────────────────────────────────────────────
         j.leftHip.rotation.x  = Math.sin(walkTime.current)            * legAmp;

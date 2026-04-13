@@ -50,18 +50,19 @@ const SEED: { zoneId: string; interest: number }[] = [
 
 /** Build POI list from live zone centers (call after ResearchFacilityWorld registers zones). */
 export function buildDefaultResearchFacilityIdleLocations(): LabLocation[] {
-  return SEED.map(({ zoneId, interest }) => {
-    const p = getZoneCenterPosition(zoneId);
-    return {
-      id: zoneId,
-      zoneId,
-      label: ZONE_NAMES[zoneId] ?? zoneId,
-      interest,
-      position: p
-        ? { x: p.x, y: p.y, z: p.z }
-        : { x: 0, y: 0, z: 0 },
-    };
-  });
+  return SEED
+    .map(({ zoneId, interest }) => {
+      const p = getZoneCenterPosition(zoneId);
+      if (!p) return null;
+      return {
+        id: zoneId,
+        zoneId,
+        label: ZONE_NAMES[zoneId] ?? zoneId,
+        interest,
+        position: { x: p.x, y: p.y, z: p.z }
+      };
+    })
+    .filter((loc): loc is LabLocation => loc !== null);
 }
 
 export class IdleExplorer {
@@ -211,7 +212,10 @@ export class IdleExplorer {
     const now = Date.now();
 
     const scored = this.locations
-      .filter((loc) => this.distance(agentPos, loc.position) > 3.0)
+      .filter((loc) => {
+        if (!loc.position) return false;
+        return this.distance(agentPos, loc.position) > 3.0;
+      })
       .map((loc) => {
         const visit = this.visits.get(loc.id)!;
         let score = 0;
@@ -305,9 +309,10 @@ export class IdleExplorer {
   }
 
   private distance(
-    a: { x: number; y: number; z: number },
-    b: { x: number; y: number; z: number },
+    a: { x: number; y: number; z: number } | undefined,
+    b: { x: number; y: number; z: number } | undefined,
   ): number {
+    if (!a || !b) return 999;
     return Math.sqrt(
       (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2,
     );
